@@ -150,9 +150,11 @@ const LIB_REGION = {
   ild:["Cardio","Breathing"], thoracic_surgery:["Breathing","Scapula/Upper back","Cardio"], pulm_hypertension:["Cardio","Breathing"]
 };
 function hashStr(s){ let h=0; for(let i=0;i<s.length;i++){ h=(h*31+s.charCodeAt(i))|0; } return h; }
-/* Contraindication-filtered library variations for a condition's region & phase. */
-function exercisesFor(protocol, phaseIdx, flags, exclude){
+/* Contraindication-filtered library options for a condition's region & phase.
+   seed changes the ordering (used by "reroll"); count sets how many to return. */
+function libraryOptions(protocol, phaseIdx, flags, exclude, count, seed){
   if(!window.EXERCISES) return [];
+  count = count || 6; seed = seed || 0;
   const regions = LIB_REGION[protocol] || LIB_REGION[(window.PROTOCOL_ALIAS||{})[protocol]] || ["Full body","Core"];
   const rset = new Set(regions);
   const bucket = phaseIdx+1;                      // 1..4
@@ -161,8 +163,8 @@ function exercisesFor(protocol, phaseIdx, flags, exclude){
   const pool = window.EXERCISES.filter(e =>
     e.region.some(r=>rset.has(r)) && allowed.has(e.difficulty) && !exSet.has(e.name.toLowerCase()));
   const { kept } = window.applyContra(pool, flags);
-  kept.sort((a,b)=> hashStr(a.name+phaseIdx) - hashStr(b.name+phaseIdx));
-  return kept.slice(0,6).map(e=>({ n:e.name, d:e.dose, c:e.cue, warn:e.warn, pattern:e.pattern, region:e.region }));
+  kept.sort((a,b)=> hashStr(a.name+"|"+seed) - hashStr(b.name+"|"+seed));
+  return kept.slice(0,count).map(e=>({ n:e.name, d:e.dose, c:e.cue, warn:e.warn, pattern:e.pattern, region:e.region, tags:e.tags }));
 }
 
 /* ---------- build the program ---------- */
@@ -398,25 +400,72 @@ function movementExplain(name, pattern, regionArr){
   return `<b>What it is:</b> ${info.what}${target}<br><b>How to do it:</b> ${info.how}<br><b>Why it helps:</b> ${info.why}${notes?" "+notes:""}`;
 }
 
-/* Shared exercise <li> renderer (program rows + variations) with an Explain toggle. */
-function exItemHTML(e, regionArr){
+/* Shared exercise <li> renderer with Explain + optional Swap (when ctx {ci,pi,ei} given). */
+function exItemHTML(e, regionArr, ctx){
+  const swap = ctx ? `<button class="swapbtn" data-ci="${ctx.ci}" data-pi="${ctx.pi}" data-ei="${ctx.ei}">⇄ Swap</button>` : "";
+  const swapbox = ctx ? `<div class="swapbox hide"></div>` : "";
   return `<li class="exitem">
     <div class="top"><span class="en">${esc(e.n)}</span><span class="ed">${esc(e.d)}</span></div>
     <div class="ec">${esc(e.c)}</div>
     ${e.warn?`<span class="warnpill">⚠ Modify — involves ${esc(TAG_LABEL[e.warn]||e.warn)}; keep it symptom-free.</span>`:""}
     ${e.sub?`<span class="subpill">safer substitute for your precautions</span>`:""}
-    <button class="expbtn" onclick="this.nextElementSibling.classList.toggle('hide')">ⓘ Explain this exercise</button>
+    <div class="exrowtools no-print">
+      <button class="expbtn" onclick="this.closest('.exitem').querySelector('.exp').classList.toggle('hide')">ⓘ Explain</button>
+      ${swap}
+    </div>
     <div class="exp hide">${movementExplain(e.n, e.pattern, e.region||regionArr)}</div>
+    ${swapbox}
   </li>`;
 }
 
-/* Collapsible "more variations from the library" block for a phase. */
-function variationsBlock(protocol, phaseIdx, flags, exclude){
-  const vars = exercisesFor(protocol, phaseIdx, flags, exclude);
-  if(!vars.length) return "";
-  const items = vars.map(v=>exItemHTML(v)).join("");
-  return `<button class="varbtn" onclick="this.nextElementSibling.classList.toggle('hide')">⇄ Swap it up — ${vars.length} more variations from the library</button>
-    <ul class="exlist varlist hide">${items}</ul>`;
+/* ---- program editing: swap an exercise, reroll or reset a phase ---- */
+const openPhases = new Set();                       // remembers which phases are expanded across re-renders
+function togglePhase(head, key){
+  const ph = head.parentElement; ph.classList.toggle("open");
+  if(ph.classList.contains("open")) openPhases.add(key); else openPhases.delete(key);
+}
+function wireProgram(){
+  $$("#programOut .swapbtn").forEach(b=>b.onclick=()=>openSwap(b));
+  $$("#programOut .rerollbtn").forEach(b=>b.onclick=()=>rerollPhase(+b.dataset.ci, +b.dataset.pi));
+  $$("#programOut .resetbtn").forEach(b=>b.onclick=()=>resetPhase(+b.dataset.ci, +b.dataset.pi));
+}
+function openSwap(btn){
+  const ci=+btn.dataset.ci, pi=+btn.dataset.pi, ei=+btn.dataset.ei;
+  const box = btn.closest(".exitem").querySelector(".swapbox");
+  const item = state.program.items[ci], ph = item.phases[pi];
+  if(box.dataset.filled!=="1"){
+    const opts = libraryOptions(item.protocol, pi, state.program.flags, ph.ex.map(x=>x.n), 8, 0);
+    if(!opts.length){
+      box.innerHTML = `<div class="swaphint">No safe alternatives found for this phase.</div>`;
+    } else {
+      box.innerHTML = `<div class="swaphint">Tap an exercise to replace <b>${esc(ph.ex[ei].n)}</b>:</div>` +
+        opts.map((o,oi)=>`<div class="swapopt" data-oi="${oi}"><span class="en">${esc(o.n)}</span><span class="ed">${esc(o.d)}</span>${o.warn?`<span class="exwarn">⚠ modify</span>`:""}</div>`).join("");
+      box.querySelectorAll(".swapopt").forEach(op=>op.onclick=()=>{
+        openPhases.add(ci+"-"+pi);
+        state.program.items[ci].phases[pi].ex[ei] = opts[+op.dataset.oi];
+        save(); renderProgram(state.program); toast("Exercise swapped.");
+      });
+    }
+    box.dataset.filled="1";
+  }
+  box.classList.toggle("hide");
+}
+function rerollPhase(ci, pi){
+  const item = state.program.items[ci], ph = item.phases[pi];
+  ph._seed = (ph._seed||0)+1;
+  const n = Math.max(3, ph.ex.length);
+  const fresh = libraryOptions(item.protocol, pi, state.program.flags, ph.ex.map(x=>x.n), n, ph._seed);
+  if(!fresh.length){ toast("No alternative library exercises for this phase."); return; }
+  ph.ex = fresh; openPhases.add(ci+"-"+pi);
+  save(); renderProgram(state.program); toast("Phase rerolled from the library.");
+}
+function resetPhase(ci, pi){
+  const item = state.program.items[ci], ph = item.phases[pi];
+  const pool = window.getProtocol(item.protocol)[pi];
+  const { kept } = window.applyContra(pool, state.program.flags);
+  window.ensureMinimum(kept, state.program.flags, 3);
+  ph.ex = kept; delete ph._seed; openPhases.add(ci+"-"+pi);
+  save(); renderProgram(state.program); toast("Phase reset to the recommended exercises.");
 }
 
 /* ---------- render program ---------- */
@@ -458,22 +507,29 @@ function renderProgram(prog){
       esc([...new Set(prog.removed.map(r=>TAG_LABEL[r.tag]||r.tag))].join(", ")) +
       ` and substituted safer options where needed.</div>`;
   }
+  html += `<div class="banner info no-print"><b>✎ Make it yours:</b> tap <b>⇄ Swap</b> on any exercise to pick an alternative,
+    or use <b>🔄 Reroll</b> / <b>↩ Reset</b> to change a whole phase. Every option is filtered to your precautions and saved automatically.</div>`;
   html += `</div>`;
 
-  prog.items.forEach(item=>{
+  prog.items.forEach((item, ci)=>{
     html += `<div class="card"><h2>${esc(item.name)}</h2>
       <p class="hint">${esc(conditionExplain(item, prog.track))}</p>`;
     item.phases.forEach((ph,i)=>{
-      const rows = ph.ex.map(e=>exItemHTML(e, [item.region])).join("");
-      html += `<div class="phase ${i===0?"open":""}">
-        <div class="head" onclick="this.parentElement.classList.toggle('open')">
+      const key = ci+"-"+i;
+      const open = (i===0 || openPhases.has(key)) ? "open" : "";
+      const rows = ph.ex.map((e,ei)=>exItemHTML(e, [item.region], {ci, pi:i, ei})).join("");
+      html += `<div class="phase ${open}">
+        <div class="head" onclick="togglePhase(this,'${key}')">
           <div class="pnum">${i+1}</div>
           <div><div class="ptitle">${esc(ph.title)} <span class="pweeks">· Weeks ${ph.weekStart}–${ph.weekEnd}</span></div>
           <div class="goal">${esc(ph.goal)}</div></div>
           <div class="caret">▾</div>
         </div>
         <div class="body"><ul class="exlist">${rows}</ul>
-          ${variationsBlock(item.protocol, i, prog.flags, ph.ex.map(e=>e.n))}
+          <div class="phasetools no-print">
+            <button class="rerollbtn" data-ci="${ci}" data-pi="${i}">🔄 Reroll this phase</button>
+            <button class="resetbtn" data-ci="${ci}" data-pi="${i}">↩ Reset to recommended</button>
+          </div>
           <div class="freq">Advance when this phase feels controlled and symptoms are low & stable — the weeks are a guide, not a rule.</div>
         </div></div>`;
     });
@@ -482,6 +538,7 @@ function renderProgram(prog){
 
   html += suggestionsCard(prog);
   out.innerHTML = html;
+  wireProgram();
 }
 
 function suggestionsCard(prog){
