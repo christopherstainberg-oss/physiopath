@@ -398,20 +398,195 @@ for (const [protocol, region, subs] of SUBPRESENT)
  "Chronic cough / breathing pattern disorder","Hyperventilation syndrome (breathing retraining)","Vocal cord dysfunction (breathing)"]
   .forEach(dx => add(dx, "pulmonary", "Respiratory", /embolism/.test(dx) ? "post_covid" : "asthma", { supervision:"supervised", clearance:true }));
 
+/* ==================== MEGA EXPANSION — thousands more named conditions ==================== */
+const latList  = (names, domain, region, protocol, opts={}) => names.forEach(nm => lateral(nm, domain, region, protocol, opts));
+const plainList= (names, domain, region, protocol, opts={}) => names.forEach(nm => add(nm, domain, region, protocol, opts));
+
+/* --- Named fractures (eponyms / classifications), lateralized --- */
+latList([
+ "Colles' fracture","Smith's fracture","Barton's fracture (dorsal)","Barton's fracture (volar)","Chauffeur's (radial styloid) fracture",
+ "Bennett's fracture","Rolando fracture","Galeazzi fracture","Monteggia fracture","Essex-Lopresti injury","Greater tuberosity fracture",
+ "Surgical neck of humerus fracture","Supracondylar humerus fracture","Lateral condyle humerus fracture","Capitellum fracture",
+ "Ulnar (nightstick) fracture","Hook of hamate fracture","Distal clavicle fracture","Midshaft clavicle fracture","Phalangeal tuft fracture",
+ "Hill-Sachs lesion","Bony Bankart fracture"
+].map(s=>s+" recovery"), "msk","Upper limb","fracture_ue",{supervision:"supervised"});
+latList([
+ "Intertrochanteric hip fracture","Subtrochanteric femur fracture","Distal femur (supracondylar) fracture","Tibial plafond (pilon) fracture",
+ "Maisonneuve fracture","Weber A ankle fracture","Weber B ankle fracture","Weber C ankle fracture","Medial malleolus fracture",
+ "Lateral malleolus fracture","Bimalleolar fracture","Trimalleolar fracture","Pott's fracture","Talar neck fracture","Talar dome fracture",
+ "Jones (5th metatarsal) fracture","Dancer's fracture","Lisfranc fracture-dislocation","Cuboid fracture","Sesamoid fracture","Toe phalanx fracture",
+ "Tibial tubercle fracture","Segond fracture"
+].map(s=>s+" recovery"), "msk","Lower limb","fracture_le",{supervision:"supervised"});
+["I","II","III","IV","V"].forEach(t=>{
+  add(`Salter-Harris type ${t} physeal fracture (wrist) recovery`,"msk","Wrist / Hand","fracture_ue",{supervision:"supervised"});
+  add(`Salter-Harris type ${t} physeal fracture (ankle) recovery`,"msk","Ankle","fracture_le",{supervision:"supervised"});
+});
+["Greenstick","Torus (buckle)","Spiral","Comminuted","Oblique","Transverse","Avulsion","Stress","Pathological"].forEach(t=>{
+  add(`${t} forearm fracture recovery`,"msk","Upper limb","fracture_ue",{supervision:"supervised"});
+  add(`${t} tibial fracture recovery`,"msk","Lower limb","fracture_le",{supervision:"supervised"});
+});
+
+/* --- Named ligament & tendon injuries by site, lateralized --- */
+const LIGS = [
+  ["knee_ligament","Knee",["Scapholunate ligament injury","Meniscofemoral ligament injury","Posterior oblique ligament sprain"]],
+  ["ankle",  "Ankle",  ["Anterior talofibular (ATFL) sprain","Calcaneofibular (CFL) sprain","Posterior talofibular (PTFL) sprain",
+    "Spring (calcaneonavicular) ligament injury","Bifurcate ligament sprain","Subtalar ligament sprain"]],
+  ["wrist_hand","Wrist / Hand",["Scapholunate dissociation","Lunotriquetral ligament injury","Radial collateral ligament (thumb) sprain",
+    "Volar plate injury","Finger collateral ligament sprain","Sagittal band injury"]],
+  ["shoulder","Shoulder",["Coracoclavicular ligament injury","Superior glenohumeral ligament injury","Inferior glenohumeral ligament injury"]],
+  ["foot",   "Foot",   ["Lisfranc ligament injury","Plantar plate tear","Deltoid ligament (foot) sprain"]]
+];
+for(const [protocol,region,list] of LIGS) latList(list, "msk", region, protocol);
+const TENDONS = [
+  ["shoulder","Shoulder",["Supraspinatus tendinopathy","Infraspinatus tendinopathy","Subscapularis tendinopathy","Long head biceps tendinitis","Pectoralis major tendinopathy"]],
+  ["elbow","Elbow",["Common extensor tendinopathy","Common flexor tendinopathy","Distal triceps tendinopathy","Distal biceps tendinosis"]],
+  ["wrist_hand","Wrist / Hand",["Flexor carpi radialis tendinopathy","Extensor carpi ulnaris tendinopathy","Intersection syndrome (distal)","First dorsal compartment tenosynovitis"]],
+  ["hip","Hip",["Gluteus medius tendinopathy","Gluteus minimus tendinopathy","Iliopsoas tendinopathy","Adductor tendinopathy","Proximal hamstring tendinopathy","Rectus femoris tendinopathy"]],
+  ["knee_pf","Knee",["Quadriceps tendinopathy","Patellar tendinosis","Distal iliotibial band syndrome","Popliteus tendinopathy","Pes anserine tendinopathy"]],
+  ["achilles","Ankle",["Peroneal tendinopathy","Tibialis posterior tendinopathy","Tibialis anterior tendinopathy","Flexor hallucis longus tendinopathy"]],
+  ["foot","Foot",["Extensor digitorum longus tendinopathy","Plantar fascia partial tear"]]
+];
+for(const [protocol,region,list] of TENDONS) latList(list, "msk", region, protocol, {chronic:true});
+
+/* --- Muscle strains (large muscle list) × grades, lateralized --- */
+const MUSC = [
+  ["cervical","Neck",["Sternocleidomastoid","Scalene","Splenius capitis"]],
+  ["shoulder","Shoulder",["Subscapularis","Infraspinatus","Teres major","Teres minor","Anterior deltoid","Posterior deltoid","Coracobrachialis"]],
+  ["elbow","Arm",["Brachialis","Brachioradialis"]],
+  ["wrist_hand","Forearm",["Wrist flexor group","Wrist extensor group","Flexor digitorum","Extensor digitorum"]],
+  ["lumbar","Trunk",["Rectus abdominis","Transversus abdominis","Quadratus lumborum"]],
+  ["thoracic","Trunk",["Intercostal","Serratus anterior"]],
+  ["hip","Hip / Pelvis",["Psoas major","Iliacus","Sartorius","Tensor fasciae latae","Gluteus maximus","Gluteus minimus","Piriformis","Adductor longus","Adductor magnus","Gracilis","Pectineus"]],
+  ["knee_pf","Thigh",["Rectus femoris","Vastus medialis","Vastus lateralis","Vastus intermedius"]],
+  ["hip","Thigh (posterior)",["Semimembranosus","Semitendinosus","Biceps femoris","Popliteus"]],
+  ["ankle","Lower leg",["Soleus","Tibialis anterior","Tibialis posterior","Fibularis longus","Fibularis brevis","Plantaris"]]
+];
+for(const [protocol,region,list] of MUSC)
+  for(const m of list)
+    ["strain (grade I)","strain (grade II)","tear (post-repair)"].forEach(t=>lateral(`${m} ${t}`,"msk",region,protocol));
+
+/* --- Dislocations / subluxations by joint & direction, lateralized --- */
+latList(["Anterior shoulder dislocation","Posterior shoulder dislocation","Inferior shoulder dislocation (luxatio erecta)","Recurrent shoulder subluxation"],"msk","Shoulder","shoulder_instability",{supervision:"supervised"});
+latList(["Elbow dislocation (posterior)","Radial head subluxation","Perilunate dislocation","Lunate dislocation","Thumb MCP dislocation","Finger PIP dislocation","Finger DIP dislocation"],"msk","Upper limb","wrist_hand",{supervision:"supervised"});
+latList(["Patellar dislocation (lateral)","Recurrent patellar subluxation","Native hip dislocation (post-reduction)","Subtalar dislocation","Peroneal tendon subluxation"],"msk","Lower limb","knee_pf",{supervision:"supervised"});
+plainList(["Sternoclavicular joint dislocation (anterior)","TMJ dislocation (post-reduction)"],"msk","Trunk / head","general_msk",{supervision:"supervised"});
+
+/* --- Arthroplasty / joint replacement at more joints + revisions --- */
+latList(["Total elbow replacement recovery","Total wrist replacement recovery","Total ankle replacement recovery",
+  "First MTP joint replacement recovery","MCP joint replacement recovery","PIP joint replacement recovery"],"msk","Upper/lower limb","general_msk",{supervision:"supervised"});
+latList(["Revision total hip replacement recovery","Revision total knee replacement recovery"],"msk","Lower limb","hip_replacement",{supervision:"supervised"});
+latList(["Revision total shoulder replacement recovery"],"msk","Shoulder","shoulder",{supervision:"supervised"});
+
+/* --- Osteochondroses / apophysitis / AVN --- */
+latList(["Sever's disease (calcaneal apophysitis)","Sinding-Larsen-Johansson syndrome","Iselin's disease (5th metatarsal apophysitis)",
+  "Köhler's disease (navicular)","Panner's disease (capitellum)","Legg-Calvé-Perthes disease","Blount's disease"],"msk","Growth plate / apophysis","general_msk",{chronic:true});
+latList(["Avascular necrosis of the femoral head","Avascular necrosis of the humeral head","Avascular necrosis of the talus",
+  "Avascular necrosis of the femoral condyle","Osteonecrosis of the knee (SPONK)","Transient osteoporosis of the hip"],"msk","Bone","general_msk",{chronic:true,supervision:"supervised"});
+plainList(["Slipped capital femoral epiphysis (post-fixation)","Developmental hip dysplasia (adult reconditioning)","Congenital clubfoot (adult reconditioning)","Leg length discrepancy management"],"msk","Hip / lower limb","general_msk",{supervision:"supervised"});
+
+/* --- Systemic / rheumatologic (expanded) --- */
+plainList(["Reactive arthritis","Enteropathic arthritis","Juvenile idiopathic arthritis (adult)","Sjögren-related arthralgia",
+  "Systemic sclerosis (reconditioning)","Dermatomyositis (reconditioning)","Polymyositis (reconditioning)","Mixed connective tissue disease (reconditioning)",
+  "Ehlers-Danlos / hypermobility spectrum","Marfan syndrome (exercise management)","Hemochromatosis arthropathy","CPPD (pseudogout) reconditioning",
+  "Chondrocalcinosis","Paget's disease of bone","Charcot neuroarthropathy","Diffuse idiopathic skeletal hyperostosis (DISH)",
+  "Enthesitis-related arthritis","Reactive tenosynovitis","Palindromic rheumatism"],"msk","Systemic","general_msk",{chronic:true,supervision:"supervised"});
+
+/* --- Chronic pain / soft-tissue syndromes --- */
+plainList(["Chronic exertional compartment syndrome (leg)","Myositis ossificans (reconditioning)","Delayed-onset muscle soreness (reconditioning)",
+  "Myofascial pain syndrome (upper quarter)","Myofascial pain syndrome (lower quarter)","Central sensitization pain (graded exercise)",
+  "Chronic whiplash-associated disorder","Chronic widespread pain","Bursitis (multi-site, reconditioning)"],"msk","Soft tissue","general_msk",{chronic:true});
+
+/* ==================== NEURO — mega expansion ==================== */
+plainList([
+ "Left MCA territory stroke recovery","Right MCA territory stroke recovery","ACA territory stroke recovery","PCA territory stroke recovery",
+ "Lacunar stroke recovery","Watershed (border-zone) stroke recovery","Pontine stroke recovery","Thalamic stroke recovery",
+ "Basal ganglia stroke recovery","Lateral medullary (Wallenberg) syndrome","Locked-in syndrome (supportive exercise)","Young-adult stroke recovery",
+ "Silent stroke reconditioning","Post-stroke spasticity (upper limb)","Post-stroke spasticity (lower limb)","Post-stroke pusher syndrome"
+], "neuro","Brain","stroke");
+plainList([
+ "Anterior cord syndrome","Posterior cord syndrome","Conus medullaris syndrome","Cauda equina syndrome (rehabilitation)",
+ "Incomplete tetraplegia (ASIA C)","Incomplete tetraplegia (ASIA D)","Incomplete paraplegia (ASIA C)","Incomplete paraplegia (ASIA D)",
+ "Post-spinal-decompression reconditioning","Post-spinal-fusion neuro reconditioning","Syringomyelia","Tethered cord syndrome (adult)",
+ "Transverse myelitis recovery","Spinal cord infarction recovery"
+], "neuro","Spinal cord","sci");
+// Cranial nerve palsies
+plainList(["Oculomotor (CN III) palsy recovery","Trochlear (CN IV) palsy recovery","Abducens (CN VI) palsy recovery",
+ "Hypoglossal (CN XII) palsy recovery","Spinal accessory nerve palsy recovery","Vestibulocochlear schwannoma (post-op balance)"],"neuro","Cranial nerve","bells_palsy");
+// Peripheral nerve injuries by named nerve (lateralized)
+latList(["Axillary nerve injury","Musculocutaneous nerve injury","Median nerve injury","Anterior interosseous nerve syndrome",
+ "Radial nerve injury","Posterior interosseous nerve palsy","Long thoracic nerve palsy (winged scapula)","Suprascapular nerve injury",
+ "Femoral nerve injury","Obturator nerve injury","Sciatic nerve injury","Tibial nerve injury","Deep peroneal nerve palsy",
+ "Superficial peroneal nerve injury","Sural nerve injury","Saphenous nerve injury","Lateral femoral cutaneous neuropathy"].map(s=>s+" rehabilitation"),"neuro","Peripheral nerve","neuropathy");
+plainList(["Upper brachial plexus injury (Erb's palsy, adult)","Lower brachial plexus injury (Klumpke's, adult)","Pan-brachial plexopathy",
+ "Lumbosacral plexopathy","Radiation-induced plexopathy","Neuralgic amyotrophy (Parsonage-Turner)"],"neuro","Plexus","neuropathy");
+// Neuromuscular diseases
+plainList(["Myasthenia gravis (exercise management)","Lambert-Eaton myasthenic syndrome","Duchenne muscular dystrophy (reconditioning)",
+ "Becker muscular dystrophy (reconditioning)","Limb-girdle muscular dystrophy","Facioscapulohumeral muscular dystrophy","Myotonic dystrophy",
+ "Oculopharyngeal muscular dystrophy","Emery-Dreifuss muscular dystrophy","Congenital myopathy (reconditioning)","Mitochondrial myopathy",
+ "Inclusion body myositis","Spinal muscular atrophy (adult)","Kennedy's disease","Primary lateral sclerosis","Progressive muscular atrophy"],"neuro","Neuromuscular","balance_neuro",{chronic:true});
+// Movement disorders
+plainList(["Essential tremor (functional training)","Cervical dystonia","Blepharospasm (functional)","Writer's cramp (task-specific)",
+ "Hemifacial spasm (functional)","Chorea (functional balance)","Myoclonus (functional)","Tardive dyskinesia (reconditioning)",
+ "Restless legs syndrome (exercise)","Tourette / tic reconditioning","Multiple system atrophy","Corticobasal degeneration"],"neuro","Movement disorder","balance_neuro",{chronic:true});
+// Neuropathy subtypes
+plainList(["Multifocal motor neuropathy","Vasculitic neuropathy","Alcoholic neuropathy","B12-deficiency neuropathy","Uremic neuropathy",
+ "Paraneoplastic neuropathy","Hereditary sensory-autonomic neuropathy","Amyloid neuropathy","Critical illness neuropathy/myopathy",
+ "Post-surgical nerve injury reconditioning","Radiation neuropathy"],"neuro","Peripheral nerve","neuropathy");
+// Ataxia / cerebellar / other
+plainList(["Friedreich's ataxia","Spinocerebellar ataxia","Sensory ataxia (proprioceptive)","Acquired cerebellar ataxia",
+ "Normal pressure hydrocephalus (gait)","Arnold-Chiari malformation (reconditioning)","Spina bifida (adult reconditioning)",
+ "Post-encephalitis reconditioning","Post-meningitis reconditioning","Wilson's disease (motor reconditioning)"],"neuro","CNS","balance_neuro",{chronic:true});
+// Vestibular / concussion subtypes
+plainList(["Post-traumatic vertigo","Superior canal dehiscence (post-op balance)","Cervicogenic dizziness","Mal de debarquement syndrome",
+ "Ocular vestibular dysfunction","Post-concussion cervical dysfunction","Post-concussion visual/vestibular dysfunction"],"neuro","Vestibular","vestibular");
+
+/* ==================== CARDIAC — mega expansion ==================== */
+plainList(["Tetralogy of Fallot (repaired, adult)","Atrial septal defect (repaired)","Ventricular septal defect (repaired)",
+ "Coarctation of the aorta (repaired)","Ebstein anomaly (reconditioning)","Transposition (post arterial switch)","Fontan circulation (exercise)",
+ "Patent ductus arteriosus (repaired)","Bicuspid aortic valve (stable)"],"cardiac","Congenital heart","cardiac_rehab");
+plainList(["Restrictive cardiomyopathy","Arrhythmogenic right ventricular cardiomyopathy (cleared)","Peripartum cardiomyopathy recovery",
+ "Takotsubo (stress) cardiomyopathy recovery","Non-obstructive hypertrophic cardiomyopathy (cleared)","Ischemic cardiomyopathy","Alcoholic cardiomyopathy",
+ "Chemotherapy-induced cardiomyopathy"],"cardiac","Heart muscle","heart_failure",{chronic:true});
+plainList(["Aortic stenosis (stable)","Aortic regurgitation (stable)","Mitral stenosis (stable)","Mitral regurgitation (stable)",
+ "Mitral valve prolapse","Tricuspid regurgitation (stable)","Pulmonary valve stenosis (stable)","Post-mitral-clip recovery"],"cardiac","Heart valve","valve");
+plainList(["Paroxysmal atrial fibrillation","Persistent atrial fibrillation","Permanent atrial fibrillation (rate-controlled)","Atrial flutter",
+ "AVNRT (reconditioning)","Wolff-Parkinson-White (post-ablation)","Atrial tachycardia","Ventricular tachycardia (ICD, cleared)",
+ "Frequent PVCs (reconditioning)","First-degree AV block","Second-degree AV block (Mobitz I)","Sick sinus syndrome (paced)","Long QT syndrome (cleared)"],"cardiac","Rhythm","arrhythmia");
+plainList(["Abdominal aortic aneurysm (post-repair)","Thoracic aortic aneurysm (post-repair)","Aortic dissection recovery",
+ "Carotid endarterectomy recovery","Raynaud's phenomenon (exercise)","Buerger's disease (thromboangiitis obliterans)","Giant cell arteritis (reconditioning)",
+ "Takayasu arteritis (reconditioning)","Post-varicose-vein-procedure reconditioning","Post-endovascular-repair reconditioning"],"cardiac","Vascular","pad");
+
+/* ==================== PULMONARY — mega expansion ==================== */
+plainList(["Non-specific interstitial pneumonia (NSIP)","Usual interstitial pneumonia (UIP)","Hypersensitivity pneumonitis","Connective-tissue-disease ILD",
+ "Drug-induced interstitial lung disease","Radiation pneumonitis (reconditioning)"],"pulmonary","Interstitial lung","ild",{chronic:true});
+plainList(["Asbestosis","Silicosis","Coal workers' pneumoconiosis","Berylliosis","Byssinosis","Farmer's lung"],"pulmonary","Occupational lung","ild",{chronic:true});
+plainList(["Bronchiolitis obliterans","Primary ciliary dyskinesia","Alpha-1 antitrypsin emphysema","Non-CF bronchiectasis"],"pulmonary","Airways","pulmonary_rehab",{chronic:true});
+plainList(["Post-pleural-effusion recovery","Post-pneumothorax recovery","Post-empyema recovery","Post-pleurodesis recovery","Mesothelioma (reconditioning)"],"pulmonary","Pleura","thoracic_surgery");
+plainList(["Pulmonary embolism recovery","Chronic thromboembolic pulmonary hypertension","Post-ARDS recovery","Ventilator-weaning reconditioning",
+ "Post-tuberculosis lung reconditioning","Post-influenza pneumonia recovery"],"pulmonary","Lungs","post_covid");
+plainList(["Diaphragmatic weakness (reconditioning)","Phrenic nerve palsy (breathing)","Neuromuscular respiratory weakness","Obesity-related restrictive lung",
+ "Kyphoscoliosis-related restrictive lung","Pectus excavatum (post-op reconditioning)","Chest-wall deformity reconditioning"],"pulmonary","Chest wall / respiratory muscle","thoracic_surgery");
+
 /* ==================== Defensible top-up to reach target breadth ====================
    Clinical presentation stratifications genuinely change program tuning
    (return-to-sport load, work ergonomics, older-adult bone/fall caution).
    Applied only to primary MSK conditions, only until the target is reached. */
-const TARGET = 2000;
+const TARGET = 6000;
 const PRESENTATIONS = [
   ["return-to-sport focus", {}],
   ["return-to-work / ergonomic focus", {}],
   ["older adult (bone & fall aware)", { autoExtra:["osteoporosis","balance_risk"] }],
-  ["post-immobilization reconditioning", {}]
+  ["post-immobilization reconditioning", {}],
+  ["home-based (minimal equipment)", {}],
+  ["gym-based progression", {}],
+  ["hypermobility-aware", {}],
+  ["high-irritability / pain-dominant", {}],
+  ["deconditioned / low fitness", {}],
+  ["athlete / high-performance", {}]
 ];
 const primaryMSK = out.filter(c =>
-  c.domain === "msk" && !c.chronicByNature &&
-  !/grade|recovery|replacement|amputation|fracture|repair|reconstruction|—|at [CTL]\d/i.test(c.name));
+  c.domain === "msk" &&
+  !/ — |grade|recovery|replacement|amputation|fracture|repair|reconstruction|dislocation|at [CTL]\d/i.test(c.name));
 outer:
 for (const [label, opt] of PRESENTATIONS) {
   for (const base of primaryMSK) {
