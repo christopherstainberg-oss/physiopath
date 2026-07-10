@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#0f1720" />
+<meta name="description" content="PhysioPath — personalized, contraindication-aware injury recovery programs across musculoskeletal, neurological, cardiac and pulmonary rehabilitation." />
+<title>PhysioPath — Injury Recovery Program Builder</title>
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="PhysioPath" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<header class="app">
+  <div class="logo">✚</div>
+  <div class="brand">
+    <div class="brandname">PhysioPath</div>
+    <div class="brandsub">Personalized injury recovery</div>
+  </div>
+  <div class="grow"></div>
+  <button class="icon-btn no-print" id="installBtn" title="Install app" hidden>⬇ Install</button>
+  <button class="icon-btn no-print" id="printBtn" title="Print / Save PDF">🖨</button>
+  <button class="icon-btn no-print" id="resetBtn" title="Start over">↺</button>
+</header>
+
+<!-- step progress -->
+<nav class="steps no-print" id="steps">
+  <button class="step" data-step="0"><i>1</i><span>History</span></button>
+  <button class="step" data-step="1"><i>2</i><span>Injury</span></button>
+  <button class="step" data-step="2"><i>3</i><span>Details</span></button>
+  <button class="step" data-step="3"><i>4</i><span>Program</span></button>
+  <button class="step" data-step="4"><i>5</i><span>Coach</span></button>
+</nav>
+
+<main class="wrap">
+  <div class="disclaimer no-print">
+    <span class="ico">⚠️</span>
+    <div><b>Educational tool — not medical advice.</b> PhysioPath gives general, evidence-informed guidance and
+    cannot diagnose you or replace a licensed clinician. Get a professional evaluation before starting —
+    especially after surgery, a fracture, or with heart, lung, or neurological conditions. Stop any exercise
+    that causes sharp, spreading, or worsening symptoms and seek care.</div>
+  </div>
+
+  <!-- ============ STEP 0: MEDICAL HISTORY ============ -->
+  <section class="panel" id="panel-0">
+    <div class="card">
+      <h2>Medical history</h2>
+      <p class="hint">We ask this <b>first</b> so your program respects any medical precautions
+        (contraindications). Nothing is uploaded — it stays on your device.</p>
+
+      <div class="grid2">
+        <label class="field"><span class="lab">Age</span>
+          <input type="number" id="q_age" min="1" max="120" placeholder="years" /></label>
+        <label class="field"><span class="lab">Sex <span class="sub">(for pregnancy-related guidance)</span></span>
+          <select id="q_sex"><option value="">Prefer not to say</option><option>Female</option><option>Male</option><option>Other</option></select></label>
+      </div>
+
+      <div class="field">
+        <span class="lab">Do any of these apply to you? <span class="sub">(tap all that apply — this tailors your safety limits)</span></span>
+        <div class="checks" id="historyChecks"></div>
+      </div>
+
+      <div class="field parq">
+        <span class="lab">Quick safety screen</span>
+        <label class="check-row"><input type="checkbox" id="parq_pain" />
+          <span>I sometimes get <b>chest pain, pressure, or unusual breathlessness</b> with exertion.</span></label>
+        <label class="check-row"><input type="checkbox" id="parq_faint" />
+          <span>I have <b>fainted or felt very dizzy</b> during or after exercise.</span></label>
+        <label class="check-row"><input type="checkbox" id="parq_doc" />
+          <span>A doctor has told me to <b>only exercise under supervision</b>.</span></label>
+      </div>
+
+      <label class="field"><span class="lab">Medications <span class="sub">(optional)</span></span>
+        <input type="text" id="q_meds" placeholder="e.g. beta-blocker, blood thinner, inhaler" /></label>
+      <label class="field"><span class="lab">Anything else we should know? <span class="sub">(optional)</span></span>
+        <textarea id="q_notes" placeholder="Other conditions, symptoms, what makes things better or worse…"></textarea></label>
+
+      <div class="rowbtns">
+        <span></span>
+        <button class="btn primary" data-goto="1">Next: choose your injury →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STEP 1: INJURY SELECTION ============ -->
+  <section class="panel hide" id="panel-1">
+    <div class="card">
+      <h2>Find your injury or condition</h2>
+      <p class="hint">Search our catalog of <b id="catCount">2000</b> conditions across
+        <span class="tag msk">musculoskeletal</span> <span class="tag neuro">neurological</span>
+        <span class="tag cardiac">cardiac</span> <span class="tag pulm">pulmonary</span>. Pick one or more.</p>
+
+      <div class="searchbar">
+        <input type="text" id="condSearch" placeholder="Search e.g. ‘rotator cuff’, ‘ACL’, ‘COPD’, ‘stroke’, ‘low back’…" autocomplete="off" />
+        <div class="filters" id="domainFilters">
+          <button class="fchip on" data-d="all">All</button>
+          <button class="fchip" data-d="msk">MSK</button>
+          <button class="fchip" data-d="neuro">Neuro</button>
+          <button class="fchip" data-d="cardiac">Cardiac</button>
+          <button class="fchip" data-d="pulmonary">Pulmonary</button>
+        </div>
+      </div>
+
+      <div class="selected" id="selectedConds"></div>
+      <div class="results" id="condResults"></div>
+
+      <div class="rowbtns">
+        <button class="btn ghost" data-goto="0">← Back</button>
+        <button class="btn primary" data-goto="2" id="toDetails">Next: injury details →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STEP 2: DETAILS ============ -->
+  <section class="panel hide" id="panel-2">
+    <div class="card">
+      <h2>About your injury</h2>
+      <p class="hint">This sets your <b>acuteness</b> and how hard we start you.</p>
+
+      <div class="grid2">
+        <label class="field"><span class="lab">How long ago did it start? <span class="sub">(weeks)</span></span>
+          <input type="number" id="weeksSince" min="0" max="600" placeholder="e.g. 2" />
+          <div class="acuteLabel" id="acuteLabel"></div>
+        </label>
+        <label class="field"><span class="lab">Was there surgery for it?</span>
+          <select id="surgery"><option value="no">No</option><option value="yes">Yes — post-surgical</option></select>
+        </label>
+      </div>
+
+      <div class="grid2">
+        <label class="field"><span class="lab">Pain at rest <span class="sub">0–10</span></span>
+          <div class="rangewrap"><input type="range" id="painLevel" min="0" max="10" value="3" /><span class="rangeval" id="painVal">3</span></div>
+        </label>
+        <label class="field"><span class="lab">Pain during movement <span class="sub">0–10</span></span>
+          <div class="rangewrap"><input type="range" id="painMove" min="0" max="10" value="4" /><span class="rangeval" id="painMoveVal">4</span></div>
+        </label>
+      </div>
+
+      <div class="grid2">
+        <label class="field"><span class="lab">Current activity level</span>
+          <select id="fitness"><option value="low">Mostly sedentary</option><option value="mod" selected>Moderately active</option><option value="high">Very active / athlete</option></select>
+        </label>
+        <label class="field"><span class="lab">Recovery goal <span class="sub">(optional)</span></span>
+          <input type="text" id="goal" placeholder="e.g. return to running, lift my kids pain-free" />
+        </label>
+      </div>
+
+      <div class="rowbtns">
+        <button class="btn ghost" data-goto="1">← Back</button>
+        <button class="btn primary" id="generateBtn">Generate my program →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STEP 3: PROGRAM ============ -->
+  <section class="panel hide" id="panel-3">
+    <div id="programOut">
+      <div class="card empty"><div class="big">🗓️</div>
+        <div>No program yet — complete the earlier steps and generate.</div></div>
+    </div>
+    <div class="rowbtns no-print">
+      <button class="btn ghost" data-goto="2">← Adjust details</button>
+      <button class="btn primary" data-goto="4">Ask the AI Coach →</button>
+    </div>
+  </section>
+
+  <!-- ============ STEP 4: COACH ============ -->
+  <section class="panel hide" id="panel-4">
+    <div class="card">
+      <h2>AI Recovery Coach</h2>
+      <p class="hint">Ask about pain, swelling, ice vs heat, how hard to push, your medical precautions,
+        when to see a doctor, nutrition, sleep, or motivation. It knows your conditions and program.</p>
+      <div class="chatlog" id="chatlog"></div>
+      <div class="suggests" id="suggests"></div>
+      <form class="chatform" id="chatform">
+        <input type="text" id="chatInput" placeholder="Type your question…" autocomplete="off" />
+        <button class="btn primary" type="submit">Send</button>
+      </form>
+    </div>
+    <div class="rowbtns no-print"><button class="btn ghost" data-goto="3">← Back to program</button><span></span></div>
+  </section>
+
+  <footer>
+    PhysioPath runs entirely on your device — nothing is uploaded. · Educational recovery aid, not a medical device.<br>
+    <b>Seek urgent care</b> for chest pain, severe breathlessness, fainting, sudden weakness/numbness, loss of bladder or bowel control, or a hot swollen joint with fever.
+  </footer>
+</main>
+
+<script src="data/conditions.js"></script>
+<script src="data/protocols.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

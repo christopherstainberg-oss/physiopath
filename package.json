@@ -1,0 +1,15 @@
+{
+  "name": "physiopath",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PhysioPath — personalized, contraindication-aware injury recovery programs (MSK, neuro, cardiac, pulmonary) as an installable PWA.",
+  "type": "module",
+  "scripts": {
+    "gen:conditions": "node scripts/generate-conditions.mjs",
+    "gen:icons": "node scripts/generate-icons.mjs",
+    "build": "node scripts/build.mjs",
+    "serve": "node scripts/serve.mjs",
+    "dev": "node scripts/serve.mjs"
+  },
+  "license": "MIT"
+}
