@@ -1,0 +1,19 @@
+# PhysioPath — Portainer Stack / Docker Compose
+# Paste this into Portainer → Stacks → Add stack (Web editor), or run:
+#   docker compose up -d
+#
+# The image is published to GitHub Container Registry by the repo's
+# "Publish Docker image to GHCR" workflow on every push to main.
+services:
+  physiopath:
+    image: ghcr.io/christopherstainberg-oss/physiopath:latest
+    container_name: physiopath
+    ports:
+      - "8080:80"          # host:container — browse at http://<host-ip>:8080
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s

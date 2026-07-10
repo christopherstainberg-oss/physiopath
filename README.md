@@ -38,40 +38,52 @@ npm run build     # regenerates data/conditions.js + icons, assembles ./dist
 - `scripts/generate-icons.mjs` — generates PNG app icons.
 - `data/protocols.js` — the 32 rehab protocols + contraindication rules engine (hand-authored).
 
-## Deploy to Cloudflare Pages (auto-deploy)
+## Deploy with Docker / Portainer (GHCR)
 
-Two supported paths — pick one:
+The app ships as a small nginx container. On every push to `main`, GitHub Actions
+(`.github/workflows/docker-publish.yml`) builds the image and publishes it to the
+**GitHub Container Registry** at `ghcr.io/christopherstainberg-oss/physiopath:latest`.
 
-### Option A — Dashboard Git integration (recommended, zero secrets)
-1. Push this repo to GitHub (already done if you're reading this there).
-2. Cloudflare dashboard → **Workers & Pages → Create → Pages → Connect to Git** → pick this repo.
-3. Build settings:
-   - **Build command:** `npm run build`
-   - **Build output directory:** `dist`
-4. Save & Deploy. Cloudflare now **auto-deploys on every push to `main`**.
+### Run locally
+```bash
+docker compose up -d          # → http://localhost:8080
+# or build from source:
+docker build -t physiopath . && docker run -d -p 8080:80 physiopath
+```
 
-### Option B — GitHub Actions (already wired in `.github/workflows/deploy.yml`)
-Add two repository secrets (GitHub → Settings → Secrets and variables → Actions):
-- `CLOUDFLARE_API_TOKEN` — a token with the **Cloudflare Pages: Edit** permission.
-- `CLOUDFLARE_ACCOUNT_ID` — from your Cloudflare dashboard URL / account home.
+### Portainer Stack
+1. In Portainer: **Stacks → Add stack → Web editor**.
+2. Paste the contents of [`docker-compose.yml`](docker-compose.yml) (or point it at this repo).
+3. **Deploy the stack.** Browse to `http://<host-ip>:8080` (change the `8080:80` port map as needed).
+4. **Updates:** re-pull the image and redeploy the stack (Portainer → the stack → *Update / Re-pull*),
+   or add [Watchtower](https://containrrr.dev/watchtower/) to auto-update when a new `:latest` is pushed.
 
-Every push to `main` then builds and runs `wrangler pages deploy dist --project-name=physiopath`.
+> **GHCR image visibility:** the package is private by default. Either make it public
+> (GitHub → your profile → **Packages → physiopath → Package settings → Change visibility → Public**),
+> **or** add registry credentials in Portainer (**Registries → Add registry → Custom**,
+> URL `ghcr.io`, username = your GitHub username, password = a PAT with `read:packages`).
 
-> You only need **one** of the two. Option A is simplest; Option B keeps deploys inside GitHub Actions.
+### Alternative: Cloudflare Pages / any static host
+It's still a plain static site — the built `dist/` (or the repo root) can be served by
+Cloudflare Pages, Netlify, GitHub Pages, etc. Build command `npm run build`, output `dist`.
 
 ## Project structure
 
 ```
 index.html            app shell (loads data + app)
 styles.css            mobile-first, theme-aware styles
-app.js                wizard flow, program generation, coach
-data/conditions.js    generated 2,000-condition catalog
+app.js                wizard flow, program generation, coach, library, explanations
+data/conditions.js    generated 10,000-condition catalog
+data/exercises.js     generated 5,000-exercise library
 data/protocols.js     rehab protocols + contraindication engine
 manifest.webmanifest  PWA manifest
 sw.js                 offline service worker
 icons/                app icons (svg + png)
 scripts/              generators, static server, build
-.github/workflows/    Cloudflare Pages auto-deploy
+Dockerfile            multi-stage build → nginx static image
+nginx.conf            static-serve config (PWA MIME, caching, headers)
+docker-compose.yml    Portainer Stack / local run
+.github/workflows/    GHCR image publish
 ```
 
 ## License
