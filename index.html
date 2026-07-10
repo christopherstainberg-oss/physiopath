@@ -35,6 +35,7 @@
   <button class="step" data-step="3"><i>4</i><span>Program</span></button>
   <button class="step" data-step="4"><i>5</i><span>Progress</span></button>
   <button class="step" data-step="5"><i>6</i><span>Coach</span></button>
+  <button class="step" data-step="6"><i>7</i><span>Library</span></button>
 </nav>
 
 <main class="wrap">
@@ -248,7 +249,33 @@
         <button class="btn primary" type="submit">Send</button>
       </form>
     </div>
-    <div class="rowbtns no-print"><button class="btn ghost" data-goto="4">← Back to progress</button><span></span></div>
+    <div class="rowbtns no-print"><button class="btn ghost" data-goto="4">← Back to progress</button>
+      <button class="btn primary" data-goto="6">Browse exercise library →</button></div>
+  </section>
+
+  <!-- ============ STEP 6: EXERCISE LIBRARY ============ -->
+  <section class="panel hide" id="panel-6">
+    <div class="card">
+      <h2>Exercise library</h2>
+      <p class="hint">Browse <b id="exCount">5000</b> exercises and variations (load, tempo, stance,
+        surface, equipment). Filter by body area and level. <span id="exSafeNote"></span></p>
+      <div class="searchbar">
+        <input type="text" id="exSearch" placeholder="Search e.g. ‘single-leg squat’, ‘band row’, ‘balance’, ‘eccentric’…" autocomplete="off" />
+        <div class="filters">
+          <select id="exRegion"><option value="all">All body areas</option></select>
+          <select id="exDiff">
+            <option value="all">All levels</option>
+            <option value="1">Level 1 · gentle / early</option>
+            <option value="2">Level 2 · foundational</option>
+            <option value="3">Level 3 · strengthening</option>
+            <option value="4">Level 4 · advanced / return</option>
+          </select>
+          <label class="safechk"><input type="checkbox" id="exSafe" /> Respect my precautions</label>
+        </div>
+      </div>
+      <div class="results" id="exResults"></div>
+    </div>
+    <div class="rowbtns no-print"><button class="btn ghost" data-goto="3">← Back to program</button><span></span></div>
   </section>
 
   <footer>
@@ -259,6 +286,7 @@
 
 <script src="data/conditions.js"></script>
 <script src="data/protocols.js"></script>
+<script src="data/exercises.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

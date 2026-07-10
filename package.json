@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "gen:conditions": "node scripts/generate-conditions.mjs",
+    "gen:exercises": "node scripts/generate-exercises.mjs",
     "gen:icons": "node scripts/generate-icons.mjs",
     "build": "node scripts/build.mjs",
     "serve": "node scripts/serve.mjs",

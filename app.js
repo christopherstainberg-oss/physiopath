@@ -128,6 +128,43 @@ function loadGuidance(){
   return "You can load with confidence. Progress ~10% per week while pain stays low and settles overnight.";
 }
 
+/* ---------- exercise library integration ---------- */
+const LIB_REGION = {
+  shoulder:["Shoulder","Scapula/Upper back"], shoulder_instability:["Shoulder","Scapula/Upper back"],
+  elbow:["Elbow","Forearm"], wrist_hand:["Wrist / Hand","Forearm"],
+  hip:["Hip","Glute","Core"], hip_replacement:["Hip","Glute","Core"],
+  knee_ligament:["Knee","Hip","Ankle"], knee_pf:["Knee","Hip"], knee_meniscus:["Knee","Hip"], knee_replacement:["Knee","Hip"],
+  ankle:["Ankle","Calf","Balance"], achilles:["Ankle","Calf"], foot:["Foot","Ankle","Calf"],
+  cervical:["Neck","Scapula/Upper back"], radiculopathy_cervical:["Neck","Scapula/Upper back"],
+  thoracic:["Thoracic/Upper back","Scapula/Upper back","Core"],
+  lumbar:["Core","Hip","Spine"], radiculopathy_lumbar:["Core","Hip","Spine"], sacroiliac:["Core","Hip","Spine"],
+  fracture_ue:["Shoulder","Elbow","Wrist / Hand","Forearm"], amputation_ue:["Shoulder","Elbow","Wrist / Hand","Forearm"],
+  fracture_le:["Hip","Knee","Ankle","Foot","Calf"], amputation_le:["Hip","Knee","Ankle","Balance"],
+  tmj:["Neck"], general_msk:["Full body","Core","Hip"],
+  stroke:["Balance","Gait","Core"], tbi:["Balance","Gait","Core"], sci:["Core","Balance","Full body"],
+  ms:["Balance","Core","Cardio"], parkinsons:["Balance","Gait","Full body"], balance_neuro:["Balance","Gait","Core"], guillain_barre:["Balance","Core","Full body"],
+  neuropathy:["Balance","Foot","Ankle"], vestibular:["Vestibular","Balance"], bells_palsy:["Neck"],
+  cardiac_rehab:["Cardio","Full body"], heart_failure:["Cardio","Full body"], hypertension:["Cardio","Full body"],
+  pad:["Cardio","Knee","Hip"], valve:["Cardio","Breathing"], arrhythmia:["Cardio","Full body"],
+  pulmonary_rehab:["Cardio","Breathing","Core"], asthma:["Cardio","Breathing"], post_covid:["Cardio","Breathing","Balance"],
+  ild:["Cardio","Breathing"], thoracic_surgery:["Breathing","Scapula/Upper back","Cardio"], pulm_hypertension:["Cardio","Breathing"]
+};
+function hashStr(s){ let h=0; for(let i=0;i<s.length;i++){ h=(h*31+s.charCodeAt(i))|0; } return h; }
+/* Contraindication-filtered library variations for a condition's region & phase. */
+function exercisesFor(protocol, phaseIdx, flags, exclude){
+  if(!window.EXERCISES) return [];
+  const regions = LIB_REGION[protocol] || LIB_REGION[(window.PROTOCOL_ALIAS||{})[protocol]] || ["Full body","Core"];
+  const rset = new Set(regions);
+  const bucket = phaseIdx+1;                      // 1..4
+  const allowed = new Set([bucket]); if(bucket>1) allowed.add(bucket-1);
+  const exSet = new Set((exclude||[]).map(n=>n.toLowerCase()));
+  const pool = window.EXERCISES.filter(e =>
+    e.region.some(r=>rset.has(r)) && allowed.has(e.difficulty) && !exSet.has(e.name.toLowerCase()));
+  const { kept } = window.applyContra(pool, flags);
+  kept.sort((a,b)=> hashStr(a.name+phaseIdx) - hashStr(b.name+phaseIdx));
+  return kept.slice(0,6).map(e=>({ n:e.name, d:e.dose, c:e.cue, warn:e.warn }));
+}
+
 /* ---------- build the program ---------- */
 function generateProgram(){
   const conds = selectedConditions();
@@ -148,7 +185,7 @@ function generateProgram(){
       return { title:tmpl.phases[p].title, goal:tmpl.phases[p].goal, weekStart:wkStart, weekEnd:wkEnd, ex:kept };
     });
     return { name:c.name, domain:c.domain, region:c.region, supervision:c.supervision, phases,
-      about:aboutText(c, track), redflags:DOMAIN_REDFLAGS[c.domain] };
+      protocol:c.protocol, about:aboutText(c, track), redflags:DOMAIN_REDFLAGS[c.domain] };
   });
 
   return {
@@ -170,6 +207,20 @@ const TAG_LABEL = {
   end_range_neck:"end-range neck movement", weight_bearing:"full weight-bearing", grip_isometric:"sustained grip/isometric holds",
   breath_hold:"breath-holding", aerobic:"sustained aerobic effort"
 };
+
+/* Collapsible "more variations from the library" block for a phase. */
+function variationsBlock(protocol, phaseIdx, flags, exclude){
+  const vars = exercisesFor(protocol, phaseIdx, flags, exclude);
+  if(!vars.length) return "";
+  const items = vars.map(v=>`
+    <li class="exitem">
+      <div class="top"><span class="en">${esc(v.n)}</span><span class="ed">${esc(v.d)}</span></div>
+      <div class="ec">${esc(v.c)}</div>
+      ${v.warn?`<span class="warnpill">⚠ Modify — involves ${esc(TAG_LABEL[v.warn]||v.warn)}; keep it symptom-free.</span>`:""}
+    </li>`).join("");
+  return `<button class="varbtn" onclick="this.nextElementSibling.classList.toggle('hide')">⇄ Swap it up — ${vars.length} more variations from the library</button>
+    <ul class="exlist varlist hide">${items}</ul>`;
+}
 
 /* ---------- render program ---------- */
 function renderProgram(prog){
@@ -230,6 +281,7 @@ function renderProgram(prog){
           <div class="caret">▾</div>
         </div>
         <div class="body"><ul class="exlist">${rows}</ul>
+          ${variationsBlock(item.protocol, i, prog.flags, ph.ex.map(e=>e.n))}
           <div class="freq">Advance when this phase feels controlled and symptoms are low & stable — the weeks are a guide, not a rule.</div>
         </div></div>`;
     });
@@ -342,6 +394,7 @@ function goStep(n){
   window.scrollTo({top:0,behavior:"smooth"});
   if(n===4) renderProgress();
   if(n===5) initCoach();
+  if(n===6) initLibrary();
 }
 
 /* ---------- history UI ---------- */
@@ -635,17 +688,72 @@ async function askClaude(q){
   }
 }
 
+/* =====================================================================
+   EXERCISE LIBRARY BROWSER
+===================================================================== */
+const DIFF_LABEL = { 1:"L1", 2:"L2", 3:"L3", 4:"L4" };
+let libReady = false;
+function initLibrary(){
+  if(!window.EXERCISES) return;
+  $("#exCount").textContent = window.EXERCISES.length;
+  if(!libReady){
+    libReady = true;
+    const regions = [...new Set(window.EXERCISES.flatMap(e=>e.region))].sort();
+    const sel = $("#exRegion");
+    regions.forEach(r=>{ const o=document.createElement("option"); o.value=r; o.textContent=r; sel.appendChild(o); });
+    let t; $("#exSearch").oninput=()=>{ clearTimeout(t); t=setTimeout(renderExResults,120); };
+    $("#exRegion").onchange=renderExResults;
+    $("#exDiff").onchange=renderExResults;
+    $("#exSafe").onchange=renderExResults;
+    // default: respect precautions if any are active
+    if(gatherFlags().length){ $("#exSafe").checked=true; }
+  }
+  const flags = gatherFlags();
+  $("#exSafeNote").innerHTML = flags.length
+    ? `Tick <b>“Respect my precautions”</b> to hide exercises unsafe for your history.`
+    : `No precautions flagged from your history.`;
+  renderExResults();
+}
+function renderExResults(){
+  const q = $("#exSearch").value.trim().toLowerCase();
+  const toks = q.split(/\s+/).filter(Boolean);
+  const region = $("#exRegion").value, diff = $("#exDiff").value;
+  const safe = $("#exSafe").checked;
+  let list = window.EXERCISES;
+  if(region!=="all") list = list.filter(e=>e.region.includes(region));
+  if(diff!=="all") list = list.filter(e=>e.difficulty === +diff);
+  if(toks.length) list = list.filter(e=>{ const hay=(e.name+" "+e.region.join(" ")+" "+e.equipment+" "+e.pattern).toLowerCase();
+    return toks.every(t=>hay.includes(t)); });
+  let annotate = new Map();
+  if(safe){
+    const flags = gatherFlags();
+    const { kept } = window.applyContra(list, flags);
+    kept.forEach(e=>{ if(e.warn) annotate.set(e.id, e.warn); });
+    list = kept;
+  }
+  const total = list.length; list = list.slice(0,80);
+  const res = $("#exResults");
+  if(!list.length){ res.innerHTML=`<div class="moreinfo">No matches. Try a simpler term or clear the filters.</div>`; return; }
+  res.innerHTML = list.map(e=>{ const w=annotate.get(e.id);
+    return `<div class="exrow">
+      <span class="diffpill d${e.difficulty}">${DIFF_LABEL[e.difficulty]}</span>
+      <span class="en">${esc(e.name)}<span class="er">${esc(e.region.join(" · "))} · ${esc(e.equipment)}</span>
+        ${w?`<span class="exwarn">⚠ Modify — ${esc(TAG_LABEL[w]||w)}</span>`:""}</span>
+      <span class="ed">${esc(e.dose)}</span></div>`; }).join("") +
+    (total>80?`<div class="moreinfo">Showing 80 of ${total} matches — refine to narrow it down.</div>`:"");
+}
+
 /* ---------- boot ---------- */
 document.addEventListener("DOMContentLoaded",()=>{
   load();
   initHistory(); initSearch(); initDetails(); initInstall(); initProgress(); initCoachSettings();
   $$("[data-goto]").forEach(b=>b.onclick=()=>{
     const n=+b.dataset.goto;
-    if(n>=2 && !state.condIds.length){ toast("Pick at least one condition first."); goStep(1); return; }
+    if([2,3,4].includes(n) && !state.condIds.length){ toast("Pick at least one condition first."); goStep(1); return; }
     goStep(n);
   });
   $$(".step").forEach(s=>s.onclick=()=>{ const n=+s.dataset.step;
-    if(n>=2 && !state.condIds.length){ toast("Pick a condition first."); goStep(1); return; }
+    if([2,3,4].includes(n) && !state.condIds.length){ toast("Pick a condition first."); goStep(1); return; }
     goStep(n); });
   $("#generateBtn").onclick=doGenerate;
   $("#printBtn").onclick=()=>window.print();
