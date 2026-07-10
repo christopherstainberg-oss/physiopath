@@ -962,7 +962,7 @@ function suggestionsCard(prog){
   if(domains.has("pulmonary")) base.push("<b>Breathing:</b> pace exercise with pursed-lip breathing, rest when breathless, and use prescribed oxygen. Breathlessness is expected — dizziness or chest pain is not.");
   if(domains.has("neuro")) base.push("<b>Neurological recovery:</b> repetition and specificity drive change. Practice the actual movements you want back, safely and often, near support.");
   return `<div class="card"><h2>Suggestions for your recovery</h2><ul class="tips">${base.map(t=>`<li>${t}</li>`).join("")}</ul>
-    <p class="hint" style="margin-top:8px">Questions about any of this? Open the <b>AI Coach</b> tab.</p></div>`;
+    <p class="hint" style="margin-top:8px">Questions about any of this? Ask <b>Jeffery</b> in the <b>AI</b> tab.</p></div>`;
 }
 
 /* =====================================================================
@@ -1028,7 +1028,7 @@ function initCoach(){
   const conds=selectedConditions();
   const intro = conds.length ? `I can see you're working on: **${conds.map(c=>c.name).join(", ")}**. ` : "";
   const mode = coachOnline() ? " (Claude API connected)" : "";
-  addMsg(`Hi! I'm your recovery coach${mode}. ${intro}Ask me anything about your recovery, program, or medical precautions.`, "bot");
+  addMsg(`Hi, I'm Jeffery, your AI physical therapist${mode}. ${intro}Ask me anything about your recovery, program, or medical precautions.`, "bot");
   const sug=$("#suggests"); sug.innerHTML="";
   SUGGESTED.forEach(s=>{ const c=document.createElement("div"); c.className="s"; c.textContent=s;
     c.onclick=()=>{ $("#chatInput").value=s; $("#chatform").requestSubmit(); }; sug.appendChild(c); });
@@ -1329,7 +1329,7 @@ function initCoachSettings(){
     state.apiKey = $("#apiKey").value.trim();
     state.apiModel = $("#apiModel").value;
     save(); updateCoachMode(); $("#coachSettings").classList.add("hide");
-    toast(coachOnline() ? "Claude API connected." : "Key cleared — using offline coach.");
+    toast(coachOnline() ? "Claude API connected." : "Key cleared — using Jeffery's offline mode.");
   };
   $("#clearKeyBtn").onclick = ()=>{
     state.apiKey=""; $("#apiKey").value=""; save(); updateCoachMode();
@@ -1342,7 +1342,7 @@ function buildCoachSystem(){
   const p = state.program;
   const precautions = (p ? p.notes : window.notesForFlags(gatherFlags())).join(" | ") || "none flagged";
   const prog = p ? `${p.totalWeeks}-week ${p.track} program; supervision ${p.supervision}; clearance needed: ${p.clearance}` : "not generated yet";
-  return `You are PhysioPath's recovery coach, giving general, evidence-informed physical-rehabilitation guidance inside an educational app.
+  return `You are Jeffery, PhysioPath's AI physical therapist — an educational assistant giving general, evidence-informed physical-rehabilitation guidance. You are an AI, not a licensed clinician, and must not diagnose or replace in-person care.
 
 USER CONTEXT
 - Conditions: ${conds}
@@ -1393,7 +1393,7 @@ async function askClaude(q){
   }catch(err){
     typing.remove();
     chatHistory.pop();  // drop the unanswered user turn to keep history valid
-    addMsg("⚠ Couldn't reach the Claude API ("+err.message+"). Here's the offline coach instead:\n\n"+coachAnswer(q),"bot");
+    addMsg("⚠ Couldn't reach the Claude API ("+err.message+"). Here's Jeffery's offline answer instead:\n\n"+coachAnswer(q),"bot");
   }
 }
 
