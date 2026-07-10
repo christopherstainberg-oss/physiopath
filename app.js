@@ -244,8 +244,9 @@ const state = {
   step:0, age:"", sex:"", flags:[], parq:{pain:false,faint:false,doc:false},
   meds:"", notes:"", condIds:[], weeks:null, painRest:3, painMove:4, surgery:"no",
   surgeryType:"auto", surgeryDate:"", fitness:"mod", goal:"", program:null,
-  medIds:[], customPrecautions:[], log:[], apiKey:"", apiModel:"claude-opus-4-8"
+  medIds:[], medFilter:false, customPrecautions:[], log:[], apiKey:"", apiModel:"claude-opus-4-8"
 };
+const MED_FILTERABLE = ["fluoroquinolone","anticoagulant","antiplatelet","opioid","sedative","muscle_relaxant","gabapentinoid","antipsychotic"];
 const MEDMAP = new Map();
 function selectedMeds(){ return (state.medIds||[]).map(id=>MEDMAP.get(id)).filter(Boolean); }
 
@@ -306,6 +307,12 @@ function gatherFlags(){
   if(state.surgery === "yes") f.add("recent_surgery");
   selectedConditions().forEach(c => (c.autoFlags||[]).forEach(x=>f.add(x)));
   const surg = detectSurgery(); if(surg && surg.autoFlags) surg.autoFlags.forEach(x=>f.add(x));
+  if(state.medFilter){
+    const mf = new Set(selectedMeds().flatMap(m=>m.flags||[]));
+    if(mf.has("fluoroquinolone")) f.add("fluoroquinolone");
+    if(mf.has("anticoagulant") || mf.has("antiplatelet")) f.add("med_bleeding");
+    if(["opioid","sedative","muscle_relaxant","gabapentinoid","antipsychotic"].some(x=>mf.has(x))) f.add("med_sedating");
+  }
   return Array.from(f);
 }
 function clearanceNeeded(flags){
@@ -661,6 +668,14 @@ function wireProgram(){
   const saveBtn = $("#programOut .addprec-save");
   if(saveBtn) saveBtn.onclick = addCustomPrecaution;
   $$("#programOut .precdel").forEach(b=>b.onclick=()=>removeCustomPrecaution(+b.dataset.idx));
+  const mf = $("#programOut #medFilterToggle");
+  if(mf) mf.onchange = ()=>{
+    state.medFilter = mf.checked;
+    if(state.program) state.program = generateProgram();   // reflow with/without the med-derived flags
+    save(); renderProgram(state.program);
+    toast(mf.checked ? "Medication safety filtering ON — plan reflowed (manual edits reset)."
+                     : "Medication safety filtering OFF — plan reflowed.");
+  };
 }
 function openSwap(btn){
   const ci=+btn.dataset.ci, pi=+btn.dataset.pi, ei=+btn.dataset.ei;
@@ -800,10 +815,16 @@ function medicationCard(){
   const body = flags.length
     ? `<ul class="notelist">${flags.map(f=>`<li>${MED_EFFECT[f]}</li>`).join("")}</ul>`
     : `<p class="hint">No specific exercise considerations flagged for these — but always tell your clinician what you take.</p>`;
+  const canFilter = meds.some(m=>(m.flags||[]).some(f=>MED_FILTERABLE.includes(f)));
+  const toggle = canFilter ? `<label class="medfilter no-print">
+      <input type="checkbox" id="medFilterToggle" ${state.medFilter?"checked":""} />
+      <span><b>Apply medication safety filtering to my plan</b> — automatically remove/flag high-impact, tendon-loading, contact, and balance exercises for high-risk medicines (fluoroquinolone antibiotics, blood thinners, and sedating medicines). Off by default; a clinician's judgement still applies.</span>
+    </label>` : "";
   return `<div class="card medcard">
     <h2>💊 Medication considerations for exercise</h2>
     <p class="hint">Based on your medications (${list}). These are <b>general considerations</b>, not prescribing advice — your prescriber and pharmacist are the authority on your medicines.</p>
     ${body}
+    ${toggle}
   </div>`;
 }
 

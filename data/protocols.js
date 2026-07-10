@@ -833,7 +833,14 @@
     diabetes: { avoid:[], caution:[T.impact],
       note:"Diabetes: check glucose around exercise, carry fast-acting carbs, stay hydrated, and take care of your feet (good shoes, daily checks)." },
     pacemaker_icd: { avoid:[], caution:[T.highInt],
-      note:"Pacemaker/ICD: keep your heart rate below any limit your cardiologist set and avoid maximal exertion; know your device's settings." }
+      note:"Pacemaker/ICD: keep your heart rate below any limit your cardiologist set and avoid maximal exertion; know your device's settings." },
+    // ---- optional medication-derived rules (only applied when the user turns on medication safety filtering) ----
+    fluoroquinolone: { avoid:[T.impact], caution:[],
+      note:"On a fluoroquinolone antibiotic: high-impact and heavy tendon-loading exercises are removed to protect your tendons (raised Achilles-rupture risk) while taking it and for a few weeks after." },
+    med_bleeding: { avoid:[T.impact], caution:[T.balance],
+      note:"On blood thinners / antiplatelets: high-impact and high-fall-risk exercises are removed or flagged to reduce bruising and bleeding risk — avoid contact/collision activities." },
+    med_sedating: { avoid:[], caution:[T.impact,T.balance],
+      note:"On sedating medicines (opioids, sedatives, muscle relaxants, gabapentinoids): balance and high-impact exercises are flagged — do them near sturdy support and only when fully alert." }
   };
 
   // Apply flags to a phase's exercise list.

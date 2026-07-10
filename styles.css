@@ -241,6 +241,9 @@ svg.chart .dot{fill:var(--brand)}
 .medresults{max-height:38vh}
 .medcard{border-color:rgba(62,166,255,.4)}
 .medcard h2{color:var(--brand)}
+.medfilter{display:flex;gap:10px;align-items:flex-start;margin-top:14px;padding:12px;border:1px solid var(--line);
+  border-radius:10px;background:var(--panel-2);font-size:13px;cursor:pointer;line-height:1.5}
+.medfilter input{width:20px;height:20px;margin-top:1px;flex:0 0 auto;accent-color:var(--brand)}
 
 /* surgical precautions card */
 .surgcard{border-color:rgba(255,138,92,.5)}
