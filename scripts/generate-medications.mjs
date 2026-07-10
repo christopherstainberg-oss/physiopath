@@ -52,7 +52,9 @@ const S = {
   generic5:["1 mg","2 mg","4 mg","5 mg","10 mg","20 mg","25 mg","50 mg","100 mg"]
 };
 S.dpp4=S.generic5;
-const TAB=["tablet","extended-release tablet"], CAP=["capsule","extended-release capsule"], TABCAP=["tablet","capsule","extended-release tablet"];
+const TAB=["tablet","extended-release tablet","oral solution"],
+      CAP=["capsule","extended-release capsule","oral solution"],
+      TABCAP=["tablet","capsule","extended-release tablet","oral suspension"];
 
 /* class: {cls, flags, str, forms, drugs:[[generic,[brands]],...]} */
 const CLASSES = [
@@ -180,6 +182,88 @@ const CLASSES = [
     ["Sildenafil",["Viagra","Revatio"]],["Tadalafil",["Cialis","Adcirca"]],["Vardenafil",["Levitra"]],["Avanafil",["Stendra"]]]}
 ];
 
+/* ---- second batch of classes (extends the catalog toward 20,000) ---- */
+const EXTRA = [
+  {cls:"Combination antihypertensive",flags:["antihypertensive"],str:S.ace,forms:TAB,drugs:[
+    ["Lisinopril/hydrochlorothiazide",["Zestoretic"]],["Losartan/hydrochlorothiazide",["Hyzaar"]],["Valsartan/hydrochlorothiazide",["Diovan HCT"]],
+    ["Olmesartan/hydrochlorothiazide",["Benicar HCT"]],["Amlodipine/benazepril",["Lotrel"]],["Amlodipine/valsartan",["Exforge"]],
+    ["Amlodipine/olmesartan",["Azor"]],["Triamterene/hydrochlorothiazide",["Dyazide","Maxzide"]],["Metoprolol/hydrochlorothiazide",["Dutoprol"]],
+    ["Telmisartan/hydrochlorothiazide",["Micardis HCT"]],["Aliskiren",["Tekturna"]]]},
+  {cls:"Alpha-blocker (BPH/BP)",flags:["alpha_blocker"],str:S.generic5,forms:CAP,drugs:[
+    ["Tamsulosin",["Flomax"]],["Alfuzosin",["Uroxatral"]],["Silodosin",["Rapaflo"]]]},
+  {cls:"ADHD / stimulant",flags:["stimulant"],str:S.generic5,forms:TAB,drugs:[
+    ["Methylphenidate",["Ritalin","Concerta"]],["Amphetamine/dextroamphetamine",["Adderall"]],["Lisdexamfetamine",["Vyvanse"]],
+    ["Dexmethylphenidate",["Focalin"]],["Atomoxetine",["Strattera"]],["Guanfacine",["Intuniv"]],["Modafinil",["Provigil"]],["Armodafinil",["Nuvigil"]]]},
+  {cls:"Mood stabilizer",flags:["lithium"],str:S.aed,forms:TAB,drugs:[["Lithium",["Lithobid","Eskalith"]]]},
+  {cls:"Newer antipsychotic",flags:["antipsychotic"],str:S.generic5,forms:TAB,drugs:[
+    ["Brexpiprazole",["Rexulti"]],["Cariprazine",["Vraylar"]],["Asenapine",["Saphris"]],["Lumateperone",["Caplyta"]],["Iloperidone",["Fanapt"]]]},
+  {cls:"MAOI / other antidepressant",flags:["antidepressant"],str:S.ssri,forms:TAB,drugs:[
+    ["Phenelzine",["Nardil"]],["Tranylcypromine",["Parnate"]],["Isocarboxazid",["Marplan"]],["Nefazodone",[]],["Levomilnacipran",["Fetzima"]]]},
+  {cls:"Immunosuppressant",flags:["immunosuppressant"],str:S.generic5,forms:CAP,drugs:[
+    ["Tacrolimus",["Prograf"]],["Cyclosporine",["Neoral","Sandimmune"]],["Mycophenolate mofetil",["CellCept"]],["Azathioprine",["Imuran"]],
+    ["Sirolimus",["Rapamune"]],["Everolimus",["Afinitor"]]]},
+  {cls:"Oral cancer / endocrine therapy",flags:["oncology_endocrine"],str:S.generic5,forms:TAB,drugs:[
+    ["Tamoxifen",["Nolvadex"]],["Anastrozole",["Arimidex"]],["Letrozole",["Femara"]],["Exemestane",["Aromasin"]],
+    ["Abiraterone",["Zytiga"]],["Enzalutamide",["Xtandi"]],["Bicalutamide",["Casodex"]]]},
+  {cls:"Oral oncology (targeted)",flags:[],str:S.generic5,forms:TAB,drugs:[
+    ["Imatinib",["Gleevec"]],["Erlotinib",["Tarceva"]],["Capecitabine",["Xeloda"]],["Lenalidomide",["Revlimid"]],
+    ["Ibrutinib",["Imbruvica"]],["Palbociclib",["Ibrance"]],["Sorafenib",["Nexavar"]]]},
+  {cls:"Antiviral",flags:[],str:S.abx,forms:TAB,drugs:[
+    ["Acyclovir",["Zovirax"]],["Valacyclovir",["Valtrex"]],["Famciclovir",["Famvir"]],["Oseltamivir",["Tamiflu"]],
+    ["Baloxavir",["Xofluza"]],["Nirmatrelvir/ritonavir",["Paxlovid"]],["Entecavir",["Baraclude"]]]},
+  {cls:"HIV / hepatitis",flags:[],str:S.generic5,forms:TAB,drugs:[
+    ["Tenofovir/emtricitabine",["Truvada","Descovy"]],["Bictegravir/emtricitabine/tenofovir",["Biktarvy"]],["Dolutegravir",["Tivicay"]],
+    ["Efavirenz",["Sustiva"]],["Raltegravir",["Isentress"]],["Darunavir",["Prezista"]],["Sofosbuvir/velpatasvir",["Epclusa"]],["Ledipasvir/sofosbuvir",["Harvoni"]]]},
+  {cls:"Antifungal",flags:[],str:S.abx,forms:TAB,drugs:[
+    ["Fluconazole",["Diflucan"]],["Itraconazole",["Sporanox"]],["Terbinafine",["Lamisil"]],["Voriconazole",["Vfend"]],
+    ["Posaconazole",["Noxafil"]],["Nystatin",[]],["Griseofulvin",[]],["Ketoconazole",[]]]},
+  {cls:"Antibiotic (extended)",flags:[],str:S.abx,forms:TABCAP,drugs:[
+    ["Clarithromycin",["Biaxin"]],["Erythromycin",["Ery-Tab"]],["Minocycline",["Minocin"]],["Tetracycline",[]],["Ampicillin",[]],
+    ["Dicloxacillin",[]],["Cefuroxime",["Ceftin"]],["Cefpodoxime",["Vantin"]],["Cefixime",["Suprax"]],["Linezolid",["Zyvox"]],
+    ["Fosfomycin",["Monurol"]],["Rifampin",["Rifadin"]],["Isoniazid",[]],["Ethambutol",["Myambutol"]],["Tinidazole",["Tindamax"]],["Rifaximin",["Xifaxan"]]]},
+  {cls:"GI (extended)",flags:[],str:S.generic5,forms:TABCAP,drugs:[
+    ["Sucralfate",["Carafate"]],["Dicyclomine",["Bentyl"]],["Hyoscyamine",["Levsin"]],["Linaclotide",["Linzess"]],["Lubiprostone",["Amitiza"]],
+    ["Polyethylene glycol",["Miralax"]],["Docusate",["Colace"]],["Senna",["Senokot"]],["Bisacodyl",["Dulcolax"]],["Loperamide",["Imodium"]],
+    ["Mesalamine",["Asacol","Lialda"]],["Ursodiol",["Actigall"]],["Metoclopramide",["Reglan"]],["Ondansetron",["Zofran"]]]},
+  {cls:"Antiemetic / sedating",flags:["sedative"],str:S.generic5,forms:TAB,drugs:[
+    ["Promethazine",["Phenergan"]],["Prochlorperazine",["Compazine"]],["Scopolamine",["Transderm Scop"]],["Meclizine",["Antivert"]]]},
+  {cls:"Migraine prevention (CGRP/gepant)",flags:["triptan"],str:S.generic5,forms:TAB,drugs:[
+    ["Erenumab",["Aimovig"]],["Galcanezumab",["Emgality"]],["Fremanezumab",["Ajovy"]],["Ubrogepant",["Ubrelvy"]],["Rimegepant",["Nurtec"]],["Lasmiditan",["Reyvow"]]]},
+  {cls:"Respiratory (extended)",flags:["bronchodilator"],str:S.generic5,forms:["inhaler","tablet"],drugs:[
+    ["Ipratropium/albuterol",["Combivent"]],["Umeclidinium/vilanterol",["Anoro Ellipta"]],["Tiotropium/olodaterol",["Stiolto"]],
+    ["Guaifenesin",["Mucinex"]],["Benzonatate",["Tessalon"]],["Cromolyn",[]]]},
+  {cls:"Nasal / allergy",flags:["antihistamine"],str:S.generic5,forms:["nasal spray","tablet"],drugs:[
+    ["Fluticasone nasal",["Flonase"]],["Mometasone nasal",["Nasonex"]],["Azelastine",["Astelin"]],["Triamcinolone nasal",["Nasacort"]],["Ketotifen",[]]]},
+  {cls:"Endocrine (other)",flags:["thyroid"],str:S.generic5,forms:TAB,drugs:[
+    ["Fludrocortisone",["Florinef"]],["Desmopressin",["DDAVP"]],["Cabergoline",[]],["Bromocriptine",["Parlodel"]],["Cinacalcet",["Sensipar"]]]},
+  {cls:"Men's / women's health",flags:[],str:S.generic5,forms:TAB,drugs:[
+    ["Finasteride",["Proscar","Propecia"]],["Dutasteride",["Avodart"]],["Estradiol",["Estrace"]],["Conjugated estrogens",["Premarin"]],
+    ["Medroxyprogesterone",["Provera"]],["Norethindrone",[]],["Testosterone",["AndroGel","Depo-Testosterone"]],["Progesterone",["Prometrium"]]]},
+  {cls:"Oral contraceptive",flags:[],str:["1/20","1/35","0.15/30","3/0.02"],forms:["tablet"],drugs:[
+    ["Ethinyl estradiol/norethindrone",["Loestrin","Junel"]],["Ethinyl estradiol/norgestimate",["Ortho Tri-Cyclen","Sprintec"]],
+    ["Ethinyl estradiol/drospirenone",["Yaz","Yasmin"]],["Ethinyl estradiol/levonorgestrel",["Seasonique"]],["Norethindrone (progestin-only)",["Camila"]]]},
+  {cls:"Bone / calcium / vitamin D",flags:["bisphosphonate"],str:["600 mg","1000 mg","1000 IU","2000 IU","5000 IU","0.25 mcg"],forms:["tablet","capsule"],drugs:[
+    ["Calcium carbonate",["Tums","Caltrate"]],["Calcium citrate",["Citracal"]],["Cholecalciferol (vitamin D3)",[]],["Ergocalciferol (vitamin D2)",["Drisdol"]],
+    ["Calcitriol",["Rocaltrol"]],["Calcitonin",["Miacalcin"]]]},
+  {cls:"Supplement / electrolyte",flags:[],str:["8 mEq","10 mEq","20 mEq","325 mg","1 mg","1000 mcg","400 mg"],forms:["tablet","capsule"],drugs:[
+    ["Ferrous sulfate",["Feosol"]],["Folic acid",[]],["Cyanocobalamin (B12)",[]],["Potassium chloride",["K-Dur","Klor-Con"]],
+    ["Magnesium oxide",[]],["Multivitamin",[]],["Omega-3 acid ethyl esters",["Lovaza"]],["Melatonin",[]],["Thiamine (B1)",[]]]},
+  {cls:"Topical / dermatology",flags:["corticosteroid"],str:["0.025%","0.05%","0.1%","1%","2.5%"],forms:["cream","ointment","gel"],drugs:[
+    ["Hydrocortisone topical",["Cortizone"]],["Triamcinolone topical",["Kenalog"]],["Clobetasol",["Temovate"]],["Mupirocin",["Bactroban"]],
+    ["Tretinoin",["Retin-A"]],["Adapalene",["Differin"]],["Clindamycin topical",["Cleocin T"]],["Tacrolimus topical",["Protopic"]],["Ketoconazole topical",[]]]},
+  {cls:"Eye drops",flags:[],str:["0.005%","0.01%","0.15%","0.2%","0.5%","2%"],forms:["ophthalmic solution"],drugs:[
+    ["Latanoprost",["Xalatan"]],["Timolol ophthalmic",["Timoptic"]],["Brimonidine",["Alphagan"]],["Dorzolamide",["Trusopt"]],
+    ["Travoprost",["Travatan"]],["Bimatoprost",["Lumigan"]],["Olopatadine",["Pataday"]]]},
+  {cls:"Diabetes combination",flags:["diabetes"],str:S.metf,forms:TAB,drugs:[
+    ["Metformin/sitagliptin",["Janumet"]],["Empagliflozin/metformin",["Synjardy"]],["Dapagliflozin/metformin",["Xigduo XR"]],
+    ["Glipizide/metformin",[]],["Empagliflozin/linagliptin",["Glyxambi"]],["Insulin glargine/lixisenatide",["Soliqua"]]]},
+  {cls:"Statin combination",flags:["statin"],str:S.statin,forms:TAB,drugs:[
+    ["Ezetimibe/simvastatin",["Vytorin"]],["Amlodipine/atorvastatin",["Caduet"]]]},
+  {cls:"Hematology",flags:[],str:S.generic5,forms:["injection","tablet"],drugs:[
+    ["Pentoxifylline",["Trental"]],["Epoetin alfa",["Procrit","Epogen"]],["Darbepoetin",["Aranesp"]],["Filgrastim",["Neupogen"]],["Ferric carboxymaltose",["Injectafer"]]]}
+];
+CLASSES.push(...EXTRA);
+
 const out=[]; const seen=new Set();
 const slug=s=>s.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");
 function push(name, base, strength, form){
@@ -198,7 +282,7 @@ for(const c of CLASSES){
   }
 }
 // 2) round-robin strength × form variants until target
-const TARGET=10000;
+const TARGET=20000;
 const variants = bases.map(b=>{
   const list=[]; for(const s of b.str) for(const f of b.forms) list.push([s,f]); return {b, list, i:0};
 });
