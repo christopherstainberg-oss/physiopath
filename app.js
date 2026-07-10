@@ -637,7 +637,9 @@ function movementExplain(name, pattern, regionArr){
 
 /* Shared exercise <li> renderer with Explain + optional Swap (when ctx {ci,pi,ei} given). */
 function exItemHTML(e, regionArr, ctx){
-  const swap = ctx ? `<button class="swapbtn" data-ci="${ctx.ci}" data-pi="${ctx.pi}" data-ei="${ctx.ei}">⇄ Swap</button>` : "";
+  const dc = ctx ? `data-ci="${ctx.ci}" data-pi="${ctx.pi}" data-ei="${ctx.ei}"` : "";
+  const rotate = ctx ? `<button class="rotatebtn" ${dc} title="Rotate to the next option">⟳ Rotate</button>` : "";
+  const swap = ctx ? `<button class="swapbtn" ${dc}>⇄ Swap…</button>` : "";
   const swapbox = ctx ? `<div class="swapbox hide"></div>` : "";
   return `<li class="exitem">
     <div class="top"><span class="en">${esc(e.n)}</span><span class="ed">${esc(e.d)}</span></div>
@@ -646,7 +648,7 @@ function exItemHTML(e, regionArr, ctx){
     ${e.sub?`<span class="subpill">safer substitute for your precautions</span>`:""}
     <div class="exrowtools no-print">
       <button class="expbtn" onclick="this.closest('.exitem').querySelector('.exp').classList.toggle('hide')">ⓘ Explain</button>
-      ${swap}
+      ${rotate}${swap}
     </div>
     <div class="exp hide">${movementExplain(e.n, e.pattern, e.region||regionArr)}</div>
     ${swapbox}
@@ -660,6 +662,7 @@ function togglePhase(head, key){
   if(ph.classList.contains("open")) openPhases.add(key); else openPhases.delete(key);
 }
 function wireProgram(){
+  $$("#programOut .rotatebtn").forEach(b=>b.onclick=()=>rotateExercise(+b.dataset.ci, +b.dataset.pi, +b.dataset.ei));
   $$("#programOut .swapbtn").forEach(b=>b.onclick=()=>openSwap(b));
   $$("#programOut .rerollbtn").forEach(b=>b.onclick=()=>rerollPhase(+b.dataset.ci, +b.dataset.pi));
   $$("#programOut .resetbtn").forEach(b=>b.onclick=()=>resetPhase(+b.dataset.ci, +b.dataset.pi));
@@ -697,6 +700,17 @@ function openSwap(btn){
     box.dataset.filled="1";
   }
   box.classList.toggle("hide");
+}
+function rotateExercise(ci, pi, ei){
+  const item = state.program.items[ci], ph = item.phases[pi];
+  const cur = ph.ex[ei].n;
+  const others = ph.ex.filter((_,i)=>i!==ei).map(x=>x.n);
+  const pool = libraryOptions(item.protocol, pi, state.program.flags, others, 24, 0);
+  if(!pool.length){ toast("No alternative library exercises for this one."); return; }
+  const idx = pool.findIndex(o=>o.n.toLowerCase()===cur.toLowerCase());
+  const next = pool[(idx+1) % pool.length];
+  openPhases.add(ci+"-"+pi);
+  ph.ex[ei] = next; save(); renderProgram(state.program); toast("Rotated to the next option.");
 }
 function rerollPhase(ci, pi){
   const item = state.program.items[ci], ph = item.phases[pi];
@@ -891,7 +905,8 @@ function renderProgram(prog){
         </div>
         <div class="body"><ul class="exlist">${rows}</ul>
           <div class="phasetools no-print">
-            <button class="rerollbtn" data-ci="${ci}" data-pi="${i}">🔄 Reroll this phase</button>
+            <span class="phasetoolslbl">Whole phase:</span>
+            <button class="rerollbtn" data-ci="${ci}" data-pi="${i}">🔄 Rotate all exercises</button>
             <button class="resetbtn" data-ci="${ci}" data-pi="${i}">↩ Reset to recommended</button>
           </div>
           <div class="freq">Advance when this phase feels controlled and symptoms are low & stable — the weeks are a guide, not a rule.</div>
