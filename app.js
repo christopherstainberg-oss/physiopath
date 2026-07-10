@@ -766,6 +766,31 @@ function removeCustomPrecaution(idx){
   state.customPrecautions.splice(idx,1); save(); renderProgram(state.program); toast("Reminder removed.");
 }
 
+/* Consolidated safety notes card (universal guidance; prints with the program). */
+function safetyNotesCard(prog){
+  return `<div class="card safetycard">
+    <h2>🛟 Safety notes</h2>
+    <p class="hint">Read this before you start. PhysioPath is educational and does not replace your doctor or physiotherapist — any specific instructions from your care team always take precedence.</p>
+    <div class="banner clear" style="margin:0 0 12px"><b>⛔ Stop and rest right away if you feel:</b> sharp, spreading, or rapidly worsening pain · chest pain or pressure · severe or unusual breathlessness · dizziness, light-headedness, or faintness · palpitations · or sudden weakness, numbness, or trouble speaking.</div>
+    <b class="safeh">How much pain is okay — the traffic-light rule</b>
+    <ul class="safelist">
+      <li><span class="dotg"></span><b>Green — keep going:</b> discomfort up to about 3/10 that settles within 24 hours.</li>
+      <li><span class="dota"></span><b>Amber — ease off:</b> pain around 4–5/10, or soreness that's worse the next morning. Reduce range/load and progress more slowly.</li>
+      <li><span class="dotr"></span><b>Red — stop &amp; get assessed:</b> sharp, severe, or steadily worsening pain, or new swelling, giving-way, or loss of movement.</li>
+    </ul>
+    <b class="safeh">Train safely</b>
+    <ul class="safelist plain">
+      <li>Warm up for a few minutes first, and cool down afterward.</li>
+      <li>Prioritise good technique over heavy load; increase by about 10% per week at most.</li>
+      <li>Breathe normally — never hold your breath during effort.</li>
+      <li>Do balance work beside a sturdy support if you feel at all unsteady.</li>
+      <li>Stay hydrated, and stop if you feel unwell, faint, or overheated.</li>
+    </ul>
+    <div class="redflags" style="margin-top:12px"><b>⚠ Seek urgent care</b> for: chest pain, severe breathlessness, fainting, sudden weakness/numbness or trouble speaking, loss of bladder or bowel control, a hot swollen joint with fever, or calf pain/swelling with breathlessness.</div>
+    ${prog && prog.clearance ? `<p class="hint" style="margin-top:10px"><b>Because of your history, get medical clearance before starting</b> — ideally with supervised rehab. See your personalised precautions below.</p>` : ""}
+  </div>`;
+}
+
 /* Medication considerations card. */
 function medicationCard(){
   const meds = selectedMeds();
@@ -825,6 +850,7 @@ function renderProgram(prog){
     or use <b>🔄 Reroll</b> / <b>↩ Reset</b> to change a whole phase. Every option is filtered to your precautions and saved automatically.</div>`;
   html += `</div>`;
 
+  html += safetyNotesCard(prog);
   html += surgicalReminderCard();
   html += medicationCard();
 
