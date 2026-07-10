@@ -146,6 +146,7 @@ input[type=range]{flex:1;accent-color:var(--brand);height:30px}
 .phase.open .body{display:block}
 .exlist{list-style:none;margin:8px 0 0;padding:0}
 .exitem{padding:10px 0;border-bottom:1px solid var(--line)}
+.exitem.medhidden{display:none}
 .exitem:last-child{border-bottom:none}
 .exitem .top{display:flex;justify-content:space-between;gap:10px}
 .exitem .en{font-weight:600;font-size:14px}

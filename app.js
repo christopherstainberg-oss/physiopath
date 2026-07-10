@@ -307,13 +307,24 @@ function gatherFlags(){
   if(state.surgery === "yes") f.add("recent_surgery");
   selectedConditions().forEach(c => (c.autoFlags||[]).forEach(x=>f.add(x)));
   const surg = detectSurgery(); if(surg && surg.autoFlags) surg.autoFlags.forEach(x=>f.add(x));
-  if(state.medFilter){
-    const mf = new Set(selectedMeds().flatMap(m=>m.flags||[]));
-    if(mf.has("fluoroquinolone")) f.add("fluoroquinolone");
-    if(mf.has("anticoagulant") || mf.has("antiplatelet")) f.add("med_bleeding");
-    if(["opioid","sedative","muscle_relaxant","gabapentinoid","antipsychotic"].some(x=>mf.has(x))) f.add("med_sedating");
-  }
   return Array.from(f);
+}
+/* Medication-derived engine flags — applied at RENDER time only (so toggling is
+   reversible and never discards manual edits). Empty unless the toggle is on. */
+function medExerciseFlags(){
+  if(!state.medFilter) return [];
+  const mf = new Set(selectedMeds().flatMap(m=>m.flags||[]));
+  const out = [];
+  if(mf.has("fluoroquinolone")) out.push("fluoroquinolone");
+  if(mf.has("anticoagulant") || mf.has("antiplatelet")) out.push("med_bleeding");
+  if(["opioid","sedative","muscle_relaxant","gabapentinoid","antipsychotic"].some(x=>mf.has(x))) out.push("med_sedating");
+  return out;
+}
+/* Base program flags plus any active medication flags — used by the edit controls
+   so rotated/swapped/rerolled picks stay safe while the filter is on. */
+function activeFlags(){
+  const base = state.program ? state.program.flags : gatherFlags();
+  return [...new Set([...base, ...medExerciseFlags()])];
 }
 function clearanceNeeded(flags){
   return window.needsClearance(flags) || state.parq.pain || state.parq.faint || state.parq.doc ||
@@ -636,12 +647,12 @@ function movementExplain(name, pattern, regionArr){
 }
 
 /* Shared exercise <li> renderer with Explain + optional Swap (when ctx {ci,pi,ei} given). */
-function exItemHTML(e, regionArr, ctx){
+function exItemHTML(e, regionArr, ctx, medHidden){
   const dc = ctx ? `data-ci="${ctx.ci}" data-pi="${ctx.pi}" data-ei="${ctx.ei}"` : "";
   const rotate = ctx ? `<button class="rotatebtn" ${dc} title="Rotate to the next option">⟳ Rotate</button>` : "";
   const swap = ctx ? `<button class="swapbtn" ${dc}>⇄ Swap…</button>` : "";
   const swapbox = ctx ? `<div class="swapbox hide"></div>` : "";
-  return `<li class="exitem">
+  return `<li class="exitem${medHidden?" medhidden":""}">
     <div class="top"><span class="en">${esc(e.n)}</span><span class="ed">${esc(e.d)}</span></div>
     <div class="ec">${esc(e.c)}</div>
     ${e.warn?`<span class="warnpill">⚠ Modify — involves ${esc(TAG_LABEL[e.warn]||e.warn)}; keep it symptom-free.</span>`:""}
@@ -673,11 +684,10 @@ function wireProgram(){
   $$("#programOut .precdel").forEach(b=>b.onclick=()=>removeCustomPrecaution(+b.dataset.idx));
   const mf = $("#programOut #medFilterToggle");
   if(mf) mf.onchange = ()=>{
-    state.medFilter = mf.checked;
-    if(state.program) state.program = generateProgram();   // reflow with/without the med-derived flags
-    save(); renderProgram(state.program);
-    toast(mf.checked ? "Medication safety filtering ON — plan reflowed (manual edits reset)."
-                     : "Medication safety filtering OFF — plan reflowed.");
+    state.medFilter = mf.checked; save();
+    renderProgram(state.program);   // render-time only — no regeneration, edits kept
+    toast(mf.checked ? "Medication safety filtering ON — high-risk exercises hidden (your edits are kept)."
+                     : "Medication safety filtering OFF — all exercises shown.");
   };
 }
 function openSwap(btn){
@@ -685,7 +695,7 @@ function openSwap(btn){
   const box = btn.closest(".exitem").querySelector(".swapbox");
   const item = state.program.items[ci], ph = item.phases[pi];
   if(box.dataset.filled!=="1"){
-    const opts = libraryOptions(item.protocol, pi, state.program.flags, ph.ex.map(x=>x.n), 8, 0);
+    const opts = libraryOptions(item.protocol, pi, activeFlags(), ph.ex.map(x=>x.n), 8, 0);
     if(!opts.length){
       box.innerHTML = `<div class="swaphint">No safe alternatives found for this phase.</div>`;
     } else {
@@ -705,7 +715,7 @@ function rotateExercise(ci, pi, ei){
   const item = state.program.items[ci], ph = item.phases[pi];
   const cur = ph.ex[ei].n;
   const others = ph.ex.filter((_,i)=>i!==ei).map(x=>x.n);
-  const pool = libraryOptions(item.protocol, pi, state.program.flags, others, 24, 0);
+  const pool = libraryOptions(item.protocol, pi, activeFlags(), others, 24, 0);
   if(!pool.length){ toast("No alternative library exercises for this one."); return; }
   const idx = pool.findIndex(o=>o.n.toLowerCase()===cur.toLowerCase());
   const next = pool[(idx+1) % pool.length];
@@ -716,7 +726,7 @@ function rerollPhase(ci, pi){
   const item = state.program.items[ci], ph = item.phases[pi];
   ph._seed = (ph._seed||0)+1;
   const n = Math.max(3, ph.ex.length);
-  const fresh = libraryOptions(item.protocol, pi, state.program.flags, ph.ex.map(x=>x.n), n, ph._seed);
+  const fresh = libraryOptions(item.protocol, pi, activeFlags(), ph.ex.map(x=>x.n), n, ph._seed);
   if(!fresh.length){ toast("No alternative library exercises for this phase."); return; }
   ph.ex = fresh; openPhases.add(ci+"-"+pi);
   save(); renderProgram(state.program); toast("Phase rerolled from the library.");
@@ -724,8 +734,9 @@ function rerollPhase(ci, pi){
 function resetPhase(ci, pi){
   const item = state.program.items[ci], ph = item.phases[pi];
   const pool = window.getProtocol(item.protocol)[pi];
-  const { kept } = window.applyContra(pool, state.program.flags);
-  window.ensureMinimum(kept, state.program.flags, 3);
+  const flags = activeFlags();
+  const { kept } = window.applyContra(pool, flags);
+  window.ensureMinimum(kept, flags, 3);
   ph.ex = kept; delete ph._seed; openPhases.add(ci+"-"+pi);
   save(); renderProgram(state.program); toast("Phase reset to the recommended exercises.");
 }
@@ -821,7 +832,7 @@ function safetyNotesCard(prog){
 }
 
 /* Medication considerations card. */
-function medicationCard(){
+function medicationCard(medHiddenTotal){
   const meds = selectedMeds();
   if(!meds.length) return "";
   const flags = [...new Set(meds.flatMap(m=>m.flags||[]))].filter(f=>MED_EFFECT[f]);
@@ -832,13 +843,16 @@ function medicationCard(){
   const canFilter = meds.some(m=>(m.flags||[]).some(f=>MED_FILTERABLE.includes(f)));
   const toggle = canFilter ? `<label class="medfilter no-print">
       <input type="checkbox" id="medFilterToggle" ${state.medFilter?"checked":""} />
-      <span><b>Apply medication safety filtering to my plan</b> — automatically remove/flag high-impact, tendon-loading, contact, and balance exercises for high-risk medicines (fluoroquinolone antibiotics, blood thinners, and sedating medicines). Off by default; a clinician's judgement still applies.</span>
+      <span><b>Apply medication safety filtering to my plan</b> — hide high-impact, tendon-loading, contact, and balance exercises for high-risk medicines (fluoroquinolone antibiotics, blood thinners, sedating medicines). Off by default, fully reversible, and it keeps any exercises you've changed. A clinician's judgement still applies.</span>
     </label>` : "";
+  const active = (state.medFilter && canFilter) ? `<div class="banner load" style="margin:12px 0 0"><b>🔒 Medication safety filtering is ON.</b> ${
+      medHiddenTotal>0 ? `${medHiddenTotal} higher-risk exercise${medHiddenTotal===1?"":"s"} hidden from your plan.` : "No exercises needed hiding."
+    } ${esc(window.notesForFlags(medExerciseFlags()).join(" "))}</div>` : "";
   return `<div class="card medcard">
     <h2>💊 Medication considerations for exercise</h2>
     <p class="hint">Based on your medications (${list}). These are <b>general considerations</b>, not prescribing advice — your prescriber and pharmacist are the authority on your medicines.</p>
     ${body}
-    ${toggle}
+    ${toggle}${active}
   </div>`;
 }
 
@@ -885,9 +899,16 @@ function renderProgram(prog){
     or use <b>🔄 Reroll</b> / <b>↩ Reset</b> to change a whole phase. Every option is filtered to your precautions and saved automatically.</div>`;
   html += `</div>`;
 
+  // render-time medication filtering (hide high-risk exercises; fully reversible)
+  const mflags = medExerciseFlags();
+  let medHiddenTotal = 0;
+  if(mflags.length) prog.items.forEach(it=>it.phases.forEach(ph=>{
+    medHiddenTotal += window.applyContra(ph.ex, mflags).removed.length;
+  }));
+
   html += safetyNotesCard(prog);
   html += surgicalReminderCard();
-  html += medicationCard();
+  html += medicationCard(medHiddenTotal);
 
   prog.items.forEach((item, ci)=>{
     html += `<div class="card"><h2>${esc(item.name)}</h2>
@@ -895,7 +916,8 @@ function renderProgram(prog){
     item.phases.forEach((ph,i)=>{
       const key = ci+"-"+i;
       const open = (i===0 || openPhases.has(key)) ? "open" : "";
-      const rows = ph.ex.map((e,ei)=>exItemHTML(e, [item.region], {ci, pi:i, ei})).join("");
+      const hiddenNames = mflags.length ? new Set(window.applyContra(ph.ex, mflags).removed.map(r=>r.n)) : null;
+      const rows = ph.ex.map((e,ei)=>exItemHTML(e, [item.region], {ci, pi:i, ei}, hiddenNames && hiddenNames.has(e.n))).join("");
       html += `<div class="phase ${open}">
         <div class="head" onclick="togglePhase(this,'${key}')">
           <div class="pnum">${i+1}</div>
