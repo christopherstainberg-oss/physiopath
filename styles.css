@@ -224,6 +224,26 @@ svg.chart .dot{fill:var(--brand)}
 .exrow .exwarn{color:var(--warn);font-size:11px;display:block;margin-top:2px}
 #exRegion,#exDiff{width:auto;flex:1;min-width:120px}
 
+/* explanations */
+.expbtn{margin-top:7px;background:none;border:none;color:var(--brand);font-size:12px;font-weight:600;cursor:pointer;padding:2px 0;font-family:inherit}
+.expbtn:hover{text-decoration:underline}
+.exp,.resexp,.exexp{font-size:12.5px;color:var(--muted);line-height:1.55;border-left:2px solid var(--brand);
+  padding:7px 0 7px 12px;margin-top:7px}
+.exp b,.resexp b,.exexp b{color:var(--text)}
+.resitem{border-bottom:1px solid var(--line)}
+.resitem:last-child{border-bottom:none}
+.resitem .result{border-bottom:none}
+.resexp{padding:2px 12px 12px}
+.result .info{cursor:pointer;color:var(--muted);width:26px;flex:0 0 auto;text-align:center;font-size:15px}
+.result .info:hover{color:var(--brand)}
+.exrow{cursor:pointer}
+.exrow .chev{color:var(--muted);transition:.2s;flex:0 0 auto}
+.exitemw.open .chev{transform:rotate(180deg)}
+.exitemw{border-bottom:1px solid var(--line)}
+.exitemw:last-child{border-bottom:none}
+.exitemw .exrow{border-bottom:none}
+.exexp{padding:2px 12px 14px}
+
 .empty{text-align:center;color:var(--muted);padding:40px 10px}
 .empty .big{font-size:38px;margin-bottom:6px}
 footer{color:var(--muted);font-size:12px;text-align:center;padding:22px 6px 30px}

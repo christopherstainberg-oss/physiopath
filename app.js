@@ -162,7 +162,7 @@ function exercisesFor(protocol, phaseIdx, flags, exclude){
     e.region.some(r=>rset.has(r)) && allowed.has(e.difficulty) && !exSet.has(e.name.toLowerCase()));
   const { kept } = window.applyContra(pool, flags);
   kept.sort((a,b)=> hashStr(a.name+phaseIdx) - hashStr(b.name+phaseIdx));
-  return kept.slice(0,6).map(e=>({ n:e.name, d:e.dose, c:e.cue, warn:e.warn }));
+  return kept.slice(0,6).map(e=>({ n:e.name, d:e.dose, c:e.cue, warn:e.warn, pattern:e.pattern, region:e.region }));
 }
 
 /* ---------- build the program ---------- */
@@ -185,7 +185,8 @@ function generateProgram(){
       return { title:tmpl.phases[p].title, goal:tmpl.phases[p].goal, weekStart:wkStart, weekEnd:wkEnd, ex:kept };
     });
     return { name:c.name, domain:c.domain, region:c.region, supervision:c.supervision, phases,
-      protocol:c.protocol, about:aboutText(c, track), redflags:DOMAIN_REDFLAGS[c.domain] };
+      protocol:c.protocol, clearance:c.clearance, chronicByNature:c.chronicByNature,
+      about:aboutText(c, track), redflags:DOMAIN_REDFLAGS[c.domain] };
   });
 
   return {
@@ -208,16 +209,212 @@ const TAG_LABEL = {
   breath_hold:"breath-holding", aerobic:"sustained aerobic effort"
 };
 
+/* =====================================================================
+   EXPLANATIONS — generated at render time from knowledge maps
+===================================================================== */
+const P_ALIAS = window.PROTOCOL_ALIAS || {};
+function resolveProto(p){ return (window.PROTOCOLS && window.PROTOCOLS[p]) ? p : (P_ALIAS[p] || "general_msk"); }
+
+const PROTOCOL_APPROACH = {
+  shoulder:"restoring pain-free shoulder range, then progressively strengthening the rotator cuff and shoulder-blade muscles",
+  elbow:"settling the irritated tendon and progressively loading the forearm and elbow (isometrics early for pain relief)",
+  wrist_hand:"restoring wrist and hand motion, then building grip and forearm strength",
+  hip:"strengthening the glutes and hip muscles while improving mobility and control",
+  hip_replacement:"rebuilding hip strength and walking while respecting your hip-replacement precautions",
+  knee_ligament:"restoring quad control and knee motion, then progressive loading and return-to-sport drills",
+  knee_pf:"strengthening the hips and quads and managing load to settle kneecap pain",
+  knee_replacement:"regaining full knee motion and strength while progressing walking and function",
+  ankle:"restoring ankle motion, then balance and strength to prevent recurrence",
+  achilles:"progressive calf and Achilles loading — especially slow, heavy and eccentric work",
+  foot:"restoring foot and arch control and progressively loading the tissue",
+  cervical:"gentle neck movement plus deep-neck and postural strengthening",
+  thoracic:"mid-back mobility, posture and shoulder-blade strengthening",
+  lumbar:"graded movement, core and hip strengthening, and confident loading of the spine",
+  fracture:"restoring motion and strength around the healing bone, following your weight-bearing timeline",
+  amputation:"building residual-limb strength, balance and (where relevant) prosthetic function toward independence",
+  tmj:"gentle jaw control, posture and relaxation to settle the joint",
+  general_msk:"restoring movement, then progressively strengthening and reconditioning the area",
+  stroke:"repetitive, task-specific practice to rebuild movement, balance and function",
+  sci:"maximizing available strength, transfers, mobility and independence",
+  ms:"paced strengthening, balance and endurance with attention to fatigue and heat",
+  parkinsons:"large-amplitude movement, balance and high-effort exercise to manage symptoms",
+  neuropathy:"rebuilding strength and balance while protecting areas of reduced sensation",
+  vestibular:"gaze-stabilization and balance retraining to reduce dizziness",
+  bells_palsy:"gentle, targeted activation and control of the affected muscles",
+  balance_neuro:"balance, mobility and strengthening tailored to your condition, near support",
+  tbi:"symptom-guided, graded return of aerobic fitness, balance and coordination",
+  guillain_barre:"carefully paced strengthening that avoids overwork as nerves recover",
+  cardiac_rehab:"supervised, graded aerobic exercise plus light resistance to rebuild fitness safely",
+  heart_failure:"gentle, symptom-guided aerobic and light resistance work with close monitoring",
+  hypertension:"regular moderate aerobic exercise (the cornerstone) plus controlled resistance work",
+  pad:"structured walking to improve circulation and pain-free walking distance",
+  valve:"graded aerobic and light strength work while respecting sternal/surgical precautions",
+  arrhythmia:"aerobic and resistance exercise kept within safe heart-rate limits",
+  pulmonary_rehab:"paced aerobic and strength work combined with breathing techniques",
+  post_covid:"energy-paced, gradually progressed reconditioning to avoid setbacks",
+  ild:"paced, oxygen-monitored aerobic work and breathing techniques",
+  thoracic_surgery:"breathing and airway work plus graded reconditioning, respecting incision precautions",
+  pulm_hypertension:"very conservative, low-to-moderate exercise strictly within prescribed limits",
+  asthma:"well-warmed-up aerobic and strength work, using your action plan to prevent symptoms"
+};
+
+const PATHOLOGY_INFO = [
+  [/sprain/, "A sprain is an overstretch or tear of a ligament (the tissue joining bone to bone). Healing follows a protect-then-load path as the ligament regains strength."],
+  [/strain|muscle.*tear|tear \(post-repair\)|avulsion/, "A strain is an overstretch or tear of muscle or its tendon. Recovery rebuilds the muscle's length and load tolerance, with special attention to lengthening (eccentric) strength that guards against re-injury."],
+  [/tendinopathy|tendinitis|tendinosis|tenosynovitis|epicondyl/, "Tendinopathy is an overload injury of a tendon. Tendons respond best to progressive loading — gradually heavier, controlled exercise — rather than rest."],
+  [/bursitis/, "Bursitis is irritation of a bursa, the small fluid sac that cushions a joint. Calming the irritation and correcting the load or movement that caused it are the priorities."],
+  [/osteoarthritis|kellgren|chondromalacia|cartilage|chondral/, "This involves the joint cartilage. Exercise doesn't 'wear the joint out' — appropriate strengthening and movement reduce pain and improve function."],
+  [/rheumatoid|psoriatic|ankylosing|lupus|reactive arthritis|juvenile idiopathic|enteropathic|inflammatory/, "This is an inflammatory (autoimmune) joint condition. Exercise is tailored to disease activity — gentler during flares, progressive when settled — to preserve strength and mobility."],
+  [/stress fracture/, "A stress fracture is a small bone crack from repetitive overload. Recovery respects a period of reduced loading, then a graded return once the bone has healed."],
+  [/fracture/, "A fracture is a broken bone. Rehabilitation follows your surgeon's healing and weight-bearing timeline, restoring motion and strength as the bone unites."],
+  [/dislocation|instability|subluxation|bankart|labral|labrum/, "This involves a joint slipping partly or fully out of place. Rehab rebuilds the muscles and control that keep the joint stable."],
+  [/replacement|arthroplasty|resurfacing/, "This is recovery after a joint replacement. The plan restores motion and strength while respecting the precautions for your new joint."],
+  [/reconstruction|repair|graft|latarjet|mpfl/, "This is recovery after a surgical repair or reconstruction. Progression follows the tissue-healing timeline and your surgeon's protocol."],
+  [/impingement/, "Impingement is pinching of soft tissue during movement. Rehab restores pain-free range and the muscle control that creates space in the joint."],
+  [/radiculopathy|sciatica/, "Radiculopathy is irritation of a spinal nerve root, often causing pain, numbness or weakness along the nerve. Rehab calms the nerve and restores movement and strength."],
+  [/herniation|disc bulge|protrusion|extrusion|degenerative disc|\bdisc\b/, "This involves an intervertebral disc. Most disc-related pain settles with graded movement and progressive strengthening rather than rest."],
+  [/stenosis|foraminal/, "Stenosis is narrowing of the spinal canal or a nerve passage. Exercise focuses on positions and strengthening that open space and improve activity tolerance."],
+  [/spondylo|facet|pars|baastrup|schmorl|modic/, "This is a mechanical or age-related change of the spinal joints. Movement, mobility and core strengthening typically reduce symptoms."],
+  [/frozen shoulder|adhesive capsulitis/, "Adhesive capsulitis ('frozen shoulder') is painful stiffening of the shoulder capsule that passes through phases. Rehab restores range gradually and avoids aggressive stretching too early."],
+  [/plantar fasciitis|fasciitis|fibromatosis|heel/, "This affects the connective tissue of the foot. Loading the tissue progressively, plus calf and foot strengthening, drives recovery."],
+  [/stroke|hemiparesis|wallenberg|infarct/, "A stroke injures part of the brain, affecting movement, balance or coordination. Recovery uses repetitive, task-specific practice — the brain can re-learn."],
+  [/spinal cord|tetraplegia|paraplegia|cord syndrome|myelitis|myelopathy|brown-s|cauda equina/, "This involves the spinal cord, affecting movement and sensation below the level of injury. Rehab maximizes strength, function and independence within your ability."],
+  [/parkinson|supranuclear|multiple system atrophy|corticobasal/, "This affects movement control. Large-amplitude, high-effort exercise and balance training help manage symptoms and maintain function."],
+  [/multiple sclerosis|(^|[^a-z])ms /, "MS affects nerve signalling and can fluctuate. Exercise is paced to avoid overheating and fatigue while maintaining strength, balance and endurance."],
+  [/neuropathy|nerve (injury|palsy|entrapment|damage)|plexopathy|radial|ulnar|median|peroneal|sciatic nerve|tunnel/, "This involves a peripheral nerve, which can affect strength, sensation and balance. Rehab rebuilds strength and control while protecting areas of reduced sensation."],
+  [/vestibular|vertigo|bppv|labyrinth|dizziness|meniere|neuritis/, "This is an inner-ear / balance-system problem causing dizziness. Specific gaze and balance exercises retrain the system to reduce symptoms."],
+  [/palsy|bell's|facial nerve/, "This is weakness from a nerve not working properly. Targeted, gentle activation and control exercises support recovery."],
+  [/dystrophy|myopathy|myositis|muscular atrophy|myasthenia|lambert-eaton|sma/, "This is a muscle or neuromuscular condition. Exercise is carefully dosed — enough to maintain strength and function without overworking vulnerable muscle."],
+  [/ataxia|cerebellar|friedreich/, "Ataxia affects coordination and balance. Rehab uses balance and coordination training, usually near support, to improve steadiness."],
+  [/myocardial|heart attack|stemi|coronary|angina|cabg|bypass|stent|\bpci\b|cardiac rehab|deconditioning \(gen/, "This is recovery for the heart's blood supply. Supervised, graded aerobic exercise safely rebuilds fitness and is proven to improve outcomes."],
+  [/heart failure|cardiomyopathy|lvad|hfref|hfpef|ejection fraction|transplant/, "The heart's pumping capacity is affected. Carefully paced, monitored exercise improves symptoms and endurance — intensity stays moderate and symptom-guided."],
+  [/valve|tavr|valvular|mitral|aortic|tricuspid|pulmonary valve/, "This involves a heart valve. Graded aerobic and light strength work rebuild fitness while respecting any surgical (e.g. sternal) precautions."],
+  [/arrhythmia|fibrillation|flutter|tachycardia|pacemaker|icd|heart block|bradycardia|\bqt\b|ablation/, "This involves the heart's rhythm. Exercise is kept within safe heart-rate limits, avoiding maximal exertion and breath-holding."],
+  [/hypertension|blood pressure|prehypertension/, "High blood pressure responds well to regular moderate aerobic exercise. Heavy straining and breath-holding are avoided as they spike blood pressure."],
+  [/artery disease|claudication|\bpad\b|aneurysm|dissection|venous|\bdvt\b|thrombo|vascular|raynaud|buerger|arteritis|carotid/, "This is a blood-vessel / circulation condition. Structured walking and conditioning improve circulation and, for leg-artery disease, pain-free walking distance."],
+  [/copd|emphysema|bronchitis|bronchiectasis|gold stage/, "COPD narrows the airways and makes breathing harder. Pulmonary rehab — paced exercise plus breathing techniques — improves capacity and reduces breathlessness."],
+  [/asthma/, "Asthma is reversible airway narrowing. With a good warm-up and your action plan, exercise is safe and improves fitness; intervals are usually well tolerated."],
+  [/fibrosis|interstitial|\bild\b|pneumonia|sarcoid|asbestosis|silicosis|pneumoconiosis|hypersensitivity pneumonitis|nsip|uip/, "This is a lung-tissue condition that can lower oxygen levels. Exercise is paced and monitored (often with oxygen) to build tolerance safely."],
+  [/embolism|cteph|ards/, "This follows a serious lung or clot event. Reconditioning is gradual and symptom-guided; new breathlessness or chest pain needs prompt review."],
+  [/covid/, "This is recovery after COVID-19. Energy pacing is key — progress only when you recover well, to avoid post-exertional setbacks."],
+  [/amputation|disarticulation|hemipelvectomy|forequarter/, "This is rehabilitation after limb loss. The plan builds residual-limb strength, balance and (where relevant) prosthetic function toward independence."],
+  [/burn|contracture|skin graft|flap|replantation/, "This is recovery of soft tissue and movement after injury or surgery. Regaining range and preventing contracture are early priorities."],
+  [/lymphedema/, "Lymphedema is swelling from impaired lymph drainage. Exercise, often with compression, helps move fluid and maintain function."],
+  [/cancer|oncolog|sarcoma|metasta|chemotherapy|radiation|mastectomy|prostatectomy|lumpectomy/, "This is cancer-related rehabilitation. Exercise safely counters treatment-related fatigue and deconditioning and is tailored to your treatment stage."],
+  [/pregnan|postpartum|caesarean|pelvic girdle|diastasis|pelvic floor|symphysis|levator/, "This is a pregnancy-related or pelvic-health condition. Rehab restores core, pelvic and hip control with attention to this life stage."],
+  [/sarcopenia|frailty|deconditioning|falls|immobility|multimorbidity/, "This is age- or illness-related loss of strength and fitness. Progressive resistance and balance training rebuild capacity and reduce fall risk."],
+  [/tmj|temporomandibular|bruxism|jaw/, "This affects the jaw joint and muscles. Gentle jaw control, posture and relaxation exercises reduce pain and improve function."],
+  [/whiplash|neck strain|cervicogenic|torticollis|text neck|headache|occipital neuralgia/, "This is a neck or cervicogenic condition. Early gentle movement plus deep-neck and postural strengthening speeds recovery."],
+  [/pots|orthostatic|dysautonomia|autonomic/, "This involves the autonomic control of heart rate and blood pressure. Reconditioning often begins with recumbent exercise and progresses gradually."],
+  [/osteoporos|osteopenia|osteonecrosis|avascular necrosis|paget|blount|perthes|apophysitis|osteochondr|kienb|köhler|freiberg|scheuermann|sever|larsen/, "This is a bone or growth-plate condition. Rehab loads the area appropriately to support bone and tissue health while avoiding high-risk stress."]
+];
+function pathologyText(name){
+  const l = name.toLowerCase();
+  for(const [re, txt] of PATHOLOGY_INFO) if(re.test(l)) return txt;
+  return "";
+}
+/* Full plain-language explanation for a condition. */
+function conditionExplain(c, track){
+  track = track || classify(state.weeks) || (c.chronicByNature ? "chronic" : "acute");
+  const path = pathologyText(c.name);
+  const approach = PROTOCOL_APPROACH[resolveProto(c.protocol)] || PROTOCOL_APPROACH.general_msk;
+  const phase = track==="acute"
+    ? "Because this is within the acute window (first ~6 weeks), the plan protects the healing tissue first, then progressively loads it."
+    : "Because this is in the chronic phase (beyond ~6 weeks), the plan emphasizes progressive loading to rebuild capacity.";
+  const parts = [
+    path || `${c.name} affects the ${String(c.region).toLowerCase()}.`,
+    `Your ${DOMAIN_NAME[c.domain]} program centers on ${approach}.`,
+    phase
+  ];
+  if(c.clearance) parts.push("Given the nature of this condition, get medical clearance before starting and consider supervised rehab.");
+  return parts.join(" ");
+}
+
+/* ---- exercise explanations ---- */
+const PATTERN_INFO = {
+  squat:{what:"A squat is a foundational lower-body movement that bends the hips and knees together.",how:"Feet about hip-to-shoulder width; sit the hips back and down with the knees tracking over the toes, then drive up.",why:"Builds strength in the quads, glutes and whole leg for standing, stairs and lifting."},
+  hinge:{what:"A hip hinge (deadlift-family) movement bends mainly at the hips while the spine stays long.",how:"Push the hips back with soft knees and a neutral spine, feel a hamstring stretch, then drive the hips forward.",why:"Strengthens the hamstrings, glutes and back for bending, lifting and posture."},
+  lunge:{what:"A lunge is a split-stance movement that loads one leg at a time.",how:"Step into a split stance, lower with a vertical front shin until the back knee nears the floor, then push back up.",why:"Builds single-leg strength, balance and control for walking and stairs."},
+  calf:{what:"A calf raise loads the calf muscles and Achilles tendon.",how:"Rise onto the balls of the feet through full range, then lower slowly under control.",why:"Strengthens the calf and Achilles for push-off, walking and running."},
+  pull:{what:"A pulling / curling exercise contracts a muscle to draw resistance in or bend a joint.",how:"Contract the target muscle to move the weight smoothly, then control the return.",why:"Builds pulling and curling strength and helps balance the joints it crosses."},
+  push:{what:"A pushing / pressing exercise contracts a muscle to press resistance away or straighten a joint.",how:"Press smoothly through range and control the return, exhaling on effort.",why:"Builds pressing and extending strength for everyday tasks."},
+  isometric:{what:"An isometric is a static hold with no joint movement.",how:"Get into position and hold steady with the target muscle engaged, breathing normally.",why:"Builds strength and tendon tolerance and often eases pain — useful when movement hurts."},
+  mobility:{what:"A mobility or stretching drill moves a joint through its available range.",how:"Move slowly and smoothly to a gentle, pain-free end range.",why:"Restores range of motion and reduces stiffness."},
+  balance:{what:"A balance exercise challenges your stability and body awareness.",how:"Hold or move in a challenging position near sturdy support, progressing difficulty gradually.",why:"Improves stability and coordination and lowers fall and re-injury risk."},
+  plyo:{what:"A plyometric is an explosive jump or hop that trains power and landing control.",how:"Jump or hop with intent, focusing on soft, quiet, controlled landings.",why:"Rebuilds power and shock absorption for sport and impact activities."},
+  carry:{what:"A loaded carry means walking while holding weight.",how:"Stand tall and braced, hold the load, and walk with even, controlled steps.",why:"Builds grip, core and whole-body strength and endurance."},
+  cardio:{what:"An aerobic activity raises your heart and breathing rate steadily.",how:"Work at a conversational pace (or your prescribed intervals); warm up and cool down.",why:"Builds cardiovascular fitness, endurance and recovery capacity."},
+  vestibular:{what:"A vestibular exercise retrains the inner-ear balance system.",how:"Perform the gaze or head movements as prescribed, provoking mild symptoms that then settle.",why:"Reduces dizziness and improves gaze and balance stability."},
+  breathing:{what:"A breathing exercise trains the diaphragm and breathing pattern.",how:"Breathe slowly and relaxed (e.g. in through the nose, out through pursed lips); never hold your breath.",why:"Improves breathing efficiency and helps control breathlessness."},
+  "anti-ext":{what:"An anti-extension core exercise resists the low back arching.",how:"Brace the core and move the limbs while keeping the low back flat and still.",why:"Builds deep core control that protects the spine."},
+  "anti-rot":{what:"An anti-rotation core exercise resists twisting.",how:"Keep the hips and shoulders square while resisting a rotational load.",why:"Builds trunk stability for lifting, sport and spine protection."},
+  extension:{what:"A back-extension exercise strengthens the muscles that straighten the spine.",how:"Lift into a small, controlled range without pinching, then lower slowly.",why:"Strengthens the back extensors for posture and lifting."},
+  flexion:{what:"A trunk-flexion exercise works the abdominals by curling the spine.",how:"Curl through the upper spine with control; avoid straining the neck.",why:"Builds abdominal strength — introduced when appropriate for your condition."},
+  gait:{what:"A gait drill practices the components of walking.",how:"Perform the stepping pattern with even, deliberate steps, looking ahead and near support if needed.",why:"Improves walking quality, coordination and confidence."},
+  rotate:{what:"A rotational exercise trains controlled trunk turning and power.",how:"Rotate through the trunk with control and return smoothly.",why:"Builds rotational strength for sport and daily twisting tasks."},
+  general:{what:"A general conditioning exercise for the area.",how:"Perform with control through a pain-free range, exhaling on effort.",why:"Helps restore strength, movement and function."}
+};
+function inferPattern(name){
+  const l = name.toLowerCase();
+  if(/gaze|vor|habituation/.test(l)) return "vestibular";
+  if(/breath|diaphragm|pursed|spirometr/.test(l)) return "breathing";
+  if(/dead bug/.test(l)) return "anti-ext";
+  if(/bird-dog|pallof|anti-rotation|wood-?chop|\bchop\b|\blift\b \(/.test(l)) return "anti-rot";
+  if(/jump|hop|bound|pogo|plyo|depth/.test(l)) return "plyo";
+  if(/plank|wall sit|isometric|\bhold\b|dead-hang|chin tuck|quad set|glute set/.test(l)) return "isometric";
+  if(/carry|farmer|suitcase|waiter/.test(l)) return "carry";
+  if(/calf raise|heel raise|calf/.test(l)) return "calf";
+  if(/lunge|step-up|split squat|step-down/.test(l)) return "lunge";
+  if(/squat/.test(l)) return "squat";
+  if(/deadlift|hinge|bridge|hip thrust|good-morning|kickback|romanian|hip extension/.test(l)) return "hinge";
+  if(/crunch|sit-up|curl-up|v-up|trunk flexion|reverse crunch/.test(l)) return "flexion";
+  if(/superman|cobra|back extension|hyperextension|prone extension/.test(l)) return "extension";
+  if(/tandem walk|braiding|grapevine|gait|marching|obstacle stepping|backward walk/.test(l)) return "gait";
+  if(/balance|single-leg stance|star-excursion|weight-shift|reach|foam|bosu|perturbation/.test(l)) return "balance";
+  if(/walk|jog|run|cycl|bike|row|elliptical|stair|swim|aqua|conditioning|interval|sled/.test(l)) return "cardio";
+  if(/stretch|\brom\b|mobility|pendulum|cat-camel|open-book|circle|alphabet|thread|slide|wall walk/.test(l)) return "mobility";
+  if(/row|pull|curl|face pull|rear-delt|external rotation|scapular|y-t-w|deviation|glide/.test(l)) return "pull";
+  if(/press|push-up|raise|fly|scaption|full-can|internal rotation|extension|leg extension/.test(l)) return "push";
+  return "general";
+}
+function movementNotes(name){
+  const l = name.toLowerCase(); const n = [];
+  if(/isometric|hold|wall sit|plank|set\b/.test(l)) n.push("Held statically — builds tendon tolerance and control without moving the joint, which is handy when motion is painful.");
+  if(/eccentric|nordic|off-step|slow-tempo|3s|slow eccentric/.test(l)) n.push("Emphasizes the slow lowering (lengthening) phase, which is especially effective for tendon and muscle strengthening.");
+  if(/single-leg|pistol|unilateral|1-leg|one-leg/.test(l)) n.push("A single-leg version — more balance and stability demand; progress to it once the two-leg version is easy.");
+  if(/\bband\b|cable|banded|accommodating/.test(l)) n.push("Uses variable resistance that's easy to scale up or down.");
+  if(/paused|1\.5-rep|2s pause/.test(l)) n.push("The pause removes momentum and increases control at the hardest position.");
+  if(/deficit|deep|full-range/.test(l)) n.push("Trains a larger range of motion — introduce it gradually.");
+  if(/foam|bosu|unstable|wobble|perturbation/.test(l)) n.push("An unstable surface increases the balance challenge — keep sturdy support nearby.");
+  return n.slice(0,2).join(" ");
+}
+function movementExplain(name, pattern, regionArr){
+  const p = pattern || inferPattern(name);
+  const info = PATTERN_INFO[p] || PATTERN_INFO.general;
+  const skip = new Set(["Full body","Cardio","Balance","Gait","Vestibular","Breathing","Core","Grip"]);
+  const regs = (regionArr||[]).filter(r=>!skip.has(r));
+  const target = regs.length ? ` It mainly works the ${regs.join(", ").toLowerCase()}.` : "";
+  const notes = movementNotes(name);
+  return `<b>What it is:</b> ${info.what}${target}<br><b>How to do it:</b> ${info.how}<br><b>Why it helps:</b> ${info.why}${notes?" "+notes:""}`;
+}
+
+/* Shared exercise <li> renderer (program rows + variations) with an Explain toggle. */
+function exItemHTML(e, regionArr){
+  return `<li class="exitem">
+    <div class="top"><span class="en">${esc(e.n)}</span><span class="ed">${esc(e.d)}</span></div>
+    <div class="ec">${esc(e.c)}</div>
+    ${e.warn?`<span class="warnpill">⚠ Modify — involves ${esc(TAG_LABEL[e.warn]||e.warn)}; keep it symptom-free.</span>`:""}
+    ${e.sub?`<span class="subpill">safer substitute for your precautions</span>`:""}
+    <button class="expbtn" onclick="this.nextElementSibling.classList.toggle('hide')">ⓘ Explain this exercise</button>
+    <div class="exp hide">${movementExplain(e.n, e.pattern, e.region||regionArr)}</div>
+  </li>`;
+}
+
 /* Collapsible "more variations from the library" block for a phase. */
 function variationsBlock(protocol, phaseIdx, flags, exclude){
   const vars = exercisesFor(protocol, phaseIdx, flags, exclude);
   if(!vars.length) return "";
-  const items = vars.map(v=>`
-    <li class="exitem">
-      <div class="top"><span class="en">${esc(v.n)}</span><span class="ed">${esc(v.d)}</span></div>
-      <div class="ec">${esc(v.c)}</div>
-      ${v.warn?`<span class="warnpill">⚠ Modify — involves ${esc(TAG_LABEL[v.warn]||v.warn)}; keep it symptom-free.</span>`:""}
-    </li>`).join("");
+  const items = vars.map(v=>exItemHTML(v)).join("");
   return `<button class="varbtn" onclick="this.nextElementSibling.classList.toggle('hide')">⇄ Swap it up — ${vars.length} more variations from the library</button>
     <ul class="exlist varlist hide">${items}</ul>`;
 }
@@ -264,15 +461,10 @@ function renderProgram(prog){
   html += `</div>`;
 
   prog.items.forEach(item=>{
-    html += `<div class="card"><h2>${esc(item.name)}</h2><p class="hint">${esc(item.about)}</p>`;
+    html += `<div class="card"><h2>${esc(item.name)}</h2>
+      <p class="hint">${esc(conditionExplain(item, prog.track))}</p>`;
     item.phases.forEach((ph,i)=>{
-      const rows = ph.ex.map(e=>`
-        <li class="exitem">
-          <div class="top"><span class="en">${esc(e.n)}</span><span class="ed">${esc(e.d)}</span></div>
-          <div class="ec">${esc(e.c)}</div>
-          ${e.warn?`<span class="warnpill">⚠ Modify — involves ${esc(TAG_LABEL[e.warn]||e.warn)}; reduce range/load and keep it symptom-free.</span>`:""}
-          ${e.sub?`<span class="subpill">safer substitute for your precautions</span>`:""}
-        </li>`).join("");
+      const rows = ph.ex.map(e=>exItemHTML(e, [item.region])).join("");
       html += `<div class="phase ${i===0?"open":""}">
         <div class="head" onclick="this.parentElement.classList.toggle('open')">
           <div class="pnum">${i+1}</div>
@@ -440,15 +632,25 @@ function runSearch(){
   const res=$("#condResults");
   if(!list.length){ res.innerHTML=`<div class="moreinfo">No matches. Try a simpler term, or a different spelling.</div>`; return; }
   res.innerHTML = list.map(c=>{ const picked=state.condIds.includes(c.id);
-    return `<div class="result ${picked?"picked":""}" data-id="${c.id}">
-      <span class="dot" style="background:${dotColor[c.domain]}"></span>
-      <span class="rn">${esc(c.name)}<div class="rr">${esc(c.region)} · ${DOMAIN_NAME[c.domain]}</div></span>
-      <span class="add">${picked?"✓":"+"}</span></div>`; }).join("") +
+    return `<div class="resitem">
+      <div class="result ${picked?"picked":""}" data-id="${c.id}">
+        <span class="dot" style="background:${dotColor[c.domain]}"></span>
+        <span class="rn">${esc(c.name)}<div class="rr">${esc(c.region)} · ${DOMAIN_NAME[c.domain]}</div></span>
+        <span class="info" data-info="${c.id}" title="What is this?">ⓘ</span>
+        <span class="add">${picked?"✓":"+"}</span>
+      </div>
+      <div class="resexp hide" id="exp-${c.id}"></div>
+    </div>`; }).join("") +
     (total>60?`<div class="moreinfo">Showing 60 of ${total} matches — refine your search to narrow it down.</div>`:"");
-  $$("#condResults .result").forEach(r=>r.onclick=()=>{ const id=r.dataset.id;
+  $$("#condResults .result").forEach(r=>r.onclick=e=>{ if(e.target.closest(".info")) return;
+    const id=r.dataset.id;
     if(state.condIds.includes(id)) state.condIds=state.condIds.filter(i=>i!==id);
     else state.condIds.push(id);
     save(); renderSelected(); runSearch(); });
+  $$("#condResults .info").forEach(ic=>ic.onclick=e=>{ e.stopPropagation();
+    const id=ic.dataset.info, exp=document.getElementById("exp-"+id);
+    if(!exp.dataset.filled){ exp.textContent=conditionExplain(CONMAP.get(id)); exp.dataset.filled="1"; }
+    exp.classList.toggle("hide"); });
 }
 function initSearch(){
   window.CONDITIONS.forEach(c=>CONMAP.set(c.id,c));
@@ -692,12 +894,14 @@ async function askClaude(q){
    EXERCISE LIBRARY BROWSER
 ===================================================================== */
 const DIFF_LABEL = { 1:"L1", 2:"L2", 3:"L3", 4:"L4" };
+const EXMAP = new Map();
 let libReady = false;
 function initLibrary(){
   if(!window.EXERCISES) return;
   $("#exCount").textContent = window.EXERCISES.length;
   if(!libReady){
     libReady = true;
+    window.EXERCISES.forEach(e=>EXMAP.set(e.id,e));
     const regions = [...new Set(window.EXERCISES.flatMap(e=>e.region))].sort();
     const sel = $("#exRegion");
     regions.forEach(r=>{ const o=document.createElement("option"); o.value=r; o.textContent=r; sel.appendChild(o); });
@@ -735,12 +939,21 @@ function renderExResults(){
   const res = $("#exResults");
   if(!list.length){ res.innerHTML=`<div class="moreinfo">No matches. Try a simpler term or clear the filters.</div>`; return; }
   res.innerHTML = list.map(e=>{ const w=annotate.get(e.id);
-    return `<div class="exrow">
-      <span class="diffpill d${e.difficulty}">${DIFF_LABEL[e.difficulty]}</span>
-      <span class="en">${esc(e.name)}<span class="er">${esc(e.region.join(" · "))} · ${esc(e.equipment)}</span>
-        ${w?`<span class="exwarn">⚠ Modify — ${esc(TAG_LABEL[w]||w)}</span>`:""}</span>
-      <span class="ed">${esc(e.dose)}</span></div>`; }).join("") +
+    return `<div class="exitemw" data-i="${e.id}">
+      <div class="exrow">
+        <span class="diffpill d${e.difficulty}">${DIFF_LABEL[e.difficulty]}</span>
+        <span class="en">${esc(e.name)}<span class="er">${esc(e.region.join(" · "))} · ${esc(e.equipment)}</span>
+          ${w?`<span class="exwarn">⚠ Modify — ${esc(TAG_LABEL[w]||w)}</span>`:""}</span>
+        <span class="ed">${esc(e.dose)}</span>
+        <span class="chev">▾</span>
+      </div>
+      <div class="exexp hide"></div>
+    </div>`; }).join("") +
     (total>80?`<div class="moreinfo">Showing 80 of ${total} matches — refine to narrow it down.</div>`:"");
+  $$("#exResults .exitemw").forEach(w=>{ w.querySelector(".exrow").onclick=()=>{
+    const exp=w.querySelector(".exexp");
+    if(!exp.dataset.filled){ const e=EXMAP.get(w.dataset.i); exp.innerHTML=movementExplain(e.name,e.pattern,e.region); exp.dataset.filled="1"; }
+    exp.classList.toggle("hide"); w.classList.toggle("open"); }; });
 }
 
 /* ---------- boot ---------- */
