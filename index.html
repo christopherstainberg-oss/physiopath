@@ -76,8 +76,14 @@
           <span>A doctor has told me to <b>only exercise under supervision</b>.</span></label>
       </div>
 
-      <label class="field"><span class="lab">Medications <span class="sub">(optional)</span></span>
-        <input type="text" id="q_meds" placeholder="e.g. beta-blocker, blood thinner, inhaler" /></label>
+      <div class="field">
+        <span class="lab">Medications <span class="sub">(optional — search 10,000+; flags exercise considerations)</span></span>
+        <input type="text" id="medSearch" placeholder="Search e.g. ‘metoprolol’, ‘Eliquis’, ‘prednisone’, ‘gabapentin’…" autocomplete="off" />
+        <div class="selected" id="selectedMeds"></div>
+        <div class="results medresults hide" id="medResults"></div>
+      </div>
+      <label class="field"><span class="lab">Other medications <span class="sub">(free text, optional)</span></span>
+        <input type="text" id="q_meds" placeholder="anything not found in the search above" /></label>
       <label class="field"><span class="lab">Anything else we should know? <span class="sub">(optional)</span></span>
         <textarea id="q_notes" placeholder="Other conditions, symptoms, what makes things better or worse…"></textarea></label>
 
@@ -300,6 +306,7 @@
 <script src="data/conditions.js"></script>
 <script src="data/protocols.js"></script>
 <script src="data/exercises.js"></script>
+<script src="data/medications.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

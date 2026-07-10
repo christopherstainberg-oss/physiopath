@@ -244,7 +244,42 @@ const state = {
   step:0, age:"", sex:"", flags:[], parq:{pain:false,faint:false,doc:false},
   meds:"", notes:"", condIds:[], weeks:null, painRest:3, painMove:4, surgery:"no",
   surgeryType:"auto", surgeryDate:"", fitness:"mod", goal:"", program:null,
-  customPrecautions:[], log:[], apiKey:"", apiModel:"claude-opus-4-8"
+  medIds:[], customPrecautions:[], log:[], apiKey:"", apiModel:"claude-opus-4-8"
+};
+const MEDMAP = new Map();
+function selectedMeds(){ return (state.medIds||[]).map(id=>MEDMAP.get(id)).filter(Boolean); }
+
+/* medication class → exercise consideration (education, not prescribing advice) */
+const MED_EFFECT = {
+  beta_blocker:"Beta-blockers blunt your heart-rate response — don't judge effort by heart rate; use the talk-test or RPE (perceived exertion). Warm up and cool down slowly to avoid dizziness.",
+  antihypertensive:"Blood-pressure medicines can cause dizziness on standing — rise slowly, stay hydrated, and cool down gradually.",
+  diuretic:"Diuretics increase fluid and salt loss — hydrate well and watch for dizziness or cramps, especially in the heat.",
+  nitrate:"Nitrates are for angina — keep your spray/tablets with you, stop and rest for chest pain, and never exercise through angina. Do NOT combine nitrates with ED medicines.",
+  antiarrhythmic:"Follow any heart-rate limits from your cardiologist; stop for palpitations, dizziness, or chest pain.",
+  statin:"Statins occasionally cause muscle aches — report new, unusual, or severe muscle pain or weakness (especially with dark urine).",
+  anticoagulant:"Blood thinners raise bruising and bleeding risk — favor lower-fall-risk exercises, avoid contact/collision, and report unusual bruising or bleeding.",
+  antiplatelet:"Antiplatelet medicines (aspirin, clopidogrel, etc.) increase bruising/bleeding — take care with fall-risk and contact activities.",
+  insulin:"Insulin can cause low blood sugar with exercise — check glucose before and after, carry fast-acting carbs, and don't exercise if glucose is very low or very high.",
+  hypoglycemic:"Some diabetes pills (sulfonylureas/glinides) can cause low blood sugar with exercise — carry fast-acting carbs and check your glucose.",
+  sglt2:"SGLT2 diabetes medicines increase fluid loss — hydrate well; if you feel very unwell, stop and seek care (rare risk of ketoacidosis).",
+  nsaid:"Anti-inflammatories relieve pain but can mask it — don't use them to push through sharp pain; heavy use may blunt tissue adaptation.",
+  opioid:"Opioid pain medicines cause drowsiness and can mask pain — don't push through 'painless' limits, and avoid balance-demanding exercise when drowsy.",
+  muscle_relaxant:"Muscle relaxants cause drowsiness and reduce alertness — do balance work near support and avoid it when drowsy.",
+  gabapentinoid:"Nerve-pain medicines (gabapentin/pregabalin) can cause dizziness and drowsiness — take care with balance and rise slowly.",
+  corticosteroid:"Longer-term steroids can weaken tendon and bone — progress loading gradually, prioritize good technique, and avoid sudden maximal efforts and high impact.",
+  bronchodilator:"Use your reliever inhaler as prescribed (before exercise if advised) and warm up thoroughly.",
+  inhaled_steroid:"Keep using your inhaled controller as prescribed for stable breathing during exercise.",
+  sedative:"Sedatives / sleep or anxiety medicines impair balance and alertness — do balance work near support and avoid exercise when drowsy.",
+  antipsychotic:"Antipsychotics can cause drowsiness and dizziness on standing — rise slowly and take care with balance.",
+  antidepressant:"Some antidepressants can cause dizziness — rise slowly, especially in the first weeks.",
+  levodopa:"Parkinson's medicines work best during 'on' periods — time exercise for when the medication is working, and take care with balance and blood pressure on standing.",
+  fluoroquinolone:"⚠ Fluoroquinolone antibiotics (ciprofloxacin, levofloxacin, etc.) raise the risk of TENDON pain and rupture — especially the Achilles. Avoid heavy tendon loading and high impact while taking it and for a few weeks after, and stop/rest if you feel any tendon pain.",
+  bisphosphonate:"Bone medicines support your skeleton — keep loading progressive; take the tablet exactly as directed (upright, on an empty stomach).",
+  triptan:"Triptans treat migraine attacks — if you have heart disease, follow your doctor's advice about exertion.",
+  pde5:"Do NOT combine ED medicines with nitrates — the blood-pressure drop can be dangerous; stand up slowly to avoid dizziness.",
+  diabetes:"Regular exercise improves blood-sugar control — stay hydrated and check glucose around workouts if you're prone to lows.",
+  thyroid:"Once your thyroid level is stable, normal exercise is fine — see your doctor if you feel unusually fatigued or your heart races.",
+  dmard:"Immune-modulating medicines can raise infection risk — avoid training when acutely unwell and keep good hygiene at shared gyms."
 };
 let chatHistory = [];
 const CONMAP = new Map();
@@ -726,6 +761,22 @@ function removeCustomPrecaution(idx){
   state.customPrecautions.splice(idx,1); save(); renderProgram(state.program); toast("Reminder removed.");
 }
 
+/* Medication considerations card. */
+function medicationCard(){
+  const meds = selectedMeds();
+  if(!meds.length) return "";
+  const flags = [...new Set(meds.flatMap(m=>m.flags||[]))].filter(f=>MED_EFFECT[f]);
+  const list = meds.map(m=>esc(m.name)).join(", ");
+  const body = flags.length
+    ? `<ul class="notelist">${flags.map(f=>`<li>${MED_EFFECT[f]}</li>`).join("")}</ul>`
+    : `<p class="hint">No specific exercise considerations flagged for these — but always tell your clinician what you take.</p>`;
+  return `<div class="card medcard">
+    <h2>💊 Medication considerations for exercise</h2>
+    <p class="hint">Based on your medications (${list}). These are <b>general considerations</b>, not prescribing advice — your prescriber and pharmacist are the authority on your medicines.</p>
+    ${body}
+  </div>`;
+}
+
 /* ---------- render program ---------- */
 function renderProgram(prog){
   const out = $("#programOut");
@@ -770,6 +821,7 @@ function renderProgram(prog){
   html += `</div>`;
 
   html += surgicalReminderCard();
+  html += medicationCard();
 
   prog.items.forEach((item, ci)=>{
     html += `<div class="card"><h2>${esc(item.name)}</h2>
@@ -976,6 +1028,37 @@ function initSearch(){
   $$("#domainFilters .fchip").forEach(f=>f.onclick=()=>{ domainFilter=f.dataset.d;
     $$("#domainFilters .fchip").forEach(x=>x.classList.toggle("on",x===f)); runSearch(); });
   renderSelected(); runSearch();
+}
+
+/* ---------- medication search UI ---------- */
+function renderSelectedMeds(){
+  const wrap=$("#selectedMeds"); if(!wrap) return;
+  const meds=selectedMeds();
+  wrap.innerHTML = meds.map(m=>`<span class="selchip">${esc(m.name)}<span class="x" data-id="${m.id}">✕</span></span>`).join("");
+  $$("#selectedMeds .x").forEach(x=>x.onclick=()=>{ state.medIds=state.medIds.filter(i=>i!==x.dataset.id); save(); renderSelectedMeds(); runMedSearch(); });
+}
+function runMedSearch(){
+  const res=$("#medResults"); if(!res || !window.MEDICATIONS) return;
+  const q=$("#medSearch").value.trim().toLowerCase(); const toks=q.split(/\s+/).filter(Boolean);
+  if(!toks.length){ res.innerHTML=""; res.classList.add("hide"); return; }
+  res.classList.remove("hide");
+  let list=window.MEDICATIONS.filter(m=>{ const hay=(m.name+" "+m.generic+" "+m.cls).toLowerCase(); return toks.every(t=>hay.includes(t)); });
+  const total=list.length; list=list.slice(0,40);
+  if(!list.length){ res.innerHTML=`<div class="moreinfo">No matches — try the generic or brand name.</div>`; return; }
+  res.innerHTML = list.map(m=>{ const picked=state.medIds.includes(m.id);
+    return `<div class="result ${picked?"picked":""}" data-id="${m.id}">
+      <span class="rn">${esc(m.name)}<div class="rr">${esc(m.cls)}${m.brand?` · generic: ${esc(m.generic)}`:""}</div></span>
+      <span class="add">${picked?"✓":"+"}</span></div>`; }).join("") +
+    (total>40?`<div class="moreinfo">Showing 40 of ${total} — keep typing to narrow.</div>`:"");
+  $$("#medResults .result").forEach(r=>r.onclick=()=>{ const id=r.dataset.id;
+    if(state.medIds.includes(id)) state.medIds=state.medIds.filter(i=>i!==id); else state.medIds.push(id);
+    save(); renderSelectedMeds(); runMedSearch(); });
+}
+function initMeds(){
+  if(window.MEDICATIONS) window.MEDICATIONS.forEach(m=>MEDMAP.set(m.id,m));
+  const inp=$("#medSearch"); if(!inp) return;
+  let t; inp.oninput=()=>{ clearTimeout(t); t=setTimeout(runMedSearch,120); };
+  renderSelectedMeds();
 }
 
 /* ---------- details UI ---------- */
@@ -1294,7 +1377,7 @@ function renderExResults(){
 /* ---------- boot ---------- */
 document.addEventListener("DOMContentLoaded",()=>{
   load();
-  initHistory(); initSearch(); initDetails(); initInstall(); initProgress(); initCoachSettings();
+  initHistory(); initMeds(); initSearch(); initDetails(); initInstall(); initProgress(); initCoachSettings();
   $$("[data-goto]").forEach(b=>b.onclick=()=>{
     const n=+b.dataset.goto;
     if([2,3,4].includes(n) && !state.condIds.length){ toast("Pick at least one condition first."); goStep(1); return; }

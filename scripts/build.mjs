@@ -9,6 +9,7 @@ const DIST = join(ROOT, "dist");
 // 1) regenerate generated assets (importing runs each generator's top-level code)
 await import("./generate-conditions.mjs");
 await import("./generate-exercises.mjs");
+await import("./generate-medications.mjs");
 await import("./generate-icons.mjs");
 
 // 2) fresh dist
