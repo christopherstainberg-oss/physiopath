@@ -244,7 +244,7 @@ const state = {
   step:0, age:"", sex:"", flags:[], parq:{pain:false,faint:false,doc:false},
   meds:"", notes:"", condIds:[], weeks:null, painRest:3, painMove:4, surgery:"no",
   surgeryType:"auto", surgeryDate:"", fitness:"mod", goal:"", program:null,
-  log:[], apiKey:"", apiModel:"claude-opus-4-8"
+  customPrecautions:[], log:[], apiKey:"", apiModel:"claude-opus-4-8"
 };
 let chatHistory = [];
 const CONMAP = new Map();
@@ -616,6 +616,11 @@ function wireProgram(){
   $$("#programOut .swapbtn").forEach(b=>b.onclick=()=>openSwap(b));
   $$("#programOut .rerollbtn").forEach(b=>b.onclick=()=>rerollPhase(+b.dataset.ci, +b.dataset.pi));
   $$("#programOut .resetbtn").forEach(b=>b.onclick=()=>resetPhase(+b.dataset.ci, +b.dataset.pi));
+  const addBtn = $("#programOut .addprecbtn");
+  if(addBtn) addBtn.onclick = ()=>{ const f=$("#programOut .addprecform"); f.classList.toggle("hide"); if(!f.classList.contains("hide")) f.querySelector(".addprec-t").focus(); };
+  const saveBtn = $("#programOut .addprec-save");
+  if(saveBtn) saveBtn.onclick = addCustomPrecaution;
+  $$("#programOut .precdel").forEach(b=>b.onclick=()=>removeCustomPrecaution(+b.dataset.idx));
 }
 function openSwap(btn){
   const ci=+btn.dataset.ci, pi=+btn.dataset.pi, ei=+btn.dataset.ei;
@@ -656,30 +661,69 @@ function resetPhase(ci, pi){
   save(); renderProgram(state.program); toast("Phase reset to the recommended exercises.");
 }
 
-/* Surgical precautions & reminders card (post-op timeline). */
-function surgicalReminderCard(){
-  const surg = detectSurgery(); if(!surg) return "";
+/* status of a precaution given its weeks-to-follow (w) and the user's weeks post-op */
+function precStatus(w){
   const wpo = weeksPostOp();
-  let sub;
-  if(state.surgeryDate) sub = (wpo>0 ? `You're about <b>${wpo} week${wpo===1?"":"s"} post-op</b>` : `You're <b>less than a week post-op</b>`) + ` (surgery date: ${esc(fmtDate(state.surgeryDate))}).`;
-  else if(wpo!=null)    sub = `About <b>${wpo} week${wpo===1?"":"s"}</b> in — add your <b>surgery date</b> in Details for an exact post-op timeline.`;
-  else                  sub = `Add your <b>surgery date</b> in Details to track your post-op timeline.`;
-  const rows = surg.precautions.map(p=>{
-    let cls, label;
-    if(p.w===0){ cls="active"; label="ongoing / until cleared"; }
-    else if(wpo==null){ cls="neutral"; label=`follow ~${p.w} wks`; }
-    else if(wpo < p.w){ cls="active"; label=`ACTIVE · until ~wk ${p.w}`; }
-    else { cls="lifted"; label=`likely lifted — confirm`; }
-    return `<li class="precrow ${cls}"><span class="prec-t">${esc(p.t)}</span><span class="prec-w">${label}</span></li>`;
-  }).join("");
-  return `<div class="card surgcard">
-    <h2>🩹 Surgical precautions &amp; reminders</h2>
-    <p class="hint"><b>${esc(surg.name)}.</b> ${sub}</p>
-    <ul class="preclist">${rows}</ul>
-    <div class="banner load" style="margin:4px 0 0"><b>Timeline:</b> ${esc(surg.ret)}</div>
-    <p class="hint" style="margin-top:10px">These are <b>generalized</b> timeframes for education — your surgeon's own protocol always takes precedence.
-      Seek care for spreading redness, discharge, fever, new calf pain/swelling, or chest pain/breathlessness.</p>
+  if(w==null) return ["personal","personal reminder"];
+  if(w===0) return ["active","ongoing / until cleared"];
+  if(wpo==null) return ["neutral",`follow ~${w} wks`];
+  if(wpo < w) return ["active",`ACTIVE · until ~wk ${w}`];
+  return ["lifted","likely lifted — confirm"];
+}
+function precRowHTML(t, w, idx){
+  const [cls,label] = precStatus(w);
+  const del = (idx!=null) ? `<span class="precdel no-print" data-idx="${idx}" title="Remove">✕</span>` : "";
+  const mine = (idx!=null) ? `<span class="precmine">yours</span> ` : "";
+  return `<li class="precrow ${cls}"><span class="prec-t">${mine}${esc(t)}</span><span class="prec-w">${label}</span>${del}</li>`;
+}
+
+/* Precautions & reminders card: surgical precautions (if any) + user's own reminders. */
+function surgicalReminderCard(){
+  const surg = detectSurgery();
+  const customs = state.customPrecautions || [];
+  const wpo = weeksPostOp();
+
+  let head = "", timeline = "", disclaimer = "", surgRows = "";
+  if(surg){
+    let sub;
+    if(state.surgeryDate) sub = (wpo>0 ? `You're about <b>${wpo} week${wpo===1?"":"s"} post-op</b>` : `You're <b>less than a week post-op</b>`) + ` (surgery date: ${esc(fmtDate(state.surgeryDate))}).`;
+    else if(wpo!=null)    sub = `About <b>${wpo} week${wpo===1?"":"s"}</b> in — add your <b>surgery date</b> in Details for an exact post-op timeline.`;
+    else                  sub = `Add your <b>surgery date</b> in Details to track your post-op timeline.`;
+    head = `<p class="hint"><b>${esc(surg.name)}.</b> ${sub}</p>`;
+    surgRows = surg.precautions.map(p=>precRowHTML(p.t, p.w, null)).join("");
+    timeline = `<div class="banner load" style="margin:4px 0 0"><b>Timeline:</b> ${esc(surg.ret)}</div>`;
+    disclaimer = `<p class="hint" style="margin-top:10px">These are <b>generalized</b> timeframes for education — your surgeon's own protocol always takes precedence.
+      Seek care for spreading redness, discharge, fever, new calf pain/swelling, or chest pain/breathlessness.</p>`;
+  }
+  const customRows = customs.map((p,i)=>precRowHTML(p.t, p.w, i)).join("");
+  const list = (surgRows || customRows)
+    ? `<ul class="preclist">${surgRows}${customRows}</ul>`
+    : `<p class="hint">Add your own reminders below — e.g. a specific instruction from your surgeon or clinician.</p>`;
+  const addCtrl = `<div class="addprec no-print">
+      <button class="addprecbtn">＋ Add your own precaution / reminder</button>
+      <div class="addprecform hide">
+        <input type="text" class="addprec-t" placeholder="e.g. Keep the brace locked in extension when sleeping" />
+        <input type="number" class="addprec-w" min="0" max="104" placeholder="weeks (optional)" />
+        <button class="btn primary addprec-save">Add</button>
+      </div>
+    </div>`;
+  const title = surg ? "🩹 Surgical precautions &amp; reminders" : "📌 Precautions &amp; reminders";
+  return `<div class="card surgcard${surg?"":" plain"}">
+    <h2>${title}</h2>
+    ${head}${list}${timeline}${addCtrl}${disclaimer}
   </div>`;
+}
+function addCustomPrecaution(){
+  const t = $("#programOut .addprec-t").value.trim();
+  if(!t){ toast("Type a reminder first."); return; }
+  const wv = $("#programOut .addprec-w").value;
+  const w = wv==="" ? null : Math.max(0, parseInt(wv));
+  (state.customPrecautions = state.customPrecautions || []).push({ t, w: isNaN(w)?null:w });
+  save(); renderProgram(state.program); toast("Reminder added.");
+}
+function removeCustomPrecaution(idx){
+  if(!state.customPrecautions) return;
+  state.customPrecautions.splice(idx,1); save(); renderProgram(state.program); toast("Reminder removed.");
 }
 
 /* ---------- render program ---------- */

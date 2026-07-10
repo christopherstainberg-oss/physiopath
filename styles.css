@@ -237,6 +237,21 @@ svg.chart .dot{fill:var(--brand)}
 .precrow.lifted{opacity:.62}
 .precrow.lifted .prec-w{background:rgba(92,225,166,.16);color:var(--brand-2)}
 .precrow.neutral .prec-w{background:rgba(159,178,198,.16);color:var(--muted)}
+.precrow.personal .prec-w{background:rgba(62,166,255,.16);color:var(--brand)}
+.precmine{display:inline-block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;
+  color:var(--brand);background:rgba(62,166,255,.14);border-radius:999px;padding:1px 7px;margin-right:6px;vertical-align:1px}
+.precdel{cursor:pointer;color:var(--muted);width:22px;flex:0 0 auto;text-align:center;border-radius:50%;font-size:12px}
+.precdel:hover{background:var(--line);color:var(--danger)}
+.surgcard.plain{border-color:var(--line)}
+.surgcard.plain h2{color:var(--text)}
+.addprec{margin-top:12px}
+.addprecbtn{background:none;border:1px dashed var(--line);color:var(--brand);border-radius:10px;padding:8px 12px;
+  font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+.addprecbtn:hover{border-color:var(--brand)}
+.addprecform{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.addprecform .addprec-t{flex:3;min-width:200px}
+.addprecform .addprec-w{flex:1;min-width:120px}
+.addprecform .btn{flex:0 0 auto}
 
 /* program editing controls */
 .exrowtools{display:flex;gap:14px;align-items:center;margin-top:7px}
