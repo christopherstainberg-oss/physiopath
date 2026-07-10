@@ -33,7 +33,8 @@
   <button class="step" data-step="1"><i>2</i><span>Injury</span></button>
   <button class="step" data-step="2"><i>3</i><span>Details</span></button>
   <button class="step" data-step="3"><i>4</i><span>Program</span></button>
-  <button class="step" data-step="4"><i>5</i><span>Coach</span></button>
+  <button class="step" data-step="4"><i>5</i><span>Progress</span></button>
+  <button class="step" data-step="5"><i>6</i><span>Coach</span></button>
 </nav>
 
 <main class="wrap">
@@ -164,16 +165,82 @@
     </div>
     <div class="rowbtns no-print">
       <button class="btn ghost" data-goto="2">← Adjust details</button>
-      <button class="btn primary" data-goto="4">Ask the AI Coach →</button>
+      <button class="btn primary" data-goto="4">Track my progress →</button>
     </div>
   </section>
 
-  <!-- ============ STEP 4: COACH ============ -->
+  <!-- ============ STEP 4: PROGRESS ============ -->
   <section class="panel hide" id="panel-4">
     <div class="card">
-      <h2>AI Recovery Coach</h2>
-      <p class="hint">Ask about pain, swelling, ice vs heat, how hard to push, your medical precautions,
-        when to see a doctor, nutrition, sleep, or motivation. It knows your conditions and program.</p>
+      <h2>Log today's session</h2>
+      <p class="hint">Track pain and sessions over time to see your trend. Stored on your device only.</p>
+      <div class="grid2">
+        <label class="field"><span class="lab">Pain today <span class="sub">0–10</span></span>
+          <div class="rangewrap"><input type="range" id="logPain" min="0" max="10" value="3" /><span class="rangeval" id="logPainVal">3</span></div>
+        </label>
+        <label class="field"><span class="lab">Sessions completed today</span>
+          <input type="number" id="logSessions" min="0" max="20" value="1" />
+        </label>
+      </div>
+      <label class="field"><span class="lab">How did it feel? <span class="sub">(optional)</span></span>
+        <input type="text" id="logNote" placeholder="e.g. easier than last week, calf tight after" />
+      </label>
+      <div class="rowbtns">
+        <span class="muted" id="logToday"></span>
+        <button class="btn primary" id="logBtn">Save today's entry</button>
+      </div>
+    </div>
+
+    <div class="card" id="progressSummaryCard">
+      <h2>Your progress</h2>
+      <div id="progressBody">
+        <div class="empty"><div class="big">📈</div><div>No entries yet — log your first session above.</div></div>
+      </div>
+    </div>
+
+    <div class="rowbtns no-print">
+      <button class="btn ghost" data-goto="3">← Back to program</button>
+      <button class="btn primary" data-goto="5">Ask the AI Coach →</button>
+    </div>
+  </section>
+
+  <!-- ============ STEP 5: COACH ============ -->
+  <section class="panel hide" id="panel-5">
+    <div class="card">
+      <div class="coachhead">
+        <div>
+          <h2>AI Recovery Coach</h2>
+          <p class="hint">Ask about pain, swelling, ice vs heat, how hard to push, your precautions,
+            when to see a doctor, nutrition, sleep, or motivation. Knows your conditions & program.
+            <span id="coachMode" class="modepill">offline</span></p>
+        </div>
+        <button class="icon-btn no-print" id="coachSettingsBtn" title="AI settings">⚙</button>
+      </div>
+
+      <div class="settings hide" id="coachSettings">
+        <p class="hint" style="margin-bottom:10px">Optionally connect the <b>real Claude API</b> for open-ended answers.
+          Without a key, the coach uses a fast, private, offline knowledge base.</p>
+        <label class="field"><span class="lab">Anthropic API key <span class="sub">(stored only in this browser)</span></span>
+          <input type="password" id="apiKey" placeholder="sk-ant-…" autocomplete="off" />
+        </label>
+        <label class="field"><span class="lab">Model</span>
+          <select id="apiModel">
+            <option value="claude-opus-4-8">Claude Opus 4.8 (most capable)</option>
+            <option value="claude-sonnet-5">Claude Sonnet 5 (balanced)</option>
+            <option value="claude-haiku-4-5">Claude Haiku 4.5 (fastest / cheapest)</option>
+          </select>
+        </label>
+        <div class="banner clear" style="margin:0 0 10px">
+          <b>⚠ Key safety:</b> your key is saved in this browser's local storage and requests go
+          <b>directly from your browser to Anthropic</b>. Anyone with access to this device/browser could read it,
+          and usage is billed to your account. Only enable this on a device you trust; clear the key when done.
+        </div>
+        <div class="rowbtns">
+          <button class="btn ghost" id="clearKeyBtn">Clear key</button>
+          <button class="btn primary" id="saveKeyBtn">Save & enable</button>
+        </div>
+      </div>
+
       <div class="chatlog" id="chatlog"></div>
       <div class="suggests" id="suggests"></div>
       <form class="chatform" id="chatform">
@@ -181,7 +248,7 @@
         <button class="btn primary" type="submit">Send</button>
       </form>
     </div>
-    <div class="rowbtns no-print"><button class="btn ghost" data-goto="3">← Back to program</button><span></span></div>
+    <div class="rowbtns no-print"><button class="btn ghost" data-goto="4">← Back to progress</button><span></span></div>
   </section>
 
   <footer>

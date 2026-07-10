@@ -631,14 +631,166 @@
      E("Maintenance routine","ongoing","Sustain the gains")]
   ];
 
+  /* ================= NEURO — additional distinct protocols ================= */
+  P.tbi = [
+    [E("Rest & symptom-limited activity","daily","Stay below symptom-provoking threshold"),
+     E("Gentle neck & eye ROM","3×10","Reduce cervical/vestibular contribution",T.endNeck),
+     E("Diaphragmatic breathing","3×1 min","Calm the nervous system"),
+     E("Short easy walks","5–10 min","Only if symptoms don't spike",T.aerobic)],
+    [E("Sub-symptom aerobic (Buffalo-style)","10–15 min","Keep below the symptom-onset heart rate",T.aerobic),
+     E("Seated & standing balance","3×30s","Near support",T.balance),
+     E("Gaze stabilization (if cleared)","3×1 min","For dizziness/visual symptoms"),
+     E("Light strengthening","3×12","Whole body, sub-fatigue")],
+    [E("Graded aerobic progression","15–20 min","Raise intensity as tolerance improves",T.aerobic,T.highInt),
+     E("Dynamic balance & coordination","3×30s","Near support",T.balance),
+     E("Dual-task drills","3×30s","Move + think",T.balance),
+     E("Progressive strengthening","3×12","Functional")],
+    [E("Return-to-activity progression","staged","Symptom-free at each stage before advancing",T.aerobic),
+     E("Sport-specific / non-contact drills","as tolerated","Only when cleared",T.impact),
+     E("Advanced balance & agility","as tolerated","Near support",T.balance),
+     E("Full return (medical clearance)","as cleared","Especially before contact/collision",T.impact)]
+  ];
+
+  P.guillain_barre = [
+    [E("Gentle passive/active-assisted ROM","daily","Prevent contractures — do NOT overwork"),
+     E("Positioning & skin care","regular","Protect weak/insensate areas"),
+     E("Breathing exercises","3×1 min","Support respiratory muscles"),
+     E("Very light activation of available muscles","3×8","Stop well before fatigue")],
+    [E("Short low-effort strengthening","2×10","Sub-fatigue — overwork can set recovery back"),
+     E("Supported sitting/standing balance","3×20s","Near support",T.balance),
+     E("Frequent rest breaks","as needed","Pacing is essential"),
+     E("Gentle stretching","3×20s","Maintain length")],
+    [E("Progressive strengthening (careful)","2–3×10","Small increments, monitor next-day fatigue"),
+     E("Standing balance & transfers","3×30s","Near support",T.balance,T.wb),
+     E("Endurance (paced intervals)","10–15 min","Rest between bouts",T.aerobic),
+     E("Functional task practice","3×8","Real-life movements",T.wb)],
+    [E("Strength & endurance build","3×10","Still avoid overfatigue",T.wb),
+     E("Gait & mobility training","per tolerance","Safe, even steps",T.wb,T.balance),
+     E("Advanced balance","as tolerated","Fall prevention",T.balance),
+     E("Graded return to activity","progressive","Recovery can take months — be patient")]
+  ];
+
+  /* ================= CARDIAC — additional distinct protocols ================= */
+  P.valve = [
+    [E("Gentle walking","5–10 min","RPE 9–11; respect sternal/incision precautions",T.aerobic),
+     E("Ankle pumps & seated leg movements","3×15","Circulation, no straining"),
+     E("Diaphragmatic & deep breathing","3×1 min","Protect lungs, no breath-holding"),
+     E("Posture & gentle ROM (within precautions)","3×10","No pushing/pulling/lifting >~5 lb early",T.overhead)],
+    [E("Walking intervals","10–15 min","RPE 11–12, conversational",T.aerobic),
+     E("Seated light band work (respect sternum)","1×12–15","No heavy pulling until cleared (~6–8 wks)",T.grip,T.valsalva),
+     E("Standing balance","3×30s","Near support",T.balance),
+     E("Cool-down & breathing","5 min","Ease down")],
+    [E("Continuous aerobic","15–25 min","Within target RPE/HR",T.aerobic,T.highInt),
+     E("Light resistance (post-precaution)","1–2×12–15","Once sternum has healed & cleared",T.valsalva),
+     E("Functional endurance","10 min","Stairs/hills as cleared",T.wb,T.aerobic),
+     E("Flexibility","10 min","Relax, breathe")],
+    [E("Progressive aerobic conditioning","30–40 min","Build duration then intensity",T.aerobic,T.highInt),
+     E("Maintenance resistance","2–3×12–15","Avoid maximal/heavy holds",T.valsalva),
+     E("Return to activity/hobbies","as cleared","Gradual, monitored"),
+     E("Long-term heart-healthy routine","ongoing","150 min/week goal",T.aerobic)]
+  ];
+
+  P.arrhythmia = [
+    [E("Warm-up walking","5–10 min","Ease in; note your pulse/rhythm",T.aerobic),
+     E("Moderate aerobic","10–15 min","Stay conversational; know your HR limits",T.aerobic),
+     E("Breathing practice","3×1 min","No breath-holding"),
+     E("Gentle mobility","3×10","Loosen up")],
+    [E("Aerobic conditioning","15–20 min","Keep HR below any prescribed cap",T.aerobic,T.highInt),
+     E("Light resistance","2×12–15","Exhale on effort, avoid maximal holds",T.grip,T.valsalva),
+     E("Balance & mobility","3×30s","Near support if needed",T.balance),
+     E("Symptom monitoring","every session","Stop for palpitations, dizziness, faintness")],
+    [E("Progressive aerobic","20–30 min","Within HR/RPE limits",T.aerobic,T.highInt),
+     E("Whole-body resistance","2×12–15","Controlled breathing",T.valsalva),
+     E("Functional endurance","10 min","Daily-task capacity",T.wb),
+     E("Know your device limits","ongoing","Stay below any ICD/pacemaker threshold",T.highInt)],
+    [E("Aerobic maintenance","30+ min most days","Consistent, moderate",T.aerobic,T.highInt),
+     E("Maintenance resistance","2–3×12–15","No maximal exertion",T.valsalva),
+     E("Active lifestyle","ongoing","Movement throughout the day"),
+     E("Long-term monitored routine","ongoing","Keep your care team informed",T.aerobic)]
+  ];
+
+  /* ================= PULMONARY — additional distinct protocols ================= */
+  P.ild = [
+    [E("Pursed-lip breathing","several × day","Manage breathlessness & desaturation"),
+     E("Very short walking bouts","3–5 × 1–2 min","Use O₂ as prescribed; watch SpO₂",T.aerobic),
+     E("Seated limb movements","3×10","Gentle, no breath-holding",T.breath),
+     E("Recovery positions","as needed","Lean forward, relax shoulders")],
+    [E("Interval walking (SpO₂-guided)","10 min total","Rest to keep saturation up",T.aerobic),
+     E("Light resistance (small muscles)","1×10–12","Exhale on effort",T.grip,T.valsalva),
+     E("Breathing-coordinated movement","3×10","Sync with breath"),
+     E("Balance & standing tolerance","3×30s","Near support",T.balance)],
+    [E("Graded aerobic (monitored)","12–20 min","Keep SpO₂ above your prescribed level",T.aerobic,T.highInt),
+     E("Progressive light resistance","2×10–12","Whole body, paced",T.valsalva),
+     E("Functional endurance","8–10 min","Daily tasks, with rests",T.wb,T.aerobic),
+     E("Energy conservation","ongoing","Plan activity around rest")],
+    [E("Aerobic maintenance (paced)","20–25 min","Consistency over intensity",T.aerobic,T.highInt),
+     E("Maintenance resistance","2×12","Light–moderate",T.valsalva),
+     E("Breathlessness self-management","ongoing","Positions, pacing, oxygen"),
+     E("Long-term supervised routine","ongoing","Stay linked to pulmonary rehab",T.aerobic)]
+  ];
+
+  P.thoracic_surgery = [
+    [E("Deep breathing & incentive spirometry","several × day","Re-expand the lungs, prevent complications"),
+     E("Airway clearance (huff/supported cough)","as prescribed","Splint the incision with a pillow"),
+     E("Shoulder & arm ROM (operated side)","3×10","Prevent stiffness, within comfort",T.overhead),
+     E("Short walks","5–10 min","Frequent, easy pace",T.aerobic)],
+    [E("Walking endurance","10–15 min","Pace with breathing, use O₂ if prescribed",T.aerobic),
+     E("Posture & scapular work","3×12","Counter guarding around the incision"),
+     E("Light resistance (respect precautions)","1×12–15","Avoid heavy pushing/pulling early",T.grip,T.valsalva),
+     E("Breathing-coordinated movement","3×10","Sync breath with effort")],
+    [E("Aerobic build","15–25 min","Interval or continuous, moderate",T.aerobic,T.highInt),
+     E("Progressive resistance","2×10–15","Whole body, controlled breathing",T.valsalva),
+     E("Full shoulder/thoracic mobility","3×10","Restore range",T.overhead),
+     E("Functional endurance","10 min","Stairs, carrying — paced",T.wb,T.aerobic)],
+    [E("Aerobic maintenance","20–30 min","Most days, paced",T.aerobic,T.highInt),
+     E("Maintenance resistance","2×12–15","Light–moderate",T.valsalva),
+     E("Return to activity/work","as cleared","Gradual, breathing-led"),
+     E("Long-term active routine","ongoing","Keep lungs & body conditioned",T.aerobic)]
+  ];
+
+  P.pulm_hypertension = [
+    [E("Very gentle walking","3–5 × 1–2 min","Low intensity ONLY; stop for dizziness/chest pressure",T.aerobic),
+     E("Pursed-lip breathing","several × day","Never hold your breath",T.breath),
+     E("Seated gentle mobility","3×10","No straining or heavy effort",T.valsalva),
+     E("Symptom awareness","every session","Stop for lightheadedness, chest pain, fainting")],
+    [E("Low-intensity walking","8–12 min","Keep it conversational and easy",T.aerobic),
+     E("Very light resistance","1×10–12","Small muscles, exhale on effort — no heavy loads",T.grip,T.valsalva),
+     E("Breathing-coordinated movement","3×10","Calm, controlled"),
+     E("Balance near support","3×20s","Fall safety",T.balance)],
+    [E("Low–moderate aerobic (supervised)","12–20 min","Only within your prescribed limits",T.aerobic,T.highInt),
+     E("Light resistance","1–2×12","No breath-holding, no maximal effort",T.valsalva,T.breath),
+     E("Functional endurance","8 min","Gentle daily tasks",T.wb),
+     E("Pacing & rest","ongoing","Avoid exertional symptoms")],
+    [E("Maintenance low–moderate aerobic","15–25 min","Consistency, never maximal",T.aerobic,T.highInt),
+     E("Maintenance light resistance","2×12","Light only",T.valsalva),
+     E("Energy conservation","ongoing","Balance activity and rest"),
+     E("Long-term specialist-guided routine","ongoing","Exercise only as your PH team advises",T.aerobic)]
+  ];
+
+  P.asthma = [
+    [E("Thorough warm-up","10–15 min","Gradual — reduces exercise-induced symptoms",T.aerobic),
+     E("Pre-exercise inhaler (per action plan)","as prescribed","Use reliever beforehand if advised"),
+     E("Breathing (nasal, relaxed)","3×1 min","Warm, humidified air helps"),
+     E("Easy aerobic","10–15 min","Build gradually; carry your reliever",T.aerobic)],
+    [E("Interval aerobic","15–20 min","Intervals suit exercise-induced asthma well",T.aerobic,T.highInt),
+     E("Resistance training","2×10–15","Normal breathing, exhale on effort",T.valsalva),
+     E("Core & mobility","3×10","Whole-body conditioning"),
+     E("Cool-down","5–10 min","Gradual — avoids post-exercise symptoms",T.aerobic)],
+    [E("Progressive aerobic","20–30 min","Swimming/cycling are well tolerated",T.aerobic,T.highInt),
+     E("Full-body resistance","2–3×10–15","Controlled breathing",T.valsalva),
+     E("Higher-intensity intervals","as tolerated","With good warm-up",T.highInt),
+     E("Trigger management","ongoing","Avoid cold/pollen triggers where possible")],
+    [E("Aerobic maintenance","150+ min/week","Fitness reduces symptom burden",T.aerobic),
+     E("Resistance 2–3×/week","2×12–15","Progressive",T.valsalva),
+     E("Sport participation","as tolerated","Well-controlled asthma → full activity",T.impact),
+     E("Action-plan review","ongoing","Keep your asthma plan up to date")]
+  ];
+
   /* ================= ALIASES ================= */
   const ALIAS = {
     shoulder_instability:"shoulder", knee_meniscus:"knee_ligament",
     radiculopathy_cervical:"cervical", radiculopathy_lumbar:"lumbar", sacroiliac:"lumbar",
-    fracture_ue:"fracture", fracture_le:"fracture", amputation_ue:"amputation", amputation_le:"amputation",
-    tbi:"stroke", guillain_barre:"balance_neuro",
-    valve:"cardiac_rehab", arrhythmia:"cardiac_rehab",
-    ild:"pulmonary_rehab", thoracic_surgery:"pulmonary_rehab", pulm_hypertension:"pulmonary_rehab", asthma:"pulmonary_rehab"
+    fracture_ue:"fracture", fracture_le:"fracture", amputation_ue:"amputation", amputation_le:"amputation"
   };
   function getProtocol(key) { return P[key] || P[ALIAS[key]] || P.general_msk; }
 

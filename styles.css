@@ -173,6 +173,37 @@ input[type=range]{flex:1;accent-color:var(--brand);height:30px}
 .suggests .s{border:1px solid var(--line);background:var(--panel-2);border-radius:999px;padding:7px 12px;font-size:13px;cursor:pointer}
 .suggests .s:hover{border-color:var(--brand)}
 
+/* progress */
+.chartwrap{overflow-x:auto;margin:4px 0 10px}
+svg.chart{display:block;width:100%;min-width:280px;height:180px}
+svg.chart .grid{stroke:var(--line);stroke-width:1}
+svg.chart .axislbl{fill:var(--muted);font-size:10px}
+svg.chart .line{fill:none;stroke:var(--brand);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
+svg.chart .area{fill:var(--brand);opacity:.12}
+svg.chart .dot{fill:var(--brand)}
+.progstats{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
+.trendtag{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700}
+.trend-down{background:rgba(92,225,166,.16);color:var(--brand-2)}
+.trend-up{background:rgba(255,138,92,.16);color:var(--acute)}
+.trend-flat{background:rgba(159,178,198,.16);color:var(--muted)}
+.loglist{list-style:none;margin:10px 0 0;padding:0;max-height:220px;overflow-y:auto}
+.logrow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.logrow:last-child{border-bottom:none}
+.logrow .ld{color:var(--muted);min-width:96px;font-variant-numeric:tabular-nums}
+.logrow .lp{font-weight:700;min-width:60px}
+.logrow .ln{color:var(--muted);flex:1}
+.logrow .lx{cursor:pointer;color:var(--muted);width:22px;height:22px;border-radius:50%;display:grid;place-items:center}
+.logrow .lx:hover{background:var(--line);color:var(--danger)}
+
+/* coach settings */
+.coachhead{display:flex;align-items:flex-start;gap:10px}
+.coachhead h2{margin-top:0}
+.modepill{display:inline-block;margin-left:6px;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;vertical-align:middle}
+.modepill.offline{background:rgba(159,178,198,.16);color:var(--muted)}
+.modepill.online{background:rgba(92,225,166,.16);color:var(--brand-2)}
+.settings{border:1px solid var(--line);border-radius:12px;padding:14px;margin:6px 0 14px;background:var(--panel-2)}
+.msg.typing{color:var(--muted);font-style:italic}
+
 .empty{text-align:center;color:var(--muted);padding:40px 10px}
 .empty .big{font-size:38px;margin-bottom:6px}
 footer{color:var(--muted);font-size:12px;text-align:center;padding:22px 6px 30px}

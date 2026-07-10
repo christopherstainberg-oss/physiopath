@@ -56,8 +56,10 @@ const DOMAIN_REDFLAGS = {
 const state = {
   step:0, age:"", sex:"", flags:[], parq:{pain:false,faint:false,doc:false},
   meds:"", notes:"", condIds:[], weeks:null, painRest:3, painMove:4, surgery:"no",
-  fitness:"mod", goal:"", program:null
+  fitness:"mod", goal:"", program:null,
+  log:[], apiKey:"", apiModel:"claude-opus-4-8"
 };
+let chatHistory = [];
 const CONMAP = new Map();
 let domainFilter = "all";
 
@@ -320,10 +322,11 @@ function addMsg(text, who){
 const mdLite = t => esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/\*(.+?)\*/g,"<i>$1</i>").replace(/\n/g,"<br>");
 const SUGGESTED = ["Should I use ice or heat?","How much pain is normal?","What should I avoid with my condition?","When should I see a doctor?","How often should I train?","How do I return to sport safely?"];
 function initCoach(){
-  $("#chatlog").innerHTML="";
+  $("#chatlog").innerHTML=""; chatHistory=[]; updateCoachMode();
   const conds=selectedConditions();
   const intro = conds.length ? `I can see you're working on: **${conds.map(c=>c.name).join(", ")}**. ` : "";
-  addMsg(`Hi! I'm your recovery coach. ${intro}Ask me anything about your recovery, program, or medical precautions.`, "bot");
+  const mode = coachOnline() ? " (Claude API connected)" : "";
+  addMsg(`Hi! I'm your recovery coach${mode}. ${intro}Ask me anything about your recovery, program, or medical precautions.`, "bot");
   const sug=$("#suggests"); sug.innerHTML="";
   SUGGESTED.forEach(s=>{ const c=document.createElement("div"); c.className="s"; c.textContent=s;
     c.onclick=()=>{ $("#chatInput").value=s; $("#chatform").requestSubmit(); }; sug.appendChild(c); });
@@ -337,7 +340,8 @@ function goStep(n){
   $$(".panel").forEach((p,i)=>p.classList.toggle("hide", i!==n));
   $$(".step").forEach((s,i)=>{ s.classList.toggle("active", i===n); s.classList.toggle("done", i<n); });
   window.scrollTo({top:0,behavior:"smooth"});
-  if(n===4) initCoach();
+  if(n===4) renderProgress();
+  if(n===5) initCoach();
 }
 
 /* ---------- history UI ---------- */
@@ -450,10 +454,191 @@ if("serviceWorker" in navigator){
   window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
 }
 
+/* =====================================================================
+   PROGRESS TRACKING
+===================================================================== */
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function fmtDate(iso){
+  const d=new Date(iso+"T00:00:00");
+  return d.toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"});
+}
+function initProgress(){
+  $("#logToday").textContent = "Entry for " + fmtDate(todayISO());
+  $("#logPain").oninput = e=>$("#logPainVal").textContent=e.target.value;
+  $("#logBtn").onclick = saveLogEntry;
+}
+function saveLogEntry(){
+  const entry = {
+    date: todayISO(),
+    pain: parseInt($("#logPain").value),
+    sessions: Math.max(0, parseInt($("#logSessions").value)||0),
+    note: $("#logNote").value.trim()
+  };
+  const i = state.log.findIndex(e=>e.date===entry.date);
+  if(i>=0) state.log[i]=entry; else state.log.push(entry);
+  state.log.sort((a,b)=>a.date<b.date?-1:1);
+  save(); $("#logNote").value="";
+  renderProgress();
+  toast(i>=0 ? "Updated today's entry." : "Saved. Keep it up! 💪");
+}
+function deleteLog(date){ state.log=state.log.filter(e=>e.date!==date); save(); renderProgress(); }
+
+function renderProgress(){
+  const body=$("#progressBody"); const log=state.log;
+  if(!log.length){
+    body.innerHTML=`<div class="empty"><div class="big">📈</div><div>No entries yet — log your first session above.</div></div>`;
+    return;
+  }
+  const pains=log.map(e=>e.pain);
+  const first=pains[0], last=pains[pains.length-1];
+  const totalSessions=log.reduce((a,e)=>a+e.sessions,0);
+  const delta=last-first;
+  let trendCls="trend-flat", trendTxt="holding steady";
+  if(log.length>1 && delta<=-1){ trendCls="trend-down"; trendTxt=`pain down ${Math.abs(delta)} pts ↓ improving`; }
+  else if(log.length>1 && delta>=1){ trendCls="trend-up"; trendTxt=`pain up ${delta} pts ↑ — ease off & review`; }
+  const streak=computeStreak(log);
+
+  body.innerHTML = `
+    <div class="progstats">
+      <div class="stat"><div class="k">Entries</div><div class="v">${log.length}</div></div>
+      <div class="stat"><div class="k">Sessions logged</div><div class="v">${totalSessions}</div></div>
+      <div class="stat"><div class="k">Current pain</div><div class="v">${last}/10</div></div>
+      <div class="stat"><div class="k">Day streak</div><div class="v">${streak}🔥</div></div>
+    </div>
+    <div style="margin:2px 0 6px"><span class="trendtag ${trendCls}">${trendTxt}</span></div>
+    <div class="chartwrap">${painChartSVG(log)}</div>
+    <ul class="loglist">${
+      log.slice().reverse().map(e=>`<li class="logrow">
+        <span class="ld">${fmtDate(e.date)}</span>
+        <span class="lp">${e.pain}/10</span>
+        <span class="ln">${e.sessions} session${e.sessions===1?"":"s"}${e.note?" · "+esc(e.note):""}</span>
+        <span class="lx" data-date="${e.date}" title="Delete">✕</span>
+      </li>`).join("")
+    }</ul>`;
+  $$("#progressBody .lx").forEach(x=>x.onclick=()=>{ if(confirm("Delete this entry?")) deleteLog(x.dataset.date); });
+}
+function computeStreak(log){
+  // consecutive calendar days ending today (or last entry) with an entry
+  const set=new Set(log.map(e=>e.date));
+  let streak=0, d=new Date(todayISO()+"T00:00:00");
+  if(!set.has(todayISO())) d.setDate(d.getDate()-1); // allow streak to count up to yesterday
+  for(;;){ const key=d.toISOString().slice(0,10); if(set.has(key)){ streak++; d.setDate(d.getDate()-1);} else break; }
+  return streak;
+}
+function painChartSVG(log){
+  const W=700,H=180,padL=28,padR=12,padT=14,padB=24;
+  const plotW=W-padL-padR, plotH=H-padT-padB;
+  const n=log.length;
+  const x=i=> n<=1 ? padL+plotW/2 : padL + (i/(n-1))*plotW;
+  const y=p=> padT + ((10-p)/10)*plotH;                 // pain 10 top, 0 bottom
+  const pts=log.map((e,i)=>[x(i),y(e.pain)]);
+  const line=pts.map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" ");
+  const area=`M${pts[0][0].toFixed(1)} ${(padT+plotH).toFixed(1)} `+
+    pts.map(p=>"L"+p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" ")+
+    ` L${pts[pts.length-1][0].toFixed(1)} ${(padT+plotH).toFixed(1)} Z`;
+  const grid=[0,5,10].map(v=>{ const gy=y(v);
+    return `<line class="grid" x1="${padL}" y1="${gy}" x2="${W-padR}" y2="${gy}"/>`+
+      `<text class="axislbl" x="4" y="${gy+3}">${v}</text>`; }).join("");
+  const dots=pts.map(p=>`<circle class="dot" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3"/>`).join("");
+  const xlabels = n>1
+    ? `<text class="axislbl" x="${padL}" y="${H-6}">${fmtDate(log[0].date).replace(/,.*/,"")}</text>`+
+      `<text class="axislbl" x="${W-padR}" y="${H-6}" text-anchor="end">${fmtDate(log[n-1].date).replace(/,.*/,"")}</text>`
+    : "";
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Pain over time">
+    ${grid}${n>1?`<path class="area" d="${area}"/>`:""}${n>1?`<path class="line" d="${line}"/>`:""}${dots}${xlabels}
+    <text class="axislbl" x="4" y="10">pain</text></svg>`;
+}
+
+/* =====================================================================
+   CLAUDE API COACH (optional) + settings
+===================================================================== */
+function coachOnline(){ return !!(state.apiKey && state.apiKey.trim()); }
+function updateCoachMode(){
+  const pill=$("#coachMode"); if(!pill) return;
+  const on=coachOnline();
+  pill.textContent = on ? "Claude API" : "offline";
+  pill.className = "modepill "+(on?"online":"offline");
+}
+function initCoachSettings(){
+  $("#apiKey").value = state.apiKey || "";
+  $("#apiModel").value = state.apiModel || "claude-opus-4-8";
+  $("#coachSettingsBtn").onclick = ()=>$("#coachSettings").classList.toggle("hide");
+  $("#saveKeyBtn").onclick = ()=>{
+    state.apiKey = $("#apiKey").value.trim();
+    state.apiModel = $("#apiModel").value;
+    save(); updateCoachMode(); $("#coachSettings").classList.add("hide");
+    toast(coachOnline() ? "Claude API connected." : "Key cleared — using offline coach.");
+  };
+  $("#clearKeyBtn").onclick = ()=>{
+    state.apiKey=""; $("#apiKey").value=""; save(); updateCoachMode();
+    toast("Key cleared.");
+  };
+  updateCoachMode();
+}
+function buildCoachSystem(){
+  const conds = selectedConditions().map(c=>c.name).join(", ") || "none selected";
+  const p = state.program;
+  const precautions = (p ? p.notes : window.notesForFlags(gatherFlags())).join(" | ") || "none flagged";
+  const prog = p ? `${p.totalWeeks}-week ${p.track} program; supervision ${p.supervision}; clearance needed: ${p.clearance}` : "not generated yet";
+  return `You are PhysioPath's recovery coach, giving general, evidence-informed physical-rehabilitation guidance inside an educational app.
+
+USER CONTEXT
+- Conditions: ${conds}
+- Weeks since injury: ${state.weeks ?? "unknown"}; rest pain ${state.painRest}/10, movement pain ${state.painMove}/10; surgery: ${state.surgery}
+- Program: ${prog}
+- Personalized precautions (MUST respect): ${precautions}
+
+RULES
+- You are an educational aid, NOT a clinician. Never diagnose or give specific medication doses.
+- Always honor the precautions above. If a request is unsafe for these conditions, say so and offer a safer alternative.
+- Recommend in-person assessment for anything serious, worsening, or uncertain.
+- Treat these as urgent-care red flags: chest pain/pressure, severe breathlessness, fainting, sudden weakness/numbness, trouble speaking, loss of bladder/bowel control, or a hot swollen joint with fever.
+- Be concise, warm, and practical (short paragraphs or bullets). Respond with your final answer only — no meta-commentary about your reasoning.`;
+}
+function addTyping(){
+  const div=document.createElement("div"); div.className="msg bot typing"; div.textContent="thinking…";
+  $("#chatlog").appendChild(div); $("#chatlog").scrollTop=$("#chatlog").scrollHeight; return div;
+}
+async function askClaude(q){
+  chatHistory.push({ role:"user", content:q });
+  const typing=addTyping();
+  try{
+    const res = await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{
+        "content-type":"application/json",
+        "x-api-key":state.apiKey.trim(),
+        "anthropic-version":"2023-06-01",
+        "anthropic-dangerous-direct-browser-access":"true"
+      },
+      body:JSON.stringify({
+        model: state.apiModel || "claude-opus-4-8",
+        max_tokens: 800,
+        system: buildCoachSystem(),
+        messages: chatHistory.slice(-10)
+      })
+    });
+    typing.remove();
+    if(!res.ok){
+      let msg="HTTP "+res.status;
+      try{ const j=await res.json(); if(j.error&&j.error.message) msg=j.error.message; }catch(e){}
+      throw new Error(msg);
+    }
+    const data=await res.json();
+    const text=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n").trim() || "(no reply)";
+    chatHistory.push({ role:"assistant", content:text });
+    addMsg(text,"bot");
+  }catch(err){
+    typing.remove();
+    chatHistory.pop();  // drop the unanswered user turn to keep history valid
+    addMsg("⚠ Couldn't reach the Claude API ("+err.message+"). Here's the offline coach instead:\n\n"+coachAnswer(q),"bot");
+  }
+}
+
 /* ---------- boot ---------- */
 document.addEventListener("DOMContentLoaded",()=>{
   load();
-  initHistory(); initSearch(); initDetails(); initInstall();
+  initHistory(); initSearch(); initDetails(); initInstall(); initProgress(); initCoachSettings();
   $$("[data-goto]").forEach(b=>b.onclick=()=>{
     const n=+b.dataset.goto;
     if(n>=2 && !state.condIds.length){ toast("Pick at least one condition first."); goStep(1); return; }
@@ -467,7 +652,10 @@ document.addEventListener("DOMContentLoaded",()=>{
   $("#resetBtn").onclick=doReset;
   $("#chatform").addEventListener("submit",e=>{ e.preventDefault();
     const v=$("#chatInput").value.trim(); if(!v) return;
-    addMsg(v,"user"); $("#chatInput").value=""; setTimeout(()=>addMsg(coachAnswer(v),"bot"),220); });
+    addMsg(v,"user"); $("#chatInput").value="";
+    if(coachOnline()) askClaude(v);
+    else setTimeout(()=>addMsg(coachAnswer(v),"bot"),220);
+  });
   if(state.program) renderProgram(state.program);
   goStep(state.step||0);
 });
