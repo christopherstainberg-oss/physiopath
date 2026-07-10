@@ -52,11 +52,198 @@ const DOMAIN_REDFLAGS = {
   pulmonary:"Seek care for: worsening breathlessness at rest, chest pain, blue-tinged lips/fingertips, fever with discolored sputum, or oxygen readings below your prescribed level."
 };
 
+/* ---------- surgical precautions library ----------
+   Each surgery: precautions [{t:text, w:typical weeks to follow (0 = ongoing/until cleared)}].
+   `match` auto-detects the surgery from a selected condition's name.
+   Generalized education — a surgeon's specific protocol always takes precedence. */
+const SURGERIES = [
+  { id:"tha", name:"Total hip replacement (arthroplasty)", match:/hip replacement|hip arthroplasty|hemiarthroplasty|hip resurfacing/, autoFlags:["hip_replacement"],
+    precautions:[
+      {t:"Hip precautions: don't bend the hip past 90° (avoid deep bending/low chairs).",w:12},
+      {t:"Don't cross your legs or bring the operated leg across your body's midline.",w:12},
+      {t:"Don't rotate the operated leg or foot inward.",w:12},
+      {t:"Use a raised toilet seat and a firm, higher chair; avoid low, soft seats.",w:12},
+      {t:"Weight-bear as instructed and use your walker/crutches until cleared.",w:6},
+      {t:"No driving until cleared (often ~4–6 weeks, especially the right leg).",w:6}],
+    ret:"Precautions commonly relax around 6–12 weeks — the exact rules depend on your surgical approach (posterior vs anterior). Confirm with your surgeon." },
+  { id:"tka", name:"Total / partial knee replacement", match:/knee replacement|knee arthroplasty|unicompartmental/, autoFlags:["knee_replacement"],
+    precautions:[
+      {t:"Work on full knee straightening (extension) AND bend (flexion) early — regaining motion is the priority.",w:8},
+      {t:"Ice and elevate frequently to control swelling.",w:6},
+      {t:"Keep ankle pumps going and watch for DVT (calf pain/swelling/warmth).",w:6},
+      {t:"Weight-bear as tolerated with your walker/crutches until steady.",w:6},
+      {t:"No driving until cleared (often ~4–6 weeks).",w:6},
+      {t:"Avoid high-impact activity (running, jumping) to protect the implant.",w:0}],
+    ret:"Range-of-motion and strength progress over ~12 weeks; impact restrictions are usually long-term." },
+  { id:"acl", name:"ACL reconstruction", match:/acl recon|acl reconstruction|acl revision/, autoFlags:[],
+    precautions:[
+      {t:"Wear your brace and follow your exact weight-bearing instructions.",w:6},
+      {t:"Regain full extension (straightening) early and work on quad activation.",w:6},
+      {t:"Avoid deep squatting and open-chain knee extension early (per protocol).",w:12},
+      {t:"NO pivoting, cutting, or twisting sports.",w:36},
+      {t:"Return to running only when cleared (often ~3 months).",w:12}],
+    ret:"Full sport return is typically ~9–12 months and should follow strength/hop testing and surgeon clearance." },
+  { id:"meniscus_repair", name:"Meniscus repair", match:/meniscus repair|meniscus root repair/, autoFlags:[],
+    precautions:[
+      {t:"Follow your restricted range-of-motion and brace instructions.",w:6},
+      {t:"Weight-bear only as instructed (often limited early).",w:6},
+      {t:"Avoid deep squatting, pivoting and twisting.",w:12}],
+    ret:"Meniscus repairs are protected longer than a meniscectomy — progress on your surgeon's timeline (often ~3 months to sport)." },
+  { id:"meniscectomy", name:"Partial meniscectomy", match:/meniscectomy/, autoFlags:[],
+    precautions:[
+      {t:"Weight-bear as tolerated; control swelling with ice and elevation.",w:2},
+      {t:"Restore motion and quad control early.",w:4},
+      {t:"Ease back into impact once swelling and strength allow.",w:6}],
+    ret:"Recovery is usually quicker than a repair — often back to activity within ~4–6 weeks." },
+  { id:"rcr", name:"Rotator cuff repair", match:/rotator cuff repair|cuff repair/, autoFlags:[],
+    precautions:[
+      {t:"Wear your sling as instructed.",w:6},
+      {t:"Passive range of motion only early — NO active lifting of the arm.",w:6},
+      {t:"No reaching overhead or behind your back early.",w:8},
+      {t:"No lifting, pushing or pulling with the arm.",w:12},
+      {t:"No weight-bearing through the arm (e.g., pushing up from a chair).",w:12}],
+    ret:"Active motion usually starts ~6 weeks and strengthening ~12 weeks — the tendon needs time to heal to bone." },
+  { id:"shoulder_stab", name:"Shoulder stabilisation / labral (Bankart, SLAP, Latarjet) repair", match:/bankart|slap repair|labral repair|shoulder stabil|latarjet|instability repair/, autoFlags:[],
+    precautions:[
+      {t:"Wear your sling as instructed.",w:4},
+      {t:"Avoid external rotation past neutral and the 'apprehension' position early.",w:6},
+      {t:"No overhead or behind-the-back reaching early.",w:8},
+      {t:"No lifting/pushing/pulling with the arm.",w:8}],
+    ret:"Return to contact sport or overhead athletics is typically ~4–6 months with clearance." },
+  { id:"tsa", name:"Total / reverse shoulder replacement", match:/total shoulder replacement|reverse total shoulder|shoulder arthroplasty/, autoFlags:[],
+    precautions:[
+      {t:"Wear your sling as instructed.",w:4},
+      {t:"Follow your passive/active motion limits (reverse and anatomic differ).",w:6},
+      {t:"No pushing up from a chair with the operated arm; no reaching behind the back early.",w:8},
+      {t:"No lifting heavier than a coffee cup early.",w:6}],
+    ret:"Strengthening progresses after ~6–12 weeks; avoid heavy overhead lifting long-term." },
+  { id:"achilles", name:"Achilles tendon repair", match:/achilles.*repair|achilles rupture|achilles tendon rupture/, autoFlags:[],
+    precautions:[
+      {t:"Wear your boot with heel wedges as prescribed.",w:8},
+      {t:"Follow your weight-bearing progression exactly (often protected early).",w:6},
+      {t:"NO active push-off or aggressive calf stretching early.",w:10}],
+    ret:"Heel wedges are removed gradually; return to running is typically ~4–6 months." },
+  { id:"ankle_orif", name:"Ankle fracture fixation (ORIF)", match:/ankle fracture|malleolus|pilon|orif/, autoFlags:[],
+    precautions:[
+      {t:"Stay non-weight-bearing or protected in your boot/cast as instructed.",w:6},
+      {t:"Elevate to control swelling; keep the incision clean and dry.",w:4},
+      {t:"Progress weight-bearing and motion only when your surgeon clears it.",w:8}],
+    ret:"Weight-bearing usually starts around 6 weeks once bone healing is confirmed." },
+  { id:"lumbar_fusion", name:"Lumbar spinal fusion", match:/lumbar fusion|spinal fusion|post-lumbar fusion/, autoFlags:[],
+    precautions:[
+      {t:"BLT precautions: NO bending, lifting (>~5–10 lb) or twisting.",w:12},
+      {t:"Log-roll to get in/out of bed; wear your brace if prescribed.",w:8},
+      {t:"Change positions often; avoid prolonged sitting early.",w:6},
+      {t:"No driving until cleared.",w:6}],
+    ret:"BLT restrictions commonly ease around 6–12 weeks as the fusion consolidates." },
+  { id:"discectomy", name:"Lumbar discectomy / microdiscectomy / laminectomy", match:/discectomy|microdiscectomy|laminectomy|decompression|post-laminectomy/, autoFlags:[],
+    precautions:[
+      {t:"Limit bending, heavy lifting (>~5–10 lb) and twisting early.",w:6},
+      {t:"Avoid prolonged sitting; walk frequently.",w:4},
+      {t:"Progress activity gradually as pain allows.",w:6}],
+    ret:"Restrictions typically ease over ~4–6 weeks; a graded return follows." },
+  { id:"acdf", name:"Cervical fusion (ACDF)", match:/acdf|cervical fusion|anterior cervical/, autoFlags:[],
+    precautions:[
+      {t:"Wear your collar as prescribed and limit end-range neck motion early.",w:6},
+      {t:"No heavy lifting or overhead work early.",w:6},
+      {t:"Avoid prolonged looking-down (phone/tablet) positions.",w:6}],
+    ret:"Neck motion and loading progress after the fusion consolidates (~6–12 weeks)." },
+  { id:"hip_scope", name:"Hip arthroscopy / labral repair", match:/hip arthroscopy|hip labral repair|labral repair — hip|femoroacetabular|fai/, autoFlags:[],
+    precautions:[
+      {t:"Use crutches and follow your weight-bearing limits.",w:4},
+      {t:"Respect your motion limits; avoid provocative deep flexion/rotation.",w:6},
+      {t:"No aggressive hip-flexor stretching or loading early.",w:8}],
+    ret:"Return to sport is typically ~3–4 months on a staged protocol." },
+  { id:"wrist_orif", name:"Wrist / distal radius fixation (ORIF)", match:/distal radius|colles.*orif|wrist orif|scaphoid fixation/, autoFlags:[],
+    precautions:[
+      {t:"Wear your splint/cast as instructed; keep the hand elevated early.",w:6},
+      {t:"Keep fingers, elbow and shoulder moving to prevent stiffness.",w:4},
+      {t:"No gripping, lifting or weight-bearing through the wrist early.",w:6}],
+    ret:"Wrist motion and grip strengthening progress once healing is confirmed (~6 weeks)." },
+  { id:"ctr", name:"Carpal tunnel release", match:/carpal tunnel release/, autoFlags:[],
+    precautions:[
+      {t:"Keep the incision clean and dry; keep fingers moving.",w:2},
+      {t:"Avoid heavy gripping, pinching or leaning on the palm early.",w:4},
+      {t:"Expect some tenderness at the scar for several weeks.",w:6}],
+    ret:"Light use returns within days–weeks; full grip strength can take 2–3 months." },
+  { id:"sternotomy", name:"Open-heart surgery / sternotomy (CABG, valve)", match:/cabg|bypass|open heart|sternotomy|valve replacement|valve repair|aortic valve|mitral valve|post-tavr|coronary/, autoFlags:["cardiac"],
+    precautions:[
+      {t:"Sternal precautions: don't lift, push or pull more than ~5–10 lb (about a milk jug).",w:8},
+      {t:"Don't reach both arms overhead or far behind you.",w:8},
+      {t:"Hug a firm pillow against your chest when coughing or sneezing.",w:8},
+      {t:"No driving until cleared (often ~4–6 weeks).",w:6},
+      {t:"Don't push up through your arms to stand — use your legs.",w:8}],
+    ret:"Sternal precautions usually last ~6–8 weeks until the breastbone heals. Attend supervised cardiac rehab." },
+  { id:"thoracic", name:"Chest / lung surgery (lobectomy, thoracotomy)", match:/lobectomy|thoracotomy|pneumonectomy|thoracic surgery|lung.*surgery|decortication/, autoFlags:["pulmonary"],
+    precautions:[
+      {t:"Do your breathing exercises / incentive spirometry regularly.",w:6},
+      {t:"Support the incision when coughing; keep the arm/shoulder moving gently.",w:6},
+      {t:"Avoid heavy lifting and strenuous pushing/pulling early.",w:6}],
+    ret:"Reconditioning is gradual; breathing capacity improves over weeks–months." },
+  { id:"abdominal", name:"Abdominal surgery (hernia, C-section, laparoscopy)", match:/hernia repair|c-section|caesarean|cesarean|laparoscop|abdominal.*surgery|appendect|hysterect|prostatectomy/, autoFlags:[],
+    precautions:[
+      {t:"No heavy lifting (>~10 lb) — protect the incision and deep core.",w:6},
+      {t:"Support your abdomen when coughing, laughing or getting up.",w:4},
+      {t:"Avoid straining and vigorous core exercise early.",w:6},
+      {t:"Reintroduce core work gradually and gently.",w:8}],
+    ret:"Most lifting restrictions last ~4–6 weeks; core rehab is progressive." },
+  { id:"mastectomy", name:"Breast surgery (mastectomy / lumpectomy)", match:/mastectomy|lumpectomy|breast/, autoFlags:[],
+    precautions:[
+      {t:"Progress shoulder/arm range of motion gently as advised; care for any drains.",w:4},
+      {t:"Avoid heavy lifting on the operated side early; watch for lymphedema (swelling).",w:6},
+      {t:"Follow guidance if lymph nodes were removed (extra arm care).",w:0}],
+    ret:"Shoulder motion is restored gradually; lymphedema precautions may be ongoing." },
+  { id:"amputation", name:"Amputation", match:/amputation|disarticulation|hemipelvectomy|forequarter/, autoFlags:[],
+    precautions:[
+      {t:"Position the residual limb to prevent contracture (avoid prolonged bending).",w:8},
+      {t:"Care for the wound and desensitise the limb as taught.",w:6},
+      {t:"Follow your prosthetic and weight-bearing timeline from the team.",w:0}],
+    ret:"Prosthetic fitting and gait training follow wound healing and shaping (weeks–months)." },
+  { id:"knee_scope", name:"Knee arthroscopy", match:/knee arthroscopy|arthroscopy recovery — knee|microfracture/, autoFlags:[],
+    precautions:[
+      {t:"Weight-bear as tolerated unless told otherwise; control swelling.",w:2},
+      {t:"Restore motion and quad control early.",w:4}],
+    ret:"Simple scopes recover in a few weeks; cartilage procedures are protected much longer." },
+  { id:"shoulder_scope", name:"Shoulder arthroscopy / decompression", match:/subacromial decompression|shoulder arthroscopy/, autoFlags:[],
+    precautions:[
+      {t:"Use the sling short-term for comfort; begin gentle motion early.",w:2},
+      {t:"No heavy lifting or forceful overhead work early.",w:6}],
+    ret:"Motion returns quickly; strengthening progresses over ~6–12 weeks." }
+];
+const OTHER_SURGERY = { id:"other", name:"Recent surgery (general precautions)", autoFlags:[],
+  precautions:[
+    {t:"Keep the incision clean and dry; watch for infection (spreading redness, warmth, discharge, fever).",w:3},
+    {t:"Follow the exact weight-bearing and activity restrictions your surgeon gave you.",w:6},
+    {t:"Avoid heavy lifting and strenuous activity until cleared.",w:6},
+    {t:"Take DVT-prevention/blood thinners as prescribed; watch for calf pain/swelling or chest pain/breathlessness.",w:4},
+    {t:"Attend follow-up visits and get clearance before progressing.",w:0}],
+  ret:"These are general post-op principles — your surgeon's specific protocol always takes precedence." };
+
+function detectSurgery(){
+  if(state.surgeryType && state.surgeryType!=="auto"){
+    if(state.surgeryType==="other") return OTHER_SURGERY;
+    const s = SURGERIES.find(x=>x.id===state.surgeryType); if(s) return s;
+  }
+  for(const c of selectedConditions()){
+    const nm = c.name.toLowerCase();
+    const hit = SURGERIES.find(s=>s.match.test(nm));
+    if(hit) return hit;
+  }
+  return state.surgery==="yes" ? OTHER_SURGERY : null;
+}
+function weeksPostOp(){
+  if(state.surgeryDate){
+    const d = new Date(state.surgeryDate+"T00:00:00");
+    if(!isNaN(d.getTime())){ const w = Math.round((Date.now()-d.getTime())/(7*864e5)); return w>=0?w:0; }
+  }
+  return (state.weeks!=null && !isNaN(state.weeks)) ? state.weeks : null;
+}
+
 /* ---------- state ---------- */
 const state = {
   step:0, age:"", sex:"", flags:[], parq:{pain:false,faint:false,doc:false},
   meds:"", notes:"", condIds:[], weeks:null, painRest:3, painMove:4, surgery:"no",
-  fitness:"mod", goal:"", program:null,
+  surgeryType:"auto", surgeryDate:"", fitness:"mod", goal:"", program:null,
   log:[], apiKey:"", apiModel:"claude-opus-4-8"
 };
 let chatHistory = [];
@@ -78,6 +265,7 @@ function gatherFlags(){
   if(Number(state.age) >= 75) f.add("balance_risk");
   if(state.surgery === "yes") f.add("recent_surgery");
   selectedConditions().forEach(c => (c.autoFlags||[]).forEach(x=>f.add(x)));
+  const surg = detectSurgery(); if(surg && surg.autoFlags) surg.autoFlags.forEach(x=>f.add(x));
   return Array.from(f);
 }
 function clearanceNeeded(flags){
@@ -468,6 +656,32 @@ function resetPhase(ci, pi){
   save(); renderProgram(state.program); toast("Phase reset to the recommended exercises.");
 }
 
+/* Surgical precautions & reminders card (post-op timeline). */
+function surgicalReminderCard(){
+  const surg = detectSurgery(); if(!surg) return "";
+  const wpo = weeksPostOp();
+  let sub;
+  if(state.surgeryDate) sub = (wpo>0 ? `You're about <b>${wpo} week${wpo===1?"":"s"} post-op</b>` : `You're <b>less than a week post-op</b>`) + ` (surgery date: ${esc(fmtDate(state.surgeryDate))}).`;
+  else if(wpo!=null)    sub = `About <b>${wpo} week${wpo===1?"":"s"}</b> in — add your <b>surgery date</b> in Details for an exact post-op timeline.`;
+  else                  sub = `Add your <b>surgery date</b> in Details to track your post-op timeline.`;
+  const rows = surg.precautions.map(p=>{
+    let cls, label;
+    if(p.w===0){ cls="active"; label="ongoing / until cleared"; }
+    else if(wpo==null){ cls="neutral"; label=`follow ~${p.w} wks`; }
+    else if(wpo < p.w){ cls="active"; label=`ACTIVE · until ~wk ${p.w}`; }
+    else { cls="lifted"; label=`likely lifted — confirm`; }
+    return `<li class="precrow ${cls}"><span class="prec-t">${esc(p.t)}</span><span class="prec-w">${label}</span></li>`;
+  }).join("");
+  return `<div class="card surgcard">
+    <h2>🩹 Surgical precautions &amp; reminders</h2>
+    <p class="hint"><b>${esc(surg.name)}.</b> ${sub}</p>
+    <ul class="preclist">${rows}</ul>
+    <div class="banner load" style="margin:4px 0 0"><b>Timeline:</b> ${esc(surg.ret)}</div>
+    <p class="hint" style="margin-top:10px">These are <b>generalized</b> timeframes for education — your surgeon's own protocol always takes precedence.
+      Seek care for spreading redness, discharge, fever, new calf pain/swelling, or chest pain/breathlessness.</p>
+  </div>`;
+}
+
 /* ---------- render program ---------- */
 function renderProgram(prog){
   const out = $("#programOut");
@@ -510,6 +724,8 @@ function renderProgram(prog){
   html += `<div class="banner info no-print"><b>✎ Make it yours:</b> tap <b>⇄ Swap</b> on any exercise to pick an alternative,
     or use <b>🔄 Reroll</b> / <b>↩ Reset</b> to change a whole phase. Every option is filtered to your precautions and saved automatically.</div>`;
   html += `</div>`;
+
+  html += surgicalReminderCard();
 
   prog.items.forEach((item, ci)=>{
     html += `<div class="card"><h2>${esc(item.name)}</h2>
@@ -731,12 +947,30 @@ function initDetails(){
   $("#painLevel").value=state.painRest; $("#painVal").textContent=state.painRest;
   $("#painMove").value=state.painMove; $("#painMoveVal").textContent=state.painMove;
   $("#surgery").value=state.surgery; $("#fitness").value=state.fitness; $("#goal").value=state.goal;
+  // populate surgery-type dropdown once
+  const sel=$("#surgeryType");
+  if(sel.options.length<=1){ SURGERIES.forEach(s=>{ const o=document.createElement("option"); o.value=s.id; o.textContent=s.name; sel.appendChild(o); });
+    const oth=document.createElement("option"); oth.value="other"; oth.textContent="Other / not listed"; sel.appendChild(oth); }
+  sel.value=state.surgeryType||"auto"; $("#surgeryDate").value=state.surgeryDate||"";
+  toggleSurgeryExtra(); updatePostopLabel();
   w.oninput=()=>{ state.weeks=w.value===""?null:parseInt(w.value); updateAcuteLabel(); save(); };
   $("#painLevel").oninput=e=>{ state.painRest=+e.target.value; $("#painVal").textContent=e.target.value; save(); };
   $("#painMove").oninput=e=>{ state.painMove=+e.target.value; $("#painMoveVal").textContent=e.target.value; save(); };
-  $("#surgery").oninput=e=>{ state.surgery=e.target.value; save(); };
+  $("#surgery").oninput=e=>{ state.surgery=e.target.value; toggleSurgeryExtra(); save(); };
+  $("#surgeryType").oninput=e=>{ state.surgeryType=e.target.value; save(); };
+  $("#surgeryDate").oninput=e=>{ state.surgeryDate=e.target.value; updatePostopLabel(); save(); };
   $("#fitness").oninput=e=>{ state.fitness=e.target.value; save(); };
   $("#goal").oninput=e=>{ state.goal=e.target.value; save(); };
+}
+function toggleSurgeryExtra(){
+  const show = state.surgery==="yes" || !!detectSurgery();
+  $("#surgeryExtra").classList.toggle("hide", !show);
+}
+function updatePostopLabel(){
+  const el=$("#postopLabel"); if(!el) return;
+  if(!state.surgeryDate){ el.innerHTML=""; return; }
+  const w=weeksPostOp();
+  el.innerHTML = w==null ? "" : (w>0 ? `→ about <b>${w} week${w===1?"":"s"}</b> post-op` : `→ <b>under a week</b> post-op`);
 }
 
 function doGenerate(){

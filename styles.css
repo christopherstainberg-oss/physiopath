@@ -224,6 +224,20 @@ svg.chart .dot{fill:var(--brand)}
 .exrow .exwarn{color:var(--warn);font-size:11px;display:block;margin-top:2px}
 #exRegion,#exDiff{width:auto;flex:1;min-width:120px}
 
+/* surgical precautions card */
+.surgcard{border-color:rgba(255,138,92,.5)}
+.surgcard h2{color:var(--acute)}
+.preclist{list-style:none;margin:10px 0 0;padding:0}
+.precrow{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.precrow:last-child{border-bottom:none}
+.precrow .prec-t{flex:1}
+.precrow .prec-w{flex:0 0 auto;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;padding:3px 9px;border-radius:999px;white-space:nowrap;margin-top:1px}
+.precrow.active .prec-w{background:rgba(255,138,92,.18);color:var(--acute)}
+.precrow.active .prec-t{color:var(--text)}
+.precrow.lifted{opacity:.62}
+.precrow.lifted .prec-w{background:rgba(92,225,166,.16);color:var(--brand-2)}
+.precrow.neutral .prec-w{background:rgba(159,178,198,.16);color:var(--muted)}
+
 /* program editing controls */
 .exrowtools{display:flex;gap:14px;align-items:center;margin-top:7px}
 .swapbtn{background:none;border:none;color:var(--brand-2);font-size:12px;font-weight:700;cursor:pointer;padding:2px 0;font-family:inherit}
