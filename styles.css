@@ -455,6 +455,8 @@ footer b{color:var(--text)}
 .riskcard.risk-low{border-color:rgba(92,225,166,.45)}
 .riskcard.risk-mod{border-color:rgba(255,204,87,.5)}
 .riskcard.risk-high{border-color:rgba(255,107,107,.55)}
+.riskcard.risk-info{border-color:rgba(62,166,255,.4)}
+.rlevel.risk-info{background:rgba(62,166,255,.16);color:var(--brand)}
 .riskhead{display:flex;align-items:center;gap:8px}
 .ricon{font-size:18px}
 .rtitle{font-weight:700;font-size:14.5px}

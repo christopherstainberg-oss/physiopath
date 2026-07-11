@@ -2718,6 +2718,140 @@ function renderRisks(){
       <p class="risknote">${esc(r.note)}</p>
     </div>`;
   }).join("") + `<div class="redflags" style="margin-top:12px"><b>Educational only — not a diagnosis or a validated risk score.</b> These estimates use general thresholds and only the values you entered. Discuss any concerns, and any abnormal labs, with your doctor.</div>`;
+  renderOtherRisks();   // keep the cross-cutting "other risks" card in sync on every risk refresh
+}
+
+/* Cross-cutting "other health risks" — patterns the 6 specialty cards don't capture alone. */
+function otherHealthRisks(){
+  const v=latestVitals(), sbp=vnum(v.sbp), dbp=vnum(v.dbp), glu=vnum(v.glucose);
+  const bmi=bmiCalc(v.height,v.weight), age=vnum(state.age);
+  const L=id=>vnum((state.labs[id]||{}).v);
+  const gt=(x,n)=>x!=null&&x>=n, lt=(x,n)=>x!=null&&x<n;
+  const flags=new Set(gatherFlags());
+  const medFlags=new Set(selectedMeds().flatMap(m=>m.flags||[]));
+  const smoker=state.smoking==="current";
+  const out=[]; const add=(title,level,factors,advice)=>{ if(factors.length) out.push({title,level,factors,advice}); };
+
+  { const c=[];
+    if(bmi!=null&&bmi>=30) c.push("BMI in the obese range");
+    if(gt(L("trig"),150)) c.push("Triglycerides ≥150");
+    if(lt(L("hdl"),40)) c.push("HDL below 40");
+    if(gt(sbp,130)||gt(dbp,85)) c.push("Blood pressure ≥130/85");
+    if(gt(L("glucoseF"),100)||gt(glu,100)||gt(L("a1c"),5.7)) c.push("Elevated blood sugar");
+    if(c.length>=3) add("⚖️ Metabolic syndrome pattern", c.length>=4?"high":"moderate", c,
+      "This cluster raises heart-disease and type-2-diabetes risk. Weight loss, a whole-food diet, regular exercise and not smoking can reverse it — discuss with your clinician."); }
+
+  { const c=[]; const diabRange=(L("a1c")!=null&&L("a1c")>=6.5)||(L("glucoseF")!=null&&L("glucoseF")>=126);
+    if(L("a1c")!=null&&L("a1c")>=6.5) c.push("HbA1c in the diabetes range");
+    else if(L("a1c")!=null&&L("a1c")>=5.7) c.push("HbA1c in the prediabetes range");
+    if(L("glucoseF")!=null&&L("glucoseF")>=126) c.push("Fasting glucose in the diabetes range");
+    else if(L("glucoseF")!=null&&L("glucoseF")>=100) c.push("Fasting glucose in the prediabetes range");
+    if(bmi!=null&&bmi>=30) c.push("BMI in the obese range");
+    if(!flags.has("diabetes")) add("🍬 Raised diabetes / prediabetes risk", diabRange?"high":"moderate", c,
+      "Cutting refined carbs and sugar, losing excess weight and regular activity strongly lower this — ask your clinician about a formal check."); }
+
+  { const c=[];
+    if(lt(L("hgb"),12)) c.push("Low hemoglobin");
+    if(lt(L("ferritin"),30)) c.push("Low ferritin (iron stores)");
+    if(lt(L("iron"),60)) c.push("Low serum iron");
+    if(lt(L("b12"),200)) c.push("Low vitamin B12");
+    if(lt(L("folate"),3)) c.push("Low folate");
+    add("🩸 Anemia / nutrient-deficiency risk", lt(L("hgb"),10)?"high":"moderate", c,
+      "Iron/B12/folate-rich foods (with vitamin C for iron) help, but a low hemoglobin needs a cause found — see your doctor, especially to rule out slow blood loss."); }
+
+  { const c=[];
+    if(lt(L("vitd"),30)) c.push("Low vitamin D");
+    if(lt(L("magnesium"),1.7)) c.push("Low magnesium");
+    if(lt(L("zinc"),60)) c.push("Low zinc");
+    if(lt(L("vitc"),0.4)) c.push("Low vitamin C");
+    add("💊 Vitamin / mineral deficiency","moderate", c,
+      "Targeted diet changes or supplements (as advised) restore these — low vitamin D also affects bone and muscle."); }
+
+  { const c=[];
+    if(gt(age,65)) c.push("Age 65+");
+    if(state.sex==="Female"&&gt(age,50)) c.push("Post-menopausal (higher bone loss)");
+    if(lt(L("vitd"),30)) c.push("Low vitamin D");
+    if(lt(L("calcium"),8.6)) c.push("Low calcium");
+    if(smoker) c.push("Current smoker");
+    if(flags.has("osteoporosis")) c.push("Known low bone density");
+    if(medFlags.has("corticosteroid")) c.push("Long-term steroid use");
+    if(c.length>=2||flags.has("osteoporosis")) add("🦴 Bone-health / fracture risk", flags.has("osteoporosis")?"high":"moderate", c,
+      "Weight-bearing and resistance exercise, enough calcium and vitamin D, and not smoking protect bone — ask about a bone-density (DEXA) scan if you have several factors."); }
+
+  { const c=[];
+    if(flags.has("recent_surgery")) c.push("Recent surgery");
+    if(flags.has("dvt")) c.push("Prior clot / on blood thinners");
+    if(bmi!=null&&bmi>=35) c.push("Very high BMI");
+    if(smoker) c.push("Current smoker");
+    if(gt(L("ddimer"),0.5)) c.push("Raised D-dimer");
+    if(c.length>=2) add("🦵 Blood-clot (VTE) risk", gt(L("ddimer"),0.5)?"high":"moderate", c,
+      "Stay mobile, hydrate, and move your legs on long journeys. Seek urgent care for a hot, swollen, painful calf or sudden breathlessness/chest pain."); }
+
+  { const c=[];
+    if(medFlags.has("anticoagulant")||medFlags.has("antiplatelet")) c.push("On blood thinners / antiplatelets");
+    if(lt(L("platelets"),150)) c.push("Low platelet count");
+    if(gt(L("inr"),1.4)) c.push("Raised INR");
+    add("🩹 Bleeding risk", lt(L("platelets"),50)?"high":"moderate", c,
+      "Take care with contact and fall-risk activities, and report unusual bruising or bleeding to your clinician."); }
+
+  { const c=[];
+    if(lt(L("wbc"),4)) c.push("Low white-cell count");
+    if(medFlags.has("immunosuppressant")||medFlags.has("dmard")) c.push("Immune-suppressing medicine");
+    if(lt(L("igg"),700)) c.push("Low IgG");
+    if(flags.has("diabetes")) c.push("Diabetes");
+    add("🦠 Higher infection risk", lt(L("wbc"),2)?"high":"moderate", c,
+      "Avoid training when acutely unwell, keep good hygiene at shared gyms, stay up to date with vaccinations, and seek care early for fevers."); }
+
+  { const c=[];
+    if(gt(L("tsh"),4)) c.push("High TSH (possible underactive thyroid)");
+    else if(L("tsh")!=null&&L("tsh")<0.4) c.push("Low TSH (possible overactive thyroid)");
+    add("🦋 Thyroid dysfunction","info", c,
+      "Thyroid problems affect energy, weight, heart rate and mood — confirm and manage with your doctor."); }
+
+  if(gt(L("uricacid"),7.2)) add("🦶 Gout risk (high uric acid)","moderate",["Uric acid above range"],
+      "Limit alcohol (especially beer), sugary drinks and high-purine foods (red/organ meat, shellfish), stay hydrated, and lose excess weight.");
+
+  { const c=[];
+    if(gt(L("crp"),3)) c.push("Raised hs-CRP");
+    if(gt(L("esr"),20)) c.push("Raised ESR");
+    add("🌡️ Raised inflammation","info", c,
+      "A non-specific signal — can reflect infection, injury or an inflammatory condition. A persistent rise should be reviewed."); }
+
+  { const c=[];
+    if(bmi!=null&&bmi>=30) c.push("BMI in the obese range");
+    if(gt(sbp,140)||gt(dbp,90)) c.push("High blood pressure");
+    if(state.sex==="Male"&&gt(age,50)) c.push("Male, 50+");
+    if(c.length>=2) add("😴 Sleep-apnea risk","info", c,
+      "Loud snoring, gasping in sleep, or daytime sleepiness alongside these are worth screening — sleep apnea strains the heart. Ask your doctor."); }
+
+  { const c=[];
+    if(gt(L("sodium"),145)) c.push("High sodium");
+    if(gt(L("buncreat"),20)) c.push("High BUN/creatinine ratio");
+    if(gt(L("hct"),50)) c.push("High hematocrit");
+    if(c.length>=2) add("💧 Dehydration pattern","info", c,
+      "These often reflect low fluid — hydrate well, especially around exercise and in the heat."); }
+
+  { const c=[];
+    if(lt(L("albumin"),3.5)) c.push("Low albumin");
+    if(lt(L("prealbumin"),18)) c.push("Low prealbumin");
+    add("🍽️ Nutrition (low-protein) risk","moderate", c,
+      "Prioritise adequate protein and calories to support recovery, and review the cause with your clinician."); }
+
+  return out;
+}
+function renderOtherRisks(){
+  const el=$("#otherRiskBody"); if(!el) return;
+  const risks=otherHealthRisks();
+  if(!risks.length){ el.innerHTML=`<div class="empty" style="padding:20px 10px"><div class="big">✅</div><div>No additional cross-cutting risks flagged from what you've entered. Add vitals and labs above to check more patterns.</div></div>`; return; }
+  const lvlTxt={low:"Lower",moderate:"Moderate",high:"Higher",info:"Note"}, lvlCls={low:"risk-low",moderate:"risk-mod",high:"risk-high",info:"risk-info"};
+  el.innerHTML = risks.map(r=>{
+    const cls=lvlCls[r.level]||"risk-info";
+    return `<div class="riskcard ${cls}">
+      <div class="riskhead"><span class="rtitle">${esc(r.title)}</span><span class="rlevel ${cls}">${lvlTxt[r.level]||"Note"}</span></div>
+      <ul class="riskfactors">${r.factors.map(f=>`<li>${esc(f)}</li>`).join("")}</ul>
+      <p class="risknote">${esc(r.advice)}</p>
+    </div>`;
+  }).join("") + `<div class="redflags" style="margin-top:12px"><b>Educational only — not a diagnosis.</b> These are pattern-based prompts from the values you entered. Discuss anything relevant with your doctor.</div>`;
 }
 
 function renderHealth(){ renderVitalsLog(); renderLabs(); renderRisks(); }
