@@ -901,6 +901,93 @@ const PATTERN_INFO = {
   rotate:{what:"A rotational exercise trains controlled trunk turning and power.",how:"Rotate through the trunk with control and return smoothly.",why:"Builds rotational strength for sport and daily twisting tasks."},
   general:{what:"A general conditioning exercise for the area.",how:"Perform with control through a pain-free range, exhaling on effort.",why:"Helps restore strength, movement and function."}
 };
+/* Step-by-step technique detail per movement pattern — feeds the "How to do it" block. */
+const PATTERN_HOWTO = {
+  squat:{setup:"Stand with feet hip-to-shoulder-width apart, toes turned slightly out, weight balanced over your mid-foot. Brace your stomach as if about to be poked.",
+    steps:["Break at the hips and knees at the same time, sitting your hips back and down.","Keep your chest up; let your knees travel forward over your toes — they may pass the toes as long as your heels stay flat.","Descend as far as you can while your heels stay down and your low back stays neutral (no rounding or tucking).","Drive up through your whole foot and squeeze your glutes at the top."],
+    tempo:"Lower for 2–3 seconds, then stand at a controlled pace. Breathe in on the way down, out as you drive up.",
+    avoid:"Don't let the knees cave inward or the heels lift — widen your stance or reduce depth if they do."},
+  hinge:{setup:"Stand tall, feet hip-width, a slight soft bend in the knees. Set your shoulders back and brace your core.",
+    steps:["Push your hips straight back toward the wall behind you, letting your torso tip forward as one unit.","Keep your spine long and flat — imagine a broomstick touching your head, upper back and tailbone.","Lower until you feel a stretch in the hamstrings (often about shin height), keeping the weight close to your legs.","Drive your hips forward to stand tall and squeeze your glutes — don't lean back at the top."],
+    tempo:"Lower under control for ~3 seconds; return smoothly. Exhale as you stand up.",
+    avoid:"Don't round your back or turn it into a squat — the movement comes from the hips, not the knees."},
+  lunge:{setup:"Stand tall, then take a controlled step into a long split stance (or set up already staggered).",
+    steps:["Lower straight down by bending both knees, dropping the back knee toward the floor.","Keep your front shin roughly vertical and your weight through the front heel and mid-foot.","Stop just before the back knee touches, keeping your torso upright.","Push through the front foot to return to the start."],
+    tempo:"Lower for ~2 seconds, pause briefly, then rise. Breathe out on the way up.",
+    avoid:"Don't let the front knee collapse inward or shoot far past the toes, and don't lean your trunk forward."},
+  calf:{setup:"Stand tall, feet hip-width, near a wall or rail for light balance. Place the balls of the feet on a step for extra range if prescribed.",
+    steps:["Push through the balls of your feet to rise as high as you can onto your toes.","Pause a moment at the top with the ankles fully pointed.","Lower slowly all the way down — let the heels drop below the step if you're using one."],
+    tempo:"Rise for 1–2 seconds, lower for 3–4 seconds — the slow lower is where much of the benefit is.",
+    avoid:"Don't bounce or rush; keep it smooth and let the calves, not gripping toes, do the work."},
+  pull:{setup:"Set the resistance and get into a stable, tall posture; take up the slack before you start.",
+    steps:["Set your shoulder blades — gently draw them back and down before the arm moves.","Pull the resistance smoothly toward you (or curl the joint), leading with the elbow.","Squeeze the working muscle for a moment at the end of the range.","Return slowly to full length, keeping tension the whole way."],
+    tempo:"Pull for 1–2 seconds, control the return for ~3 seconds. Exhale as you pull.",
+    avoid:"Don't shrug, swing or heave with momentum — if you have to jerk the weight, lighten it."},
+  push:{setup:"Set a stable base and tall posture; start the joint at a comfortable, pain-free angle.",
+    steps:["Brace your core and set your shoulder blades.","Press the resistance smoothly away (or straighten the joint) through a full, controlled range.","Stop just short of a harsh lock-out, keeping tension on the muscle.","Lower back to the start slowly and with control."],
+    tempo:"Press for 1–2 seconds, lower for ~3 seconds. Exhale as you press.",
+    avoid:"Don't hold your breath or flare the joint into a painful range — keep it smooth and pain-free."},
+  isometric:{setup:"Move into the prescribed position and set your posture; find the exact angle where the target muscle works but nothing sharp is felt.",
+    steps:["Gently build tension in the target muscle to a firm but comfortable effort (about 5–7 out of 10).","Hold perfectly still — no bouncing or shifting.","Keep breathing steadily throughout the hold.","Ease off slowly at the end rather than dropping suddenly."],
+    tempo:"Hold for the prescribed time (often 20–45 seconds), then rest. Never hold your breath.",
+    avoid:"Don't strain to maximum or push into pain — steady, sub-maximal tension is the goal."},
+  mobility:{setup:"Get into the starting position and relax the surrounding muscles; the aim is gentle range, not force.",
+    steps:["Move slowly and smoothly toward the end of the comfortable range.","Ease to the first point of gentle stretch or resistance — not pain.","Hold briefly, or move rhythmically in and out if it's a dynamic drill.","Return slowly to the start and repeat."],
+    tempo:"Move deliberately; for static stretches hold ~20–30 seconds. Breathe out as you ease into range.",
+    avoid:"Don't bounce or force through pain — range should improve gradually, not be wrenched."},
+  balance:{setup:"Set up beside a sturdy support (counter, rail or wall) you can touch if needed; footwear as prescribed.",
+    steps:["Get into position (e.g. stand on one leg) with your gaze fixed on a point ahead.","Brace your core gently and keep a soft bend in the knee.","Hold steady, correcting with small foot and ankle adjustments rather than flailing your arms.","Progress — add movement, close your eyes or use a softer surface — only when the level feels secure."],
+    tempo:"Hold or work for the prescribed time; rest and repeat. Breathe normally.",
+    avoid:"Don't hold your breath or lock the knee; keep support within reach so you can push yourself safely."},
+  plyo:{setup:"Warm up first. Pick a surface with some give and clear space; start with a low height or short distance.",
+    steps:["Load by dipping into a quarter-squat with the hips back and chest up.","Jump or hop with full effort, extending the hips, knees and ankles together.","Focus on the landing — land softly on the mid-foot and absorb through the hips and knees.","Land 'quietly' with the knees tracking over the toes, then reset before the next rep."],
+    tempo:"Explode up, then land soft and controlled. Quality over quantity — stop if landings get sloppy.",
+    avoid:"Don't land stiff-legged or with the knees caving in; cut the height or reps if form breaks down."},
+  carry:{setup:"Pick up the load with a good hip hinge; stand tall with it at your side(s) or front as prescribed.",
+    steps:["Stand as tall as you can — ribs down, shoulders back, core braced.","Take short, deliberate, even steps.","Keep the weight from swinging and your torso from leaning or tipping.","Set the load down with control using your legs, not your back."],
+    tempo:"Walk at a steady pace for the prescribed distance or time; breathe normally throughout.",
+    avoid:"Don't hold your breath, lean toward the weight, or let your posture collapse — stop when you can't stay tall."},
+  cardio:{setup:"Choose your mode (walk, bike, row, etc.) and start with a few minutes of easy warm-up.",
+    steps:["Build to your target effort — a conversational 'moderate' pace, or your prescribed intervals.","Keep a smooth, rhythmic pattern and steady breathing.","Use your heart-rate zone and/or RPE (see the cardio target above) to stay in range.","Finish with a few minutes of easy cool-down."],
+    tempo:"Sustain the prescribed duration or intervals; at a moderate pace you should be able to talk but not sing.",
+    avoid:"Don't red-line to breathlessness, and stop for chest pain, dizziness or unusual symptoms."},
+  vestibular:{setup:"Sit or stand safely near support, ready to provoke mild dizziness that then settles.",
+    steps:["Perform the prescribed gaze or head movement (e.g. keep your eyes on a target while turning your head).","Move at a pace that brings on mild symptoms without overwhelming you.","Continue for the set time, then pause and let symptoms settle before the next set.","Progress the speed or difficulty gradually as symptoms ease."],
+    tempo:"Work for the prescribed time; rest between sets until dizziness settles.",
+    avoid:"Don't push to severe nausea — a little provocation is therapeutic, a lot is counterproductive."},
+  breathing:{setup:"Get comfortable — sitting upright or lying with knees bent. Rest one hand on your belly.",
+    steps:["Breathe in slowly through your nose, letting your belly (not your chest) rise into your hand.","Keep your shoulders and neck relaxed.","Breathe out slowly and fully — through pursed lips if prescribed — for longer than you breathed in.","Pause briefly, then repeat at an unhurried pace."],
+    tempo:"Aim for a slow rhythm — roughly in for 4, out for 6. Never hold your breath or force it.",
+    avoid:"Don't let the upper chest and shoulders do the work, and don't strain — it should feel calm."},
+  "anti-ext":{setup:"Set your low back flat to the floor (or into a neutral brace) and engage your core before moving.",
+    steps:["Brace your abdominals as if bracing for a light punch.","Move your arms and/or legs slowly as prescribed while keeping the low back completely still.","Only move as far as you can before the back starts to arch.","Return under control and reset the brace each rep."],
+    tempo:"Move slowly; breathe steadily and don't hold your breath.",
+    avoid:"Don't let the back arch or the belly 'dome' up — shorten the range if you lose the flat-back position."},
+  "anti-rot":{setup:"Set a stable stance and brace your core; take up tension so the resistance is trying to rotate you.",
+    steps:["Square your hips and shoulders to the front.","Press or move as prescribed while resisting the pull that wants to twist you.","Keep the trunk dead still — the challenge is to not rotate.","Return slowly, staying square the whole time."],
+    tempo:"Move deliberately and hold the end position briefly; breathe steadily.",
+    avoid:"Don't let your torso twist toward the resistance — reduce the load if you can't stay square."},
+  extension:{setup:"Position yourself as prescribed (e.g. lying face-down) with the spine neutral and the neck long.",
+    steps:["Gently engage the muscles that straighten the spine.","Lift into a small, controlled range — think 'long and tall', not 'crank it high'.","Pause briefly at the top without pinching the low back.","Lower slowly back to the start."],
+    tempo:"Lift for 1–2 seconds, lower for ~3 seconds. Exhale as you lift.",
+    avoid:"Don't hyper-arch or jerk upward — if you feel pinching, reduce the range."},
+  flexion:{setup:"Lie on your back with knees bent (or as prescribed); rest your hands lightly by your head without pulling the neck.",
+    steps:["Draw your ribs gently toward your hips to curl the upper spine.","Peel the shoulder blades off the floor — you don't need to sit all the way up.","Keep the neck relaxed with a soft chin tuck (don't yank the head forward).","Lower slowly and with control."],
+    tempo:"Curl up for ~2 seconds, lower for ~2–3 seconds. Exhale as you curl.",
+    avoid:"Don't pull on your neck or use momentum — the abs, not the arms or hip flexors, should do the work."},
+  gait:{setup:"Choose a clear, flat path with support (rail or wall) nearby; look ahead, not down at your feet.",
+    steps:["Perform the prescribed stepping pattern with even, deliberate steps.","Keep your posture tall and let your arms swing naturally if the drill allows.","Place each foot with control — heel-to-toe unless told otherwise.","Keep support within reach; add pace or difficulty only as you feel steady."],
+    tempo:"Move at a controlled pace; the quality of each step matters more than speed.",
+    avoid:"Don't look down or rush — if you feel unsteady, slow down and stay near support."},
+  rotate:{setup:"Set an athletic stance with soft knees and a braced core; take up tension on the resistance.",
+    steps:["Start the turn from your hips and trunk, letting them lead the arms.","Rotate smoothly through a controlled range and pivot the back foot to protect the knee.","Keep the arms and core connected as one unit, not just swinging the arms.","Return under control to the start."],
+    tempo:"Turn with intent, then control the return; exhale through the effort.",
+    avoid:"Don't twist only from the low back or wrench the movement — the power comes from the hips."},
+  general:{setup:"Set up in a stable, comfortable position with good posture.",
+    steps:["Move through a pain-free range with control.","Keep the target area working and the surrounding joints relaxed.","Pause briefly at the hardest point if it feels controlled.","Return slowly to the start."],
+    tempo:"Move smoothly at a controlled pace with a slower return. Exhale on the effort.",
+    avoid:"Don't rush, hold your breath, or push into pain — smooth and controlled wins."}
+};
 function inferPattern(name){
   const l = name.toLowerCase();
   if(/gaze|vor|habituation/.test(l)) return "vestibular";
@@ -938,11 +1025,21 @@ function movementNotes(name){
 function movementExplain(name, pattern, regionArr){
   const p = pattern || inferPattern(name);
   const info = PATTERN_INFO[p] || PATTERN_INFO.general;
+  const ht = PATTERN_HOWTO[p] || PATTERN_HOWTO.general;
   const skip = new Set(["Full body","Cardio","Balance","Gait","Vestibular","Breathing","Core","Grip"]);
   const regs = (regionArr||[]).filter(r=>!skip.has(r));
   const target = regs.length ? ` It mainly works the ${regs.join(", ").toLowerCase()}.` : "";
   const notes = movementNotes(name);
-  return `<b>What it is:</b> ${info.what}${target}<br><b>How to do it:</b> ${info.how}<br><b>Why it helps:</b> ${info.why}${notes?" "+notes:""}`;
+  const steps = [`<b>Set up —</b> ${ht.setup}`].concat(ht.steps || []);
+  const stepHTML = `<ol class="howsteps">${steps.map(s=>`<li>${s}</li>`).join("")}</ol>`;
+  const meta = [
+    ht.tempo ? `<div class="howmeta"><b>⏱ Tempo &amp; breathing:</b> ${ht.tempo}</div>` : "",
+    ht.avoid ? `<div class="howmeta howavoid"><b>⚠ Avoid:</b> ${ht.avoid}</div>` : "",
+    notes ? `<div class="howmeta"><b>Note:</b> ${notes}</div>` : ""
+  ].join("");
+  return `<b>What it is:</b> ${info.what}${target}`
+    + `<div class="howhead"><b>How to do it</b></div>${stepHTML}${meta}`
+    + `<div class="howwhy"><b>Why it helps:</b> ${info.why}</div>`;
 }
 
 /* Shared exercise <li> renderer with Explain + optional Swap (when ctx {ci,pi,ei} given). */
