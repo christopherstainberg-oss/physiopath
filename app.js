@@ -1084,8 +1084,8 @@ function renderProgram(prog){
       esc([...new Set(prog.removed.map(r=>TAG_LABEL[r.tag]||r.tag))].join(", ")) +
       ` and substituted safer options where needed.</div>`;
   }
-  html += `<div class="banner info no-print"><b>✎ Make it yours:</b> tap <b>⇄ Swap</b> on any exercise to pick an alternative,
-    or use <b>🔄 Reroll</b> / <b>↩ Reset</b> to change a whole phase. Every option is filtered to your precautions and saved automatically.</div>`;
+  html += `<div class="banner info no-print"><b>✎ Make it yours.</b> On any exercise: tap <b>⟳ Rotate</b> to swap it for the next option, or <b>⇄ Swap…</b> to choose from a list.
+    For a whole phase: <b>🔄 Rotate all exercises</b> or <b>↩ Reset to recommended</b>. Everything stays within your precautions and is saved automatically.</div>`;
   html += `</div>`;
 
   // render-time medication filtering (hide high-risk exercises; fully reversible)
