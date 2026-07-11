@@ -786,6 +786,178 @@
      E("Action-plan review","ongoing","Keep your asthma plan up to date")]
   ];
 
+  /* ================= DEDICATED PROTOCOLS (were generic aliases) ================= */
+  P.shoulder_instability = [
+    [E("Scapular setting & 'clock' control","3×10","Control the shoulder blade first"),
+     E("Isometric rotator cuff (safe range)","3×10s","Press into a towel, elbow at your side",T.grip),
+     E("Pendulum swings","3×30s","Relaxed small circles"),
+     E("Gentle rhythmic stabilization","3×20s","Light hand-on-wall perturbations",T.balance)],
+    [E("Band external rotation (neutral)","3×15","Elbow tucked; avoid end-range early"),
+     E("Band internal rotation","3×15","Controlled"),
+     E("Scapular rows & retraction","3×15","Squeeze the blades back"),
+     E("Closed-chain wall stabilization","3×30s","Hand on wall, small circles",T.balance)],
+    [E("Progressive cuff strengthening","3×12","Add resistance weekly",T.grip),
+     E("Prone Y-T-W raises","3×10 each","Build scapular control",T.prone),
+     E("Controlled-range external rotation","3×12","Increase range gradually",T.overhead),
+     E("Loaded rhythmic stabilization","3×30s","Multi-direction control",T.balance)],
+    [E("Plyometric ball drills","3×12","Light, controlled catches",T.highInt),
+     E("Overhead pressing (progressive)","3×10","Only when stable & pain-free",T.overhead,T.valsalva),
+     E("Perturbation & reactive control","3×30s","Prepare for real demands",T.balance),
+     E("Sport / contact-specific loading","as tolerated","Avoid the apprehension position",T.overhead)]
+  ];
+
+  P.knee_meniscus = [
+    [E("Quad sets","3×10 (5s hold)","Tighten thigh, keep knee straight"),
+     E("Straight-leg raises","3×10","Knee locked"),
+     E("Heel slides (comfortable range)","3×12","Avoid deep bend early",T.deepHipFlex),
+     E("Ankle pumps & patellar mobilizations","3×15","Control swelling")],
+    [E("Mini squats (0–60°)","3×12","Avoid deep flexion & twisting early",T.wb),
+     E("Stationary bike (light)","10–15 min","Low resistance",T.aerobic),
+     E("Hamstring curls","3×12","Slow, controlled"),
+     E("Glute bridges","3×12","Drive through the heels")],
+    [E("Progressive leg press (controlled range)","3×10","No deep loaded flexion for repairs",T.wb),
+     E("Step-ups & step-downs","3×10 each","Control, no knee collapse",T.wb,T.balance),
+     E("Single-leg balance","3×30s","Rebuild knee stability",T.balance),
+     E("Calf raises","3×15","Full range")],
+    [E("Return to deeper squats (if cleared)","3×10","Progress range gradually",T.wb),
+     E("Agility & pivoting (staged)","3×6","Avoid forced twisting until cleared",T.impact),
+     E("Jogging progression","walk/run plan","When strength & control return",T.impact),
+     E("Sport-specific drills","as tolerated","Pain- & swelling-guided",T.impact)]
+  ];
+
+  P.radiculopathy_lumbar = [
+    [E("Directional-preference movements (often extension)","hourly ×5","Find the direction that centralizes symptoms",T.ext),
+     E("Sciatic / femoral nerve glides","3×10","Gentle floss — do NOT stretch into pain"),
+     E("Pelvic tilts & gentle core","3×12","Pain-free control"),
+     E("Frequent walking","5–10 min ×2/day","Movement calms the nerve",T.aerobic)],
+    [E("Repeated directional loading","3×10","Continue what centralizes symptoms",T.ext),
+     E("Bird-dog","3×10 each","Segmental control, hips level"),
+     E("Glute bridges","3×12","Support the spine"),
+     E("Progressive nerve mobilization","3×10","Slider → tensioner as tolerated")],
+    [E("Core endurance (planks, side planks)","3×20–40s","Build spinal support"),
+     E("Hip hinge patterning","3×12","Protect the disc & nerve",T.flexLoad),
+     E("Progressive leg strengthening","3×12","Squats/steps as tolerated",T.wb),
+     E("Walking endurance","15–25 min","Build tolerance",T.aerobic)],
+    [E("Loaded lifting mechanics","3×8","Neutral spine, add load slowly",T.flexLoad,T.valsalva),
+     E("Return-to-activity conditioning","3×10","Task-specific",T.wb),
+     E("Impact reintroduction (if relevant)","gradual","When symptoms have settled",T.impact),
+     E("Relapse-prevention routine","ongoing","Keep moving, manage load")]
+  ];
+
+  P.radiculopathy_cervical = [
+    [E("Cervical retraction (chin tuck)","hourly ×5","Often centralizes arm symptoms"),
+     E("Median / ulnar / radial nerve glides","3×10","Gentle floss, don't reproduce pain"),
+     E("Scapular setting","3×12","Support neck posture"),
+     E("Gentle pain-free ROM","3×8","Within comfort",T.endNeck)],
+    [E("Deep neck flexor holds","3×10s","Chin tuck + hold"),
+     E("Postural retraining","3×1 min","Reduce forward-head load"),
+     E("Band rows","3×15","Squeeze the mid-back"),
+     E("Progressive nerve mobilization","3×10","Slider → tensioner")],
+    [E("Scapular strengthening (Y-T-W)","3×10 each","Light, controlled",T.prone),
+     E("Deep neck flexor endurance","3×15s","Build support"),
+     E("Thoracic mobility / extension","3×10","Offload the neck",T.ext),
+     E("Rows & band pull-aparts","3×15","Build capacity")],
+    [E("Progressive loaded rows & carries","3×10","Build neck/shoulder capacity",T.grip),
+     E("Postural endurance drills","3×45s","Hold tall posture"),
+     E("Work/sport-specific loading","as tolerated","Gradual"),
+     E("Return to full activity","as tolerated","Symptom-guided")]
+  ];
+
+  P.sacroiliac = [
+    [E("Pelvic tilts & gentle core","3×12","Find pain-free control"),
+     E("Glute sets & bridges","3×12","Activate pelvic 'force closure'"),
+     E("Adductor & abductor isometrics","3×10s","Compress and stabilize the pelvis"),
+     E("Walking (short, frequent)","5–10 min ×2/day","Even, symmetric stride",T.aerobic)],
+    [E("Single-leg bridge","3×10 each","Keep the pelvis level"),
+     E("Bird-dog","3×10 each","Anti-rotation control"),
+     E("Clamshells & side-lying abduction","3×15 each","Glute-med control"),
+     E("Hip hinge (light)","3×12","Symmetric loading")],
+    [E("Split squats (symmetric loading)","3×10 each","Brace the core",T.wb),
+     E("Side plank","3×20–40s","Lateral stability"),
+     E("Pallof press (anti-rotation)","3×12 each","Resist the twist"),
+     E("Step-ups","3×10 each","Keep the pelvis level",T.wb,T.balance)],
+    [E("Progressive loaded hinge / squat","3×8","Neutral, symmetric",T.valsalva,T.flexLoad),
+     E("Loaded carries","3×30m","Braced trunk",T.grip),
+     E("Return to activity / sport","as tolerated","Progress gradually",T.impact),
+     E("Relapse-prevention routine","ongoing","Glute & core maintenance")]
+  ];
+
+  P.fracture_ue = [
+    [E("Gentle ROM of cast-free joints","3×10","Within pain-free range"),
+     E("Isometric holds (nearby muscles)","3×10s","Keep strength without moving the bone"),
+     E("Finger/hand pumps & circulation","3×20","Reduce swelling, keep fingers mobile"),
+     E("Keep neighbouring joints moving","3×10","Shoulder/elbow/wrist as allowed")],
+    [E("Active ROM progression","3×12","Restore full motion"),
+     E("Light band resistance","3×15","Rebuild muscle gently"),
+     E("Grip & forearm activation","3×15","Soft-ball squeezes",T.grip),
+     E("Gentle stretching","3×30s","Ease stiffness")],
+    [E("Progressive resistance","3×12","Add load weekly once healing is confirmed"),
+     E("Grip work & loaded carries","3×30m","Rebuild function",T.grip),
+     E("Functional reaching & lifting","3×10","Daily tasks"),
+     E("Whole-body conditioning","10–20 min","Rebuild capacity",T.aerobic)],
+    [E("Strength to near-normal","3×10","Match the other side",T.valsalva),
+     E("Weight-bearing through the arm (if cleared)","3×10","Wall → floor push-ups",T.wb),
+     E("Activity/sport-specific drills","as tolerated","Progress slowly"),
+     E("Return to full activity","as tolerated","Symptom- & clearance-guided")]
+  ];
+
+  P.fracture_le = [
+    [E("Ankle pumps & circulation","3×20","Reduce swelling & clot risk"),
+     E("Isometric quad/glute/calf sets","3×10s","Maintain strength without loading the bone"),
+     E("Gentle ROM of cast-free joints","3×10","Within pain-free range"),
+     E("Follow your weight-bearing status","per surgeon","Non- or partial-weight-bearing as instructed",T.wb)],
+    [E("Progressive weight-bearing (per surgeon)","per status","Partial → full as cleared",T.wb),
+     E("Active ROM progression","3×12","Restore full motion"),
+     E("Light resistance (band)","3×15","Rebuild muscle gently"),
+     E("Seated/standing balance","3×30s","Near support",T.balance)],
+    [E("Progressive resistance","3×12","Add load weekly once healing is confirmed",T.wb),
+     E("Gait retraining","3×20m","Even, symmetric steps",T.wb,T.balance),
+     E("Functional movements","3×10","Sit-to-stand, step-ups",T.wb),
+     E("Endurance work","10–20 min","Rebuild capacity",T.aerobic)],
+    [E("Strength to near-normal","3×10","Match the other side",T.valsalva),
+     E("Impact reintroduction (if cleared)","gradual","Only once the bone is healed",T.impact),
+     E("Balance & agility","as tolerated","Fall prevention",T.balance),
+     E("Return to full activity","as tolerated","Symptom- & clearance-guided",T.impact)]
+  ];
+
+  P.amputation_le = [
+    [E("Residual-limb positioning (prevent flexion contracture)","several × day","Avoid prolonged hip/knee bending"),
+     E("Residual-limb desensitization","several × day","Tapping, textures, gentle massage"),
+     E("Core & sound-limb strengthening","as able","Prepare for the prosthesis"),
+     E("Seated / arm cardio","10–15 min","Maintain fitness",T.aerobic)],
+    [E("Residual-limb strengthening (hip/knee)","3×12","Build for socket load"),
+     E("Sitting & standing balance","3×30s","Near support",T.balance),
+     E("Hip & knee flexor stretches","3×30s","Prevent contracture"),
+     E("Prosthetic tolerance (per prosthetist)","graded","Wear schedule & socket fit",T.wb)],
+    [E("Gait training with prosthesis","per team","Even steps, near support",T.wb,T.balance),
+     E("Progressive lower-limb strength","3×12","Glutes, quads, core",T.wb),
+     E("Endurance building","15–25 min","Rebuild stamina",T.aerobic),
+     E("Functional transfers & steps","3×10","Real-life mobility",T.wb)],
+    [E("Advanced balance & agility","as tolerated","Confidence on the prosthesis",T.balance),
+     E("Community mobility (terrain, stairs, ramps)","progressive","Uneven ground",T.wb),
+     E("Recreation / sport adaptation","as tolerated","Adaptive options"),
+     E("Return to activity","as tolerated","Team-guided")]
+  ];
+
+  P.amputation_ue = [
+    [E("Residual-limb positioning & desensitization","several × day","Reduce sensitivity, prevent contracture"),
+     E("Gentle ROM (shoulder/elbow as relevant)","3×10","Maintain full motion"),
+     E("Core & sound-limb strengthening","as able","Prepare for the prosthesis"),
+     E("Seated cardio","10–15 min","Maintain fitness",T.aerobic)],
+    [E("Residual-limb & shoulder-girdle strengthening","3×12","Build for prosthesis control"),
+     E("Muscle-site activation (per team)","3×10","Isolate control signals for myoelectric use"),
+     E("Scapular & posture work","3×12","Support the prosthesis"),
+     E("Chest & shoulder stretches","3×30s","Prevent tightness",T.overhead)],
+    [E("Prosthetic control training (per team)","graded","Open/close, grip, positioning"),
+     E("Progressive whole-body strengthening","3×12","Rebuild capacity"),
+     E("Bimanual functional tasks","3×10","Real-life two-handed activities"),
+     E("Endurance / conditioning","15–20 min","Rebuild stamina",T.aerobic)],
+    [E("Advanced prosthetic skills","as tolerated","Fine control & speed"),
+     E("Functional independence tasks","progressive","Work & home activities"),
+     E("Recreation / sport adaptation","as tolerated","Adaptive options"),
+     E("Return to activity","as tolerated","Team-guided")]
+  ];
+
   /* ================= ALIASES ================= */
   const ALIAS = {
     shoulder_instability:"shoulder", knee_meniscus:"knee_ligament",
