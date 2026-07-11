@@ -1231,6 +1231,8 @@ function goStep(n){
   state.step=n; save();
   $$(".panel").forEach((p,i)=>p.classList.toggle("hide", i!==n));
   $$(".step").forEach((s,i)=>{ s.classList.toggle("active", i===n); s.classList.toggle("done", i<n); });
+  const act=document.querySelector(".step.active");        // keep the active step visible in the scrollable nav
+  if(act&&act.scrollIntoView) try{ act.scrollIntoView({inline:"center",block:"nearest",behavior:"smooth"}); }catch(e){}
   window.scrollTo({top:0,behavior:"smooth"});
   if(n===4) renderProgress();
   if(n===5) initCoach();
@@ -1399,11 +1401,39 @@ function toast(msg){
 let deferredPrompt=null;
 window.addEventListener("beforeinstallprompt",e=>{ e.preventDefault(); deferredPrompt=e; $("#installBtn").hidden=false; });
 function initInstall(){
-  $("#installBtn").onclick=async()=>{ if(!deferredPrompt) return; deferredPrompt.prompt();
-    await deferredPrompt.userChoice; deferredPrompt=null; $("#installBtn").hidden=true; };
+  const btn=$("#installBtn");
+  const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+  const standalone=("standalone" in navigator && navigator.standalone) || matchMedia("(display-mode: standalone)").matches;
+  btn.onclick=async()=>{
+    if(deferredPrompt){ deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt=null; btn.hidden=true; return; }
+    if(isIOS) toast("To install: tap the Share icon, then choose “Add to Home Screen”.");
+  };
+  if(isIOS && !standalone) btn.hidden=false;   // iOS Safari never fires beforeinstallprompt — show a hint
+}
+/* ---- service worker + update-available flow ---- */
+function showUpdateToast(reg){
+  if(document.querySelector(".toast-update")) return;
+  const t=document.createElement("div"); t.className="toast toast-update";
+  t.innerHTML="✨ A new version is available. <button class='btn primary updbtn'>Refresh</button>";
+  document.body.appendChild(t);
+  t.querySelector(".updbtn").onclick=()=>{ if(reg.waiting) reg.waiting.postMessage({type:"SKIP_WAITING"}); t.remove(); };
+  setTimeout(()=>{ if(t.isConnected) t.remove(); }, 15000);
 }
 if("serviceWorker" in navigator){
-  window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+  window.addEventListener("load", async ()=>{
+    try{
+      const reg=await navigator.serviceWorker.register("sw.js");
+      if(reg.waiting && navigator.serviceWorker.controller) showUpdateToast(reg);
+      reg.addEventListener("updatefound", ()=>{
+        const nw=reg.installing; if(!nw) return;
+        nw.addEventListener("statechange", ()=>{
+          if(nw.state==="installed" && navigator.serviceWorker.controller) showUpdateToast(reg);
+        });
+      });
+    }catch(e){}
+  });
+  let reloaded=false;
+  navigator.serviceWorker.addEventListener("controllerchange", ()=>{ if(reloaded) return; reloaded=true; location.reload(); });
 }
 
 /* =====================================================================
@@ -1675,5 +1705,8 @@ document.addEventListener("DOMContentLoaded",()=>{
     else setTimeout(()=>addMsg(coachAnswer(v),"bot"),220);
   });
   if(state.program) renderProgram(state.program);
-  goStep(state.step||0);
+  // PWA app-shortcut routing (?go=coach|library|build|progress)
+  const goMap={ build:1, details:2, program:3, progress:4, coach:5, library:6 };
+  const go=new URLSearchParams(location.search).get("go");
+  goStep(go && goMap[go]!=null ? goMap[go] : (state.step||0));
 });

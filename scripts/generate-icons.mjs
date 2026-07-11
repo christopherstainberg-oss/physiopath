@@ -56,6 +56,7 @@ function roundedIn(x,y,x0,x1,y0,y1,r){
   for(const cx of cxs) for(const cy of cys) if((x-cx)**2+(y-cy)**2<=r*r) return true;
   return false;
 }
+writeFileSync(dir+"/icon-180.png", draw(180,{pad:false}));   // apple-touch-icon
 writeFileSync(dir+"/icon-192.png", draw(192,{pad:false}));
 writeFileSync(dir+"/icon-512.png", draw(512,{pad:false}));
 writeFileSync(dir+"/icon-maskable-512.png", draw(512,{pad:true}));

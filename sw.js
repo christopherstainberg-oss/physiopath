@@ -1,6 +1,6 @@
-/* PhysioPath service worker — offline-first caching.
+/* PhysioPath service worker — offline-first caching + safe update flow.
    Bump CACHE version whenever app assets change so clients update. */
-const CACHE = "physiopath-v19";
+const CACHE = "physiopath-v20";
 const ASSETS = [
   "./",
   "./index.html",
@@ -12,12 +12,14 @@ const ASSETS = [
   "./data/medications.js",
   "./manifest.webmanifest",
   "./icons/icon.svg",
+  "./icons/icon-180.png",
   "./icons/icon-192.png",
   "./icons/icon-512.png"
 ];
 
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  // Do NOT skipWaiting here — the page shows a "Refresh" prompt and messages us when ready.
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
 });
 
 self.addEventListener("activate", e => {
@@ -27,10 +29,22 @@ self.addEventListener("activate", e => {
   );
 });
 
-// Cache-first for our own assets; network-first fallback to cache for the rest.
+// Let the page trigger activation of a waiting worker.
+self.addEventListener("message", e => {
+  if (e.data && e.data.type === "SKIP_WAITING") self.skipWaiting();
+});
+
 self.addEventListener("fetch", e => {
   const req = e.request;
   if (req.method !== "GET") return;
+
+  // Navigations: network-first, fall back to the cached app shell (works offline, incl. ?go= URLs).
+  if (req.mode === "navigate") {
+    e.respondWith(fetch(req).catch(() => caches.match("./index.html")));
+    return;
+  }
+
+  // Everything else: cache-first, then network (and cache same-origin successes).
   e.respondWith(
     caches.match(req).then(cached => {
       if (cached) return cached;
