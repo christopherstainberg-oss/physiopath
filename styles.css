@@ -452,6 +452,27 @@ footer b{color:var(--text)}
 .riskfactors li{font-size:13px;margin-bottom:4px}
 .risknote{font-size:12.5px;color:var(--muted);margin:8px 0 0;line-height:1.5}
 
+/* lab import (upload & parse) */
+.labimport{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:4px 0 12px}
+.labuploadbtn{border:1px solid var(--brand);background:rgba(62,166,255,.1);color:var(--brand);border-radius:10px;padding:10px 15px;font-size:13.5px;font-weight:700;cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.labuploadbtn:hover{background:rgba(62,166,255,.18)}
+.labuploadbtn:active{transform:translateY(1px)}
+.labimporthint{font-size:11.5px;color:var(--muted);flex:1;min-width:200px;line-height:1.45}
+.labimsg{font-size:13px;border-radius:10px;padding:10px 12px;margin-bottom:12px;line-height:1.5}
+.labimsg.ok{background:rgba(92,225,166,.12);border:1px solid rgba(92,225,166,.4);color:var(--brand-2)}
+.labimsg.warn{background:rgba(255,204,87,.12);border:1px solid rgba(255,204,87,.4);color:var(--warn)}
+.labimsg.err{background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.4);color:var(--danger)}
+.labimsg.load{background:var(--panel-2);border:1px solid var(--line);color:var(--muted)}
+.labreview{border:1px solid var(--brand);border-radius:12px;padding:12px 14px;margin-bottom:12px;background:var(--panel-2)}
+.labrevhd{font-size:13.5px;margin-bottom:6px}
+.labrevrow{display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px solid var(--line)}
+.labrevrow:last-of-type{border-bottom:none}
+.labrevchk{width:18px;height:18px;accent-color:var(--brand);flex:0 0 auto}
+.labrevname{flex:1;font-size:13px;font-weight:600;min-width:0}
+.labrevval{width:90px;flex:0 0 auto;padding:8px;font-size:14px}
+.labrevunit{font-size:11.5px;color:var(--muted);min-width:44px}
+.labrevbtns{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+
 /* ---------- app-style bottom navigation on phones ---------- */
 @media (max-width:700px){
   .steps{

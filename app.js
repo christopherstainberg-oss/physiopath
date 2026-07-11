@@ -1934,6 +1934,151 @@ function renderLabs(){
   $$("#labsBody .labt").forEach(inp=>inp.oninput=()=>{ const id=inp.dataset.lab; (state.labs[id]=state.labs[id]||{})[inp.dataset.b]=inp.value.trim(); save(); refreshLabRow(id); renderRisks(); });
 }
 
+/* ---- import lab values from an uploaded file (CSV/TSV/TXT/JSON on-device; PDF/photos via Claude API) ---- */
+const LAB_ALIASES = {
+  tchol:["total cholesterol","cholesterol total","cholesterol, total","chol total"],
+  ldl:["ldl cholesterol","ldl-c","ldl chol","ldl","low density"],
+  hdl:["hdl cholesterol","hdl-c","hdl chol","hdl","high density"],
+  trig:["triglycerides","triglyceride","trig"],
+  glucoseF:["fasting glucose","glucose fasting","glucose, fasting","fasting blood glucose","fbg","fbs","glucose"],
+  a1c:["hemoglobin a1c","haemoglobin a1c","glycated hemoglobin","glycohemoglobin","hba1c","a1c"],
+  crp:["hs-crp","hscrp","c-reactive protein","c reactive protein","crp"],
+  creat:["creatinine","creat"],
+  egfr:["estimated gfr","glomerular filtration","egfr","gfr"],
+  bun:["urea nitrogen","blood urea","bun"],
+  potassium:["potassium","serum potassium"],
+  sodium:["sodium","serum sodium"],
+  acr:["albumin/creatinine ratio","albumin creatinine ratio","albumin/creatinine","microalbumin","uacr","acr"],
+  alt:["alanine aminotransferase","alanine transaminase","sgpt","alt"],
+  ast:["aspartate aminotransferase","aspartate transaminase","sgot","ast"],
+  alp:["alkaline phosphatase","alk phos","alp"],
+  bili:["total bilirubin","bilirubin total","bilirubin, total","tbili","t bili","bilirubin"],
+  ggt:["gamma-glutamyl transferase","gamma glutamyl","ggtp","ggt"],
+  albumin:["albumin"],
+  hgb:["hemoglobin","haemoglobin","hgb","hb"],
+  ferritin:["ferritin"],
+  b12:["vitamin b12","cobalamin","b12"],
+  lipase:["lipase"],
+  vitd:["vitamin d","25-hydroxy","25 hydroxy","25-oh","calcidiol"],
+  tsh:["thyroid stimulating hormone","thyrotropin","tsh"]
+};
+const reEsc = s => String(s).replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+function labName(id){ const l=LABS.find(x=>x.id===id); return l?l.name:id; }
+function labUnit(id){ const l=LABS.find(x=>x.id===id); return l?l.unit:""; }
+function aliasHit(low, a){ return new RegExp("(^|[^a-z0-9])"+reEsc(a)+"([^a-z0-9]|$)","i").test(low); }
+function longestAlias(low){
+  let best=null, bestLen=0;
+  for(const id in LAB_ALIASES) for(const a of LAB_ALIASES[id]) if(a.length>bestLen && aliasHit(low, a)){ best=id; bestLen=a.length; }
+  return best;
+}
+function parseLineForLab(line){
+  const low=" "+line.toLowerCase()+" ";
+  const id=longestAlias(low); if(!id) return null;
+  // strip the test's own name (some aliases contain digits, e.g. 'a1c','b12','25-oh') so we don't read those as the value,
+  // then drop parenthetical notes, reference ranges (a-b) and comparators (<a / >a); the first remaining number is the result
+  let cleaned=line;
+  (LAB_ALIASES[id]||[]).forEach(a=>{ cleaned=cleaned.replace(new RegExp(reEsc(a),"ig")," "); });
+  cleaned=cleaned.replace(/\([^)]*\)/g," ").replace(/\d+(\.\d+)?\s*[-–—]\s*\d+(\.\d+)?/g," ").replace(/[<>]=?\s*\d+(\.\d+)?/g," ");
+  const m=cleaned.match(/-?\d+(\.\d+)?/);
+  if(m) return { id, value:parseFloat(m[0]), name:labName(id), unit:labUnit(id) };
+  const m2=line.match(/[<>]=?\s*(\d+(\.\d+)?)/);           // e.g. eGFR ">60"
+  if(m2) return { id, value:parseFloat(m2[1]), name:labName(id), unit:labUnit(id) };
+  return null;
+}
+function jsonParseLabs(j){
+  const out=[], seen=new Set();
+  const push=(name,val)=>{ if(val==null||val==="") return; const id=matchAlias(String(name)); if(!id||seen.has(id)) return;
+    const v=parseFloat(val); if(isNaN(v)) return; seen.add(id); out.push({id, value:v, name:labName(id), unit:labUnit(id)}); };
+  if(Array.isArray(j)) j.forEach(o=>{ if(o&&typeof o==="object"){ const name=o.name||o.test||o.label||o.analyte||o.code||o.parameter; const val=o.value??o.result??o.val??o.reading; if(name!=null) push(name,val); } });
+  else if(j&&typeof j==="object") Object.entries(j).forEach(([k,v])=>{ (v&&typeof v==="object") ? push(k, v.value??v.result??v.val) : push(k,v); });
+  return out;
+}
+function matchAlias(name){ const low=name.toLowerCase().trim(); if(LABS.some(l=>l.id===low)) return low; return longestAlias(" "+low+" "); }
+function localParseLabs(text){
+  const t=(text||"").trim();
+  if(t.startsWith("{")||t.startsWith("[")){ try{ const c=jsonParseLabs(JSON.parse(t)); if(c.length) return c; }catch(e){} }
+  const out=[], seen=new Set();
+  t.split(/\r?\n/).forEach(line=>{ const c=parseLineForLab(line); if(c && !seen.has(c.id)){ seen.add(c.id); out.push(c); } });
+  return out;
+}
+function fileToBase64(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(String(r.result).split(",")[1]); r.onerror=()=>rej(new Error("Could not read the file")); r.readAsDataURL(file); }); }
+function extractJSON(t){
+  if(!t) return null;
+  let s=t.trim().replace(/^```(json)?/i,"").replace(/```$/,"").trim();
+  try{ return JSON.parse(s); }catch(e){}
+  const m=s.match(/\{[\s\S]*\}/); if(m){ try{ return JSON.parse(m[0]); }catch(e){} }
+  return null;
+}
+async function apiParseLabs(payload){
+  const known = LABS.map(l=>`${l.id} — ${l.name} (${l.unit}); aliases: ${(LAB_ALIASES[l.id]||[]).join(", ")}`).join("\n");
+  const sys = `You extract laboratory test results from the user's document and map each to one of the KNOWN TESTS below.
+KNOWN TESTS (id — name (target unit); aliases):
+${known}
+
+Return ONLY a JSON object — no prose, no code fences:
+{"labs":[{"id":"<known id>","value":<number>,"unit":"<unit found>"}]}
+Rules: include a test only if it has a clear numeric result. Use the matching id from the list. If the reported unit differs from the target unit and the conversion is standard and unambiguous, convert to the target unit; otherwise return the original number and its unit. Ignore anything not in the list. If none are found, return {"labs":[]}.`;
+  let content;
+  if(payload.kind==="text") content=[{type:"text",text:`Extract the lab results from this document:\n\n${payload.text.slice(0,60000)}`}];
+  else if(payload.kind==="image") content=[{type:"image",source:{type:"base64",media_type:payload.media_type,data:payload.data}},{type:"text",text:"Extract every lab test result visible in this image."}];
+  else content=[{type:"document",source:{type:"base64",media_type:"application/pdf",data:payload.data}},{type:"text",text:"Extract every lab test result from this PDF."}];
+  const res=await fetch("https://api.anthropic.com/v1/messages",{ method:"POST",
+    headers:{"content-type":"application/json","x-api-key":state.apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+    body:JSON.stringify({ model:state.apiModel||"claude-opus-4-8", max_tokens:1500, system:sys, messages:[{role:"user",content}] }) });
+  if(!res.ok){ const t=await res.text().catch(()=>""); throw new Error(`API ${res.status}${t?" — "+t.slice(0,140):""}`); }
+  const data=await res.json();
+  const txt=(data.content||[]).map(b=>b.text||"").join("");
+  const parsed=extractJSON(txt), labs=(parsed&&parsed.labs)||[];
+  return labs.filter(x=>x&&x.id!=null&&x.value!=null).map(x=>({id:x.id, value:x.value, unit:x.unit, name:labName(x.id)}));
+}
+async function handleLabFile(file){
+  const ext=(file.name.split(".").pop()||"").toLowerCase();
+  const isImage=file.type.startsWith("image/")||/^(png|jpg|jpeg|webp|gif|heic)$/.test(ext);
+  const isPdf=file.type==="application/pdf"||ext==="pdf";
+  labImportMsg("load", `Reading ${esc(file.name)}…`);
+  try{
+    let cands=[];
+    if(isImage||isPdf){
+      if(!coachOnline()){ labImportMsg("warn","PDFs and photos are parsed with the Claude API. Add your key in the <b>AI</b> tab, or upload a CSV, TSV, TXT or JSON export instead."); return; }
+      labImportMsg("load", `Parsing ${isPdf?"PDF":"image"} with Claude…`);
+      cands = await apiParseLabs({ kind:isPdf?"pdf":"image", media_type:file.type||"image/jpeg", data:await fileToBase64(file) });
+    } else {
+      const text=await file.text();
+      if(coachOnline()){ labImportMsg("load","Parsing with Claude…"); try{ cands=await apiParseLabs({kind:"text",text}); }catch(e){ cands=localParseLabs(text); } }
+      else cands=localParseLabs(text);
+    }
+    cands=(cands||[]).filter(c=>LABS.some(l=>l.id===c.id) && c.value!=null && c.value!=="" && !isNaN(parseFloat(c.value)));
+    if(!cands.length){ labImportMsg("warn","Couldn't find recognizable lab values in that file. Try a clearer export (CSV/JSON) or enter values manually below."); return; }
+    // de-dupe by id, keep first
+    const seen=new Set(); cands=cands.filter(c=>seen.has(c.id)?false:(seen.add(c.id),true));
+    showLabReview(cands);
+  }catch(e){ labImportMsg("err","Import failed: "+esc(e.message||String(e))); }
+}
+function labImportMsg(kind, html){ const el=$("#labImport"); if(el) el.innerHTML=`<div class="labimsg ${kind}">${html}</div>`; }
+function showLabReview(cands){
+  const el=$("#labImport"); if(!el) return;
+  el.innerHTML=`<div class="labreview">
+    <div class="labrevhd"><b>Found ${cands.length} value${cands.length>1?"s":""}</b> — check each against your report, then apply.</div>
+    ${cands.map((c,i)=>`<label class="labrevrow"><input type="checkbox" class="labrevchk" data-i="${i}" checked />
+      <span class="labrevname">${esc(labName(c.id))}</span>
+      <input class="labrevval" data-i="${i}" value="${esc(String(c.value))}" inputmode="decimal" />
+      <span class="labrevunit">${esc(c.unit||labUnit(c.id))}</span></label>`).join("")}
+    <div class="labrevbtns"><button class="btn ghost" id="labRevCancel">Cancel</button><button class="btn primary" id="labRevApply">Apply to my labs</button></div>
+    <p class="hint" style="margin:8px 0 0">Automated parsing can make mistakes — verify each value first.${coachOnline()?" This file was parsed by the Claude API (its contents were sent to Anthropic).":""}</p>
+  </div>`;
+  $("#labRevApply").onclick=()=>applyLabImport(cands);
+  $("#labRevCancel").onclick=()=>{ el.innerHTML=""; };
+}
+function applyLabImport(cands){
+  const el=$("#labImport"); let n=0;
+  cands.forEach((c,i)=>{ const chk=el.querySelector(`.labrevchk[data-i="${i}"]`); if(!chk||!chk.checked) return;
+    const vi=el.querySelector(`.labrevval[data-i="${i}"]`); const v=(vi?vi.value:String(c.value)).trim();
+    if(v==="") return; (state.labs[c.id]=state.labs[c.id]||{}).v=v; n++; });
+  save(); renderLabs(); renderRisks();
+  labImportMsg("ok", `Applied ${n} value${n===1?"":"s"} to your labs. ✓`);
+  toast(`Imported ${n} lab value${n===1?"":"s"}.`);
+}
+
 /* ---- educational risk assessment across 5 specialties ---- */
 function computeRisks(){
   const v=latestVitals(), sbp=vnum(v.sbp), dbp=vnum(v.dbp), hr=vnum(v.restHR), glu=vnum(v.glucose);
@@ -2027,6 +2172,7 @@ function renderHealth(){ renderVitalsLog(); renderLabs(); renderRisks(); }
 function initHealth(){
   const d=$("#vlDate"); if(d && !d.value) d.value=todayISO();
   const sv=$("#vlSave"); if(sv) sv.onclick=saveVitalsEntry;
+  const lf=$("#labFile"); if(lf) lf.onchange=e=>{ const f=e.target.files&&e.target.files[0]; if(f) handleLabFile(f); e.target.value=""; };
 }
 
 /* =====================================================================
