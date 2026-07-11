@@ -1397,19 +1397,6 @@ function toast(msg){
   setTimeout(()=>t.remove(),2600);
 }
 
-/* ---------- PWA install + service worker ---------- */
-let deferredPrompt=null;
-window.addEventListener("beforeinstallprompt",e=>{ e.preventDefault(); deferredPrompt=e; $("#installBtn").hidden=false; });
-function initInstall(){
-  const btn=$("#installBtn");
-  const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
-  const standalone=("standalone" in navigator && navigator.standalone) || matchMedia("(display-mode: standalone)").matches;
-  btn.onclick=async()=>{
-    if(deferredPrompt){ deferredPrompt.prompt(); await deferredPrompt.userChoice; deferredPrompt=null; btn.hidden=true; return; }
-    if(isIOS) toast("To install: tap the Share icon, then choose “Add to Home Screen”.");
-  };
-  if(isIOS && !standalone) btn.hidden=false;   // iOS Safari never fires beforeinstallprompt — show a hint
-}
 /* ---- service worker + update-available flow ---- */
 function showUpdateToast(reg){
   if(document.querySelector(".toast-update")) return;
@@ -1686,7 +1673,7 @@ function renderExResults(){
 /* ---------- boot ---------- */
 document.addEventListener("DOMContentLoaded",()=>{
   load();
-  initHistory(); initMeds(); initSearch(); initDetails(); initInstall(); initProgress(); initCoachSettings();
+  initHistory(); initMeds(); initSearch(); initDetails(); initProgress(); initCoachSettings();
   $$("[data-goto]").forEach(b=>b.onclick=()=>{
     const n=+b.dataset.goto;
     if([2,3,4].includes(n) && !state.condIds.length){ toast("Pick at least one condition first."); goStep(1); return; }
