@@ -466,6 +466,12 @@ footer b{color:var(--text)}
 .rlevel.risk-high{background:rgba(255,107,107,.16);color:var(--danger)}
 .riskfactors{margin:8px 0 0;padding-left:18px}
 .riskfactors li{font-size:13px;margin-bottom:4px}
+.riskfindings{margin:8px 0 0;padding-left:18px}
+.riskfindings li{font-size:13px;margin-bottom:5px;line-height:1.45}
+.rf-high{color:var(--danger);font-weight:500}
+.rf-moderate{color:var(--warn)}
+.rf-info{color:var(--brand)}
+.rf-normal{color:var(--brand-2)}
 .risknote{font-size:12.5px;color:var(--muted);margin:8px 0 0;line-height:1.5}
 
 /* lab import (upload & parse) */

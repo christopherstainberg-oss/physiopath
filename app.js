@@ -1848,7 +1848,7 @@ function latestVitals(){
   const log = state.vitalsLog||[];
   const last = log.length ? log[log.length-1] : {};
   const pick = k => (last[k]!==undefined && last[k]!=="" && last[k]!=null) ? last[k] : base[k];
-  return { restHR:pick("restHR"), sbp:pick("sbp"), dbp:pick("dbp"), spo2:pick("spo2"),
+  return { restHR:pick("restHR"), sbp:pick("sbp"), dbp:pick("dbp"), spo2:pick("spo2"), rr:pick("rr"),
            weight:pick("weight"), height:base.height, glucose:pick("glucose"), temp:pick("temp") };
 }
 
@@ -2721,137 +2721,147 @@ function renderRisks(){
   renderOtherRisks();   // keep the cross-cutting "other risks" card in sync on every risk refresh
 }
 
-/* Cross-cutting "other health risks" — patterns the 6 specialty cards don't capture alone. */
-function otherHealthRisks(){
-  const v=latestVitals(), sbp=vnum(v.sbp), dbp=vnum(v.dbp), glu=vnum(v.glucose);
-  const bmi=bmiCalc(v.height,v.weight), age=vnum(state.age);
+/* Health Risk Areas — clinically-grouped lab interpretation (metabolic, hematology, nutrition,
+   thyroid, bone, thrombosis, inflammation/infection, reproductive, oncology awareness).
+   Each area only appears once it has relevant data; educational, not diagnostic. */
+function computeRiskAreas(){
+  const v=latestVitals(), sbp=vnum(v.sbp), dbp=vnum(v.dbp), rr=vnum(v.rr), gluV=vnum(v.glucose);
+  const bmi=bmiCalc(v.height,v.weight), sex=state.sex;
   const L=id=>vnum((state.labs[id]||{}).v);
-  const gt=(x,n)=>x!=null&&x>=n, lt=(x,n)=>x!=null&&x<n;
-  const flags=new Set(gatherFlags());
-  const medFlags=new Set(selectedMeds().flatMap(m=>m.flags||[]));
-  const smoker=state.smoking==="current";
-  const out=[]; const add=(title,level,factors,advice)=>{ if(factors.length) out.push({title,level,factors,advice}); };
+  const has=(...ids)=>ids.some(id=>L(id)!=null);
+  const rank={normal:0,info:1,moderate:2,high:3};
+  const areas=[];
+  function push(icon,title,dataPresent,f,note){
+    if(!dataPresent) return;
+    let level="normal"; f.forEach(x=>{ if(rank[x.lv]>rank[level]) level=x.lv; });
+    const findings = f.length ? f : [{t:"No abnormal values in this area from what you entered.",lv:"normal"}];
+    areas.push({icon,title,level,findings,note});
+  }
 
-  { const c=[];
-    if(bmi!=null&&bmi>=30) c.push("BMI in the obese range");
-    if(gt(L("trig"),150)) c.push("Triglycerides ≥150");
-    if(lt(L("hdl"),40)) c.push("HDL below 40");
-    if(gt(sbp,130)||gt(dbp,85)) c.push("Blood pressure ≥130/85");
-    if(gt(L("glucoseF"),100)||gt(glu,100)||gt(L("a1c"),5.7)) c.push("Elevated blood sugar");
-    if(c.length>=3) add("⚖️ Metabolic syndrome pattern", c.length>=4?"high":"moderate", c,
-      "This cluster raises heart-disease and type-2-diabetes risk. Weight loss, a whole-food diet, regular exercise and not smoking can reverse it — discuss with your clinician."); }
+  // ---- Metabolic ----
+  { const f=[]; const a1c=L("a1c"),gf=L("glucoseF"),ins=L("insulin"),fru=L("fructosamine"),tg=L("trig"),hdl=L("hdl");
+    if(a1c!=null){ if(a1c>=6.5) f.push({t:`HbA1c ${a1c}% — diabetes range`,lv:"high"}); else if(a1c>=5.7) f.push({t:`HbA1c ${a1c}% — prediabetes range`,lv:"moderate"}); }
+    if(gf!=null){ if(gf>=126) f.push({t:`Fasting glucose ${gf} — diabetes range`,lv:"high"}); else if(gf>=100) f.push({t:`Fasting glucose ${gf} — prediabetes range`,lv:"moderate"}); }
+    if(fru!=null&&fru>285) f.push({t:`Fructosamine ${fru} — average glucose high over the past 2–3 weeks`,lv:"moderate"});
+    if(ins!=null&&gf!=null){ const homa=Math.round((gf*ins/405)*10)/10; if(homa>=2.9) f.push({t:`HOMA-IR ${homa} — suggests insulin resistance`,lv:"moderate"}); else f.push({t:`HOMA-IR ${homa} — insulin sensitivity looks normal`,lv:"normal"}); }
+    else if(ins!=null&&ins>20) f.push({t:`Fasting insulin ${ins} — high (possible insulin resistance)`,lv:"moderate"});
+    const ms=[]; if(bmi!=null&&bmi>=30) ms.push("BMI"); if(tg!=null&&tg>=150) ms.push("triglycerides"); if(hdl!=null&&hdl<(sex==="Female"?50:40)) ms.push("HDL"); if((sbp!=null&&sbp>=130)||(dbp!=null&&dbp>=85)) ms.push("BP"); if((gf!=null&&gf>=100)||(a1c!=null&&a1c>=5.7)) ms.push("glucose");
+    if(ms.length>=3) f.push({t:`Metabolic-syndrome criteria met (${ms.length}/5: ${ms.join(", ")})`,lv:ms.length>=4?"high":"moderate"});
+    push("🫀","Metabolic", has("a1c","glucoseF","insulin","cpeptide","fructosamine","trig","hdl")||gluV!=null, f,
+      "Reversible with weight loss, a lower-sugar whole-food diet and regular exercise. Discuss abnormal sugars or insulin resistance with your clinician."); }
 
-  { const c=[]; const diabRange=(L("a1c")!=null&&L("a1c")>=6.5)||(L("glucoseF")!=null&&L("glucoseF")>=126);
-    if(L("a1c")!=null&&L("a1c")>=6.5) c.push("HbA1c in the diabetes range");
-    else if(L("a1c")!=null&&L("a1c")>=5.7) c.push("HbA1c in the prediabetes range");
-    if(L("glucoseF")!=null&&L("glucoseF")>=126) c.push("Fasting glucose in the diabetes range");
-    else if(L("glucoseF")!=null&&L("glucoseF")>=100) c.push("Fasting glucose in the prediabetes range");
-    if(bmi!=null&&bmi>=30) c.push("BMI in the obese range");
-    if(!flags.has("diabetes")) add("🍬 Raised diabetes / prediabetes risk", diabRange?"high":"moderate", c,
-      "Cutting refined carbs and sugar, losing excess weight and regular activity strongly lower this — ask your clinician about a formal check."); }
+  // ---- Hematology ----
+  { const f=[]; const hgb=L("hgb"),hct=L("hct"),mcv=L("mcv"),rdw=L("rdw"),wbc=L("wbc"),plt=L("platelets"),neut=L("neutabs");
+    const fer=L("ferritin"),tsat=L("transferrinsat"),b12=L("b12"),fol=L("folate"),hapto=L("haptoglobin"),ldh=L("ldh"),retic=L("retic");
+    const lowHgb = hgb!=null && hgb<(sex==="Female"?12:13);
+    if(lowHgb){ let type="normocytic"; if(mcv!=null){ if(mcv<80) type="microcytic"; else if(mcv>100) type="macrocytic"; }
+      const cause = type==="microcytic" ? ((fer!=null&&fer<30)||(tsat!=null&&tsat<20)?" — iron-deficiency pattern":" — usually iron deficiency")
+        : type==="macrocytic" ? (b12!=null&&b12<200?" — low B12":fol!=null&&fol<3?" — low folate":" — check B12/folate & alcohol")
+        : " — normocytic (chronic disease, blood loss or early deficiency)";
+      f.push({t:`Anemia — Hb ${hgb}, ${type}${cause}`,lv:"high"}); }
+    if((hapto!=null&&hapto<30)||((ldh!=null&&ldh>222)&&(retic!=null&&retic>2.5))) f.push({t:"Hemolysis signals — low haptoglobin / high LDH & reticulocytes",lv:"high"});
+    if((hgb!=null&&hgb>(sex==="Female"?16:17))||(hct!=null&&hct>52)) f.push({t:"Polycythemia — high hemoglobin/hematocrit (hydrate; raises clot risk)",lv:"moderate"});
+    if(wbc!=null&&wbc<4) f.push({t:`Leukopenia — low white cells ${wbc}`,lv:wbc<2?"high":"moderate"});
+    if(neut!=null&&neut<1.5) f.push({t:`Neutropenia — low neutrophils ${neut}`,lv:neut<0.5?"high":"moderate"});
+    if(plt!=null&&plt<150) f.push({t:`Thrombocytopenia — low platelets ${plt}`,lv:plt<50?"high":"moderate"});
+    if(rdw!=null&&rdw>14.5&&!lowHgb) f.push({t:"High RDW (mixed red-cell sizes) — early/combined deficiency possible",lv:"info"});
+    push("🔴","Hematology", has("hgb","hct","rbc","mcv","wbc","platelets","ferritin","iron","b12","folate","haptoglobin","ldh","retic","neutabs"), f,
+      "Anemia and low counts need a cause found — see your doctor, especially to rule out slow blood loss."); }
 
-  { const c=[];
-    if(lt(L("hgb"),12)) c.push("Low hemoglobin");
-    if(lt(L("ferritin"),30)) c.push("Low ferritin (iron stores)");
-    if(lt(L("iron"),60)) c.push("Low serum iron");
-    if(lt(L("b12"),200)) c.push("Low vitamin B12");
-    if(lt(L("folate"),3)) c.push("Low folate");
-    add("🩸 Anemia / nutrient-deficiency risk", lt(L("hgb"),10)?"high":"moderate", c,
-      "Iron/B12/folate-rich foods (with vitamin C for iron) help, but a low hemoglobin needs a cause found — see your doctor, especially to rule out slow blood loss."); }
+  // ---- Nutrition ----
+  { const f=[];
+    [["vitd",30,"Vitamin D"],["b12",200,"Vitamin B12"],["folate",3,"Folate"],["b6",5,"Vitamin B6"],["b1",70,"Vitamin B1"],["vita",20,"Vitamin A"],["vite",5.5,"Vitamin E"],["vitc",0.4,"Vitamin C"],["vitk",0.1,"Vitamin K"],["zinc",60,"Zinc"],["copper",70,"Copper"],["selenium",70,"Selenium"],["magnesium",1.7,"Magnesium"],["iron",60,"Serum iron"]]
+      .forEach(([id,lo,name])=>{ const x=L(id); if(x!=null&&x<lo) f.push({t:`${name} low (${x})`,lv:"moderate"}); });
+    const alb=L("albumin"),pre=L("prealbumin"),tp=L("totprotein");
+    if(alb!=null&&alb<3.5) f.push({t:`Albumin low (${alb}) — protein/nutrition or inflammation`,lv:"moderate"});
+    if(pre!=null&&pre<18) f.push({t:`Prealbumin low (${pre}) — recent protein-calorie intake`,lv:"moderate"});
+    if(tp!=null&&tp<6) f.push({t:`Total protein low (${tp})`,lv:"moderate"});
+    push("🧁","Nutrition", has("vitd","b12","folate","b6","b1","vita","vite","vitc","vitk","zinc","copper","selenium","magnesium","iron","albumin","prealbumin","totprotein"), f,
+      "Targeted diet changes or supplements (as advised) correct these. Low vitamin D and protein also affect bone and muscle recovery."); }
 
-  { const c=[];
-    if(lt(L("vitd"),30)) c.push("Low vitamin D");
-    if(lt(L("magnesium"),1.7)) c.push("Low magnesium");
-    if(lt(L("zinc"),60)) c.push("Low zinc");
-    if(lt(L("vitc"),0.4)) c.push("Low vitamin C");
-    add("💊 Vitamin / mineral deficiency","moderate", c,
-      "Targeted diet changes or supplements (as advised) restore these — low vitamin D also affects bone and muscle."); }
-
-  { const c=[];
-    if(gt(age,65)) c.push("Age 65+");
-    if(state.sex==="Female"&&gt(age,50)) c.push("Post-menopausal (higher bone loss)");
-    if(lt(L("vitd"),30)) c.push("Low vitamin D");
-    if(lt(L("calcium"),8.6)) c.push("Low calcium");
-    if(smoker) c.push("Current smoker");
-    if(flags.has("osteoporosis")) c.push("Known low bone density");
-    if(medFlags.has("corticosteroid")) c.push("Long-term steroid use");
-    if(c.length>=2||flags.has("osteoporosis")) add("🦴 Bone-health / fracture risk", flags.has("osteoporosis")?"high":"moderate", c,
-      "Weight-bearing and resistance exercise, enough calcium and vitamin D, and not smoking protect bone — ask about a bone-density (DEXA) scan if you have several factors."); }
-
-  { const c=[];
-    if(flags.has("recent_surgery")) c.push("Recent surgery");
-    if(flags.has("dvt")) c.push("Prior clot / on blood thinners");
-    if(bmi!=null&&bmi>=35) c.push("Very high BMI");
-    if(smoker) c.push("Current smoker");
-    if(gt(L("ddimer"),0.5)) c.push("Raised D-dimer");
-    if(c.length>=2) add("🦵 Blood-clot (VTE) risk", gt(L("ddimer"),0.5)?"high":"moderate", c,
-      "Stay mobile, hydrate, and move your legs on long journeys. Seek urgent care for a hot, swollen, painful calf or sudden breathlessness/chest pain."); }
-
-  { const c=[];
-    if(medFlags.has("anticoagulant")||medFlags.has("antiplatelet")) c.push("On blood thinners / antiplatelets");
-    if(lt(L("platelets"),150)) c.push("Low platelet count");
-    if(gt(L("inr"),1.4)) c.push("Raised INR");
-    add("🩹 Bleeding risk", lt(L("platelets"),50)?"high":"moderate", c,
-      "Take care with contact and fall-risk activities, and report unusual bruising or bleeding to your clinician."); }
-
-  { const c=[];
-    if(lt(L("wbc"),4)) c.push("Low white-cell count");
-    if(medFlags.has("immunosuppressant")||medFlags.has("dmard")) c.push("Immune-suppressing medicine");
-    if(lt(L("igg"),700)) c.push("Low IgG");
-    if(flags.has("diabetes")) c.push("Diabetes");
-    add("🦠 Higher infection risk", lt(L("wbc"),2)?"high":"moderate", c,
-      "Avoid training when acutely unwell, keep good hygiene at shared gyms, stay up to date with vaccinations, and seek care early for fevers."); }
-
-  { const c=[];
-    if(gt(L("tsh"),4)) c.push("High TSH (possible underactive thyroid)");
-    else if(L("tsh")!=null&&L("tsh")<0.4) c.push("Low TSH (possible overactive thyroid)");
-    add("🦋 Thyroid dysfunction","info", c,
+  // ---- Thyroid ----
+  { const f=[]; const tsh=L("tsh"),ft4=L("ft4"),ft3=L("ft3"),tpo=L("tpo");
+    const lowFT4=ft4!=null&&ft4<0.8, highFT4=ft4!=null&&ft4>1.8;
+    if(tsh!=null&&tsh>4){ if(lowFT4) f.push({t:`Overt hypothyroidism — high TSH ${tsh} with low free T4`,lv:"high"}); else if(ft4!=null) f.push({t:`Subclinical hypothyroidism — high TSH ${tsh}, normal free T4`,lv:"moderate"}); else f.push({t:`High TSH ${tsh} — possible underactive thyroid`,lv:"moderate"}); }
+    if(tsh!=null&&tsh<0.4){ if(highFT4||(ft3!=null&&ft3>4.2)) f.push({t:`Overt hyperthyroidism — low TSH ${tsh} with high free T4/T3`,lv:"high"}); else if(ft4!=null) f.push({t:`Subclinical hyperthyroidism — low TSH ${tsh}, normal free T4`,lv:"moderate"}); else f.push({t:`Low TSH ${tsh} — possible overactive thyroid`,lv:"moderate"}); }
+    if(tpo!=null&&tpo>34) f.push({t:`Raised thyroid antibodies (TPO ${tpo}) — autoimmune thyroid disease`,lv:"moderate"});
+    push("🦋","Thyroid", has("tsh","ft4","ft3","tt4","tt3","rt3","tpo","thyroglobulin"), f,
       "Thyroid problems affect energy, weight, heart rate and mood — confirm and manage with your doctor."); }
 
-  if(gt(L("uricacid"),7.2)) add("🦶 Gout risk (high uric acid)","moderate",["Uric acid above range"],
-      "Limit alcohol (especially beer), sugary drinks and high-purine foods (red/organ meat, shellfish), stay hydrated, and lose excess weight.");
+  // ---- Bone Health ----
+  { const f=[]; const ca=L("calcium"),alb=L("albumin"),phos=L("phosphorus"),vitd=L("vitd"),pth=L("pth"),alp=L("alp"),mg=L("magnesium");
+    let cca=ca; if(ca!=null&&alb!=null) cca=Math.round((ca+0.8*(4-alb))*10)/10;
+    if(cca!=null){ if(cca>10.3) f.push({t:`Calcium high (${cca}${alb!=null?", albumin-corrected":""}) — needs review`,lv:"high"}); else if(cca<8.6) f.push({t:`Calcium low (${cca}${alb!=null?", albumin-corrected":""})`,lv:"moderate"}); }
+    if(vitd!=null&&vitd<30) f.push({t:`Vitamin D low (${vitd}) — affects bone & muscle`,lv:"moderate"});
+    if(pth!=null){ if(pth>65) f.push({t:`PTH high (${pth}) — parathyroid / vitamin-D / kidney review`,lv:"moderate"}); else if(pth<15) f.push({t:`PTH low (${pth})`,lv:"info"}); }
+    if(phos!=null&&(phos>4.5||phos<2.5)) f.push({t:`Phosphate out of range (${phos})`,lv:"info"});
+    if(alp!=null&&alp>147) f.push({t:`ALP high (${alp}) — bone or liver source`,lv:"info"});
+    if(mg!=null&&mg<1.7) f.push({t:`Magnesium low (${mg}) — affects calcium & PTH`,lv:"info"});
+    if(cca!=null&&cca<8.6&&pth!=null&&pth>65&&vitd!=null&&vitd<30) f.push({t:"Pattern: vitamin-D deficiency with secondary hyperparathyroidism",lv:"moderate"});
+    push("🦴","Bone Health", has("calcium","phosphorus","vitd","pth","alp","magnesium"), f,
+      "Bone is protected by weight-bearing exercise, enough calcium & vitamin D, and not smoking. Abnormal calcium or PTH needs a doctor."); }
 
-  { const c=[];
-    if(gt(L("crp"),3)) c.push("Raised hs-CRP");
-    if(gt(L("esr"),20)) c.push("Raised ESR");
-    add("🌡️ Raised inflammation","info", c,
-      "A non-specific signal — can reflect infection, injury or an inflammatory condition. A persistent rise should be reviewed."); }
+  // ---- Thrombosis & bleeding ----
+  { const f=[]; const dd=L("ddimer"),fib=L("fibrinogen"),plt=L("platelets"),hct=L("hct"),inr=L("inr"),pt=L("pt"),ptt=L("ptt");
+    if(dd!=null&&dd>0.5) f.push({t:`D-dimer raised (${dd}) — non-specific but can indicate a clot`,lv:"high"});
+    if(hct!=null&&hct>52) f.push({t:`High hematocrit (${hct}) — hyperviscosity / clot risk`,lv:"moderate"});
+    if(fib!=null&&fib>400) f.push({t:`Fibrinogen high (${fib}) — inflammation / clot tendency`,lv:"info"});
+    if(plt!=null&&plt>450) f.push({t:`Platelets high (${plt}) — clot tendency`,lv:"info"});
+    if(plt!=null&&plt<150) f.push({t:`Platelets low (${plt}) — bleeding risk`,lv:plt<50?"high":"moderate"});
+    if(inr!=null&&inr>1.4) f.push({t:`INR raised (${inr}) — anticoagulated / bleeding tendency`,lv:inr>4?"high":"moderate"});
+    if(pt!=null&&pt>13.5) f.push({t:`PT prolonged (${pt})`,lv:"moderate"});
+    if(ptt!=null&&ptt>35) f.push({t:`aPTT prolonged (${ptt})`,lv:"moderate"});
+    if(fib!=null&&fib<200) f.push({t:`Fibrinogen low (${fib}) — bleeding tendency`,lv:"moderate"});
+    push("🩹","Thrombosis & bleeding", has("ddimer","fibrinogen","platelets","hct","inr","pt","ptt"), f,
+      "Clot warning signs — a hot, swollen, painful calf or sudden breathlessness/chest pain — need urgent care. On blood thinners, watch for unusual bruising or bleeding."); }
 
-  { const c=[];
-    if(bmi!=null&&bmi>=30) c.push("BMI in the obese range");
-    if(gt(sbp,140)||gt(dbp,90)) c.push("High blood pressure");
-    if(state.sex==="Male"&&gt(age,50)) c.push("Male, 50+");
-    if(c.length>=2) add("😴 Sleep-apnea risk","info", c,
-      "Loud snoring, gasping in sleep, or daytime sleepiness alongside these are worth screening — sleep apnea strains the heart. Ask your doctor."); }
+  // ---- Inflammation & Infection ----
+  { const f=[]; const crp=L("crp"),esr=L("esr"),fer=L("ferritin"),pct=L("procalcitonin"),lac=L("lactate"),wbc=L("wbc"),anc=L("neutabs");
+    if(crp!=null&&crp>3) f.push({t:`hs-CRP raised (${crp})`,lv:crp>10?"high":"moderate"});
+    if(esr!=null&&esr>20) f.push({t:`ESR raised (${esr})`,lv:"moderate"});
+    if(fer!=null&&fer>500) f.push({t:`Ferritin very high (${fer}) — marked inflammation`,lv:"moderate"});
+    if(pct!=null&&pct>0.5) f.push({t:`Procalcitonin raised (${pct}) — suggests bacterial infection`,lv:pct>2?"high":"moderate"});
+    if(wbc!=null&&wbc>11) f.push({t:`WBC high (${wbc}) — infection / inflammation`,lv:"moderate"});
+    if(anc!=null&&anc>8) f.push({t:`Neutrophils high (${anc})`,lv:"info"});
+    if(lac!=null&&lac>2) f.push({t:`Lactate raised (${lac})`,lv:lac>4?"high":"moderate"});
+    const q=[]; if(rr!=null&&rr>=22) q.push("fast breathing"); if(sbp!=null&&sbp<=100) q.push("low blood pressure");
+    if(q.length>=2||(q.length>=1&&((pct!=null&&pct>0.5)||(lac!=null&&lac>2)))) f.push({t:`Sepsis warning signs (${q.join(" + ")}) — if you feel unwell or feverish, seek urgent care`,lv:"high"});
+    push("🔥","Inflammation & Infection", has("crp","esr","ferritin","procalcitonin","lactate","wbc","neutabs")||rr!=null, f,
+      "A single raised marker is non-specific; combined with feeling unwell or a fever it needs care. Sepsis is a medical emergency."); }
 
-  { const c=[];
-    if(gt(L("sodium"),145)) c.push("High sodium");
-    if(gt(L("buncreat"),20)) c.push("High BUN/creatinine ratio");
-    if(gt(L("hct"),50)) c.push("High hematocrit");
-    if(c.length>=2) add("💧 Dehydration pattern","info", c,
-      "These often reflect low fluid — hydrate well, especially around exercise and in the heat."); }
+  // ---- Reproductive & Hormonal ----
+  { const f=[]; const testo=L("testosterone"),e2=L("estradiol"),fsh=L("fsh"),lh=L("lh"),prl=L("prolactin"),dheas=L("dheas"),amh=L("amh");
+    if(sex==="Male"){ if(testo!=null&&testo<300) f.push({t:`Total testosterone low (${testo}) — possible hypogonadism (low-T)`,lv:"moderate"}); }
+    else if(sex==="Female"){
+      if(fsh!=null&&fsh>25&&e2!=null&&e2<30) f.push({t:"Menopausal pattern — high FSH with low estradiol",lv:"info"});
+      if(lh!=null&&fsh!=null&&fsh>0&&(lh/fsh)>=2&&((testo!=null&&testo>70)||(dheas!=null&&dheas>430)||(amh!=null&&amh>4))) f.push({t:"PCOS-suggestive pattern — high LH:FSH with raised androgens/AMH",lv:"moderate"});
+    }
+    if(prl!=null&&prl>25) f.push({t:`Prolactin high (${prl}) — review (medication or pituitary)`,lv:"moderate"});
+    push("🌸","Reproductive & Hormonal", has("testosterone","freetesto","estradiol","progesterone","fsh","lh","prolactin","shbg","dheas","amh"), f,
+      sex ? "Hormones are best interpreted with cycle timing, symptoms and sex in mind — review with your doctor." : "Set your sex in the History step so these are interpreted correctly."); }
 
-  { const c=[];
-    if(lt(L("albumin"),3.5)) c.push("Low albumin");
-    if(lt(L("prealbumin"),18)) c.push("Low prealbumin");
-    add("🍽️ Nutrition (low-protein) risk","moderate", c,
-      "Prioritise adequate protein and calories to support recovery, and review the cause with your clinician."); }
+  // ---- Oncology Marker Awareness ----
+  { const f=[];
+    [["psa",4,"PSA"],["cea",3,"CEA"],["ca125",35,"CA 125"],["ca199",37,"CA 19-9"],["ca153",30,"CA 15-3"],["afp",8,"AFP"]]
+      .forEach(([id,hi,name])=>{ const x=L(id); if(x!=null) f.push(x>hi?{t:`${name} above range (${x}) — many benign causes; discuss with your doctor`,lv:"info"}:{t:`${name} within range (${x})`,lv:"normal"}); });
+    push("🎗️","Oncology Marker Awareness", has("psa","cea","ca125","ca199","ca153","afp"), f,
+      "IMPORTANT: tumour markers are for MONITORING a known condition, not screening or diagnosis. Raised levels often have benign causes and normal levels don't rule cancer out — use them only as your specialist directs."); }
 
-  return out;
+  return areas;
 }
 function renderOtherRisks(){
   const el=$("#otherRiskBody"); if(!el) return;
-  const risks=otherHealthRisks();
-  if(!risks.length){ el.innerHTML=`<div class="empty" style="padding:20px 10px"><div class="big">✅</div><div>No additional cross-cutting risks flagged from what you've entered. Add vitals and labs above to check more patterns.</div></div>`; return; }
-  const lvlTxt={low:"Lower",moderate:"Moderate",high:"Higher",info:"Note"}, lvlCls={low:"risk-low",moderate:"risk-mod",high:"risk-high",info:"risk-info"};
-  el.innerHTML = risks.map(r=>{
-    const cls=lvlCls[r.level]||"risk-info";
+  const areas=computeRiskAreas();
+  if(!areas.length){ el.innerHTML=`<div class="empty" style="padding:20px 10px"><div class="big">🧪</div><div>Enter vitals and labs above and these risk areas — Metabolic, Hematology, Nutrition, Thyroid, Bone, Thrombosis, Inflammation & Infection, Reproductive & Hormonal, and Oncology-marker awareness — populate automatically.</div></div>`; return; }
+  const lvlTxt={normal:"No flags",info:"Note",moderate:"Review",high:"Abnormal"}, lvlCls={normal:"risk-low",info:"risk-info",moderate:"risk-mod",high:"risk-high"};
+  el.innerHTML = areas.map(a=>{
+    const cls=lvlCls[a.level]||"risk-info";
     return `<div class="riskcard ${cls}">
-      <div class="riskhead"><span class="rtitle">${esc(r.title)}</span><span class="rlevel ${cls}">${lvlTxt[r.level]||"Note"}</span></div>
-      <ul class="riskfactors">${r.factors.map(f=>`<li>${esc(f)}</li>`).join("")}</ul>
-      <p class="risknote">${esc(r.advice)}</p>
+      <div class="riskhead"><span class="ricon">${a.icon}</span><span class="rtitle">${esc(a.title)}</span><span class="rlevel ${cls}">${lvlTxt[a.level]||"Note"}</span></div>
+      <ul class="riskfindings">${a.findings.map(x=>`<li class="rf-${x.lv||'info'}">${esc(x.t)}</li>`).join("")}</ul>
+      <p class="risknote">${esc(a.note)}</p>
     </div>`;
-  }).join("") + `<div class="redflags" style="margin-top:12px"><b>Educational only — not a diagnosis.</b> These are pattern-based prompts from the values you entered. Discuss anything relevant with your doctor.</div>`;
+  }).join("") + `<div class="redflags" style="margin-top:12px"><b>Educational only — not a diagnosis.</b> These interpretations use general adult thresholds and only the values you entered; some vary by sex, age and lab. Discuss anything relevant with your clinician.</div>`;
 }
 
 function renderHealth(){ renderVitalsLog(); renderLabs(); renderRisks(); }
