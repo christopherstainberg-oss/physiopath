@@ -78,6 +78,25 @@
           <span>A doctor has told me to <b>only exercise under supervision</b>.</span></label>
       </div>
 
+      <div class="field vitals">
+        <span class="lab">Vital signs &amp; measurements <span class="sub">(optional — powers your heart-rate targets and tailors exercise intensity)</span></span>
+        <div class="grid3">
+          <label class="subfield"><span>Resting heart rate <i>bpm</i></span>
+            <input type="number" id="v_restHR" min="30" max="220" inputmode="numeric" placeholder="e.g. 68" /></label>
+          <label class="subfield"><span>Blood pressure <i>mmHg</i></span>
+            <span class="bpwrap"><input type="number" id="v_sbp" min="60" max="260" inputmode="numeric" placeholder="sys" /><em>/</em><input type="number" id="v_dbp" min="30" max="160" inputmode="numeric" placeholder="dia" /></span></label>
+          <label class="subfield"><span>Oxygen saturation <i>SpO₂ %</i></span>
+            <input type="number" id="v_spo2" min="50" max="100" inputmode="numeric" placeholder="e.g. 98" /></label>
+          <label class="subfield"><span>Respiratory rate <i>breaths/min</i></span>
+            <input type="number" id="v_rr" min="6" max="60" inputmode="numeric" placeholder="e.g. 14" /></label>
+          <label class="subfield"><span>Height <i>cm</i></span>
+            <input type="number" id="v_height" min="80" max="250" inputmode="numeric" placeholder="e.g. 175" /></label>
+          <label class="subfield"><span>Weight <i>kg</i></span>
+            <input type="number" id="v_weight" min="20" max="400" inputmode="numeric" placeholder="e.g. 78" /></label>
+        </div>
+        <div class="vitalsreadout" id="vitalsReadout"></div>
+      </div>
+
       <div class="field">
         <span class="lab">Medications <span class="sub">(optional — search 10,000+; flags exercise considerations)</span></span>
         <input type="text" id="medSearch" placeholder="Search e.g. ‘metoprolol’, ‘Eliquis’, ‘prednisone’, ‘gabapentin’…" autocomplete="off" />

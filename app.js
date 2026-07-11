@@ -244,6 +244,7 @@ const state = {
   step:0, age:"", sex:"", flags:[], parq:{pain:false,faint:false,doc:false},
   meds:"", notes:"", condIds:[], weeks:null, painRest:3, painMove:4, surgery:"no",
   surgeryType:"auto", surgeryDate:"", fitness:"mod", goal:"", program:null,
+  vitals:{restHR:"",sbp:"",dbp:"",spo2:"",rr:"",height:"",weight:""},
   medIds:[], medFilter:false, customPrecautions:[], log:[], apiKey:"", apiModel:"claude-opus-4-8"
 };
 const MED_FILTERABLE = ["fluoroquinolone","anticoagulant","antiplatelet","opioid","sedative","muscle_relaxant","gabapentinoid","antipsychotic"];
@@ -307,6 +308,7 @@ function gatherFlags(){
   if(state.surgery === "yes") f.add("recent_surgery");
   selectedConditions().forEach(c => (c.autoFlags||[]).forEach(x=>f.add(x)));
   const surg = detectSurgery(); if(surg && surg.autoFlags) surg.autoFlags.forEach(x=>f.add(x));
+  vitalFlags().forEach(x=>f.add(x));
   return Array.from(f);
 }
 /* Medication-derived engine flags — applied at RENDER time only (so toggling is
@@ -329,6 +331,65 @@ function activeFlags(){
 function clearanceNeeded(flags){
   return window.needsClearance(flags) || state.parq.pain || state.parq.faint || state.parq.doc ||
     selectedConditions().some(c=>c.clearance);
+}
+
+/* =====================================================================
+   VITAL SIGNS · MAX HEART RATE (Tanaka) · TARGET ZONES · BORG RPE
+   Objective inputs that personalize intensity and tailor safety flags.
+===================================================================== */
+const vnum = v => { const n = parseFloat(v); return isFinite(n) ? n : null; };
+// Tanaka 2001: HRmax = 208 − 0.7 × age (more accurate than 220 − age).
+function tanakaMax(age){ const a = vnum(age); return (a && a>=5 && a<=110) ? Math.round(208 - 0.7*a) : null; }
+function bmiCalc(h,w){ const H=vnum(h), W=vnum(w); if(!H||!W) return null; const m=H/100; const b=W/(m*m); return (isFinite(b)&&b>8&&b<100) ? Math.round(b*10)/10 : null; }
+function bmiCategory(b){ if(b==null) return ""; if(b<18.5) return "underweight"; if(b<25) return "healthy"; if(b<30) return "overweight"; return "obese"; }
+function fmtRange(r){ return r ? `${r[0]}–${r[1]}` : "—"; }
+
+// Target HR zones — Karvonen (heart-rate reserve) when resting HR is known, else % of max HR.
+function hrZones(){
+  const hrmax = tanakaMax(state.age); if(!hrmax) return null;
+  const v = state.vitals||{}; const rest = vnum(v.restHR);
+  const useHRR = rest!=null && rest>=30 && rest<hrmax-10;
+  const band = (lo,hi)=> useHRR
+    ? [Math.round(rest+lo*(hrmax-rest)), Math.round(rest+hi*(hrmax-rest))]
+    : [Math.round(lo*hrmax), Math.round(hi*hrmax)];
+  const zones = useHRR
+    ? { warmup:band(.30,.40), moderate:band(.40,.60), vigorous:band(.60,.85) }
+    : { warmup:band(.57,.64), moderate:band(.64,.76), vigorous:band(.76,.93) };
+  return { hrmax, rest: useHRR?rest:null, zones };
+}
+
+// Objective-data-derived engine flags (baked into the program through gatherFlags).
+function vitalFlags(){
+  const v = state.vitals||{}; const out=[];
+  const sbp=vnum(v.sbp), dbp=vnum(v.dbp), hr=vnum(v.restHR), spo2=vnum(v.spo2);
+  if((sbp!=null&&sbp>=180)||(dbp!=null&&dbp>=110)) out.push("vital_bp_crisis");
+  else if((sbp!=null&&sbp>=160)||(dbp!=null&&dbp>=100)) out.push("vital_bp_high");
+  if(hr!=null&&hr>=100) out.push("vital_tachy");
+  else if(hr!=null&&hr>0&&hr<50) out.push("vital_brady");
+  if(spo2!=null&&spo2>0&&spo2<92) out.push("vital_hypoxia");
+  return out;
+}
+function onBetaBlocker(){ return selectedMeds().some(m=>(m.flags||[]).includes("beta_blocker")); }
+function someCardioPulm(){
+  const f = state.program ? state.program.flags : gatherFlags();
+  return f.some(x=>["cardiac","pulmonary","hypertension","pad","dvt","vital_hypoxia","vital_bp_high","vital_bp_crisis","vital_tachy"].includes(x));
+}
+
+// Borg 6–20 RPE scale; perceived-exertion number × 10 ≈ heart rate.
+const BORG_SCALE = [
+  [6,"No exertion","At rest"], [7,"Extremely light",""], [9,"Very light","Easy, could sustain for hours"],
+  [11,"Light","Can talk comfortably"], [13,"Somewhat hard","Breathing harder, still able to talk"],
+  [15,"Hard","Sweating, talking takes effort"], [17,"Very hard","Very strenuous, near your limit"],
+  [19,"Extremely hard","Almost maximal"], [20,"Maximal","All-out effort"]
+];
+// Recommended RPE band for the current track / risk profile.
+function borgTarget(){
+  const flags = state.program ? state.program.flags : gatherFlags();
+  const cardioCap = flags.some(f=>["cardiac","pulmonary","hypertension","pad","dvt","vital_bp_high","vital_bp_crisis","vital_tachy","vital_hypoxia"].includes(f));
+  const track = state.program ? state.program.track : (classify(state.weeks)||"acute");
+  if(cardioCap) return {lo:11,hi:13,label:"light–moderate · RPE 11–13 (stay able to talk)"};
+  if(track==="acute") return {lo:9,hi:12,label:"very light–light · RPE 9–12"};
+  return {lo:12,hi:15,label:"moderate–hard · RPE 12–15"};
 }
 function topSupervision(){
   const rank={self:0,supervised:1,clinical:2}; let best="self";
@@ -836,6 +897,15 @@ function movementExplain(name, pattern, regionArr){
 }
 
 /* Shared exercise <li> renderer with Explain + optional Swap (when ctx {ci,pi,ei} given). */
+/* Objective cardio target for aerobic exercises — HR zone (if age known) + Borg RPE. */
+function exertionLine(e){
+  if(!e || !e.tags || !e.tags.includes("aerobic")) return "";
+  const b = borgTarget(), z = hrZones(), beta = onBetaBlocker();
+  let hr = "";
+  if(beta) hr = "HR unreliable on your beta-blocker — go by RPE";
+  else if(z) hr = `target HR ~${fmtRange(z.zones.moderate)} bpm`;
+  return `<div class="hrtarget">🎯 <b>Cardio target:</b> ${hr?esc(hr)+" · ":""}RPE ${b.lo}–${b.hi}${someCardioPulm()?" · watch SpO₂ if you monitor it":""}</div>`;
+}
 function exItemHTML(e, regionArr, ctx, medHidden){
   const dc = ctx ? `data-ci="${ctx.ci}" data-pi="${ctx.pi}" data-ei="${ctx.ei}"` : "";
   const rotate = ctx ? `<button class="rotatebtn" ${dc} title="Rotate to the next option">⟳ Rotate</button>` : "";
@@ -844,6 +914,7 @@ function exItemHTML(e, regionArr, ctx, medHidden){
   return `<li class="exitem${medHidden?" medhidden":""}">
     <div class="top"><span class="en">${e.sig?`<span class="sigpill">🎯 key</span> `:""}${esc(e.n)}</span><span class="ed">${esc(e.d)}</span></div>
     <div class="ec">${esc(e.c)}</div>
+    ${exertionLine(e)}
     ${e.warn?`<span class="warnpill">⚠ Modify — involves ${esc(TAG_LABEL[e.warn]||e.warn)}; keep it symptom-free.</span>`:""}
     ${e.sub?`<span class="subpill">safer substitute for your precautions</span>`:""}
     <div class="exrowtools no-print">
@@ -1045,6 +1116,58 @@ function medicationCard(medHiddenTotal){
   </div>`;
 }
 
+/* Heart-rate, vital-signs & Borg-RPE exertion card. */
+function vChip(k,val,warn){ return `<div class="vitalchip${warn?" warn":""}"><span class="vk">${esc(k)}</span><span class="vv">${esc(val)}</span></div>`; }
+function borgScaleHTML(target){
+  const rows = BORG_SCALE.map(([n,lab,desc])=>{
+    const on = target && n>=target.lo && n<=target.hi;
+    return `<div class="borgrow${on?" on":""}"><span class="bn">${n}</span><span class="bl">${esc(lab)}</span><span class="bd">${esc(desc||"")}</span></div>`;
+  }).join("");
+  return `<div class="borgwrap"><div class="borghead">Borg RPE 6–20 · perceived exertion <span class="sub">(the number × 10 ≈ heart rate)</span></div>${rows}</div>`;
+}
+function vitalsCard(prog){
+  const v = state.vitals||{}, hz = hrZones(), beta = onBetaBlocker(), b = borgTarget();
+  const bmi = bmiCalc(v.height,v.weight), fset = new Set(vitalFlags());
+  const chips=[];
+  if(vnum(v.restHR)!=null) chips.push(vChip("Resting HR", `${vnum(v.restHR)} bpm`, fset.has("vital_tachy")||fset.has("vital_brady")));
+  if(vnum(v.sbp)!=null && vnum(v.dbp)!=null) chips.push(vChip("Blood pressure", `${vnum(v.sbp)}/${vnum(v.dbp)}`, fset.has("vital_bp_high")||fset.has("vital_bp_crisis")));
+  if(vnum(v.spo2)!=null) chips.push(vChip("SpO₂", `${vnum(v.spo2)}%`, fset.has("vital_hypoxia")));
+  if(vnum(v.rr)!=null) chips.push(vChip("Resp. rate", `${vnum(v.rr)}/min`, vnum(v.rr)>20||vnum(v.rr)<10));
+  if(bmi!=null) chips.push(vChip("BMI", `${bmi} · ${bmiCategory(bmi)}`, bmi<18.5||bmi>=30));
+
+  let hrBlock;
+  if(hz){
+    hrBlock = `<p class="hint" style="margin:2px 0 8px"><b>Estimated maximum heart rate ≈ ${hz.hrmax} bpm</b> — Tanaka formula (208 − 0.7 × ${esc(String(state.age))}). Target zones ${hz.rest?`use the <b>Karvonen</b> method with your resting HR ${hz.rest} bpm`:"are a <b>percent of your max HR</b>"}.</p>
+      <div class="zonetable">
+        <div class="zonerow zw"><span>Warm-up / very light</span><b>${fmtRange(hz.zones.warmup)} bpm</b></div>
+        <div class="zonerow zm"><span>Moderate — build fitness</span><b>${fmtRange(hz.zones.moderate)} bpm</b></div>
+        <div class="zonerow zv"><span>Vigorous — only as cleared</span><b>${fmtRange(hz.zones.vigorous)} bpm</b></div>
+      </div>`;
+    if(beta) hrBlock += `<div class="banner clear" style="margin:8px 0 0"><b>You take a beta-blocker.</b> Your heart rate won't rise the way these numbers assume — judge effort by the <b>Borg RPE / talk-test</b> below, not bpm.</div>`;
+  } else {
+    hrBlock = `<div class="banner info" style="margin:2px 0 8px">Add your <b>age</b> in the History step and we'll calculate your <b>maximum heart rate</b> (Tanaka formula) and personal target zones here.</div>`;
+  }
+
+  const aer=[]; (prog.items||[]).forEach(it=>it.phases.forEach(ph=>ph.ex.forEach(e=>{ if(e.tags&&e.tags.includes("aerobic")&&!aer.includes(e.n)) aer.push(e.n); })));
+  const monitor = aer.length ? `<b class="safeh">Exercises to track with objective data</b>
+    <p class="hint" style="margin:2px 0 6px">These aerobic/endurance items benefit most from a <b>heart-rate monitor</b>${someCardioPulm()?" and a <b>pulse oximeter</b> (SpO₂)":""}. Aim for the target zone and RPE — ease off if you exceed them or feel unwell.</p>
+    <ul class="safelist plain">${aer.slice(0,10).map(n=>`<li>${esc(n)}</li>`).join("")}</ul>` : "";
+
+  const vf = vitalFlags();
+  const warn = vf.length ? `<div class="banner clear" style="margin:0 0 12px"><b>⚠ Some readings need attention</b><ul class="notelist">${window.notesForFlags(vf).map(n=>`<li>${esc(n)}</li>`).join("")}</ul></div>` : "";
+
+  return `<div class="card vitalcard">
+    <h2>❤️ Heart rate, vitals &amp; exertion targets</h2>
+    <p class="hint">Objective targets for how hard to work — personalized from your age and any vitals you entered. Educational only; your care team's limits always take precedence.</p>
+    ${warn}
+    ${chips.length?`<div class="vitalchips">${chips.join("")}</div>`:""}
+    ${hrBlock}
+    <b class="safeh">Your recommended effort: ${esc(b.label)}</b>
+    ${borgScaleHTML(b)}
+    ${monitor}
+  </div>`;
+}
+
 /* ---------- render program ---------- */
 function renderProgram(prog){
   const out = $("#programOut");
@@ -1096,6 +1219,7 @@ function renderProgram(prog){
   }));
 
   html += safetyNotesCard(prog);
+  html += vitalsCard(prog);
   html += surgicalReminderCard();
   html += medicationCard(medHiddenTotal);
 
@@ -1183,7 +1307,12 @@ const KB = [
   { kw:["warm up","warmup","before exercise","cool down","cooldown"], a:()=>"A few minutes of easy movement first raises tissue temperature and cuts injury risk; a gentle cool-down eases stiffness. 5 minutes each end is plenty." },
   { kw:["brace","support","tape","wrap","sleeve","crutches"], a:()=>"Braces/taping give short-term support and confidence, especially early or returning to activity — but long-term reliance keeps the area weak. Use support to move and load safely, not to avoid movement. Follow your clinician's bracing instructions after surgery." },
   { kw:["blood pressure","hypertension","bp"], a:()=>"With high blood pressure: **never hold your breath** — exhale on effort. Avoid heavy grip/isometric holds and head-down positions. Regular **moderate aerobic exercise lowers blood pressure**, so it's a cornerstone. Know your numbers." },
-  { kw:["breath","breathe","short of breath","breathless","copd","oxygen"], a:()=>"Pace exercise with your breathing: **pursed-lip breathing** (in through the nose, out slowly through pursed lips), rest when breathless, and use prescribed oxygen. Breathlessness is expected; chest pain, dizziness, or blue lips are not — stop and seek care." }
+  { kw:["breath","breathe","short of breath","breathless","copd","oxygen"], a:()=>"Pace exercise with your breathing: **pursed-lip breathing** (in through the nose, out slowly through pursed lips), rest when breathless, and use prescribed oxygen. Breathlessness is expected; chest pain, dizziness, or blue lips are not — stop and seek care." },
+  { kw:["max heart rate","maximum heart rate","target heart rate","heart rate zone","hr zone","target zone","tanaka","borg","rpe","perceived exertion","how hard should i","how hard do i","talk test","target hr","karvonen","how hard to work"], a:()=>{
+      const hz=hrZones(), b=borgTarget();
+      if(hz) return `Your estimated **maximum heart rate is about ${hz.hrmax} bpm** (Tanaka: 208 − 0.7 × age). A good **moderate** zone is **${fmtRange(hz.zones.moderate)} bpm**${hz.rest?" (Karvonen, from your resting HR)":""}; **vigorous** (only as cleared) is **${fmtRange(hz.zones.vigorous)} bpm**. ${onBetaBlocker()?"Because you take a **beta-blocker**, your heart rate won't rise normally — use **Borg RPE** instead. ":""}Prefer effort-based? Aim for **${b.label}**. Simplest of all is the **talk-test**: you should be able to talk but not sing.`;
+      return `Add your **age** (and ideally resting heart rate) in the History step and I'll calculate your **maximum heart rate** (Tanaka formula) and target zones. Meanwhile, gauge effort with **Borg RPE**: aim for **${b.label}** — you should be able to talk but not sing.`;
+    } }
 ];
 
 function coachAnswer(qRaw){
@@ -1212,7 +1341,7 @@ function addMsg(text, who){
   $("#chatlog").appendChild(div); $("#chatlog").scrollTop=$("#chatlog").scrollHeight;
 }
 const mdLite = t => esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/\*(.+?)\*/g,"<i>$1</i>").replace(/\n/g,"<br>");
-const SUGGESTED = ["Should I use ice or heat?","How much pain is normal?","What should I avoid with my condition?","When should I see a doctor?","How often should I train?","How do I return to sport safely?"];
+const SUGGESTED = ["Should I use ice or heat?","How much pain is normal?","What's my target heart rate?","What should I avoid with my condition?","When should I see a doctor?","How often should I train?","How do I return to sport safely?"];
 function initCoach(){
   $("#chatlog").innerHTML=""; chatHistory=[]; updateCoachMode();
   const conds=selectedConditions();
@@ -1253,13 +1382,32 @@ function initHistory(){
   });
   $("#q_age").value=state.age; $("#q_sex").value=state.sex; $("#q_meds").value=state.meds; $("#q_notes").value=state.notes;
   $("#parq_pain").checked=state.parq.pain; $("#parq_faint").checked=state.parq.faint; $("#parq_doc").checked=state.parq.doc;
-  $("#q_age").oninput=e=>{state.age=e.target.value;save();};
+  $("#q_age").oninput=e=>{state.age=e.target.value;save();updateVitalsReadout();};
   $("#q_sex").oninput=e=>{state.sex=e.target.value;save();};
   $("#q_meds").oninput=e=>{state.meds=e.target.value;save();};
   $("#q_notes").oninput=e=>{state.notes=e.target.value;save();};
   $("#parq_pain").onchange=e=>{state.parq.pain=e.target.checked;save();};
   $("#parq_faint").onchange=e=>{state.parq.faint=e.target.checked;save();};
   $("#parq_doc").onchange=e=>{state.parq.doc=e.target.checked;save();};
+  // vital signs & measurements
+  state.vitals = state.vitals || {restHR:"",sbp:"",dbp:"",spo2:"",rr:"",height:"",weight:""};
+  const VITAL_IDS = {v_restHR:"restHR",v_sbp:"sbp",v_dbp:"dbp",v_spo2:"spo2",v_rr:"rr",v_height:"height",v_weight:"weight"};
+  Object.entries(VITAL_IDS).forEach(([id,key])=>{ const inp=$("#"+id); if(!inp) return;
+    inp.value = state.vitals[key]||"";
+    inp.oninput=e=>{ state.vitals[key]=e.target.value; save(); updateVitalsReadout(); }; });
+  updateVitalsReadout();
+}
+/* Live readout under the vitals inputs: max HR, target zone, BMI, out-of-range warnings + Borg scale. */
+function updateVitalsReadout(){
+  const el=$("#vitalsReadout"); if(!el) return;
+  const hz=hrZones(), v=state.vitals||{}, bmi=bmiCalc(v.height,v.weight), bits=[];
+  if(hz) bits.push(`Max HR ≈ <b>${hz.hrmax} bpm</b> · moderate zone <b>${fmtRange(hz.zones.moderate)} bpm</b>`);
+  else bits.push(`<span class="muted">Enter your <b>age</b> above to calculate max heart rate &amp; target zones.</span>`);
+  if(bmi!=null) bits.push(`BMI <b>${bmi}</b> (${bmiCategory(bmi)})`);
+  const vf=vitalFlags();
+  const warn = vf.length ? `<div class="vwarn">⚠ ${esc(window.notesForFlags(vf)[0]||"Some readings are outside typical ranges — your plan will adjust.")}</div>` : "";
+  el.innerHTML = `<div class="vreadline">${bits.join(" · ")}</div>${warn}
+    <details class="borgdetails"><summary>Show the Borg RPE (perceived-exertion) scale</summary>${borgScaleHTML(borgTarget())}</details>`;
 }
 
 /* ---------- condition search UI ---------- */
@@ -1549,12 +1697,18 @@ function buildCoachSystem(){
   const p = state.program;
   const precautions = (p ? p.notes : window.notesForFlags(gatherFlags())).join(" | ") || "none flagged";
   const prog = p ? `${p.totalWeeks}-week ${p.track} program; supervision ${p.supervision}; clearance needed: ${p.clearance}` : "not generated yet";
+  const v = state.vitals||{};
+  const enteredVitals = [v.restHR&&`resting HR ${v.restHR} bpm`, (v.sbp&&v.dbp)&&`BP ${v.sbp}/${v.dbp}`, v.spo2&&`SpO₂ ${v.spo2}%`, v.rr&&`RR ${v.rr}/min`, bmiCalc(v.height,v.weight)!=null&&`BMI ${bmiCalc(v.height,v.weight)}`].filter(Boolean).join(", ") || "none entered";
+  const hz = hrZones();
+  const hrLine = hz ? `max HR ≈ ${hz.hrmax} bpm (Tanaka), moderate zone ${fmtRange(hz.zones.moderate)} bpm; recommended effort ${borgTarget().label}${onBetaBlocker()?"; on a beta-blocker, so HR targets are unreliable — advise RPE/talk-test":""}` : `age not set — advise Borg RPE ${borgTarget().label}`;
   return `You are Jeffery, PhysioPath's AI physical therapist — an educational assistant giving general, evidence-informed physical-rehabilitation guidance. You are an AI, not a licensed clinician, and must not diagnose or replace in-person care.
 
 USER CONTEXT
 - Conditions: ${conds}
 - Weeks since injury: ${state.weeks ?? "unknown"}; rest pain ${state.painRest}/10, movement pain ${state.painMove}/10; surgery: ${state.surgery}
 - Program: ${prog}
+- Vitals entered: ${enteredVitals}
+- Heart-rate & exertion: ${hrLine}
 - Personalized precautions (MUST respect): ${precautions}
 
 RULES

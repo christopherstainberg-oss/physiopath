@@ -349,6 +349,51 @@ footer b{color:var(--text)}
 .toast-update{display:flex;align-items:center;gap:10px}
 .toast .updbtn{padding:6px 12px;font-size:13px;white-space:nowrap}
 
+/* vital signs, max heart rate & Borg RPE */
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media(max-width:620px){.grid3{grid-template-columns:1fr 1fr}}
+@media(max-width:400px){.grid3{grid-template-columns:1fr}}
+.subfield{display:flex;flex-direction:column;gap:5px;font-size:12.5px;margin:0}
+.subfield>span{color:var(--text);font-weight:600}
+.subfield i{font-style:normal;color:var(--muted);font-weight:400}
+.bpwrap{display:flex;align-items:center;gap:6px}
+.bpwrap em{font-style:normal;color:var(--muted);font-weight:700}
+.bpwrap input{text-align:center}
+.vitalsreadout{margin-top:12px}
+.vreadline{font-size:13px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:9px 12px;line-height:1.5}
+.vwarn{margin-top:8px;font-size:12.5px;color:var(--warn);background:rgba(255,204,87,.1);border:1px solid rgba(255,204,87,.35);border-radius:9px;padding:8px 11px;line-height:1.5}
+.borgdetails{margin-top:10px}
+.borgdetails summary{cursor:pointer;font-size:12.5px;color:var(--brand);font-weight:600;padding:4px 0;list-style:revert}
+.borgdetails[open] summary{margin-bottom:6px}
+
+.vitalcard{border-color:rgba(255,107,107,.4)}
+.vitalcard h2{color:var(--danger)}
+.vitalchips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+.vitalchip{display:flex;flex-direction:column;gap:1px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:7px 12px;min-width:80px}
+.vitalchip .vk{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.vitalchip .vv{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}
+.vitalchip.warn{border-color:rgba(255,204,87,.55);background:rgba(255,204,87,.1)}
+.vitalchip.warn .vv{color:var(--warn)}
+.zonetable{border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:2px 0 4px}
+.zonerow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 12px;font-size:13px;border-bottom:1px solid var(--line)}
+.zonerow:last-child{border-bottom:none}
+.zonerow b{font-variant-numeric:tabular-nums;white-space:nowrap}
+.zonerow.zw{background:rgba(92,225,166,.07)}.zonerow.zm{background:rgba(62,166,255,.08)}.zonerow.zv{background:rgba(255,138,92,.08)}
+.zonerow.zw b{color:var(--brand-2)}.zonerow.zm b{color:var(--brand)}.zonerow.zv b{color:var(--acute)}
+.borgwrap{border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:6px 0 4px}
+.borghead{background:var(--panel-2);padding:8px 12px;font-size:12.5px;font-weight:700;border-bottom:1px solid var(--line)}
+.borghead .sub{color:var(--muted);font-weight:400}
+.borgrow{display:grid;grid-template-columns:34px 104px 1fr;gap:8px;align-items:center;padding:6px 12px;font-size:12.5px;border-bottom:1px solid var(--line)}
+.borgrow:last-child{border-bottom:none}
+.borgrow .bn{font-weight:800;text-align:center;font-variant-numeric:tabular-nums;background:var(--panel-2);border-radius:6px;padding:2px 0}
+.borgrow .bl{font-weight:600}
+.borgrow .bd{color:var(--muted)}
+.borgrow.on{background:rgba(62,166,255,.12)}
+.borgrow.on .bn{background:var(--brand);color:#04121f}
+@media(max-width:480px){.borgrow{grid-template-columns:30px 1fr}.borgrow .bd{grid-column:2;font-size:11.5px;margin-top:-2px}}
+.hrtarget{margin-top:6px;font-size:12px;color:var(--brand);background:rgba(62,166,255,.08);border:1px solid rgba(62,166,255,.25);border-radius:8px;padding:5px 9px;line-height:1.45}
+.hrtarget b{color:var(--text)}
+
 /* ---------- app-style bottom navigation on phones ---------- */
 @media (max-width:700px){
   .steps{
