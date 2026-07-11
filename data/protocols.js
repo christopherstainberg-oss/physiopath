@@ -93,7 +93,7 @@
     [E("Loaded squats / hinges","3×8","Progress load",T.valsalva),
      E("Lateral bounds","3×8 each","Control landing",T.impact),
      E("Running / sport progression","as tolerated","Gradual",T.impact),
-     E("Cutting & agility","as tolerated","Pain-free only",T.impact)]
+     E("Cutting drills (45° → 90° angles)","3×6 each side","Brake, plant, push off — knee over foot",T.impact,T.highInt)]
   ];
 
   P.hip_replacement = [
@@ -129,9 +129,9 @@
      E("Single-leg balance + reach","3×8 each","Build knee stability",T.balance),
      E("Bridges (single-leg)","3×12","Squeeze glutes")],
     [E("Jogging progression","per return-to-run plan","Only when cleared",T.impact),
-     E("Double→single-leg hops","3×8","Soft, controlled landings",T.impact),
-     E("Lateral & deceleration drills","3×6","Control the cut",T.impact),
-     E("Sport-specific agility","as tolerated","Progress gradually",T.impact)]
+     E("Double→single-leg hop-and-stick landings","3×8","Soft, controlled — freeze the landing",T.impact),
+     E("Deceleration & 45° cutting drills","3×6 each side","Brake under control; knee over foot",T.impact,T.highInt),
+     E("Pro-agility 5-10-5 shuttle & T-drill","4–6 reps","Sharp cuts; full rest between reps",T.impact,T.highInt)]
   ];
 
   P.knee_pf = [
@@ -185,10 +185,10 @@
      E("Lateral band walks","3×12 steps","Stay low"),
      E("Step-ups","3×10 each","Control the descent",T.wb),
      E("Cushion / Bosu balance","3×45s","Unstable surface",T.balance)],
-    [E("Hopping & landing drills","3×10","Stick landings quietly",T.impact),
-     E("Lateral bounds","3×8 each","Control landing",T.impact),
-     E("Agility / figure-8 runs","4×20m","Build speed",T.impact),
-     E("Sport-specific cutting","as tolerated","Pain-free only",T.impact)]
+    [E("Single-leg hop-and-stick landings","3×8 each","Land softly, freeze for 2s",T.impact),
+     E("Lateral bounds (skater)","3×8 each","Push off sideways, stick the landing",T.impact),
+     E("Ladder footwork & figure-8 runs","3×20–30s","Fast, light, controlled feet",T.impact,T.highInt),
+     E("Cutting & reactive agility (45° → 90°)","3×6 each side","Change direction under control; pain-free",T.impact,T.highInt)]
   ];
 
   P.achilles = [

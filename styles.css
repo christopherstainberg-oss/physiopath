@@ -311,6 +311,23 @@ svg.chart .dot{fill:var(--brand)}
 .addprecform .addprec-w{flex:1;min-width:120px}
 .addprecform .btn{flex:0 0 auto}
 
+/* clinician / physician protocol */
+.clincard{border-color:var(--brand-2)}
+.clincard h2{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.clinbadge{font-size:10px;font-weight:800;letter-spacing:.3px;color:#04121f;background:var(--brand-2);border-radius:999px;padding:2px 8px}
+.clindel{margin-left:auto;cursor:pointer;color:var(--muted);border:1px solid var(--line);border-radius:8px;width:28px;height:28px;
+  display:grid;place-items:center;font-size:13px;flex:0 0 auto;background:none;font-family:inherit}
+.clindel:hover{border-color:var(--danger);color:var(--danger)}
+.clinformcard{border-style:dashed}
+.clinform{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+.clinform textarea{min-height:160px;font-family:inherit;line-height:1.5}
+.clinpreview:not(:empty){border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--panel-2);font-size:13px}
+.clinprevhead{font-weight:700;margin-bottom:6px;color:var(--brand-2)}
+.clinprevph{color:var(--muted);margin:2px 0}
+.clinprevn{color:var(--muted);font-size:12px}
+.clinbtns{display:flex;gap:10px;flex-wrap:wrap}
+.clinbtns .btn{flex:0 0 auto}
+
 /* program editing controls */
 .exrowtools{display:flex;gap:14px;align-items:center;margin-top:7px;flex-wrap:wrap}
 .swapbtn,.rotatebtn{border:1px solid var(--line);background:var(--panel-2);border-radius:8px;font-size:12.5px;font-weight:700;

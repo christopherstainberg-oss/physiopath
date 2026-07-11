@@ -253,7 +253,7 @@ const state = {
   vitals:{restHR:"",sbp:"",dbp:"",spo2:"",rr:"",height:"",weight:""},
   vitalsLog:[], labs:{}, labHist:{},
   screen:{}, falls:"", aid:"", smoking:"", alcohol:"", sleep:"", stress:"",
-  medIds:[], medFilter:false, homeMode:false, customPrecautions:[], log:[], apiKey:"", apiModel:"claude-opus-4-8"
+  medIds:[], medFilter:false, homeMode:false, customPrecautions:[], clinicianProtocols:[], log:[], apiKey:"", apiModel:"claude-opus-4-8"
 };
 const MED_FILTERABLE = ["fluoroquinolone","anticoagulant","antiplatelet","opioid","sedative","muscle_relaxant","gabapentinoid","antipsychotic"];
 const MEDMAP = new Map();
@@ -559,7 +559,7 @@ const INJURY_FOCUS = [
    add:[{p:1,n:"Quad sets / straight-leg raise",d:"3×10",c:"Lock the knee straight"},
         {p:1,n:"Heel-prop for full extension",d:"3×3 min",c:"Let the knee straighten fully"},
         {p:3,n:"Closed-chain leg press / squat (progressive)",d:"3×10",c:"Add load pain-free",tags:["weight_bearing"]},
-        {p:4,n:"Hop, landing & deceleration drills",d:"3×8",c:"Only when cleared; soft landings",tags:["impact","balance"]}]},
+        {p:4,n:"Return-to-sport hop-test battery (single, triple, crossover, 6-m timed)",d:"when cleared",c:"Aim for ≥90% of the other leg before cutting sport",tags:["impact","balance"]}]},
   {re:/\bpcl\b/,
    focus:"Emphasise the quads and support the shin — avoid deep knee flexion and hamstring-heavy loading early.",
    add:[{p:1,n:"Quad sets in extension",d:"3×12",c:"Strong quad squeeze"},
@@ -670,6 +670,45 @@ function signatureFor(focus, phase){
   return focus.add.filter(a=>a.p===phase).map(a=>({ n:a.n, d:a.d, c:a.c, tags:a.tags||[], sig:true }));
 }
 
+/* ---------- return-to-sport balance & agility ladder ----------
+   Specific, staged balance/proprioception and agility/change-of-direction
+   drills injected for lower-limb conditions so those exercises are concrete
+   and injury/phase-appropriate rather than a generic "balance training" line.
+   Balance is added for all lower-limb work (incl. OA/replacement); agility is
+   added only for sport/ligament/tendon/sprain-type injuries. All carry engine
+   tags, so applyContra() still gates them for impact/balance precautions. */
+const BALANCE_LADDER = {
+  1:[{n:"Double-leg balance: firm ground → cushion",d:"3×30s",c:"Steady near support; progress to a soft surface",tags:["balance"]}],
+  2:[{n:"Single-leg stance progression (eyes open → eyes closed)",d:"3×30s each",c:"Near support; keep the ankle and hip quiet",tags:["balance"]},
+     {n:"Tandem (heel-to-toe) stance & weight shifts",d:"3×30s",c:"Narrow base; control the sway",tags:["balance"]}],
+  3:[{n:"Single-leg balance on a cushion + ball toss / head turns",d:"3×30s each",c:"Add a task without losing control",tags:["balance"]},
+     {n:"Y-balance / star-excursion reach",d:"3×6 each direction",c:"Reach far; keep the standing knee stable over the foot",tags:["balance"]}],
+  4:[{n:"Single-leg hop-and-stick (stabilise & hold 2s)",d:"3×6 each",c:"Land softly, freeze the landing",tags:["impact","balance"]}]
+};
+const AGILITY_LADDER = {
+  3:[{n:"Ladder & line-hop footwork (two-feet in/out, side-to-side)",d:"3×20–30s",c:"Fast, light, controlled feet",tags:["weight_bearing","high_intensity","balance"]},
+     {n:"Lateral shuffle & carioca (grapevine)",d:"3×10 m each",c:"Stay low; smooth crossover, no crossing-up",tags:["weight_bearing","high_intensity"]}],
+  4:[{n:"Deceleration & cutting progression (45° → 90°)",d:"3×6 each side",c:"Brake under control; knee tracks over the foot",tags:["impact","high_intensity","balance"]},
+     {n:"Pro-agility 5-10-5 shuttle & T-drill",d:"4–6 reps",c:"Sharp changes of direction; full rest between",tags:["impact","high_intensity"]}]
+};
+const RTS_LOWER = /knee|ankle|hip|foot|calf|thigh|lower limb|leg|acl|pcl|mcl|lcl|meniscus|hamstring|achilles|patell|groin|adductor|iliotibial|\bitb\b|quadric/i;
+const RTS_DEGEN = /osteoarthritis|arthritis|replacement|arthroplasty|\btkr\b|\bthr\b|fracture|osteoporos|amputation|avascular|gout/i;
+const RTS_SPORT = /acl|pcl|mcl|lcl|ligament|sprain|instab|meniscus|hamstring|calf (strain|tear)|gastroc|achilles tendinop|patell.*tendin|jumper|groin|adductor|iliotibial|\bitb\b|sport|athlet|return to (run|sport)/i;
+/* protocols that already carry specific, staged agility drills — skip the
+   ladder's agility for these so we don't double up (balance is still added). */
+const AGILITY_RICH = new Set(["knee_ligament","ankle"]);
+function rtsFor(cond, phaseIdx){
+  const p = phaseIdx+1;
+  const hay = `${cond.name||""} ${cond.region||""}`;
+  if(!RTS_LOWER.test(hay)) return [];
+  const degen = RTS_DEGEN.test(cond.name||"");
+  const sporty = !degen && RTS_SPORT.test(cond.name||"");
+  const out = [];
+  if(BALANCE_LADDER[p]) out.push(...BALANCE_LADDER[p]);
+  if(sporty && !AGILITY_RICH.has(cond.protocol) && AGILITY_LADDER[p]) out.push(...AGILITY_LADDER[p]);
+  return out.map(a=>({ n:a.n, d:a.d, c:a.c, tags:a.tags||[], sig:true }));
+}
+
 /* ---------- build the program ---------- */
 /* Realistic exercises per phase (protocol + signature + library-matched top-up). */
 const PHASE_TARGET = [6,6,7,7];
@@ -710,8 +749,11 @@ function generateProgram(){
     let cursor=1;
     const phases = proto.map((pool,p)=>{
       const len = phaseWeeks[p], wkStart=cursor, wkEnd=cursor+len-1; cursor=wkEnd+1;
-      // prepend injury-specific signature exercises (dedupe against the generic pool)
-      const sig = signatureFor(focus, p+1);
+      // prepend injury-specific signature + return-to-sport balance/agility exercises
+      // (dedupe against each other and the generic pool)
+      const sigRaw = [...signatureFor(focus, p+1), ...rtsFor(c, p)];
+      const sig = []; const sigSeen = new Set();
+      sigRaw.forEach(s=>{ const k=s.n.toLowerCase(); if(!sigSeen.has(k)){ sigSeen.add(k); sig.push(s); } });
       const seen = new Set(sig.map(s=>s.n.toLowerCase()));
       const merged = [...sig, ...pool.filter(e=>!seen.has(e.n.toLowerCase()))];
       const { kept, removed } = window.applyContra(merged, flags);
@@ -898,6 +940,7 @@ const PATTERN_INFO = {
   extension:{what:"A back-extension exercise strengthens the muscles that straighten the spine.",how:"Lift into a small, controlled range without pinching, then lower slowly.",why:"Strengthens the back extensors for posture and lifting."},
   flexion:{what:"A trunk-flexion exercise works the abdominals by curling the spine.",how:"Curl through the upper spine with control; avoid straining the neck.",why:"Builds abdominal strength — introduced when appropriate for your condition."},
   gait:{what:"A gait drill practices the components of walking.",how:"Perform the stepping pattern with even, deliberate steps, looking ahead and near support if needed.",why:"Improves walking quality, coordination and confidence."},
+  agility:{what:"An agility / change-of-direction drill trains fast, controlled starts, stops and turns.",how:"Accelerate, decelerate under control, then plant and cut with the knee tracking over the foot.",why:"Rebuilds the ability to move quickly and safely — key for returning to sport and reacting in daily life."},
   rotate:{what:"A rotational exercise trains controlled trunk turning and power.",how:"Rotate through the trunk with control and return smoothly.",why:"Builds rotational strength for sport and daily twisting tasks."},
   general:{what:"A general conditioning exercise for the area.",how:"Perform with control through a pain-free range, exhaling on effort.",why:"Helps restore strength, movement and function."}
 };
@@ -979,6 +1022,10 @@ const PATTERN_HOWTO = {
     steps:["Perform the prescribed stepping pattern with even, deliberate steps.","Keep your posture tall and let your arms swing naturally if the drill allows.","Place each foot with control — heel-to-toe unless told otherwise.","Keep support within reach; add pace or difficulty only as you feel steady."],
     tempo:"Move at a controlled pace; the quality of each step matters more than speed.",
     avoid:"Don't look down or rush — if you feel unsteady, slow down and stay near support."},
+  agility:{setup:"Warm up thoroughly first. Mark out a small course with everyday objects (cans, bottles, tape) and clear the space; wear supportive shoes.",
+    steps:["Start in an athletic stance — knees soft, weight on the balls of the feet.","Accelerate, then decelerate under control before each turn — 'sink' into your hips to brake.","Plant the outside foot and push off to change direction, keeping the knee tracking over the foot (never letting it cave inward).","Build up speed and sharper angles only as your control and confidence improve."],
+    tempo:"Short, sharp efforts with full rest between — treat it like sprinting, not conditioning. Stop when form gets sloppy.",
+    avoid:"Don't let the knee collapse inward on cuts or land stiff-legged; slow down or shorten the course if control slips."},
   rotate:{setup:"Set an athletic stance with soft knees and a braced core; take up tension on the resistance.",
     steps:["Start the turn from your hips and trunk, letting them lead the arms.","Rotate smoothly through a controlled range and pivot the back foot to protect the knee.","Keep the arms and core connected as one unit, not just swinging the arms.","Return under control to the start."],
     tempo:"Turn with intent, then control the return; exhale through the effort.",
@@ -990,6 +1037,7 @@ const PATTERN_HOWTO = {
 };
 function inferPattern(name){
   const l = name.toLowerCase();
+  if(/agility|ladder|carioca|shuffle|shuttle|\bcutting\b|zig-zag|t-drill|5-10-5|pro-agility|mirror drill|backpedal|figure-8|dot drill|line hops|deceleration/.test(l)) return "agility";
   if(/gaze|vor|habituation/.test(l)) return "vestibular";
   if(/breath|diaphragm|pursed|spirometr/.test(l)) return "breathing";
   if(/dead bug/.test(l)) return "anti-ext";
@@ -1103,6 +1151,12 @@ function wireProgram(){
     toast(hm.checked ? "Home mode ON — exercises adapted to household objects (your edits are kept)."
                      : "Home mode OFF — standard equipment shown.");
   };
+  // clinician / physician protocol
+  const clinAdd = $("#programOut #clinAdd"); if(clinAdd) clinAdd.onclick = addClinProtocol;
+  const clinEx = $("#programOut #clinExample"); if(clinEx) clinEx.onclick = fillClinExample;
+  const clinText = $("#programOut #clinText"); if(clinText) clinText.oninput = updateClinPreview;
+  $$("#programOut .clindel").forEach(b=>b.onclick=()=>removeClinProtocol(+b.dataset.idx));
+  if(clinText) updateClinPreview();
 }
 function openSwap(btn){
   const ci=+btn.dataset.ci, pi=+btn.dataset.pi, ei=+btn.dataset.ei;
@@ -1220,6 +1274,127 @@ function addCustomPrecaution(){
 function removeCustomPrecaution(idx){
   if(!state.customPrecautions) return;
   state.customPrecautions.splice(idx,1); save(); renderProgram(state.program); toast("Reminder removed.");
+}
+
+/* =====================================================================
+   CLINICIAN / PHYSICIAN PROTOCOL — let a clinician add their own protocol
+   as its own program section (phases + exercises), shown verbatim.
+===================================================================== */
+/* Forgiving parser: "Phase …" lines start a phase (optional "(weeks 0-2)" and
+   "goal: …"); other non-blank lines are exercises "Name — sets×reps — cue". */
+function parseClinProtocol(text){
+  const lines = String(text||"").split(/\r?\n/);
+  const phases = [];
+  let cur = null;
+  const newPhase = (title, weeks, goal)=>{ cur = { title: title || ("Phase "+(phases.length+1)), weeks: weeks||"", goal: goal||"", ex: [] }; phases.push(cur); };
+  for(const raw of lines){
+    const line = raw.trim();
+    if(!line) continue;
+    if(/^phase\b/i.test(line) || /^(stage|block|week\s*\d)\b/i.test(line)){
+      let rest = line.replace(/^(phase|stage|block)\s*\d*\s*[:\-–]?\s*/i,"").trim();
+      let weeks = "", goal = "";
+      const wk = rest.match(/\(?\s*weeks?\s*([\d]+\s*(?:[–\-]|to)\s*[\d]+|[\d]+\+?)\s*\)?/i);
+      if(wk){ weeks = "weeks "+wk[1].replace(/\s+/g,"").replace("to","–").replace("-","–"); rest = rest.replace(wk[0],"").trim(); }
+      const gm = rest.match(/goal\s*[:\-]\s*(.*)$/i);
+      if(gm){ goal = gm[1].trim(); rest = rest.replace(gm[0],"").trim(); }
+      rest = rest.replace(/[—\-–|,;:]\s*$/,"").trim();
+      newPhase(rest, weeks, goal);
+      continue;
+    }
+    if(!cur) newPhase("Clinician-prescribed exercises","","");
+    let l = line.replace(/^[\-\*•·▪]\s*/,"").replace(/^\d+[\.\)]\s*/,"").trim();
+    if(!l) continue;
+    const parts = l.split(/\s*\|\s*|\s+[—–]\s+|\t+/).map(s=>s.trim()).filter(Boolean);
+    let n = parts[0] || l, d = parts[1] || "", c = parts.slice(2).join(" — ") || "";
+    if(!parts[1]){
+      const m = l.match(/^(.*?)[\s,]+(\d+\s*[x×]\s*\d+.*|\d+\s*(?:s|sec|secs|min|reps?)\b.*)$/i);
+      if(m){ n = m[1].trim().replace(/[—\-–,]$/,"").trim(); d = m[2].trim(); }
+    }
+    if(!d) d = "as prescribed";
+    cur.ex.push({ n, d, c });
+  }
+  return { phases: phases.filter(p=>p.ex.length) };
+}
+const CLIN_EXAMPLE = `Phase 1: Protection (weeks 0-2) — goal: control swelling, restore full extension
+- Quad sets — 3×10 — lock the knee straight
+- Heel slides — 3×15 — regain bend gently
+- Straight-leg raises — 3×10
+Phase 2: Early strength (weeks 3-6) — goal: normalise gait, build quad strength
+- Mini squats (0–45°) — 3×12 — knees over toes
+- Leg press (light) — 3×10
+- Stationary bike — 10 min
+Phase 3: Return to function (weeks 7-12)
+- Step-downs — 3×10 each — control, no knee collapse
+- Single-leg balance + reach — 3×8 each`;
+function clinicianProtocolCards(){
+  const list = state.clinicianProtocols || [];
+  return list.map((pr,i)=>{
+    const phases = pr.phases.map((ph,pi)=>{
+      const key = "clin-"+i+"-"+pi;
+      const open = (pi===0 || openPhases.has(key)) ? "open" : "";
+      const rows = ph.ex.map(e=>exItemHTML({ n:e.n, d:e.d, c:e.c })).join("");
+      return `<div class="phase ${open}">
+        <div class="head" onclick="togglePhase(this,'${key}')">
+          <div class="pnum">${pi+1}</div>
+          <div><div class="ptitle">${esc(ph.title)}${ph.weeks?` <span class="pweeks">· ${esc(ph.weeks)}</span>`:""}</div>
+          ${ph.goal?`<div class="goal">${esc(ph.goal)}</div>`:""}</div>
+          <div class="caret">▾</div>
+        </div>
+        <div class="body"><ul class="exlist">${rows}</ul></div></div>`;
+    }).join("");
+    return `<div class="card clincard">
+      <h2>🩺 ${esc(pr.name)} <span class="clinbadge">Clinician-provided</span>
+        <button class="clindel no-print" data-idx="${i}" title="Remove this protocol">✕</button></h2>
+      ${pr.source?`<p class="hint">Source: ${esc(pr.source)}.</p>`:""}
+      <div class="banner info" style="margin-top:4px"><b>Shown exactly as you entered it.</b> This is your clinician's protocol — the app's automatic exercise-safety filtering is <b>not</b> applied to it. Follow your clinician's own guidance and dosing.</div>
+      ${phases}
+    </div>`;
+  }).join("");
+}
+function clinicianFormCard(){
+  return `<div class="card clinformcard no-print">
+    <h2>🩺 Add a clinician / physician protocol</h2>
+    <p class="hint">Have a protocol from your surgeon, physiotherapist or physician? Add it here and it becomes its own section in your program — with expandable phases and exercises you can tap to Explain. It's saved on this device.</p>
+    <div class="clinform">
+      <input type="text" id="clinName" placeholder="Protocol name — e.g. Dr. Lee · ACL reconstruction" />
+      <input type="text" id="clinSource" placeholder="Clinician / clinic / source (optional)" />
+      <textarea id="clinText" rows="8" placeholder="Paste or type the protocol, one exercise per line. Example:&#10;Phase 1: Protection (weeks 0-2) — goal: control swelling&#10;- Quad sets — 3×10 — lock the knee straight&#10;- Heel slides — 3×15&#10;Phase 2: Strength (weeks 3-6)&#10;- Mini squats — 3×12&#10;- Leg press — 3×10"></textarea>
+      <div class="clinpreview" id="clinPreview"></div>
+      <div class="clinbtns">
+        <button class="btn ghost" id="clinExample" type="button">Fill example</button>
+        <button class="btn primary" id="clinAdd" type="button">Add to my program</button>
+      </div>
+      <p class="hint" style="margin-top:8px">Tips: start a line with <b>Phase …</b> to begin a phase (optionally add <b>(weeks 0–2)</b> and <b>goal: …</b>). Put each exercise on its own line as <b>Name — sets×reps — optional cue</b> (a dash, or a | between parts). No phases? Everything becomes one list.</p>
+    </div>
+  </div>`;
+}
+function updateClinPreview(){
+  const t = $("#programOut #clinText"), box = $("#programOut #clinPreview");
+  if(!t || !box) return;
+  const p = parseClinProtocol(t.value);
+  if(!p.phases.length){ box.innerHTML = ""; return; }
+  const total = p.phases.reduce((s,ph)=>s+ph.ex.length,0);
+  box.innerHTML = `<div class="clinprevhead">Preview — ${p.phases.length} phase${p.phases.length>1?"s":""}, ${total} exercise${total>1?"s":""}:</div>` +
+    p.phases.map(ph=>`<div class="clinprevph">• <b>${esc(ph.title)}</b>${ph.weeks?` <span class="clinprevn">· ${esc(ph.weeks)}</span>`:""} <span class="clinprevn">(${ph.ex.length})</span></div>`).join("");
+}
+function fillClinExample(){
+  const t = $("#programOut #clinText"), n = $("#programOut #clinName");
+  if(t){ t.value = CLIN_EXAMPLE; }
+  if(n && !n.value.trim()){ n.value = "Example · ACL reconstruction protocol"; }
+  updateClinPreview();
+}
+function addClinProtocol(){
+  const name = ($("#programOut #clinName").value||"").trim();
+  const source = ($("#programOut #clinSource").value||"").trim();
+  const parsed = parseClinProtocol($("#programOut #clinText").value);
+  if(!parsed.phases.length){ toast("Add at least one exercise line first."); return; }
+  (state.clinicianProtocols = state.clinicianProtocols || []).push({ name: name || "Clinician protocol", source, phases: parsed.phases });
+  save(); renderProgram(state.program);
+  toast("Clinician protocol added to your program.");
+}
+function removeClinProtocol(idx){
+  if(!state.clinicianProtocols) return;
+  state.clinicianProtocols.splice(idx,1); save(); renderProgram(state.program); toast("Clinician protocol removed.");
 }
 
 /* Consolidated safety notes card (universal guidance; prints with the program). */
@@ -1593,6 +1768,8 @@ function renderProgram(prog){
     html += `<div class="redflags"><b>⚠ When to get it checked:</b> ${esc(item.redflags)}</div></div>`;
   });
 
+  html += clinicianProtocolCards();     // any saved physician protocols, shown verbatim
+  html += clinicianFormCard();          // form to add one
   html += suggestionsCard(prog);
   out.innerHTML = html;
   wireProgram();

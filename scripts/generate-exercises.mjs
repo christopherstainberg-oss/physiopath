@@ -98,6 +98,14 @@ const BASES = [
   {b:"weight-shift drill", pat:"balance", reg:["Balance","Core"], tags:[T.balance], eq:["bw"], mods:["side-to-side","forward-back","diagonal","with reach","on foam"]},
   {b:"gait drill", pat:"gait", reg:["Gait","Balance"], tags:[T.wb,T.balance], eq:["bw"], mods:["heel-to-toe (tandem walk)","braiding (grapevine)","backward walking","high-knee march","with head turns","obstacle stepping","dual-task"]},
   {b:"dynamic balance reach", pat:"balance", reg:["Balance","Hip","Knee"], tags:[T.balance], eq:["bw"], mods:["star-excursion","single-leg reach","multidirectional reach","on foam","with catch"]},
+  {b:"", pat:"balance", reg:["Balance","Ankle","Knee","Hip"], tags:[T.balance], eq:["bw"],
+   mods:["tandem (heel-to-toe) stance","single-leg stance eyes-closed","single-leg balance on cushion","single-leg balance with head turns","single-leg balance with ball toss","Y-balance reach","single-leg RDL balance","hop-and-stick landing","single-leg hop-to-balance","reactive perturbation drill (near support)"]},
+
+  // ---- Agility / change-of-direction (return-to-sport; specific, tiered) ----
+  {b:"", pat:"agility", reg:["Balance","Knee","Ankle","Hip","Full body"], tags:[T.wb,T.highInt], eq:["bw"],
+   mods:["agility ladder two-feet in/out","agility ladder in-in-out-out","agility ladder lateral (Ali shuffle)","dot drill","line hops front-to-back","line hops side-to-side","lateral shuffle drill","carioca (grapevine)","A-skip drill","backpedal-to-sprint","box agility drill","figure-8 runs","pro-agility 5-10-5 shuttle","T-drill agility run","45° cutting drill","90° cutting drill","zig-zag cutting drill","reactive mirror drill","shuttle run"]},
+  {b:"", pat:"plyo", reg:["Knee","Ankle","Hip"], tags:[T.impact,T.highInt,T.wb,T.balance], eq:["bw"],
+   mods:["double-leg drop-and-stick landing","single-leg drop-and-stick landing","broad jump to stick","lateral hop-and-stick","deceleration drill (accel-decel)","single-leg lateral bound-and-stick","depth-drop landing","cut-and-stick drill"]},
 
   // ---- Vestibular ----
   {b:"gaze stabilization", pat:"vestibular", reg:["Vestibular","Balance"], tags:[], eq:["bw"], mods:["VOR x1 (horizontal)","VOR x1 (vertical)","VOR x2","seated","standing","walking"]},
@@ -136,10 +144,16 @@ function deriveTags(name, base, extra){
   if(/carry|farmer|suitcase|dead-hang|grip|hang/.test(l)) t.add(T.grip);
   if(base.pat==="cardio" && !/aqua|swim|cycl|recumbent/.test(l)) t.add(T.wb);
   if(base.pat==="cardio") t.add(T.aerobic);
+  if(base.pat==="agility" || /agility|ladder|carioca|shuffle|shuttle|cutting|zig-zag|dot drill|line hops|backpedal|figure-8|mirror drill|a-skip|box drill|5-10-5|t-drill/.test(l)){
+    t.add(T.wb); t.add(T.highInt); t.add(T.balance);
+  }
+  if(/cutting|shuttle|zig-zag|reactive|mirror|drop-and-stick|depth-drop|bound-and-stick|cut-and-stick|sprint/.test(l)) t.add(T.impact);
   return [...t];
 }
 function difficulty(name, base){
   const l = name.toLowerCase();
+  if(/pro-agility|5-10-5|t-drill|cutting|zig-zag|reactive|mirror drill|bound-and-stick|cut-and-stick|depth-drop|shuttle run/.test(l)) return 4;
+  if(/agility|ladder|carioca|shuffle|dot drill|line hops|backpedal|box drill|figure-8|a-skip|deceleration|drop-and-stick|hop-and-stick|hop-to-balance/.test(l)) return 3;
   if(/plyo|jump|hop|bound|pogo|depth|sprint|explosive|nordic|pistol|single-leg romanian|clap|advanced/.test(l)) return 4;
   if(/single-leg|eccentric|deficit|deep|barbell|sandbag|long-lever|rkc|bottoms-up|tempo|paused|1\.5|z-press|copenhagen/.test(l)) return 3;
   if(/isometric|hold|activation|chin tuck|pendulum|rom|mobility|stretch|assisted|wall|from-knees|drill|segmental|pursed|diaphragm|incentive|short-foot|toe|seated nod/.test(l)) return 1;
@@ -153,7 +167,8 @@ const DOSE = {
   breathing:["3×1 min","5×6 breaths","2–3 min"], anti:["3×10 each","3×8 slow","3×12"],
   push:["3×8–12","3×10","3×12"], pull:["3×10–15","3×12","3×10 each"], hinge:["3×8–10","3×10","4×8"],
   squat:["3×8–12","3×10","4×8"], lunge:["3×8–10 each","3×10 each"], calf:["3×12–15","4×12","3×15"],
-  extension:["3×10–12","3×12","3×15"], flexion:["3×10–12","3×12","3×15"], gait:["3×15–20 m","3×20 m","4×15 m"], rotate:["3×10 each","3×8 each","3×12 each"]
+  extension:["3×10–12","3×12","3×15"], flexion:["3×10–12","3×12","3×15"], gait:["3×15–20 m","3×20 m","4×15 m"], rotate:["3×10 each","3×8 each","3×12 each"],
+  agility:["3×20–30s","3×5 each way","4–6 reps","3×10–20 m"]
 };
 const CUE = {
   squat:"Knees track over toes; control the descent.", hinge:"Hinge from the hips, neutral spine, brace lightly.",
@@ -165,7 +180,8 @@ const CUE = {
   breathing:"Slow, relaxed; never hold your breath.", "anti-ext":"Keep the low back flat; move the limbs, not the spine.",
   "anti-rot":"Resist the twist; keep hips and shoulders square.", extension:"Small controlled range; avoid pinching.",
   flexion:"Curl through the upper spine; avoid straining the neck.", gait:"Even, deliberate steps; look ahead.",
-  rotate:"Rotate through the trunk, control the return."
+  rotate:"Rotate through the trunk, control the return.",
+  agility:"Accelerate, brake and change direction under control; knee over the foot, quality over speed."
 };
 const pick = (arr, i) => arr[i % arr.length];
 
