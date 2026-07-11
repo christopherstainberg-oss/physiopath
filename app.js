@@ -251,7 +251,7 @@ const state = {
   meds:"", notes:"", condIds:[], weeks:null, painRest:3, painMove:4, surgery:"no",
   surgeryType:"auto", surgeryDate:"", fitness:"mod", goal:"", program:null,
   vitals:{restHR:"",sbp:"",dbp:"",spo2:"",rr:"",height:"",weight:""},
-  vitalsLog:[], labs:{},
+  vitalsLog:[], labs:{}, labHist:{},
   screen:{}, falls:"", aid:"", smoking:"", alcohol:"", sleep:"", stress:"",
   medIds:[], medFilter:false, customPrecautions:[], log:[], apiKey:"", apiModel:"claude-opus-4-8"
 };
@@ -1996,12 +1996,23 @@ const LAB_DOMAINS = [
   { key:"coagulation",  label:"🩹 Coagulation (clotting)" },
   { key:"gastro",       label:"🍽️ Gastrointestinal & pancreatic" }
 ];
-function labStatusOf(lab){
-  const e=state.labs[lab.id];
-  if(!e || e.v==="" || e.v==null) return "none";
-  const v=vnum(e.v); if(v==null) return "none";
+function labStatusVal(lab, value){
+  const v=vnum(value); if(v==null) return "none";
+  const e=state.labs[lab.id]||{};
   const lo=vnum(e.lo)??lab.lo, hi=vnum(e.hi)??lab.hi;
   if(v<lo) return "low"; if(v>hi) return "high"; return "ok";
+}
+function labStatusOf(lab){ const e=state.labs[lab.id]; if(!e || e.v==="" || e.v==null) return "none"; return labStatusVal(lab, e.v); }
+const fmtShort = iso2 => { try{ const d=new Date(iso2+"T00:00:00"); return isNaN(d.getTime())?iso2:d.toLocaleDateString(undefined,{month:"short",day:"numeric",year:"2-digit"}); }catch(e){ return iso2; } };
+// Prior dated readings (from uploads) shown as a comparison strip under each lab.
+function labHistInner(lab){
+  const h=(state.labHist&&state.labHist[lab.id])||[];
+  if(!h.length) return "";
+  const chips=h.slice().sort((a,b)=>a.d<b.d?1:-1).map(r=>{
+    const st=labStatusVal(lab, r.v), cls=st==="ok"?"labok":st==="none"?"labnone":"labbad";
+    return `<span class="labhistchip ${cls}"><span class="lhd">${esc(fmtShort(r.d))}</span>${esc(String(r.v))}</span>`;
+  }).join("");
+  return `<span class="labhistlbl">📅 By collection date</span>${chips}`;
 }
 function labPill(st){
   if(st==="ok")   return { cls:"labok",   pill:"✓ in range" };
@@ -2020,10 +2031,11 @@ function labRowHTML(lab){
     <div class="labname">${esc(lab.name)} <span class="labunit">${esc(lab.unit)}</span></div>
     <div class="labinputs">
       <input class="labval" data-lab="${lab.id}" value="${esc(String(v))}" placeholder="your value" inputmode="decimal" />
-      <span class="labtarget">reference range <input class="labt" data-lab="${lab.id}" data-b="lo" value="${esc(String(lo))}" inputmode="decimal" aria-label="reference range low" />–<input class="labt" data-lab="${lab.id}" data-b="hi" value="${esc(String(hi))}" inputmode="decimal" aria-label="reference range high" /></span>
+      <span class="labtarget">Reference Range <input class="labt" data-lab="${lab.id}" data-b="lo" value="${esc(String(lo))}" inputmode="decimal" aria-label="reference range low" />–<input class="labt" data-lab="${lab.id}" data-b="hi" value="${esc(String(hi))}" inputmode="decimal" aria-label="reference range high" /></span>
       <span class="labpill ${cls}">${pill}</span>
     </div>
     <div class="labtip"${tip?"":' style="display:none"'}>💡 ${tip}</div>
+    <div class="labhist">${labHistInner(lab)}</div>
   </div>`;
 }
 function refreshLabRow(id){
@@ -2032,6 +2044,7 @@ function refreshLabRow(id){
   row.className="labrow "+cls;
   const p=row.querySelector(".labpill"); if(p){ p.className="labpill "+cls; p.textContent=pill; }
   const t=row.querySelector(".labtip"); if(t){ if(tip){ t.style.display=""; t.innerHTML="💡 "+tip; } else t.style.display="none"; }
+  const h=row.querySelector(".labhist"); if(h) h.innerHTML=labHistInner(lab);
 }
 function renderLabs(){
   const el=$("#labsBody"); if(!el) return;
@@ -2156,6 +2169,24 @@ function localParseLabs(text){
   t.split(/\r?\n/).forEach(line=>{ const c=parseLineForLab(line); if(c && !seen.has(c.id)){ seen.add(c.id); out.push(c); } });
   return out;
 }
+// Best-effort collection-date extraction from an uploaded report (defaults to today if none found).
+function isoDate(y,mo,d){ const p=n=>String(n).padStart(2,"0"); const M=+mo, D=+d; if(!(+y)||M<1||M>12||D<1||D>31) return null; return `${+y}-${p(M)}-${p(D)}`; }
+function parseDateLoose(s){
+  if(!s) return null;
+  let m=s.match(/(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/); if(m) return isoDate(m[1],m[2],m[3]);              // 2026-07-11
+  const MON={jan:1,feb:2,mar:3,apr:4,may:5,jun:6,jul:7,aug:8,sep:9,oct:10,nov:11,dec:12};
+  m=s.match(/([a-z]{3,9})\.?\s+(\d{1,2}),?\s+(\d{4})/i); if(m&&MON[m[1].slice(0,3).toLowerCase()]) return isoDate(m[3],MON[m[1].slice(0,3).toLowerCase()],m[2]); // Jul 11, 2026
+  m=s.match(/(\d{1,2})\s+([a-z]{3,9})\.?\s+(\d{4})/i);  if(m&&MON[m[2].slice(0,3).toLowerCase()]) return isoDate(m[3],MON[m[2].slice(0,3).toLowerCase()],m[1]); // 11 Jul 2026
+  m=s.match(/(\d{1,2})[/.](\d{1,2})[/.](\d{2,4})/);     if(m){ let y=m[3]; if(y.length===2) y="20"+y; return isoDate(y,m[1],m[2]); }               // 07/11/2026 (assume M/D/Y)
+  return null;
+}
+function detectCollectionDate(text){
+  if(!text) return null;
+  for(const ln of text.split(/\r?\n/)){
+    if(/collect|specimen|drawn|report date|reported|date of service|accession|observation date/i.test(ln)){ const d=parseDateLoose(ln); if(d) return d; }
+  }
+  return parseDateLoose(text);
+}
 function fileToBase64(file){ return new Promise((res,rej)=>{ const r=new FileReader(); r.onload=()=>res(String(r.result).split(",")[1]); r.onerror=()=>rej(new Error("Could not read the file")); r.readAsDataURL(file); }); }
 function extractJSON(t){
   if(!t) return null;
@@ -2171,8 +2202,8 @@ KNOWN TESTS (id — name (target unit); aliases):
 ${known}
 
 Return ONLY a JSON object — no prose, no code fences:
-{"labs":[{"id":"<known id>","value":<number>,"unit":"<unit found>"}]}
-Rules: include a test only if it has a clear numeric result. Use the matching id from the list. If the reported unit differs from the target unit and the conversion is standard and unambiguous, convert to the target unit; otherwise return the original number and its unit. Ignore anything not in the list. If none are found, return {"labs":[]}.`;
+{"collectionDate":"YYYY-MM-DD or null","labs":[{"id":"<known id>","value":<number>,"unit":"<unit found>"}]}
+Rules: "collectionDate" is the specimen collection/report date if shown (else null). Include a test only if it has a clear numeric result. Use the matching id from the list. If the reported unit differs from the target unit and the conversion is standard and unambiguous, convert to the target unit; otherwise return the original number and its unit. Ignore anything not in the list. If none are found, return {"labs":[]}.`;
   let content;
   if(payload.kind==="text") content=[{type:"text",text:`Extract the lab results from this document:\n\n${payload.text.slice(0,60000)}`}];
   else if(payload.kind==="image") content=[{type:"image",source:{type:"base64",media_type:payload.media_type,data:payload.data}},{type:"text",text:"Extract every lab test result visible in this image."}];
@@ -2184,7 +2215,8 @@ Rules: include a test only if it has a clear numeric result. Use the matching id
   const data=await res.json();
   const txt=(data.content||[]).map(b=>b.text||"").join("");
   const parsed=extractJSON(txt), labs=(parsed&&parsed.labs)||[];
-  return labs.filter(x=>x&&x.id!=null&&x.value!=null).map(x=>({id:x.id, value:x.value, unit:x.unit, name:labName(x.id)}));
+  const collectionDate = parsed && parsed.collectionDate ? parseDateLoose(String(parsed.collectionDate)) : null;
+  return { collectionDate, cands: labs.filter(x=>x&&x.id!=null&&x.value!=null).map(x=>({id:x.id, value:x.value, unit:x.unit, name:labName(x.id)})) };
 }
 async function handleLabFile(file){
   const ext=(file.name.split(".").pop()||"").toLowerCase();
@@ -2192,45 +2224,58 @@ async function handleLabFile(file){
   const isPdf=file.type==="application/pdf"||ext==="pdf";
   labImportMsg("load", `Reading ${esc(file.name)}…`);
   try{
-    let cands=[];
+    let cands=[], collectionDate=null;
     if(isImage||isPdf){
       if(!coachOnline()){ labImportMsg("warn","PDFs and photos are parsed with the Claude API. Add your key in the <b>AI</b> tab, or upload a CSV, TSV, TXT or JSON export instead."); return; }
       labImportMsg("load", `Parsing ${isPdf?"PDF":"image"} with Claude…`);
-      cands = await apiParseLabs({ kind:isPdf?"pdf":"image", media_type:file.type||"image/jpeg", data:await fileToBase64(file) });
+      const r = await apiParseLabs({ kind:isPdf?"pdf":"image", media_type:file.type||"image/jpeg", data:await fileToBase64(file) });
+      cands=r.cands; collectionDate=r.collectionDate;
     } else {
       const text=await file.text();
-      if(coachOnline()){ labImportMsg("load","Parsing with Claude…"); try{ cands=await apiParseLabs({kind:"text",text}); }catch(e){ cands=localParseLabs(text); } }
-      else cands=localParseLabs(text);
+      if(coachOnline()){ labImportMsg("load","Parsing with Claude…"); try{ const r=await apiParseLabs({kind:"text",text}); cands=r.cands; collectionDate=r.collectionDate; }catch(e){ cands=localParseLabs(text); collectionDate=detectCollectionDate(text); } }
+      else { cands=localParseLabs(text); collectionDate=detectCollectionDate(text); }
     }
     cands=(cands||[]).filter(c=>LABS.some(l=>l.id===c.id) && c.value!=null && c.value!=="" && !isNaN(parseFloat(c.value)));
     if(!cands.length){ labImportMsg("warn","Couldn't find recognizable lab values in that file. Try a clearer export (CSV/JSON) or enter values manually below."); return; }
     // de-dupe by id, keep first
     const seen=new Set(); cands=cands.filter(c=>seen.has(c.id)?false:(seen.add(c.id),true));
-    showLabReview(cands);
+    showLabReview(cands, collectionDate);
   }catch(e){ labImportMsg("err","Import failed: "+esc(e.message||String(e))); }
 }
 function labImportMsg(kind, html){ const el=$("#labImport"); if(el) el.innerHTML=`<div class="labimsg ${kind}">${html}</div>`; }
-function showLabReview(cands){
+function showLabReview(cands, collectionDate){
   const el=$("#labImport"); if(!el) return;
+  const dval = collectionDate || todayISO();
   el.innerHTML=`<div class="labreview">
-    <div class="labrevhd"><b>Found ${cands.length} value${cands.length>1?"s":""}</b> — check each against your report, then apply.</div>
+    <div class="labrevhd"><b>Found ${cands.length} value${cands.length>1?"s":""}</b> — check each against your report, confirm the collection date, then apply.</div>
+    <label class="labrevdate">🗓 Collection date <input type="date" id="labImportDate" value="${esc(dval)}" /></label>
     ${cands.map((c,i)=>`<label class="labrevrow"><input type="checkbox" class="labrevchk" data-i="${i}" checked />
       <span class="labrevname">${esc(labName(c.id))}</span>
       <input class="labrevval" data-i="${i}" value="${esc(String(c.value))}" inputmode="decimal" />
       <span class="labrevunit">${esc(c.unit||labUnit(c.id))}</span></label>`).join("")}
     <div class="labrevbtns"><button class="btn ghost" id="labRevCancel">Cancel</button><button class="btn primary" id="labRevApply">Apply to my labs</button></div>
-    <p class="hint" style="margin:8px 0 0">Automated parsing can make mistakes — verify each value first.${coachOnline()?" This file was parsed by the Claude API (its contents were sent to Anthropic).":""}</p>
+    <p class="hint" style="margin:8px 0 0">Automated parsing can make mistakes — verify each value first. Applying keeps a dated record, so uploading another report adds a column you can compare.${coachOnline()?" This file was parsed by the Claude API (its contents were sent to Anthropic).":""}</p>
   </div>`;
   $("#labRevApply").onclick=()=>applyLabImport(cands);
   $("#labRevCancel").onclick=()=>{ el.innerHTML=""; };
 }
 function applyLabImport(cands){
   const el=$("#labImport"); let n=0;
+  const dInp=el.querySelector("#labImportDate");
+  const date=(dInp && dInp.value) ? dInp.value : todayISO();
+  state.labHist = state.labHist || {};
   cands.forEach((c,i)=>{ const chk=el.querySelector(`.labrevchk[data-i="${i}"]`); if(!chk||!chk.checked) return;
     const vi=el.querySelector(`.labrevval[data-i="${i}"]`); const v=(vi?vi.value:String(c.value)).trim();
-    if(v==="") return; (state.labs[c.id]=state.labs[c.id]||{}).v=v; n++; });
+    if(v==="") return;
+    // record a dated reading for comparison (replace same-date entry), keep sorted
+    const arr = state.labHist[c.id] = state.labHist[c.id] || [];
+    const ex = arr.findIndex(r=>r.d===date); if(ex>=0) arr[ex]={d:date,v}; else arr.push({d:date,v});
+    arr.sort((a,b)=>a.d<b.d?-1:1);
+    // the working value shown/scored is the most recent dated reading
+    (state.labs[c.id]=state.labs[c.id]||{}).v = arr[arr.length-1].v;
+    n++; });
   save(); renderLabs(); renderRisks();
-  labImportMsg("ok", `Applied ${n} value${n===1?"":"s"} to your labs. ✓`);
+  labImportMsg("ok", `Applied ${n} value${n===1?"":"s"} for ${esc(fmtShort(date))}. ✓ Upload another report to compare over time.`);
   toast(`Imported ${n} lab value${n===1?"":"s"}.`);
 }
 
