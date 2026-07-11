@@ -253,7 +253,7 @@ const state = {
   vitals:{restHR:"",sbp:"",dbp:"",spo2:"",rr:"",height:"",weight:""},
   vitalsLog:[], labs:{}, labHist:{},
   screen:{}, falls:"", aid:"", smoking:"", alcohol:"", sleep:"", stress:"",
-  medIds:[], medFilter:false, customPrecautions:[], log:[], apiKey:"", apiModel:"claude-opus-4-8"
+  medIds:[], medFilter:false, homeMode:false, customPrecautions:[], log:[], apiKey:"", apiModel:"claude-opus-4-8"
 };
 const MED_FILTERABLE = ["fluoroquinolone","anticoagulant","antiplatelet","opioid","sedative","muscle_relaxant","gabapentinoid","antipsychotic"];
 const MEDMAP = new Map();
@@ -1058,9 +1058,10 @@ function exItemHTML(e, regionArr, ctx, medHidden){
   const swap = ctx ? `<button class="swapbtn" ${dc}>⇄ Swap…</button>` : "";
   const swapbox = ctx ? `<div class="swapbox hide"></div>` : "";
   return `<li class="exitem${medHidden?" medhidden":""}">
-    <div class="top"><span class="en">${e.sig?`<span class="sigpill">🎯 key</span> `:""}${esc(e.n)}</span><span class="ed">${esc(e.d)}</span></div>
+    <div class="top"><span class="en">${e.home?`<span class="homepill">🏠 home</span> `:""}${e.sig?`<span class="sigpill">🎯 key</span> `:""}${esc(e.n)}</span><span class="ed">${esc(e.d)}</span></div>
     <div class="ec">${esc(e.c)}</div>
     ${exertionLine(e)}
+    ${e.home?`<div class="homenote">🏠 <b>Home swap:</b> ${esc(e.homeNote)}</div>`:""}
     ${e.warn?`<span class="warnpill">⚠ Modify — involves ${esc(TAG_LABEL[e.warn]||e.warn)}; keep it symptom-free.</span>`:""}
     ${e.sub?`<span class="subpill">safer substitute for your precautions</span>`:""}
     <div class="exrowtools no-print">
@@ -1095,6 +1096,13 @@ function wireProgram(){
     toast(mf.checked ? "Medication safety filtering ON — high-risk exercises hidden (your edits are kept)."
                      : "Medication safety filtering OFF — all exercises shown.");
   };
+  const hm = $("#programOut #homeModeToggle");
+  if(hm) hm.onchange = ()=>{
+    state.homeMode = hm.checked; save();
+    renderProgram(state.program);   // render-time only — no regeneration, edits kept
+    toast(hm.checked ? "Home mode ON — exercises adapted to household objects (your edits are kept)."
+                     : "Home mode OFF — standard equipment shown.");
+  };
 }
 function openSwap(btn){
   const ci=+btn.dataset.ci, pi=+btn.dataset.pi, ei=+btn.dataset.ei;
@@ -1105,8 +1113,9 @@ function openSwap(btn){
     if(!opts.length){
       box.innerHTML = `<div class="swaphint">No safe alternatives found for this phase.</div>`;
     } else {
-      box.innerHTML = `<div class="swaphint">Tap an exercise to replace <b>${esc(ph.ex[ei].n)}</b>:</div>` +
-        opts.map((o,oi)=>`<div class="swapopt" data-oi="${oi}"><span class="en">${esc(o.n)}</span><span class="ed">${esc(o.d)}</span>${o.warn?`<span class="exwarn">⚠ modify</span>`:""}</div>`).join("");
+      const disp = o => state.homeMode ? homeSwap(o) : o;   // show options in home terms when Home mode is on
+      box.innerHTML = `<div class="swaphint">Tap an exercise to replace <b>${esc(disp(ph.ex[ei]).n)}</b>:</div>` +
+        opts.map((o,oi)=>{ const d=disp(o); return `<div class="swapopt" data-oi="${oi}"><span class="en">${d.home?"🏠 ":""}${esc(d.n)}</span><span class="ed">${esc(d.d)}</span>${o.warn?`<span class="exwarn">⚠ modify</span>`:""}</div>`; }).join("");
       box.querySelectorAll(".swapopt").forEach(op=>op.onclick=()=>{
         openPhases.add(ci+"-"+pi);
         state.program.items[ci].phases[pi].ex[ei] = opts[+op.dataset.oi];
@@ -1235,6 +1244,132 @@ function safetyNotesCard(prog){
     </ul>
     <div class="redflags" style="margin-top:12px"><b>⚠ Seek urgent care</b> for: chest pain, severe breathlessness, fainting, sudden weakness/numbness or trouble speaking, loss of bladder or bowel control, a hot swollen joint with fever, or calf pain/swelling with breathlessness.</div>
     ${prog && prog.clearance ? `<p class="hint" style="margin-top:10px"><b>Because of your history, get medical clearance before starting</b> — ideally with supervised rehab. See your personalised precautions below.</p>` : ""}
+  </div>`;
+}
+
+/* =====================================================================
+   HOME MODE — adapt the plan to ordinary household objects.
+   Render-time transform (like medication filtering): never mutates
+   state.program, so it's fully reversible and keeps the user's edits.
+===================================================================== */
+/* Gym equipment (the exercise's `equipment` field) -> household stand-in
+   used as the name prefix + a "how to improvise it" note. */
+const HOME_PREFIX = {
+  "Dumbbell":  {sub:"Soup-can",   note:"Hold a soup/bean can, a filled water bottle, or a small bag of rice in each hand. Start light (~0.5–1 kg) and add water, coins or rice to progress."},
+  "Kettlebell":{sub:"Water-jug",  note:"Use a filled water jug, a laundry-detergent bottle, or a loaded shopping bag held by the handle."},
+  "Barbell":   {sub:"Backpack",   note:"Swap the barbell for a backpack loaded with books, or a broomstick across the shoulders with a filled bag hung at each end. Keep it light and controlled."},
+  "Med-ball":  {sub:"Ball",       note:"Use a basketball, a filled pillowcase, or a small backpack in place of a medicine ball."},
+  "Sandbag":   {sub:"Duffel-bag", note:"Fill a duffel bag or backpack with books, rice or laundry to build a home 'sandbag'."},
+  "Suspension":{sub:"Door-towel", note:"Loop a strong bath towel or bedsheet over the top of a closed, latched door (or around a sturdy post) and hold both ends."},
+  "Cable":     {sub:"Door-band",  note:"Anchor a resistance band — or a bungee cord / bike inner-tube — in a door hinge or around a heavy sofa leg to replace the cable."},
+  "Machine":   {sub:"Band",       note:"No machine needed — do the band or bodyweight version at home."},
+  "Band":      {sub:"",           note:"No band? A pair of tights, a long belt or a bungee cord works; for many drills a towel you pull against yourself gives similar resistance."}
+};
+/* In-name equipment tokens -> [regex, replacement text, note]. Applied after
+   the prefix swap so props like a plyo box or foam pad also get improvised. */
+const HOME_TOKEN = [
+  [/cane-assisted/i, "broomstick-assisted", "Use a broomstick, mop handle or umbrella as the assisting 'cane'."],
+  [/\bBOSU\b|on foam|on unstable surface|unstable surface/i, "on a cushion", "Stand on a firm sofa cushion, a folded towel or a pillow for the unstable-surface challenge — keep sturdy support nearby."],
+  [/\bbox\b/i, "step", "Use the bottom stair, a low sturdy stool, or a solid chair seat as the 'box' — make sure it can't slip or tip."],
+  [/\bslider\b/i, "towel-slide", "Put a hand towel (on a hard floor) or a sock (on carpet) under the moving foot or hand to slide."],
+  [/sled push \/ drag|\bsled\b/i, "loaded-box push", "Push a laundry basket or box loaded with books across a carpet or smooth floor."],
+  [/45° bench|\bbench\b/i, "sofa/step", "Use the edge of a sofa, a bed, a staircase, or a sturdy chair instead of a bench."],
+  [/\bplate\b/i, "book", "Hold a heavy book, a baking tray, or a filled water bottle instead of a weight plate."],
+  [/\(poles\)|\bpoles\b/i, "with broomsticks", "Use two broomsticks, mop handles, or ski/trekking poles."]
+];
+/* Cardio 'machine' work -> a no-equipment home substitute (keyword on name). */
+const HOME_CARDIO = [
+  [/cycl|bike/i,        "Ride a real bike if you have one, or march / step in place and pump the arms; a seated 'march' in a chair works if standing is limited."],
+  [/row/i,              "Replace with band or towel seated rows plus a hip hinge; or brisk incline walking for the aerobic effect."],
+  [/elliptical|cross-trainer/i, "Brisk walking, marching on the spot, or repeated sit-to-stands give a similar low-impact aerobic workout."],
+  [/stair/i,            "Use a real staircase — step up and down a safe number of stairs at a steady pace, holding the rail."],
+  [/treadmill/i,        "Walk outdoors or around the house, or march on the spot; add a hallway 'shuttle' to keep it continuous."],
+  [/swim|aqua/i,        "Aquatic work needs a pool — on land, substitute a gentle full-body circuit (marching, arm circles, sit-to-stands)."],
+  [/walk|jog|run/i,     "Walk or jog outdoors or around the house; a hallway shuttle or marching on the spot works in bad weather."]
+];
+/* Household object reference for the "what can I use?" list. */
+const HOME_GEAR = [
+  ["Dumbbells","Soup/bean cans, filled water bottles, a bag of rice or flour, or filled socks"],
+  ["Kettlebell","A filled water jug, a detergent bottle, or a loaded shopping/tote bag"],
+  ["Barbell","A broomstick with a loaded bag hung at each end, or a heavy backpack"],
+  ["Weight plates","Heavy books, a baking tray, or a bag of sugar/flour"],
+  ["Resistance band / cable","Tights, a bungee cord, a bike inner-tube, or a towel; anchor a band in a door or around a sofa leg"],
+  ["Medicine ball","A basketball, a filled pillowcase, or a small backpack"],
+  ["Sandbag","A duffel bag or backpack filled with books, rice or laundry"],
+  ["Suspension trainer","A strong towel or bedsheet over a closed, latched door"],
+  ["Plyo box / step","The bottom stair, a low sturdy stool, or a solid chair"],
+  ["Balance pad / BOSU","A firm sofa cushion, a folded towel, or a pillow"],
+  ["Gym sliders","A hand towel on a hard floor, or socks on carpet"],
+  ["Weight sled","A laundry basket or box loaded with books, pushed across the floor"],
+  ["Exercise cane","A broomstick, mop handle, or umbrella"],
+  ["Cardio machine","Brisk walking, marching on the spot, stair-climbing at home, or sit-to-stands"]
+];
+const HOME_LIGHT = new Set(["Dumbbell","Kettlebell","Barbell","Med-ball","Sandbag"]); // improvised loads run light -> cue higher reps
+/* Program exercises don't carry an `equipment` field, so infer it from the
+   leading word of the name (the generator prefixes it: "Dumbbell …", "Cable …").
+   reEsc() (regex-escape helper) is defined later in this file — fine, both are
+   only referenced at render time, after the whole script has evaluated. */
+function detectEquip(e){
+  if(e.equipment && HOME_PREFIX[e.equipment]) return e.equipment;
+  for(const k of Object.keys(HOME_PREFIX)){
+    if(new RegExp("^"+reEsc(k)+"\\b","i").test(e.n)) return k;
+  }
+  return "";
+}
+/* Return a display copy of an exercise adapted for household objects.
+   Non-destructive: keeps tags/pattern/region/sig/warn/sub so the engine,
+   Explain and cardio-target logic still work on the copy. */
+function homeSwap(e){
+  if(!e) return e;
+  const o = Object.assign({}, e);
+  const notes = [];
+  let name = e.n;
+  const equip = detectEquip(e);
+  // 1) primary equipment -> household stand-in (skip cardio machines: handled below)
+  const isCardio = (e.tags||[]).includes("aerobic") || e.pattern==="cardio";
+  const pfx = HOME_PREFIX[equip];
+  if(pfx && !(equip==="Machine" && isCardio)){
+    if(pfx.sub){
+      const re = new RegExp("^"+reEsc(equip)+"\\b","i");
+      name = re.test(name) ? name.replace(re, pfx.sub) : pfx.sub+" "+name;
+    }
+    if(pfx.note) notes.push(pfx.note);
+  }
+  // 2) in-name equipment tokens (box, foam, slider, sled, bench, plate, cane, poles)
+  for(const [re, rep, note] of HOME_TOKEN){
+    if(re.test(name)){ name = name.replace(re, rep); if(note) notes.push(note); }
+  }
+  // 3) cardio substitution note
+  if(isCardio){
+    for(const [re, note] of HOME_CARDIO){ if(re.test(e.n)){ notes.push(note); break; } }
+  }
+  // 4) lighter improvised loads -> nudge toward higher reps / slower tempo
+  if(HOME_LIGHT.has(equip) && /^\s*\d+\s*[×x]/.test(e.d||"")){
+    notes.push("Household weights are light — do more reps (aim 12–20) or slow the tempo so the last few feel hard.");
+  }
+  o.n = name.replace(/\s{2,}/g," ").trim();
+  if(notes.length){ o.home = true; o.homeNote = notes.join(" "); }
+  return o;
+}
+/* The Home-mode button + reference card shown in the Program. */
+function homeCard(adaptedCount){
+  const on = !!state.homeMode;
+  const gear = HOME_GEAR.map(([g,h])=>`<tr><td>${esc(g)}</td><td>${esc(h)}</td></tr>`).join("");
+  const banner = on ? `<div class="banner load" style="margin:12px 0 0"><b>🏠 Home mode is ON.</b> ${
+      adaptedCount>0 ? `${adaptedCount} exercise${adaptedCount===1?"":"s"} adapted to use everyday objects.` : "Your exercises already use bodyweight or household items."
+    } Tap ⓘ on any exercise for the household swap.</div>` : "";
+  return `<div class="card homecard">
+    <h2>🏠 Home-friendly equipment</h2>
+    <p class="hint">No gym? Turn on Home mode to adapt every exercise in your plan to <b>ordinary objects you already have</b> — soup cans, water jugs, a broomstick, a backpack, a sturdy chair. It only changes how the plan is displayed, keeps any exercises you've edited, and is fully reversible.</p>
+    <label class="medfilter no-print">
+      <input type="checkbox" id="homeModeToggle" ${on?"checked":""} />
+      <span><b>Adapt my plan for home (use household objects)</b> — rewrites gym equipment into everyday-object equivalents and adds a "how to improvise it" note to each exercise.</span>
+    </label>${banner}
+    <details class="homegear"${on?" open":""}>
+      <summary>What household objects can I use?</summary>
+      <table class="hometbl"><thead><tr><th>Instead of…</th><th>Use at home</th></tr></thead><tbody>${gear}</tbody></table>
+      <p class="hint" style="margin-top:8px">⚠ Safety: make sure chairs/steps can't slip or tip, load bags/backpacks only as heavy as you can control, and check your grip on cans and bottles. Get clearance first if your plan advises it.</p>
+    </details>
   </div>`;
 }
 
@@ -1414,7 +1549,13 @@ function renderProgram(prog){
   if(mflags.length) prog.items.forEach(it=>it.phases.forEach(ph=>{
     medHiddenTotal += window.applyContra(ph.ex, mflags).removed.length;
   }));
+  // render-time home adaptation (household-object equivalents; fully reversible)
+  let homeAdapted = 0;
+  if(state.homeMode) prog.items.forEach(it=>it.phases.forEach(ph=>ph.ex.forEach(e=>{
+    if(homeSwap(e).home) homeAdapted++;
+  })));
 
+  html += homeCard(homeAdapted);
   html += safetyNotesCard(prog);
   html += riskAwarenessCard(prog);
   html += vitalsCard(prog);
@@ -1429,7 +1570,10 @@ function renderProgram(prog){
       const key = ci+"-"+i;
       const open = (i===0 || openPhases.has(key)) ? "open" : "";
       const hiddenNames = mflags.length ? new Set(window.applyContra(ph.ex, mflags).removed.map(r=>r.n)) : null;
-      const rows = ph.ex.map((e,ei)=>exItemHTML(e, [item.region], {ci, pi:i, ei}, hiddenNames && hiddenNames.has(e.n))).join("");
+      const rows = ph.ex.map((e,ei)=>{
+        const disp = state.homeMode ? homeSwap(e) : e;      // display copy only — real exercise unchanged
+        return exItemHTML(disp, [item.region], {ci, pi:i, ei}, hiddenNames && hiddenNames.has(e.n));
+      }).join("");
       html += `<div class="phase ${open}">
         <div class="head" onclick="togglePhase(this,'${key}')">
           <div class="pnum">${i+1}</div>

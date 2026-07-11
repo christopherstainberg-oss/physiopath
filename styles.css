@@ -176,6 +176,17 @@ input[type=range]{flex:1;accent-color:var(--brand);height:30px}
 .exitem .warnpill{display:inline-block;margin-top:5px;font-size:11.5px;color:var(--warn);background:rgba(255,204,87,.12);
   border:1px solid rgba(255,204,87,.35);border-radius:8px;padding:3px 8px}
 .exitem .subpill{display:inline-block;margin-top:5px;font-size:11px;color:var(--brand-2);background:rgba(92,225,166,.1);border-radius:8px;padding:2px 7px}
+.homepill{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.3px;color:#04121f;
+  background:var(--brand-2);border-radius:999px;padding:1px 7px;vertical-align:1px}
+.exitem .homenote{margin-top:5px;font-size:12px;line-height:1.5;color:var(--muted);
+  background:rgba(92,225,166,.08);border:1px solid rgba(92,225,166,.28);border-radius:9px;padding:6px 9px}
+.exitem .homenote b{color:var(--brand-2)}
+.homecard .homegear{margin-top:12px;border:1px solid var(--line);border-radius:10px;padding:2px 12px}
+.homecard .homegear summary{cursor:pointer;font-weight:600;font-size:13px;padding:9px 0;color:var(--brand-2)}
+.hometbl{width:100%;border-collapse:collapse;font-size:12.5px;margin:4px 0 8px}
+.hometbl th,.hometbl td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.hometbl th{color:var(--muted);font-weight:600}
+.hometbl td:first-child{font-weight:600;white-space:nowrap;color:var(--text)}
 .removed{background:rgba(255,107,107,.06);border:1px dashed rgba(255,107,107,.35);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:12.5px}
 .removed b{color:var(--danger)}
 .redflags{background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.35);border-radius:12px;padding:11px 14px;margin-top:12px;font-size:13px}
