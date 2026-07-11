@@ -249,7 +249,7 @@ function weeksPostOp(){
 const state = {
   step:0, age:"", sex:"", flags:[], parq:{pain:false,faint:false,doc:false},
   meds:"", notes:"", condIds:[], weeks:null, painRest:3, painMove:4, surgery:"no",
-  surgeryType:"auto", surgeryDate:"", fitness:"mod", goal:"", program:null,
+  surgeryType:"auto", surgeryDate:"", fitness:"mod", goal:"", returnActivities:[], returnSports:[], program:null,
   vitals:{restHR:"",sbp:"",dbp:"",spo2:"",rr:"",height:"",weight:""},
   vitalsLog:[], labs:{}, labHist:{},
   screen:{}, falls:"", aid:"", smoking:"", alcohol:"", sleep:"", stress:"",
@@ -709,6 +709,96 @@ function rtsFor(cond, phaseIdx){
   return out.map(a=>({ n:a.n, d:a.d, c:a.c, tags:a.tags||[], sig:true }));
 }
 
+/* ---------- return-to-sport tailoring ----------
+   The sport(s) the user wants to get back to (state.returnSports, free text
+   from the 10,000-item picker) adjust the LATE phases: each demand archetype
+   matched by keyword injects sport-specific "🏅" signature exercises + a focus
+   note. Keyword-based so it works for any typed/picked sport variation. All
+   carry engine tags, so applyContra() still gates them. */
+const SPORT_DEMANDS = [
+  {re:/basketball|volleyball|netball|high jump|spike|dunk|jump/i, label:"jump / court",
+   note:"Court/jump sport: build jump power and safe single-leg landing & rebound control.",
+   add:[{p:3,n:"Jump-prep: pogo hops & squat jumps",d:"3×10",c:"Springy, quiet landings",tags:["impact","high_intensity"]},
+        {p:4,n:"Max vertical jump & rebound-landing control",d:"3×6",c:"Explode up; land soft, balanced and even",tags:["impact","high_intensity","balance"]}]},
+  {re:/soccer|football|rugby|hockey|lacrosse|handball|ultimate|gaelic|aussie rules|hurling|camogie|korfball|floorball/i, label:"cutting / field",
+   note:"Multidirectional field sport: agility, deceleration and sound cutting mechanics.",
+   add:[{p:3,n:"Agility ladder & lateral shuffle footwork",d:"3×20–30s",c:"Fast, low and controlled",tags:["weight_bearing","high_intensity","balance"]},
+        {p:4,n:"Cutting, deceleration & reactive change-of-direction",d:"3×6 each side",c:"Plant and cut, knee over foot",tags:["impact","high_intensity","balance"]}]},
+  {re:/tennis|badminton|squash|racquet|pickleball|padel|table tennis|pelota|platform tennis/i, label:"racquet / overhead",
+   note:"Racquet/overhead sport: rotator-cuff resilience plus trunk-driven rotational power.",
+   add:[{p:2,n:"Rotator-cuff & scapular control (band ER + rows)",d:"3×15",c:"Elbow tucked; squeeze the shoulder blade"},
+        {p:4,n:"Overhead & rotational power (medicine-ball throws)",d:"3×8 each",c:"Drive from the legs and trunk",tags:["overhead","high_intensity"]}]},
+  {re:/baseball|softball|cricket|javelin|water polo|throw|pitch|bowling \(/i, label:"throwing",
+   note:"Throwing sport: rotator-cuff strength and a graded throwing progression.",
+   add:[{p:2,n:"Rotator-cuff external rotation & scapular strength",d:"3×15",c:"Controlled, pain-free"},
+        {p:4,n:"Graded throwing progression & rotational med-ball power",d:"3×8",c:"Build distance/effort weekly",tags:["overhead","high_intensity"]}]},
+  {re:/running|marathon|sprint|triathlon|cross-country|track and field|steeplechase|hurdles|jog|duathlon|parkour|obstacle course|orienteering|race walk/i, label:"running / endurance",
+   note:"Running/endurance: a graded return-to-run plus calf and impact tolerance are key.",
+   add:[{p:3,n:"Return-to-run walk/run intervals",d:"per return-to-run plan",c:"Pain-free; build run minutes gradually",tags:["impact","aerobic"]},
+        {p:4,n:"Tempo runs, strides & hill repeats",d:"per plan",c:"Add speed and volume ~10%/week",tags:["impact","aerobic","high_intensity"]}]},
+  {re:/boxing|kickbox|muay|mma|mixed martial|wrestl|judo|jiu-jitsu|karate|taekwondo|kung fu|krav|sambo|capoeira|kendo|sumo|hapkido|wing chun|fencing/i, label:"combat",
+   note:"Combat sport: rotational power, core control and a graded return to contact.",
+   add:[{p:3,n:"Rotational & anti-rotation core power",d:"3×10 each",c:"Braced, controlled, then faster",tags:["high_intensity"]},
+        {p:4,n:"Explosive strike/takedown drills & impact conditioning",d:"per plan",c:"Progress contact gradually",tags:["impact","high_intensity"]}]},
+  {re:/swimming|water polo|diving|synchronised swimming|open water/i, label:"swimming",
+   note:"Swimming: shoulder mobility, rotator-cuff endurance and a gradual yardage build.",
+   add:[{p:2,n:"Shoulder mobility & rotator-cuff endurance",d:"3×15",c:"Full, pain-free range"},
+        {p:4,n:"Stroke-specific & core-endurance work",d:"per plan",c:"Rebuild yardage gradually",tags:["overhead"]}]},
+  {re:/cycling|\bbmx\b|\bbike\b|spinning|cyclocross|gravel|mountain bik|unicycl/i, label:"cycling",
+   note:"Cycling: leg strength-endurance and gradual saddle-position and intensity tolerance.",
+   add:[{p:3,n:"Quad/glute strength-endurance & position tolerance",d:"3×15",c:"Build time in the riding position"},
+        {p:4,n:"Interval & hill efforts on the bike",d:"per plan",c:"Add intensity gradually",tags:["aerobic","high_intensity"]}]},
+  {re:/golf|discus|shot put|hammer throw|curling/i, label:"rotational",
+   note:"Rotational sport: thoracic and hip rotation with a graded swing progression.",
+   add:[{p:3,n:"Thoracic & hip rotation mobility + anti-rotation core",d:"3×10 each",c:"Smooth, controlled turn"},
+        {p:4,n:"Rotational power & graded swing progression",d:"3×8 each",c:"Half-swings first; build speed",tags:["high_intensity"]}]},
+  {re:/weightlifting|powerlifting|bodybuilding|crossfit|strongman|calisthenic|kettlebell|functional fitness|hyrox|olympic lift|clean and jerk|snatch/i, label:"strength",
+   note:"Strength sport: rebuild technique, then progressively load toward heavy/power work.",
+   add:[{p:3,n:"Progressive compound lifting (technique focus)",d:"3×5–8",c:"Perfect form; add load weekly",tags:["valsalva","weight_bearing"]},
+        {p:4,n:"Heavy & power lifting progression",d:"per plan",c:"Periodise; respect recovery",tags:["valsalva","high_intensity","weight_bearing"]}]},
+  {re:/climbing|bouldering|mountaineer|via ferrata|scrambling/i, label:"climbing",
+   note:"Climbing: pulling and grip strength with cautious, graded finger loading.",
+   add:[{p:3,n:"Grip, pulling & scapular strength",d:"3×8–12",c:"Controlled; protect the fingers",tags:["grip_isometric"]},
+        {p:4,n:"Lock-off & graded finger/hangboard loading",d:"per plan",c:"Very gradual finger loading",tags:["grip_isometric","high_intensity"]}]},
+  {re:/gymnastics|dance|ballet|cheerlead|acrobat|trampolin|tumbl|figure skating|aerial|pole fitness|pole dancing|baton|salsa|breakdanc/i, label:"gymnastics / dance",
+   note:"Gymnastics/dance: flexibility, single-leg control and safe landing mechanics.",
+   add:[{p:3,n:"Single-leg control, hip & spine flexibility",d:"3×10 each",c:"Control through full range",tags:["balance"]},
+        {p:4,n:"Landing control & explosive skill progression",d:"3×6",c:"Soft landings; rebuild skills gradually",tags:["impact","balance","high_intensity"]}]},
+  {re:/skiing|snowboard|skateboard|surf|wakeboard|longboard|inline|roller|scooter|bmx freestyle/i, label:"snow / board",
+   note:"Snow/board sport: eccentric quad strength, balance and landing/edge control.",
+   add:[{p:3,n:"Eccentric quad strength & balance on an unstable surface",d:"3×10",c:"Slow lowering; stay steady",tags:["balance"]},
+        {p:4,n:"Landing, edge control & reactive balance",d:"3×6",c:"Absorb and stick the landings",tags:["impact","balance"]}]},
+  {re:/rowing|kayak|canoe|paddle|dragon boat|sailing|scull/i, label:"rowing / paddle",
+   note:"Rowing/paddle: hinge and pulling endurance, then power and trunk endurance.",
+   add:[{p:3,n:"Hip-hinge & pulling strength-endurance",d:"3×12",c:"Neutral spine; strong, smooth pull"},
+        {p:4,n:"Power & trunk-endurance intervals",d:"per plan",c:"Build stroke power gradually",tags:["high_intensity"]}]},
+  {re:/horse riding|dressage|show jumping|eventing|rodeo|\bpolo\b|equestrian|barrel racing/i, label:"equestrian",
+   note:"Equestrian: core and adductor endurance, balance and grip for the saddle.",
+   add:[{p:3,n:"Core, adductor & postural endurance",d:"3×12",c:"Tall posture, braced trunk"},
+        {p:4,n:"Balance, grip & impact-absorption for the saddle",d:"3×8",c:"Progress time in the saddle",tags:["balance"]}]},
+  {re:/yoga|pilates|tai chi|qigong|barre|nordic walking|walking football|walking netball|walking basketball|aqua/i, label:"low-impact / mind-body",
+   note:"Low-impact practice: mobility, core control and balance.",
+   add:[{p:2,n:"Controlled mobility through the target area",d:"2–3×30s",c:"Gentle and pain-free"},
+        {p:3,n:"Core control & single-leg balance",d:"3×10",c:"Slow and controlled",tags:["balance"]}]}
+];
+function matchedSportDemands(){
+  const sports = state.returnSports || [];
+  const hits = []; const seen = new Set();
+  for(const sp of sports) for(const d of SPORT_DEMANDS)
+    if(d.re.test(sp) && !seen.has(d.label)){ seen.add(d.label); hits.push(d); }
+  return hits;
+}
+function sportFor(phaseIdx){
+  const p = phaseIdx+1;
+  const picked = []; const seen = new Set();
+  for(const d of matchedSportDemands())
+    (d.add||[]).filter(a=>a.p===p).forEach(a=>{
+      const k=a.n.toLowerCase();
+      if(!seen.has(k)){ seen.add(k); picked.push({ n:a.n, d:a.d, c:a.c, tags:a.tags||[], sig:true, sport:true }); }
+    });
+  return picked.slice(0,3);   // cap sport additions per phase
+}
+
 /* ---------- build the program ---------- */
 /* Realistic exercises per phase (protocol + signature + library-matched top-up). */
 const PHASE_TARGET = [6,6,7,7];
@@ -743,15 +833,15 @@ function generateProgram(){
   const tmpl = TEMPLATE[track];
   const removedAll = new Map();
 
-  const items = conds.map(c=>{
+  const items = conds.map((c,ci)=>{
     const proto = window.getProtocol(c.protocol);
     const focus = detectFocus(c.name);
     let cursor=1;
     const phases = proto.map((pool,p)=>{
       const len = phaseWeeks[p], wkStart=cursor, wkEnd=cursor+len-1; cursor=wkEnd+1;
-      // prepend injury-specific signature + return-to-sport balance/agility exercises
-      // (dedupe against each other and the generic pool)
-      const sigRaw = [...signatureFor(focus, p+1), ...rtsFor(c, p)];
+      // prepend injury-specific signature + return-to-sport balance/agility + chosen-sport
+      // exercises (sport on the primary condition only; dedupe against pool)
+      const sigRaw = [...signatureFor(focus, p+1), ...rtsFor(c, p), ...(ci===0 ? sportFor(p) : [])];
       const sig = []; const sigSeen = new Set();
       sigRaw.forEach(s=>{ const k=s.n.toLowerCase(); if(!sigSeen.has(k)){ sigSeen.add(k); sig.push(s); } });
       const seen = new Set(sig.map(s=>s.n.toLowerCase()));
@@ -1106,7 +1196,7 @@ function exItemHTML(e, regionArr, ctx, medHidden){
   const swap = ctx ? `<button class="swapbtn" ${dc}>⇄ Swap…</button>` : "";
   const swapbox = ctx ? `<div class="swapbox hide"></div>` : "";
   return `<li class="exitem${medHidden?" medhidden":""}">
-    <div class="top"><span class="en">${e.home?`<span class="homepill">🏠 home</span> `:""}${e.sig?`<span class="sigpill">🎯 key</span> `:""}${esc(e.n)}</span><span class="ed">${esc(e.d)}</span></div>
+    <div class="top"><span class="en">${e.home?`<span class="homepill">🏠 home</span> `:""}${e.sport?`<span class="sportpill">🏅 sport</span> `:""}${e.sig?`<span class="sigpill">🎯 key</span> `:""}${esc(e.n)}</span><span class="ed">${esc(e.d)}</span></div>
     <div class="ec">${esc(e.c)}</div>
     ${exertionLine(e)}
     ${e.home?`<div class="homenote">🏠 <b>Home swap:</b> ${esc(e.homeNote)}</div>`:""}
@@ -1464,20 +1554,43 @@ const HOME_CARDIO = [
 ];
 /* Household object reference for the "what can I use?" list. */
 const HOME_GEAR = [
-  ["Dumbbells","Soup/bean cans, filled water bottles, a bag of rice or flour, or filled socks"],
-  ["Kettlebell","A filled water jug, a detergent bottle, or a loaded shopping/tote bag"],
-  ["Barbell","A broomstick with a loaded bag hung at each end, or a heavy backpack"],
-  ["Weight plates","Heavy books, a baking tray, or a bag of sugar/flour"],
-  ["Resistance band / cable","Tights, a bungee cord, a bike inner-tube, or a towel; anchor a band in a door or around a sofa leg"],
-  ["Medicine ball","A basketball, a filled pillowcase, or a small backpack"],
-  ["Sandbag","A duffel bag or backpack filled with books, rice or laundry"],
-  ["Suspension trainer","A strong towel or bedsheet over a closed, latched door"],
-  ["Plyo box / step","The bottom stair, a low sturdy stool, or a solid chair"],
-  ["Balance pad / BOSU","A firm sofa cushion, a folded towel, or a pillow"],
-  ["Gym sliders","A hand towel on a hard floor, or socks on carpet"],
-  ["Weight sled","A laundry basket or box loaded with books, pushed across the floor"],
-  ["Exercise cane","A broomstick, mop handle, or umbrella"],
-  ["Cardio machine","Brisk walking, marching on the spot, stair-climbing at home, or sit-to-stands"]
+  ["Dumbbells","Soup/bean cans, filled water bottles, a bag of rice/flour/sugar, filled socks, or tins of paint"],
+  ["Kettlebell","A filled water jug, a detergent bottle, a paint can, or a loaded shopping/tote bag by the handle"],
+  ["Barbell","A broomstick or mop handle with a loaded bag hung at each end, or a heavy backpack across the shoulders"],
+  ["Weight plates","Heavy books, a baking tray, a bag of sugar/flour, a large tin, or paving slabs"],
+  ["Heavier weights","A loaded backpack or suitcase, a bucket of water/sand, a bag of cat litter, a car tyre, or a cinder block"],
+  ["Resistance band / cable","Tights or pantyhose, a bungee cord, a bike inner-tube, an old belt/tie, or a towel; anchor a band in a door or around a sofa leg"],
+  ["Medicine ball","A basketball, a filled pillowcase, a small backpack, or a bag of flour"],
+  ["Slam ball / sandbag","A duffel bag or backpack filled with books, rice, sand or laundry"],
+  ["Suspension trainer (TRX)","A strong bath towel or bedsheet looped over the top of a closed, latched door"],
+  ["Pull-up bar","A door-frame pull-up bar, a sturdy scaffold/park bar, a strong low tree branch, or do inverted rows gripping the edge of a solid table"],
+  ["Dip bars","The edges of two sturdy chairs, kitchen worktops, or parallel counters"],
+  ["Plyo box / step / bench","The bottom stair, a low sturdy stool, a solid chair, a coffee table, or the edge of a bed/sofa"],
+  ["Aerobic step","The bottom stair or a thick sturdy book/board that won't slip"],
+  ["Balance pad / BOSU / wobble board","A firm sofa cushion, a folded towel/blanket, a pillow, or a rolled-up yoga mat"],
+  ["Gym sliders","A hand towel or paper plate on a hard floor, or socks on carpet"],
+  ["Weight sled","A laundry basket, a box, or a towel loaded with books, pushed/dragged across the floor"],
+  ["Foam roller","A rolling pin, a filled water/wine bottle, or a rolled-up towel; a tennis/lacrosse ball for trigger points"],
+  ["Ab wheel","A hand towel or paper plates on a smooth floor, or a filled round bottle to roll"],
+  ["Ankle / wrist weights","A long sock filled with rice or coins and tied on, or a resistance band"],
+  ["Weight vest","A backpack loaded evenly (or one on the front and one on the back)"],
+  ["Grip / forearm trainer","Squeeze a tennis ball, a rolled sock, or a bulldog clip; a towel wrung out"],
+  ["Jump rope","An actual rope or length of washing line, or just mime the skip if space/ceiling is tight"],
+  ["Agility ladder","Lay a rope in rungs, chalk/tape lines on the floor, or space out socks/cups"],
+  ["Cones / markers","Cups, tin cans, shoes, water bottles, or rolled-up socks"],
+  ["Exercise cane / bar","A broomstick, mop handle, umbrella, or length of dowel"],
+  ["Yoga block / strap","A thick book or stack of books; a belt, tie, dressing-gown cord or towel as the strap"],
+  ["Cardio machine","Brisk walking, marching on the spot, stair-climbing at home, sit-to-stands, or a skipping rope"]
+];
+/* Note-only home swaps: add a "how to improvise" note without renaming the exercise. */
+const HOME_NOTE = [
+  [/pull-?up|chin-?up|lat pull-?down|pull-?down|dead-?hang/i, "No bar? Grip the edge of a sturdy table for inverted rows, use a door-frame pull-up bar or a strong tree branch, or anchor a band over a door for pull-downs."],
+  [/\bdip\b|triceps dip|bench dip/i, "Use the edges of two sturdy chairs or a kitchen worktop for dips — make sure they're stable."],
+  [/foam[- ]?roll/i, "No foam roller? A rolling pin, a filled water/wine bottle, or a rolled towel works; a tennis ball for trigger points."],
+  [/skipping|jump rope|jump-?rope/i, "Use an actual rope or washing line, or just mime the skip if the ceiling/space is tight."],
+  [/\bladder\b|agility ladder/i, "No ladder? Lay a rope in rungs, or chalk/tape lines (or space out socks) on the floor."],
+  [/\bhangboard|finger[- ]?board/i, "Use a sturdy door frame or a solid ledge for finger holds — go very gently and stop if the fingers hurt."],
+  [/med-?ball throw|wall ball|slam/i, "Use a basketball or a small loaded backpack against a solid outside wall (not a window)."]
 ];
 const HOME_LIGHT = new Set(["Dumbbell","Kettlebell","Barbell","Med-ball","Sandbag"]); // improvised loads run light -> cue higher reps
 /* Program exercises don't carry an `equipment` field, so infer it from the
@@ -1518,6 +1631,8 @@ function homeSwap(e){
   if(isCardio){
     for(const [re, note] of HOME_CARDIO){ if(re.test(e.n)){ notes.push(note); break; } }
   }
+  // 3b) note-only improvisations (pull-up bar, dip bars, foam roller, rope, ladder…)
+  for(const [re, note] of HOME_NOTE){ if(re.test(e.n)){ notes.push(note); break; } }
   // 4) lighter improvised loads -> nudge toward higher reps / slower tempo
   if(HOME_LIGHT.has(equip) && /^\s*\d+\s*[×x]/.test(e.d||"")){
     notes.push("Household weights are light — do more reps (aim 12–20) or slow the tempo so the last few feel hard.");
@@ -1545,6 +1660,22 @@ function homeCard(adaptedCount){
       <table class="hometbl"><thead><tr><th>Instead of…</th><th>Use at home</th></tr></thead><tbody>${gear}</tbody></table>
       <p class="hint" style="margin-top:8px">⚠ Safety: make sure chairs/steps can't slip or tip, load bags/backpacks only as heavy as you can control, and check your grip on cans and bottles. Get clearance first if your plan advises it.</p>
     </details>
+  </div>`;
+}
+
+/* Return-to-activity & sport goals card + the sport-specific focus notes. */
+function returnGoalsCard(){
+  const acts = state.returnActivities || [], sports = state.returnSports || [];
+  if(!acts.length && !sports.length) return "";
+  const foci = matchedSportDemands().map(d=>d.note);
+  const actHtml = acts.length ? `<div class="rgblock"><b>🎯 Everyday activities you're working toward:</b> ${acts.map(esc).join(" · ")}</div>` : "";
+  const sportHtml = sports.length ? `<div class="rgblock"><b>🏅 Sport goals:</b> ${sports.map(esc).join(" · ")}</div>` : "";
+  const focusHtml = foci.length ? `<ul class="notelist">${foci.map(f=>`<li>${esc(f)}</li>`).join("")}</ul>
+    <p class="hint">Sport-specific drills have been woven into your later phases (look for the <b>🏅 sport</b> tag). Return-to-sport work is late-stage — get clearance from your clinician and pass return-to-sport criteria (near-full strength, control and confidence, ~90%+ of the other side) before full return.</p>` : "";
+  return `<div class="card rgcard">
+    <h2>🎯 Your return-to-activity &amp; sport goals</h2>
+    ${actHtml}${sportHtml}${focusHtml}
+    ${(!foci.length && sports.length) ? `<p class="hint">Your plan already targets the strength, control and confidence you'll need — progress the later phases toward these goals.</p>` : ""}
   </div>`;
 }
 
@@ -1730,6 +1861,7 @@ function renderProgram(prog){
     if(homeSwap(e).home) homeAdapted++;
   })));
 
+  html += returnGoalsCard();
   html += homeCard(homeAdapted);
   html += safetyNotesCard(prog);
   html += riskAwarenessCard(prog);
@@ -2061,6 +2193,53 @@ function initDetails(){
   $("#surgeryDate").oninput=e=>{ state.surgeryDate=e.target.value; updatePostopLabel(); save(); };
   $("#fitness").oninput=e=>{ state.fitness=e.target.value; save(); };
   $("#goal").oninput=e=>{ state.goal=e.target.value; save(); };
+  // auto-populate return-to activity & sport pickers
+  setupAutocomplete("activitySearch","activityResults","activityChips", window.ACTIVITIES, "returnActivities",
+    { onChange:()=>{ if(state.program && state.step===3) renderProgram(state.program); } });
+  setupAutocomplete("sportSearch","sportResults","sportChips", window.SPORTS, "returnSports",
+    { onChange:()=>{ if(state.program){ state.program=generateProgram(); save(); if(state.step===3) renderProgram(state.program); } } });
+}
+/* ---- reusable auto-populate (typeahead + multi-add chips) ---- */
+function acFilter(data, q, limit){
+  if(!data || !data.length) return [];
+  const toks = q.toLowerCase().split(/\s+/).filter(Boolean);
+  if(!toks.length) return [];
+  const res = [];
+  for(let i=0;i<data.length && res.length<limit;i++){
+    const l = data[i].toLowerCase();
+    if(toks.every(t=>l.includes(t))) res.push(data[i]);
+  }
+  return res;
+}
+function setupAutocomplete(inputId, resultsId, chipsId, data, stateKey, opts){
+  opts = opts || {};
+  const input=$("#"+inputId), results=$("#"+resultsId), chips=$("#"+chipsId);
+  if(!input || !results || !chips) return;
+  const list = () => (state[stateKey] = state[stateKey] || []);
+  const draw = () => {
+    chips.innerHTML = list().map((v,i)=>`<span class="selchip">${esc(v)} <span class="x" data-i="${i}" title="Remove">✕</span></span>`).join("");
+    chips.querySelectorAll(".x").forEach(x=>x.onclick=()=>{ list().splice(+x.dataset.i,1); save(); if(opts.onChange) opts.onChange(); draw(); });
+  };
+  const add = (val) => {
+    val=(val||"").replace(/\s+/g," ").trim(); if(!val) return;
+    const arr=list();
+    if(!arr.some(v=>v.toLowerCase()===val.toLowerCase())){ arr.push(val); save(); if(opts.onChange) opts.onChange(); }
+    input.value=""; results.innerHTML=""; results.classList.add("hide"); draw();
+  };
+  let t;
+  input.oninput = () => { clearTimeout(t); t=setTimeout(()=>{
+    const q=input.value.trim();
+    if(!q){ results.innerHTML=""; results.classList.add("hide"); return; }
+    const matches = acFilter(data, q, 30);
+    const rows = matches.map(m=>`<div class="result acrow" data-v="${esc(m)}"><span class="rn">${esc(m)}</span><span class="add">+</span></div>`).join("");
+    const custom = `<div class="result acrow acadd" data-v="${esc(q)}"><span class="rn">＋ Add “${esc(q)}”</span><span class="add">+</span></div>`;
+    results.innerHTML = rows + custom;
+    results.classList.remove("hide");
+    results.querySelectorAll(".acrow").forEach(r=>r.onclick=()=>add(r.dataset.v));
+  }, 110); };
+  input.onkeydown = (e)=>{ if(e.key==="Enter"){ e.preventDefault(); add(input.value); } };
+  input.onblur = ()=> setTimeout(()=>results.classList.add("hide"), 180);
+  draw();
 }
 function toggleSurgeryExtra(){
   const show = state.surgery==="yes" || !!detectSurgery();
@@ -3326,6 +3505,7 @@ function buildCoachSystem(){
   const hrLine = hz ? `max HR ≈ ${hz.hrmax} bpm (Tanaka), moderate zone ${fmtRange(hz.zones.moderate)} bpm; recommended effort ${borgTarget().label}${onBetaBlocker()?"; on a beta-blocker, so HR targets are unreliable — advise RPE/talk-test":""}` : `age not set — advise Borg RPE ${borgTarget().label}`;
   const lifestyle = [state.smoking&&`smoking ${state.smoking}`, state.alcohol&&`alcohol ${state.alcohol}`, state.sleep&&`sleep ${state.sleep}`, state.stress&&`stress ${state.stress}`, state.falls&&`falls/yr ${state.falls}`, (state.aid&&state.aid!=="none")&&`walking aid ${state.aid}`].filter(Boolean).join(", ") || "not specified";
   const redflags = Object.entries(state.screen||{}).filter(([,val])=>val).map(([k])=>k).join(", ") || "none";
+  const goals = [ (state.returnActivities||[]).length && `activities: ${state.returnActivities.join(", ")}`, (state.returnSports||[]).length && `sport: ${state.returnSports.join(", ")}` ].filter(Boolean).join("; ") || "none specified";
   const abnormalLabs = LABS.filter(l=>{ const s=labStatusOf(l); return s==="high"||s==="low"; }).map(l=>`${l.name} ${labStatusOf(l)}`).join(", ") || "none entered/all in range";
   const riskAreas = computeRisks().filter(r=>r.level!=="low").map(r=>`${r.title.replace(/ risk$/i,"")} = ${r.level}`).join("; ") || "none flagged";
   return `You are Jeffery, PhysioPath's AI rehabilitation specialist — an educational assistant giving general, evidence-informed physical-rehabilitation guidance. You are an AI, not a licensed clinician, and must not diagnose or replace in-person care.
@@ -3338,6 +3518,7 @@ USER CONTEXT
 - Heart-rate & exertion: ${hrLine}
 - Lifestyle & function: ${lifestyle}
 - Red-flag screen positives: ${redflags}
+- Return-to goals: ${goals}
 - Out-of-range labs entered: ${abnormalLabs}
 - Educational risk areas (not diagnostic): ${riskAreas}
 - Personalized precautions (MUST respect): ${precautions}

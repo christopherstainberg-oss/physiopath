@@ -229,6 +229,23 @@
         </label>
       </div>
 
+      <div class="grid2">
+        <label class="field"><span class="lab">Activities you want to get back to <span class="sub">(type to search 10,000+, add as many as you like)</span></span>
+          <div class="acwrap">
+            <input type="text" id="activitySearch" placeholder="e.g. gardening, lifting my kids, climbing stairs…" autocomplete="off" />
+            <div class="results acresults hide" id="activityResults"></div>
+          </div>
+          <div class="chips" id="activityChips"></div>
+        </label>
+        <label class="field"><span class="lab">Sport you want to get back to <span class="sub">(tailors your late-phase plan · search 10,000+)</span></span>
+          <div class="acwrap">
+            <input type="text" id="sportSearch" placeholder="e.g. basketball, running (marathon), tennis…" autocomplete="off" />
+            <div class="results acresults hide" id="sportResults"></div>
+          </div>
+          <div class="chips" id="sportChips"></div>
+        </label>
+      </div>
+
       <div class="rowbtns">
         <button class="btn ghost" data-goto="1">← Back</button>
         <button class="btn primary" id="generateBtn">Generate my program →</button>
@@ -410,6 +427,8 @@
 <script src="data/exercises.js"></script>
 <script src="data/medications.js"></script>
 <script src="data/surgeries.js"></script>
+<script src="data/sports.js"></script>
+<script src="data/activities.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

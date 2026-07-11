@@ -394,6 +394,18 @@ footer b{color:var(--text)}
 .surgreset:hover{border-color:var(--brand)}
 .surgresults{max-height:40vh;max-height:40dvh}
 
+/* return-to activity & sport auto-populate pickers */
+.acwrap{position:relative}
+.acresults{max-height:34vh;max-height:34dvh}
+.acrow .rn{font-weight:500}
+.acadd .rn{color:var(--brand);font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.chips:empty{display:none}
+.sportpill{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.3px;color:#04121f;background:var(--warn);border-radius:999px;padding:1px 7px;vertical-align:1px}
+.rgcard{border-color:var(--brand)}
+.rgblock{margin:4px 0;font-size:13.5px;line-height:1.5}
+.rgblock b{color:var(--text)}
+
 /* symptom / red-flag screen */
 .check-row.urgent{border:1px solid rgba(255,107,107,.4);background:rgba(255,107,107,.06);border-radius:9px;padding:8px 10px;margin:8px 0}
 .screenwarn{margin-top:8px;font-size:12.5px;line-height:1.5}
