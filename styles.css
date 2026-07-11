@@ -259,6 +259,10 @@ svg.chart .dot{fill:var(--brand)}
 .safelist.plain li{padding-left:18px}
 .safelist.plain li::before{content:"•";position:absolute;left:3px;color:var(--muted)}
 
+/* other risks to be aware of */
+.riskaware{border-color:rgba(255,138,92,.5)}
+.riskaware h2{color:var(--acute)}
+
 /* medications */
 .medresults{max-height:38vh;max-height:38dvh}
 .medcard{border-color:rgba(62,166,255,.4)}

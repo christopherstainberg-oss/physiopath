@@ -671,6 +671,31 @@ function signatureFor(focus, phase){
 }
 
 /* ---------- build the program ---------- */
+/* Realistic exercises per phase (protocol + signature + library-matched top-up). */
+const PHASE_TARGET = [6,6,7,7];
+/* Criteria to progress to the next phase — more detail than dates alone. */
+const PHASE_CRITERIA = {
+  acute: [
+    "pain is settling, swelling is under control, and you can move the area comfortably through most of its range",
+    "you have full or near-full pain-free range and can activate the muscles without a flare-up",
+    "you can load the area with good control and any soreness stays low and settles within 24 hours",
+    "strength is close to the other side and you can handle sport/work-like demands without symptoms"
+  ],
+  chronic: [
+    "the irritable symptoms have calmed and gentle loading no longer causes a lasting flare",
+    "you tolerate progressive loading with only mild, short-lived soreness afterwards",
+    "you can handle heavier and faster loading with good control and stable symptoms",
+    "you've restored strength, power and the full capacity your activities demand"
+  ]
+};
+function enrichPhase(kept, protocol, p, flags){
+  const target = PHASE_TARGET[p] || 6;
+  if(kept.length < target){
+    const supp = libraryOptions(protocol, p, flags, kept.map(e=>e.n), target - kept.length, 100 + p);
+    kept.push(...supp);
+  }
+  return kept;
+}
 function generateProgram(){
   const conds = selectedConditions();
   const track = classify(state.weeks) || "acute";
@@ -691,8 +716,10 @@ function generateProgram(){
       const merged = [...sig, ...pool.filter(e=>!seen.has(e.n.toLowerCase()))];
       const { kept, removed } = window.applyContra(merged, flags);
       window.ensureMinimum(kept, flags, 3);
+      enrichPhase(kept, c.protocol, p, flags);
       removed.forEach(r=>removedAll.set(r.n, r.tag));
-      return { title:tmpl.phases[p].title, goal:tmpl.phases[p].goal, weekStart:wkStart, weekEnd:wkEnd, ex:kept };
+      return { title:tmpl.phases[p].title, goal:tmpl.phases[p].goal, weekStart:wkStart, weekEnd:wkEnd,
+        criteria:(PHASE_CRITERIA[track]||PHASE_CRITERIA.acute)[p], ex:kept };
     });
     return { name:c.name, domain:c.domain, region:c.region, supervision:c.supervision, phases,
       protocol:c.protocol, clearance:c.clearance, chronicByNature:c.chronicByNature,
@@ -1019,6 +1046,7 @@ function resetPhase(ci, pi){
   const flags = activeFlags();
   const { kept } = window.applyContra(pool, flags);
   window.ensureMinimum(kept, flags, 3);
+  enrichPhase(kept, item.protocol, pi, flags);
   ph.ex = kept; delete ph._seed; openPhases.add(ci+"-"+pi);
   save(); renderProgram(state.program); toast("Phase reset to the recommended exercises.");
 }
@@ -1190,6 +1218,56 @@ function vitalsCard(prog){
   </div>`;
 }
 
+/* Condition- & history-specific "other risks to be aware of" (complements the generic safety notes). */
+const RISK_KEYWORDS = [
+  [/tendinop|tendinit|tendinos/, "Tendons flare when load rises too fast — build up gradually. Pain that's worse the next morning means you overdid it, and a sudden sharp pain or 'pop' could be a tear: stop and get assessed."],
+  [/stress fracture/, "A stress fracture can worsen with continued impact — respect the reduced-loading period; increasing, localised pain that's worse with activity means back off and get re-checked."],
+  [/\bfracture\b|orif|malleolus|colles/, "Watch for increasing pain, deformity, or being unable to use the limb — the bone may not have healed or may have shifted. After a lower-limb injury, watch for a hot, swollen, painful calf (possible clot)."],
+  [/\bacl\b|\bpcl\b|\bmcl\b|\blcl\b|ligament|reconstruction|graft|instability|dislocation|subluxation/, "Giving-way, locking, or new swelling means ease off and get it checked — protect the healing ligament/graft, and don't rush return-to-sport ahead of strength and control."],
+  [/meniscus/, "Locking or catching, the knee 'giving way', or new swelling after activity means you've done too much — reduce load and get assessed."],
+  [/disc|radiculopath|sciatica|stenosis|herniation|nerve root/, "Spreading numbness or weakness, a foot that drops, or worsening leg/arm symptoms mean stop and get reviewed. Any loss of bladder or bowel control, or numbness around the groin, is an emergency — seek urgent care."],
+  [/replacement|arthroplasty/, "Sudden severe pain, inability to bear weight, a limb that looks shorter or rotated, or a clunk could be a dislocation or loosening — seek care. Also watch for infection (spreading redness, warmth, fever) and calf-clot signs."],
+  [/rotator cuff|cuff repair/, "Sharp catching, sudden weakness lifting the arm, or worsening night pain can mean the repair is being overloaded — respect your sling and loading limits."],
+  [/achilles|calf|gastrocnem/, "A sudden 'kick' in the back of the leg, a gap you can feel, or being unable to push off could be a rupture — stop and seek care."],
+  [/plantar fasci|heel|\bfoot\b/, "Sharp heel pain that's worst on the first steps of the day means the tissue is irritated — reduce impact; a sudden pop could be a tear."],
+  [/frozen shoulder|adhesive capsulitis/, "Forcing painful end-range too hard prolongs a frozen shoulder — gentle and frequent wins. New sudden weakness needs review."],
+  [/osteoporos|osteopenia|compression|fragility/, "Your bones are more fragile — avoid heavy spinal bending/twisting and high-impact moves; sudden new back pain could be a compression fracture."],
+  [/whiplash|neck strain|cervical/, "Dizziness, visual changes, arm numbness or weakness, or trouble with balance or speech after a neck problem need prompt review."],
+  [/vestibular|vertigo|bppv|dizzi|labyrinth/, "Falls are the main risk with dizziness — work near support. A sudden severe headache, double vision, or new weakness/numbness needs urgent care, not exercise."],
+  [/hamstring/, "A sharp pull or 'pop' at the back of the thigh with sudden weakness may be a tear — stop; rushing sprinting/eccentric work is the usual cause of re-injury."]
+];
+function riskAwarenessCard(prog){
+  const risks = [], seen = new Set();
+  const push = m => { if(!seen.has(m)){ seen.add(m); risks.push(m); } };
+  const names = selectedConditions().map(c=>c.name.toLowerCase()).join(" | ");
+  const flags = new Set(prog.flags);
+  const domains = new Set(prog.items.map(i=>i.domain));
+
+  RISK_KEYWORDS.forEach(([re,msg])=>{ if(re.test(names)) push(msg); });
+
+  if(domains.has("cardiac")) push("Stop and rest for chest pain or pressure, unusual breathlessness, palpitations, a cold sweat, or feeling faint — never push through these.");
+  if(domains.has("pulmonary")) push("Watch your breathing and oxygen — stop if you're very breathless at rest, dizzy, or your lips/fingertips look blue, and use your reliever/oxygen as prescribed.");
+  if(domains.has("neuro")) push("Falls are the biggest risk — always stay within reach of a sturdy support, and seek urgent care for sudden weakness, numbness, trouble speaking, or a severe headache.");
+
+  if(flags.has("recent_surgery") || /post-|recovery|repair|reconstruction|replacement|arthroplasty/.test(names))
+    push("After surgery, watch the wound for spreading redness, warmth, discharge or fever (infection), and watch for a hot, swollen, painful calf or sudden breathlessness/chest pain (blood clot) — seek care.");
+  if(flags.has("balance_risk")) push("You're at higher fall risk — clear trip hazards, wear supportive footwear, and keep support within arm's reach for standing and balance work.");
+  if(flags.has("neuropathy")) push("With reduced sensation, check your feet and hands before and after exercise for blisters, redness or cuts you might not feel, and wear protective footwear.");
+  if(flags.has("diabetes")) push("Check your blood sugar around exercise, carry fast-acting carbs, and inspect your feet — small injuries are easy to miss and slow to heal.");
+  if(flags.has("hypertension")||flags.has("vital_bp_high")||flags.has("vital_bp_crisis")) push("With raised blood pressure, avoid breath-holding and heavy straining, and stop for headache, chest pain, or vision changes.");
+  if(flags.has("osteoporosis")) push("Prioritise good technique over heavy load, and avoid loaded forward bending, twisting and high impact to protect your spine and hips.");
+  const medFlags = new Set(selectedMeds().flatMap(m=>m.flags||[]));
+  if(medFlags.has("anticoagulant")||medFlags.has("antiplatelet")) push("On blood thinners, bruising and bleeding happen more easily — favour lower-fall-risk exercises, avoid contact/collision, and report unusual bruising or bleeding.");
+  if(medFlags.has("beta_blocker")) push("Your beta-blocker blunts heart rate — judge effort by how it feels (RPE / talk-test), not your pulse, and rise slowly to avoid dizziness.");
+
+  if(!risks.length) return "";
+  return `<div class="card riskaware">
+    <h2>⚠ Other risks to be aware of</h2>
+    <p class="hint">Specific to your condition(s), history and medicines — know these warning signs, and stop or seek care if they appear. This adds to (it doesn't replace) the general red flags in your Safety notes.</p>
+    <ul class="notelist">${risks.map(r=>`<li>${esc(r)}</li>`).join("")}</ul>
+  </div>`;
+}
+
 /* ---------- render program ---------- */
 function renderProgram(prog){
   const out = $("#programOut");
@@ -1241,6 +1319,7 @@ function renderProgram(prog){
   }));
 
   html += safetyNotesCard(prog);
+  html += riskAwarenessCard(prog);
   html += vitalsCard(prog);
   html += surgicalReminderCard();
   html += medicationCard(medHiddenTotal);
@@ -1267,7 +1346,7 @@ function renderProgram(prog){
             <button class="rerollbtn" data-ci="${ci}" data-pi="${i}">🔄 Rotate all exercises</button>
             <button class="resetbtn" data-ci="${ci}" data-pi="${i}">↩ Reset to recommended</button>
           </div>
-          <div class="freq">Advance when this phase feels controlled and symptoms are low & stable — the weeks are a guide, not a rule.</div>
+          <div class="freq"><b>Advance to the next phase when:</b> ${esc(ph.criteria || "this phase feels controlled and symptoms are low & stable")}. The weeks are a guide, not a rule.</div>
         </div></div>`;
     });
     html += `<div class="redflags"><b>⚠ When to get it checked:</b> ${esc(item.redflags)}</div></div>`;
