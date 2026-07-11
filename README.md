@@ -55,8 +55,12 @@ docker build -t physiopath . && docker run -d -p 8080:80 physiopath
 1. In Portainer: **Stacks → Add stack → Web editor**.
 2. Paste the contents of [`docker-compose.yml`](docker-compose.yml) (or point it at this repo).
 3. **Deploy the stack.** Browse to `http://<host-ip>:8080` (change the `8080:80` port map as needed).
-4. **Updates:** re-pull the image and redeploy the stack (Portainer → the stack → *Update / Re-pull*),
-   or add [Watchtower](https://containrrr.dev/watchtower/) to auto-update when a new `:latest` is pushed.
+4. **Updates:** the stack ships a [Watchtower](https://containrrr.dev/watchtower/) service that
+   auto-pulls a fresh `:latest` and recreates the container within ~5 min of each new build — so
+   redeploying the stack is normally enough. To force it now: Portainer → the stack →
+   **Update the stack → tick *Re-pull image and redeploy*** (or on the host,
+   `docker compose pull && docker compose up -d`). Docker's `:latest` never updates on its own —
+   a plain redeploy reuses the cached image, which is why an old version can appear to "stick."
 
 > **GHCR image visibility:** the package is private by default. Either make it public
 > (GitHub → your profile → **Packages → physiopath → Package settings → Change visibility → Public**),

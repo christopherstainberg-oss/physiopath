@@ -17,3 +17,15 @@ services:
       timeout: 5s
       retries: 3
       start_period: 5s
+
+  # Auto-update: pulls a fresh ghcr.io/.../physiopath:latest and recreates the
+  # container within ~5 min of each new build, so you always run the newest version.
+  # (This is the container-side of "auto-deploy" — Docker's :latest never updates on
+  # its own.) Remove this service if you'd rather update manually.
+  watchtower:
+    image: containrrr/watchtower
+    container_name: physiopath-watchtower
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --cleanup --include-restarting --interval 300 physiopath
