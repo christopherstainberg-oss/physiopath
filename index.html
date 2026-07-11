@@ -199,8 +199,10 @@
 
       <div id="surgeryExtra" class="hide">
         <div class="grid2">
-          <label class="field"><span class="lab">Which surgery? <span class="sub">(for precautions & reminders)</span></span>
-            <select id="surgeryType"><option value="auto">Auto-detect from my condition</option></select>
+          <label class="field"><span class="lab">Which surgery? <span class="sub">(auto-detected, or search <b id="surgCount">3000</b>+ procedures)</span></span>
+            <input type="text" id="surgerySearch" placeholder="Search e.g. ‘ACL’, ‘rotator cuff’, ‘hip replacement’, ‘CABG’…" autocomplete="off" />
+            <div class="surgpick" id="surgeryPick"></div>
+            <div class="results surgresults hide" id="surgeryResults"></div>
           </label>
           <label class="field"><span class="lab">Surgery date <span class="sub">(for your post-op timeline)</span></span>
             <input type="date" id="surgeryDate" />
@@ -365,6 +367,7 @@
 <script src="data/protocols.js"></script>
 <script src="data/exercises.js"></script>
 <script src="data/medications.js"></script>
+<script src="data/surgeries.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

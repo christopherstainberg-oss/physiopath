@@ -10,6 +10,7 @@ const DIST = join(ROOT, "dist");
 await import("./generate-conditions.mjs");
 await import("./generate-exercises.mjs");
 await import("./generate-medications.mjs");
+await import("./generate-surgeries.mjs");
 await import("./generate-icons.mjs");
 
 // 2) fresh dist

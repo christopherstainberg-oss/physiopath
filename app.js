@@ -56,7 +56,7 @@ const DOMAIN_REDFLAGS = {
    Each surgery: precautions [{t:text, w:typical weeks to follow (0 = ongoing/until cleared)}].
    `match` auto-detects the surgery from a selected condition's name.
    Generalized education — a surgeon's specific protocol always takes precedence. */
-const SURGERIES = [
+const CURATED_SURGERIES = [
   { id:"tha", name:"Total hip replacement (arthroplasty)", match:/hip replacement|hip arthroplasty|hemiarthroplasty|hip resurfacing/, autoFlags:["hip_replacement"],
     precautions:[
       {t:"Hip precautions: don't bend the hip past 90° (avoid deep bending/low chairs).",w:12},
@@ -218,6 +218,12 @@ const OTHER_SURGERY = { id:"other", name:"Recent surgery (general precautions)",
     {t:"Take DVT-prevention/blood thinners as prescribed; watch for calf pain/swelling or chest pain/breathlessness.",w:4},
     {t:"Attend follow-up visits and get clearance before progressing.",w:0}],
   ret:"These are general post-op principles — your surgeon's specific protocol always takes precedence." };
+
+/* Curated surgeries (hand-authored, high quality) + the generated 3000-procedure
+   database (window.SURGERY_DB). Curated entries come first so their match wins auto-detect. */
+const SURGERIES = CURATED_SURGERIES.concat(
+  (window.SURGERY_DB||[]).filter(s=>!CURATED_SURGERIES.some(c=>c.id===s.id))
+);
 
 function detectSurgery(){
   if(state.surgeryType && state.surgeryType!=="auto"){
@@ -1535,17 +1541,16 @@ function initDetails(){
   $("#painLevel").value=state.painRest; $("#painVal").textContent=state.painRest;
   $("#painMove").value=state.painMove; $("#painMoveVal").textContent=state.painMove;
   $("#surgery").value=state.surgery; $("#fitness").value=state.fitness; $("#goal").value=state.goal;
-  // populate surgery-type dropdown once
-  const sel=$("#surgeryType");
-  if(sel.options.length<=1){ SURGERIES.forEach(s=>{ const o=document.createElement("option"); o.value=s.id; o.textContent=s.name; sel.appendChild(o); });
-    const oth=document.createElement("option"); oth.value="other"; oth.textContent="Other / not listed"; sel.appendChild(oth); }
-  sel.value=state.surgeryType||"auto"; $("#surgeryDate").value=state.surgeryDate||"";
+  // surgery picker — searchable (3000+ procedures)
+  $("#surgeryDate").value=state.surgeryDate||"";
+  if($("#surgCount")) $("#surgCount").textContent = SURGERIES.length.toLocaleString();
+  renderSurgeryPick();
+  let sgt; const ss=$("#surgerySearch"); if(ss) ss.oninput=()=>{ clearTimeout(sgt); sgt=setTimeout(runSurgerySearch,120); };
   toggleSurgeryExtra(); updatePostopLabel();
   w.oninput=()=>{ state.weeks=w.value===""?null:parseInt(w.value); updateAcuteLabel(); save(); };
   $("#painLevel").oninput=e=>{ state.painRest=+e.target.value; $("#painVal").textContent=e.target.value; save(); };
   $("#painMove").oninput=e=>{ state.painMove=+e.target.value; $("#painMoveVal").textContent=e.target.value; save(); };
   $("#surgery").oninput=e=>{ state.surgery=e.target.value; toggleSurgeryExtra(); save(); };
-  $("#surgeryType").oninput=e=>{ state.surgeryType=e.target.value; save(); };
   $("#surgeryDate").oninput=e=>{ state.surgeryDate=e.target.value; updatePostopLabel(); save(); };
   $("#fitness").oninput=e=>{ state.fitness=e.target.value; save(); };
   $("#goal").oninput=e=>{ state.goal=e.target.value; save(); };
@@ -1559,6 +1564,40 @@ function updatePostopLabel(){
   if(!state.surgeryDate){ el.innerHTML=""; return; }
   const w=weeksPostOp();
   el.innerHTML = w==null ? "" : (w>0 ? `→ about <b>${w} week${w===1?"":"s"}</b> post-op` : `→ <b>under a week</b> post-op`);
+}
+/* Searchable surgery picker (auto-detect / 3000+ procedures / other). */
+function setSurgery(id){
+  state.surgeryType=id;
+  const ss=$("#surgerySearch"); if(ss) ss.value="";
+  const res=$("#surgeryResults"); if(res){ res.innerHTML=""; res.classList.add("hide"); }
+  save(); renderSurgeryPick(); toggleSurgeryExtra(); updatePostopLabel();
+}
+function renderSurgeryPick(){
+  const el=$("#surgeryPick"); if(!el) return;
+  const st=state.surgeryType||"auto";
+  let label;
+  if(st==="other") label=`Selected: <b>Other / not listed</b> — general post-op precautions`;
+  else if(st!=="auto"){ const s=SURGERIES.find(x=>x.id===st); label = s?`Selected: <b>${esc(s.name)}</b>`:`<b>Auto-detect</b> from your condition`; }
+  else { const d=detectSurgery(); label = d?`Auto-detected: <b>${esc(d.name)}</b>`:`<b>Auto-detect</b> from your condition (none matched yet)`; }
+  const reset = st!=="auto" ? `<button type="button" class="surgreset" id="surgReset">↺ auto-detect</button>` : "";
+  const otherBtn = st!=="other" ? `<button type="button" class="surgreset" id="surgOther">＋ Other / not listed</button>` : "";
+  el.innerHTML=`<span>${label}</span>${reset}${otherBtn}`;
+  const rb=$("#surgReset"); if(rb) rb.onclick=()=>setSurgery("auto");
+  const ob=$("#surgOther"); if(ob) ob.onclick=()=>setSurgery("other");
+}
+function runSurgerySearch(){
+  const res=$("#surgeryResults"); if(!res) return;
+  const q=$("#surgerySearch").value.trim().toLowerCase(); const toks=q.split(/\s+/).filter(Boolean);
+  if(!toks.length){ res.innerHTML=""; res.classList.add("hide"); return; }
+  res.classList.remove("hide");
+  let list=SURGERIES.filter(s=>{ const hay=(s.name+" "+(s.region||"")+" "+(s.cat||"")).toLowerCase(); return toks.every(t=>hay.includes(t)); });
+  const total=list.length; list=list.slice(0,40);
+  const otherRow=`<div class="result" data-id="other"><span class="rn">Other / not listed<div class="rr">general post-op precautions</div></span><span class="add">+</span></div>`;
+  if(!list.length){ res.innerHTML=`<div class="moreinfo">No matches — try a simpler term.</div>`+otherRow; }
+  else res.innerHTML = list.map(s=>{ const picked=state.surgeryType===s.id;
+    return `<div class="result ${picked?"picked":""}" data-id="${s.id}"><span class="rn">${esc(s.name)}<div class="rr">${esc(s.region||s.cat||"surgery")}</div></span><span class="add">${picked?"✓":"+"}</span></div>`; }).join("")
+    + (total>40?`<div class="moreinfo">Showing 40 of ${total} — keep typing to narrow.</div>`:"") + otherRow;
+  $$("#surgeryResults .result").forEach(r=>r.onclick=()=>setSurgery(r.dataset.id));
 }
 
 function doGenerate(){
