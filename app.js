@@ -251,6 +251,7 @@ const state = {
   meds:"", notes:"", condIds:[], weeks:null, painRest:3, painMove:4, surgery:"no",
   surgeryType:"auto", surgeryDate:"", fitness:"mod", goal:"", program:null,
   vitals:{restHR:"",sbp:"",dbp:"",spo2:"",rr:"",height:"",weight:""},
+  vitalsLog:[], labs:{},
   screen:{}, falls:"", aid:"", smoking:"", alcohol:"", sleep:"", stress:"",
   medIds:[], medFilter:false, customPrecautions:[], log:[], apiKey:"", apiModel:"claude-opus-4-8"
 };
@@ -1380,7 +1381,7 @@ function goStep(n){
   const act=document.querySelector(".step.active");        // keep the active step visible in the scrollable nav
   if(act&&act.scrollIntoView) try{ act.scrollIntoView({inline:"center",block:"nearest",behavior:"smooth"}); }catch(e){}
   window.scrollTo({top:0,behavior:"smooth"});
-  if(n===4) renderProgress();
+  if(n===4){ renderProgress(); renderHealth(); }
   if(n===5) initCoach();
   if(n===6) initLibrary();
 }
@@ -1654,6 +1655,7 @@ function initProgress(){
   $("#logToday").textContent = "Entry for " + fmtDate(todayISO());
   $("#logPain").oninput = e=>$("#logPainVal").textContent=e.target.value;
   $("#logBtn").onclick = saveLogEntry;
+  initHealth();
 }
 function saveLogEntry(){
   const entry = {
@@ -1738,6 +1740,296 @@ function painChartSVG(log){
 }
 
 /* =====================================================================
+   HEALTH TRACKING — vitals log & trend · lab values · risk assessment
+   Educational only, not a diagnosis. Everything stays on the device.
+===================================================================== */
+const VITAL_METRICS = [
+  { k:"sbp",     label:"Systolic BP",  unit:"mmHg", good:"down" },
+  { k:"dbp",     label:"Diastolic BP", unit:"mmHg", good:"down" },
+  { k:"restHR",  label:"Resting HR",   unit:"bpm",  good:"down" },
+  { k:"spo2",    label:"SpO₂",         unit:"%",    good:"up" },
+  { k:"glucose", label:"Glucose",      unit:"mg/dL",good:"down" },
+  { k:"weight",  label:"Weight",       unit:"kg",   good:"neutral" },
+  { k:"temp",    label:"Temp",         unit:"°C",   good:"neutral" }
+];
+let healthChartMetric = "sbp";
+
+/* Latest known vitals — most recent log entry, falling back to History baseline. */
+function latestVitals(){
+  const base = state.vitals||{};
+  const log = state.vitalsLog||[];
+  const last = log.length ? log[log.length-1] : {};
+  const pick = k => (last[k]!==undefined && last[k]!=="" && last[k]!=null) ? last[k] : base[k];
+  return { restHR:pick("restHR"), sbp:pick("sbp"), dbp:pick("dbp"), spo2:pick("spo2"),
+           weight:pick("weight"), height:base.height, glucose:pick("glucose"), temp:pick("temp") };
+}
+
+function saveVitalsEntry(){
+  const g = id => { const el=$(id); return el?el.value.trim():""; };
+  const entry = { date: $("#vlDate").value || todayISO(), restHR:g("#vlHR"), sbp:g("#vlSBP"), dbp:g("#vlDBP"),
+    spo2:g("#vlSpo2"), weight:g("#vlWeight"), glucose:g("#vlGlucose"), temp:g("#vlTemp") };
+  if(!["restHR","sbp","dbp","spo2","weight","glucose","temp"].some(k=>entry[k]!=="")){ toast("Enter at least one vital first."); return; }
+  state.vitalsLog = state.vitalsLog||[];
+  const i = state.vitalsLog.findIndex(e=>e.date===entry.date);
+  if(i>=0) state.vitalsLog[i]=entry; else state.vitalsLog.push(entry);
+  state.vitalsLog.sort((a,b)=>a.date<b.date?-1:1);
+  save(); ["#vlHR","#vlSBP","#vlDBP","#vlSpo2","#vlWeight","#vlGlucose","#vlTemp"].forEach(id=>{ const el=$(id); if(el) el.value=""; });
+  renderVitalsLog(); renderRisks();
+  toast(i>=0 ? "Updated vitals for that date." : "Vitals saved — keep logging to see the trend.");
+}
+function deleteVitals(date){ state.vitalsLog=(state.vitalsLog||[]).filter(e=>e.date!==date); save(); renderVitalsLog(); renderRisks(); }
+
+function renderVitalsLog(){
+  const el=$("#vitalsLogBody"); if(!el) return;
+  const log=(state.vitalsLog||[]).slice();
+  if(!log.length){ el.innerHTML=`<div class="empty" style="padding:22px 10px"><div class="big">🩺</div><div>No vitals logged yet — add a set above and log again over the coming days to see your trend.</div></div>`; return; }
+  const cells = VITAL_METRICS.map(m=>{
+    const vals=log.map(e=>vnum(e[m.k])).filter(x=>x!=null);
+    if(!vals.length) return "";
+    const last=vals[vals.length-1], delta=Math.round((last-vals[0])*10)/10;
+    let arrow="—", cls="tflat", txt="first reading";
+    if(vals.length>1){
+      arrow = delta>0?"▲":delta<0?"▼":"—";
+      const dir = delta>0?"up":delta<0?"down":"flat";
+      cls = (m.good==="neutral"||dir==="flat") ? "tflat" : (m.good===dir ? "tgood":"tbad");
+      txt = (delta>0?"+":"")+delta+" from first";
+    }
+    return `<div class="vcell"><div class="vck">${m.label}</div><div class="vcv">${last}<span class="vcu"> ${m.unit}</span></div><div class="vct ${cls}">${arrow} ${esc(txt)}</div></div>`;
+  }).join("");
+  const m = VITAL_METRICS.find(x=>x.k===healthChartMetric) || VITAL_METRICS[0];
+  const opts = VITAL_METRICS.map(x=>`<option value="${x.k}" ${x.k===healthChartMetric?"selected":""}>${x.label}</option>`).join("");
+  const list = log.slice().reverse().map(e=>{
+    const parts=[];
+    if(e.sbp!==""||e.dbp!=="") parts.push(`BP ${e.sbp||"?"}/${e.dbp||"?"}`);
+    VITAL_METRICS.filter(x=>!["sbp","dbp"].includes(x.k) && e[x.k]!=="").forEach(x=>parts.push(`${x.label} ${e[x.k]}`));
+    return `<li class="logrow"><span class="ld">${fmtDate(e.date)}</span><span class="ln">${esc(parts.join(" · "))}</span><span class="lx" data-vdate="${e.date}" title="Delete">✕</span></li>`;
+  }).join("");
+  el.innerHTML=`<div class="vtrendgrid">${cells}</div>
+    <div class="vchartsel"><label>Trend chart: <select id="vlChartMetric">${opts}</select></label></div>
+    <div class="chartwrap">${metricChartSVG(log, m)}</div>
+    <ul class="loglist">${list}</ul>`;
+  const cm=$("#vlChartMetric"); if(cm) cm.onchange=()=>{ healthChartMetric=cm.value; renderVitalsLog(); };
+  $$("#vitalsLogBody .lx").forEach(x=>x.onclick=()=>{ if(confirm("Delete this entry?")) deleteVitals(x.dataset.vdate); });
+}
+function metricChartSVG(log, m){
+  const pts=log.map(e=>({d:e.date, v:vnum(e[m.k])})).filter(p=>p.v!=null);
+  if(!pts.length) return `<div class="hint" style="padding:10px">No ${esc(m.label)} values logged yet — pick another metric or add readings.</div>`;
+  const W=700,H=180,padL=34,padR=12,padT=14,padB=24, plotW=W-padL-padR, plotH=H-padT-padB;
+  const vals=pts.map(p=>p.v); let mn=Math.min(...vals), mx=Math.max(...vals);
+  if(mn===mx){ mn-=1; mx+=1; } const gap=(mx-mn)*0.15; mn-=gap; mx+=gap;
+  const n=pts.length, x=i=> n<=1?padL+plotW/2:padL+(i/(n-1))*plotW, y=v=> padT+(1-(v-mn)/(mx-mn))*plotH;
+  const Pp=pts.map((p,i)=>[x(i),y(p.v)]);
+  const line=Pp.map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" ");
+  const area=`M${Pp[0][0].toFixed(1)} ${(padT+plotH).toFixed(1)} `+Pp.map(p=>"L"+p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" ")+` L${Pp[n-1][0].toFixed(1)} ${(padT+plotH).toFixed(1)} Z`;
+  const grid=[mx,(mn+mx)/2,mn].map(v=>{const gy=y(v);return `<line class="grid" x1="${padL}" y1="${gy.toFixed(1)}" x2="${W-padR}" y2="${gy.toFixed(1)}"/><text class="axislbl" x="4" y="${(gy+3).toFixed(1)}">${Math.round(v)}</text>`;}).join("");
+  const dots=Pp.map(p=>`<circle class="dot" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3"/>`).join("");
+  const xl = n>1?`<text class="axislbl" x="${padL}" y="${H-6}">${fmtDate(pts[0].d).replace(/,.*/,"")}</text><text class="axislbl" x="${W-padR}" y="${H-6}" text-anchor="end">${fmtDate(pts[n-1].d).replace(/,.*/,"")}</text>`:"";
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="${esc(m.label)} over time">${grid}${n>1?`<path class="area" d="${area}"/><path class="line" d="${line}"/>`:""}${dots}${xl}<text class="axislbl" x="4" y="10">${esc(m.unit)}</text></svg>`;
+}
+
+/* ---- lab values with editable targets, colour coding & improvement tips ---- */
+const LABS = [
+  { id:"tchol", name:"Total cholesterol", unit:"mg/dL", lo:0, hi:200, domain:"cardiac",
+    improveHigh:"Cut saturated & trans fats, eat more soluble fiber (oats, beans, fruit & veg), exercise regularly, lose excess weight, and discuss cholesterol-lowering options with your doctor.", improveLow:"" },
+  { id:"ldl", name:"LDL ('bad') cholesterol", unit:"mg/dL", lo:0, hi:100, domain:"cardiac",
+    improveHigh:"Reduce saturated/trans fats, add soluble fiber and plant sterols, exercise, lose excess weight, and ask your doctor whether a statin is right for you.", improveLow:"" },
+  { id:"hdl", name:"HDL ('good') cholesterol", unit:"mg/dL", lo:40, hi:200, domain:"cardiac",
+    improveHigh:"", improveLow:"Regular aerobic exercise, stopping smoking, and healthy fats (olive oil, nuts, oily fish) help raise HDL." },
+  { id:"trig", name:"Triglycerides", unit:"mg/dL", lo:0, hi:150, domain:"cardiac",
+    improveHigh:"Cut sugar, refined carbs and alcohol, lose excess weight, exercise, and eat omega-3-rich fish.", improveLow:"" },
+  { id:"glucoseF", name:"Fasting glucose", unit:"mg/dL", lo:70, hi:99, domain:"cardiac",
+    improveHigh:"Reduce sugary drinks and refined carbs, lose excess weight, exercise regularly, and review blood-sugar screening/care with your clinician.", improveLow:"Frequent lows need review — carry fast-acting carbs and discuss your medications with your clinician." },
+  { id:"a1c", name:"HbA1c", unit:"%", lo:0, hi:5.7, domain:"cardiac",
+    improveHigh:"Lower refined carbs and sugar, lose excess weight, build regular activity, and review blood-sugar management with your clinician.", improveLow:"" },
+  { id:"crp", name:"hs-CRP (inflammation)", unit:"mg/L", lo:0, hi:3, domain:"cardiac",
+    improveHigh:"Address the cause with your doctor; regular exercise, not smoking, a healthy weight and treating infection/inflammation all help lower it.", improveLow:"" },
+  { id:"creat", name:"Creatinine", unit:"mg/dL", lo:0.6, hi:1.3, domain:"renal",
+    improveHigh:"Stay well hydrated, control blood pressure and glucose, avoid NSAIDs and very high protein/salt, and see your doctor about kidney function.", improveLow:"" },
+  { id:"egfr", name:"eGFR (kidney filtration)", unit:"mL/min", lo:60, hi:200, domain:"renal",
+    improveHigh:"", improveLow:"Protect kidney function: control BP and glucose, stay hydrated, avoid NSAIDs, moderate salt and protein, and see your doctor — a low eGFR needs review." },
+  { id:"bun", name:"Blood urea nitrogen (BUN)", unit:"mg/dL", lo:7, hi:20, domain:"renal",
+    improveHigh:"Often reflects hydration, protein intake or kidney function — hydrate well and review with your clinician.", improveLow:"" },
+  { id:"potassium", name:"Potassium", unit:"mmol/L", lo:3.5, hi:5.1, domain:"renal",
+    improveHigh:"High potassium can be dangerous — review potassium-rich foods and your medications with your clinician promptly (urgent if very high).", improveLow:"Discuss with your clinician; don't self-supplement potassium." },
+  { id:"sodium", name:"Sodium", unit:"mmol/L", lo:135, hi:145, domain:"renal",
+    improveHigh:"Usually reflects fluid balance — review fluid intake and medications with your clinician.", improveLow:"Low sodium needs medical review — don't drastically change fluid/salt intake without advice." },
+  { id:"acr", name:"Urine albumin/creatinine (ACR)", unit:"mg/g", lo:0, hi:30, domain:"renal",
+    improveHigh:"Tightly control blood pressure and glucose, don't smoke, and see your doctor — protein in the urine is an early kidney-stress signal.", improveLow:"" },
+  { id:"alt", name:"ALT", unit:"U/L", lo:0, hi:56, domain:"hepatic",
+    improveHigh:"Reduce alcohol, lose weight if overweight (fatty liver), avoid unnecessary hepatotoxic medicines/supplements, and see your doctor.", improveLow:"" },
+  { id:"ast", name:"AST", unit:"U/L", lo:0, hi:40, domain:"hepatic",
+    improveHigh:"Cut back alcohol, address fatty liver with weight loss and exercise, and review medications/supplements with your doctor.", improveLow:"" },
+  { id:"alp", name:"Alkaline phosphatase (ALP)", unit:"U/L", lo:44, hi:147, domain:"hepatic",
+    improveHigh:"Can reflect the liver or bone — see your doctor to find the cause.", improveLow:"" },
+  { id:"bili", name:"Total bilirubin", unit:"mg/dL", lo:0.1, hi:1.2, domain:"hepatic",
+    improveHigh:"See your doctor to find the cause; reduce alcohol and stay hydrated.", improveLow:"" },
+  { id:"ggt", name:"GGT", unit:"U/L", lo:9, hi:48, domain:"hepatic",
+    improveHigh:"Strongly linked to alcohol — cutting back usually lowers it; also review medications with your doctor.", improveLow:"" },
+  { id:"albumin", name:"Albumin", unit:"g/dL", lo:3.5, hi:5, domain:"hepatic",
+    improveHigh:"", improveLow:"Often reflects nutrition or inflammation — prioritise adequate protein and see your clinician about the cause." },
+  { id:"hgb", name:"Hemoglobin", unit:"g/dL", lo:12, hi:17, domain:"gastro",
+    improveHigh:"See your doctor to find the cause; stay well hydrated.", improveLow:"Eat iron-rich foods (lean red meat, beans, leafy greens) with vitamin C, and see your doctor — anemia can signal GI blood loss or a deficiency." },
+  { id:"ferritin", name:"Ferritin (iron stores)", unit:"ng/mL", lo:30, hi:300, domain:"gastro",
+    improveHigh:"See your doctor to find the cause of high iron stores.", improveLow:"Iron-rich diet and supplements as advised — and find the cause of iron loss with your doctor." },
+  { id:"b12", name:"Vitamin B12", unit:"pg/mL", lo:200, hi:900, domain:"gastro",
+    improveHigh:"", improveLow:"B12-rich foods (meat, dairy, eggs) or supplements/injections as advised — common with vegan diets or some medicines." },
+  { id:"lipase", name:"Lipase", unit:"U/L", lo:10, hi:140, domain:"gastro",
+    improveHigh:"Can indicate pancreas irritation — avoid alcohol and seek medical review (urgently if you have severe abdominal pain).", improveLow:"" },
+  { id:"vitd", name:"Vitamin D (25-OH)", unit:"ng/mL", lo:30, hi:100, domain:"general",
+    improveHigh:"Very high levels usually mean over-supplementing — review your dose with your clinician.", improveLow:"Safe sun exposure, vitamin-D foods (oily fish, fortified foods) and a supplement as advised." },
+  { id:"tsh", name:"TSH (thyroid)", unit:"mIU/L", lo:0.4, hi:4, domain:"general",
+    improveHigh:"A high TSH suggests an underactive thyroid — discuss thyroid testing and any medication with your doctor.", improveLow:"A low TSH suggests an overactive thyroid — discuss with your doctor." }
+];
+const LAB_DOMAINS = [
+  { key:"cardiac", label:"Cardiac & metabolic" },
+  { key:"renal",   label:"Kidney (renal)" },
+  { key:"hepatic", label:"Liver (hepatic)" },
+  { key:"gastro",  label:"Blood & digestive" },
+  { key:"general", label:"General" }
+];
+function labStatusOf(lab){
+  const e=state.labs[lab.id];
+  if(!e || e.v==="" || e.v==null) return "none";
+  const v=vnum(e.v); if(v==null) return "none";
+  const lo=vnum(e.lo)??lab.lo, hi=vnum(e.hi)??lab.hi;
+  if(v<lo) return "low"; if(v>hi) return "high"; return "ok";
+}
+function labPill(st){
+  if(st==="ok")   return { cls:"labok",   pill:"✓ in range" };
+  if(st==="high") return { cls:"labbad",  pill:"↑ high" };
+  if(st==="low")  return { cls:"labbad",  pill:"↓ low" };
+  return { cls:"labnone", pill:"—" };
+}
+function labTip(lab, st){
+  return st==="high" ? (lab.improveHigh||"") : st==="low" ? (lab.improveLow||"") : "";
+}
+function labRowHTML(lab){
+  const e=state.labs[lab.id]||{};
+  const v=(e.v??""), lo=(e.lo??lab.lo), hi=(e.hi??lab.hi);
+  const st=labStatusOf(lab), { cls, pill }=labPill(st), tip=labTip(lab, st);
+  return `<div class="labrow ${cls}" data-id="${lab.id}">
+    <div class="labname">${esc(lab.name)} <span class="labunit">${esc(lab.unit)}</span></div>
+    <div class="labinputs">
+      <input class="labval" data-lab="${lab.id}" value="${esc(String(v))}" placeholder="your value" inputmode="decimal" />
+      <span class="labtarget">target <input class="labt" data-lab="${lab.id}" data-b="lo" value="${esc(String(lo))}" inputmode="decimal" aria-label="target low" />–<input class="labt" data-lab="${lab.id}" data-b="hi" value="${esc(String(hi))}" inputmode="decimal" aria-label="target high" /></span>
+      <span class="labpill ${cls}">${pill}</span>
+    </div>
+    <div class="labtip"${tip?"":' style="display:none"'}>💡 ${tip}</div>
+  </div>`;
+}
+function refreshLabRow(id){
+  const lab=LABS.find(l=>l.id===id), row=$(`#labsBody .labrow[data-id="${id}"]`); if(!lab||!row) return;
+  const st=labStatusOf(lab), { cls, pill }=labPill(st), tip=labTip(lab, st);
+  row.className="labrow "+cls;
+  const p=row.querySelector(".labpill"); if(p){ p.className="labpill "+cls; p.textContent=pill; }
+  const t=row.querySelector(".labtip"); if(t){ if(tip){ t.style.display=""; t.innerHTML="💡 "+tip; } else t.style.display="none"; }
+}
+function renderLabs(){
+  const el=$("#labsBody"); if(!el) return;
+  el.innerHTML = LAB_DOMAINS.map(d=>{
+    const rows=LABS.filter(l=>l.domain===d.key).map(labRowHTML).join("");
+    return `<div class="labdomain"><h3 class="labdh">${esc(d.label)}</h3>${rows}</div>`;
+  }).join("");
+  $$("#labsBody .labval").forEach(inp=>inp.oninput=()=>{ const id=inp.dataset.lab; (state.labs[id]=state.labs[id]||{}).v=inp.value.trim(); save(); refreshLabRow(id); renderRisks(); });
+  $$("#labsBody .labt").forEach(inp=>inp.oninput=()=>{ const id=inp.dataset.lab; (state.labs[id]=state.labs[id]||{})[inp.dataset.b]=inp.value.trim(); save(); refreshLabRow(id); renderRisks(); });
+}
+
+/* ---- educational risk assessment across 5 specialties ---- */
+function computeRisks(){
+  const v=latestVitals(), sbp=vnum(v.sbp), dbp=vnum(v.dbp), hr=vnum(v.restHR), glu=vnum(v.glucose);
+  const bmi=bmiCalc(v.height, v.weight), age=vnum(state.age);
+  const L=id=>vnum((state.labs[id]||{}).v);
+  const gt=(x,n)=>x!=null&&x>=n, lt=(x,n)=>x!=null&&x<n;
+  const flags=new Set(gatherFlags());
+  const conds=selectedConditions().map(c=>c.name.toLowerCase()).join(" | ");
+  const smoker=state.smoking==="current", alcHeavy=state.alcohol==="heavy", alcReg=state.alcohol==="regular"||alcHeavy;
+  const nsaid=selectedMeds().some(m=>(m.flags||[]).includes("nsaid"));
+  const diab = flags.has("diabetes") || gt(L("a1c"),6.5) || gt(glu,126) || gt(L("glucoseF"),126);
+  const mk=(domain,title,icon,factors,score,modAt,highAt,note)=>({domain,title,icon,factors,note,
+    level: score>=highAt?"high":score>=modAt?"moderate":"low"});
+  const R=[];
+
+  { let f=[],s=0;
+    if(gt(sbp,160)||gt(dbp,100)){f.push("Blood pressure is high");s+=3;} else if(gt(sbp,140)||gt(dbp,90)){f.push("Blood pressure is elevated");s+=2;} else if(gt(sbp,130)){f.push("Blood pressure is borderline");s+=1;}
+    if(gt(L("ldl"),160)||gt(L("tchol"),240)){f.push("LDL / total cholesterol is high");s+=2;} else if(gt(L("ldl"),130)||gt(L("tchol"),200)){f.push("Cholesterol is borderline");s+=1;}
+    if(lt(L("hdl"),40)){f.push("HDL ('good') cholesterol is low");s+=1;}
+    if(gt(L("trig"),200)){f.push("Triglycerides are high");s+=1;}
+    if(diab){f.push("Diabetes / high blood sugar");s+=2;}
+    if(smoker){f.push("Current smoker");s+=2;}
+    if(bmi!=null&&bmi>=30){f.push("BMI in the obese range");s+=1;}
+    if(gt(L("crp"),3)){f.push("hs-CRP (inflammation) is high");s+=1;}
+    if(gt(hr,90)){f.push("Resting heart rate is high");s+=1;}
+    if(gt(age,70)){f.push("Age 70+");s+=2;} else if(gt(age,55)){f.push("Age 55+");s+=1;}
+    R.push(mk("cardiac","Cardiac (heart) risk","❤️",f,s,3,6,"Blood pressure, cholesterol, blood sugar, not smoking, a healthy weight and regular aerobic exercise are the biggest levers here.")); }
+
+  { let f=[],s=0;
+    if(gt(sbp,160)||gt(dbp,100)){f.push("Blood pressure is high (the #1 stroke risk factor)");s+=3;} else if(gt(sbp,140)||gt(dbp,90)){f.push("Blood pressure is elevated");s+=2;}
+    if(/fibrillation|atrial|flutter|arrhythmia/.test(conds)||flags.has("pacemaker_icd")){f.push("Irregular heart-rhythm history");s+=2;}
+    if(/stroke|tia|transient ischemic/.test(conds)){f.push("Prior stroke / TIA");s+=2;}
+    if(diab){f.push("Diabetes");s+=1;}
+    if(smoker){f.push("Current smoker");s+=2;}
+    if(gt(L("ldl"),160)){f.push("High LDL cholesterol");s+=1;}
+    if(bmi!=null&&bmi>=30){f.push("BMI in the obese range");s+=1;}
+    if(gt(age,75)){f.push("Age 75+");s+=2;} else if(gt(age,65)){f.push("Age 65+");s+=1;}
+    R.push(mk("stroke","Stroke risk","🧠",f,s,3,6,"Controlling blood pressure is the single biggest way to lower stroke risk; treating an irregular heart rhythm and not smoking matter a lot too.")); }
+
+  { let f=[],s=0;
+    if(gt(L("alt"),56)||gt(L("ast"),40)){f.push("Liver enzymes (ALT/AST) are raised");s+=2;}
+    if(gt(L("ggt"),48)){f.push("GGT is raised (often alcohol-related)");s+=1;}
+    if(gt(L("bili"),1.2)){f.push("Bilirubin is high");s+=1;}
+    if(lt(L("albumin"),3.5)){f.push("Albumin is low");s+=1;}
+    if(alcHeavy){f.push("Heavy alcohol use");s+=2;} else if(alcReg){f.push("Regular alcohol use");s+=1;}
+    if(bmi!=null&&bmi>=30){f.push("BMI in obese range (fatty-liver risk)");s+=1;}
+    if(diab){f.push("Diabetes (fatty-liver risk)");s+=1;}
+    R.push(mk("hepatic","Liver (hepatology) risk","🩺",f,s,2,5,"Cutting alcohol, reaching a healthy weight, and controlling blood sugar are the main ways to protect your liver.")); }
+
+  { let f=[],s=0;
+    if(lt(L("egfr"),45)||gt(L("creat"),1.5)){f.push("Kidney filtration (eGFR/creatinine) is reduced");s+=3;} else if(lt(L("egfr"),60)||gt(L("creat"),1.3)){f.push("Kidney filtration is mildly reduced");s+=2;}
+    if(gt(L("acr"),30)){f.push("Protein in the urine (raised ACR)");s+=2;}
+    if(gt(sbp,140)||gt(dbp,90)){f.push("High blood pressure");s+=1;}
+    if(diab){f.push("Diabetes");s+=1;}
+    if(gt(L("potassium"),5.1)){f.push("Potassium is high");s+=1;}
+    if(gt(age,70)){f.push("Age 70+");s+=1;}
+    R.push(mk("renal","Kidney (nephrology) risk","💧",f,s,3,6,"Kidneys are protected mainly by controlling blood pressure and blood sugar, staying hydrated, and avoiding NSAIDs and excess salt.")); }
+
+  { let f=[],s=0;
+    if(state.screen&&state.screen.weightloss){f.push("Unexplained weight loss (flagged)");s+=2;}
+    if(lt(L("hgb"),12)){f.push("Low hemoglobin (anemia — can signal GI blood loss)");s+=2;}
+    if(lt(L("ferritin"),30)){f.push("Low iron stores (ferritin)");s+=1;}
+    if(gt(L("lipase"),140)){f.push("High lipase (pancreas irritation)");s+=2;}
+    if(alcHeavy){f.push("Heavy alcohol use");s+=2;} else if(alcReg){f.push("Regular alcohol use");s+=1;}
+    if(nsaid){f.push("Regular NSAID use (stomach-bleed risk)");s+=1;}
+    if(bmi!=null&&bmi>=30){f.push("BMI in obese range (reflux risk)");s+=1;}
+    if(smoker){f.push("Current smoker");s+=1;}
+    if(state.screen&&state.screen.fever){f.push("Fever with symptoms (flagged)");s+=1;}
+    R.push(mk("gastro","Digestive (gastroenterology) risk","🩸",f,s,2,5,"Limiting alcohol and NSAIDs, not smoking, a fiber-rich diet and a healthy weight protect your gut. Unexplained weight loss, blood, or persistent symptoms need prompt review.")); }
+
+  return R;
+}
+function renderRisks(){
+  const el=$("#riskBody"); if(!el) return;
+  const risks=computeRisks();
+  const lvlTxt={low:"Lower",moderate:"Moderate",high:"Higher"}, lvlCls={low:"risk-low",moderate:"risk-mod",high:"risk-high"};
+  el.innerHTML = risks.map(r=>{
+    const cls=lvlCls[r.level];
+    const facts = r.factors.length
+      ? `<ul class="riskfactors">${r.factors.map(f=>`<li>${esc(f)}</li>`).join("")}</ul>`
+      : `<p class="hint" style="margin:6px 0 0">No major risk factors flagged from what you've entered so far.</p>`;
+    return `<div class="riskcard ${cls}">
+      <div class="riskhead"><span class="ricon">${r.icon}</span><span class="rtitle">${esc(r.title)}</span><span class="rlevel ${cls}">${lvlTxt[r.level]} risk</span></div>
+      ${facts}
+      <p class="risknote">${esc(r.note)}</p>
+    </div>`;
+  }).join("") + `<div class="redflags" style="margin-top:12px"><b>Educational only — not a diagnosis or a validated risk score.</b> These estimates use general thresholds and only the values you entered. Discuss any concerns, and any abnormal labs, with your doctor.</div>`;
+}
+
+function renderHealth(){ renderVitalsLog(); renderLabs(); renderRisks(); }
+function initHealth(){
+  const d=$("#vlDate"); if(d && !d.value) d.value=todayISO();
+  const sv=$("#vlSave"); if(sv) sv.onclick=saveVitalsEntry;
+}
+
+/* =====================================================================
    CLAUDE API COACH (optional) + settings
 ===================================================================== */
 function coachOnline(){ return !!(state.apiKey && state.apiKey.trim()); }
@@ -1774,6 +2066,8 @@ function buildCoachSystem(){
   const hrLine = hz ? `max HR ≈ ${hz.hrmax} bpm (Tanaka), moderate zone ${fmtRange(hz.zones.moderate)} bpm; recommended effort ${borgTarget().label}${onBetaBlocker()?"; on a beta-blocker, so HR targets are unreliable — advise RPE/talk-test":""}` : `age not set — advise Borg RPE ${borgTarget().label}`;
   const lifestyle = [state.smoking&&`smoking ${state.smoking}`, state.alcohol&&`alcohol ${state.alcohol}`, state.sleep&&`sleep ${state.sleep}`, state.stress&&`stress ${state.stress}`, state.falls&&`falls/yr ${state.falls}`, (state.aid&&state.aid!=="none")&&`walking aid ${state.aid}`].filter(Boolean).join(", ") || "not specified";
   const redflags = Object.entries(state.screen||{}).filter(([,val])=>val).map(([k])=>k).join(", ") || "none";
+  const abnormalLabs = LABS.filter(l=>{ const s=labStatusOf(l); return s==="high"||s==="low"; }).map(l=>`${l.name} ${labStatusOf(l)}`).join(", ") || "none entered/all in range";
+  const riskAreas = computeRisks().filter(r=>r.level!=="low").map(r=>`${r.title.replace(/ risk$/,"")} = ${r.level}`).join("; ") || "none flagged";
   return `You are Jeffery, PhysioPath's AI physical therapist — an educational assistant giving general, evidence-informed physical-rehabilitation guidance. You are an AI, not a licensed clinician, and must not diagnose or replace in-person care.
 
 USER CONTEXT
@@ -1784,6 +2078,8 @@ USER CONTEXT
 - Heart-rate & exertion: ${hrLine}
 - Lifestyle & function: ${lifestyle}
 - Red-flag screen positives: ${redflags}
+- Out-of-range labs entered: ${abnormalLabs}
+- Educational risk areas (not diagnostic): ${riskAreas}
 - Personalized precautions (MUST respect): ${precautions}
 
 RULES

@@ -35,7 +35,7 @@
   <button class="step" data-step="1"><i>2</i><span>Injury</span></button>
   <button class="step" data-step="2"><i>3</i><span>Details</span></button>
   <button class="step" data-step="3"><i>4</i><span>Program</span></button>
-  <button class="step" data-step="4"><i>5</i><span>Progress</span></button>
+  <button class="step" data-step="4"><i>5</i><span>Health</span></button>
   <button class="step" data-step="5"><i>6</i><span>AI</span></button>
   <button class="step" data-step="6"><i>7</i><span>Library</span></button>
 </nav>
@@ -244,7 +244,7 @@
     </div>
     <div class="rowbtns no-print">
       <button class="btn ghost" data-goto="2">← Adjust details</button>
-      <button class="btn primary" data-goto="4">Track my progress →</button>
+      <button class="btn primary" data-goto="4">Track health &amp; progress →</button>
     </div>
   </section>
 
@@ -275,6 +275,36 @@
       <div id="progressBody">
         <div class="empty"><div class="big">📈</div><div>No entries yet — log your first session above.</div></div>
       </div>
+    </div>
+
+    <div class="card">
+      <h2>Vitals log &amp; trend</h2>
+      <p class="hint">Record your vitals over time to see the trend across consecutive readings. Stored on your device only.</p>
+      <div class="grid3">
+        <label class="subfield"><span>Date</span><input type="date" id="vlDate" /></label>
+        <label class="subfield"><span>Resting HR <i>bpm</i></span><input type="number" id="vlHR" min="30" max="220" inputmode="numeric" placeholder="e.g. 68" /></label>
+        <label class="subfield"><span>Blood pressure <i>mmHg</i></span><span class="bpwrap"><input type="number" id="vlSBP" min="60" max="260" inputmode="numeric" placeholder="sys" /><em>/</em><input type="number" id="vlDBP" min="30" max="160" inputmode="numeric" placeholder="dia" /></span></label>
+        <label class="subfield"><span>Oxygen SpO₂ <i>%</i></span><input type="number" id="vlSpo2" min="50" max="100" inputmode="numeric" placeholder="e.g. 98" /></label>
+        <label class="subfield"><span>Blood glucose <i>mg/dL</i></span><input type="number" id="vlGlucose" min="30" max="600" inputmode="numeric" placeholder="e.g. 95" /></label>
+        <label class="subfield"><span>Weight <i>kg</i></span><input type="number" id="vlWeight" min="20" max="400" inputmode="decimal" placeholder="e.g. 78" /></label>
+        <label class="subfield"><span>Temperature <i>°C</i></span><input type="number" id="vlTemp" min="30" max="45" step="0.1" inputmode="decimal" placeholder="e.g. 36.8" /></label>
+      </div>
+      <div class="rowbtns"><span></span><button class="btn primary" id="vlSave">Save vitals entry</button></div>
+      <div id="vitalsLogBody"></div>
+    </div>
+
+    <div class="card">
+      <h2>Lab values &amp; targets</h2>
+      <p class="hint">Enter your latest results and adjust the target range if your clinician gave you a specific one.
+        <b style="color:var(--brand-2)">Green</b> = within target, <b style="color:var(--danger)">red</b> = out of range with tips to improve it.
+        Educational only — reference ranges vary by lab; your clinician's targets take precedence.</p>
+      <div id="labsBody"></div>
+    </div>
+
+    <div class="card">
+      <h2>Health risk assessment</h2>
+      <p class="hint">Educational estimates for cardiac, stroke, liver, kidney and digestive health, from the vitals, labs and history you entered. Not a diagnosis or a validated risk score.</p>
+      <div id="riskBody"></div>
     </div>
 
     <div class="rowbtns no-print">

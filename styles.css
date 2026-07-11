@@ -408,6 +408,50 @@ footer b{color:var(--text)}
 .hrtarget{margin-top:6px;font-size:12px;color:var(--brand);background:rgba(62,166,255,.08);border:1px solid rgba(62,166,255,.25);border-radius:8px;padding:5px 9px;line-height:1.45}
 .hrtarget b{color:var(--text)}
 
+/* health tracking — vitals trend, labs, risk */
+.vtrendgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(98px,1fr));gap:8px;margin-bottom:12px}
+.vcell{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.vck{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
+.vcv{font-size:16px;font-weight:800;font-variant-numeric:tabular-nums;margin-top:1px}
+.vcu{font-size:11px;color:var(--muted);font-weight:400}
+.vct{font-size:11px;font-weight:700;margin-top:2px}
+.tgood{color:var(--brand-2)}.tbad{color:var(--danger)}.tflat{color:var(--muted)}
+.vchartsel{font-size:12.5px;margin:2px 0 6px;color:var(--muted)}
+.vchartsel select{width:auto;display:inline-block;padding:6px 10px;font-size:13px;margin-left:4px}
+
+.labdomain{margin:0 0 6px}
+.labdh{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:14px 0 4px;font-weight:800}
+.labrow{padding:10px 0;border-bottom:1px solid var(--line)}
+.labrow:last-child{border-bottom:none}
+.labname{font-size:13.5px;font-weight:600;margin-bottom:6px}
+.labunit{color:var(--muted);font-weight:400;font-size:12px}
+.labinputs{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.labval{width:104px;flex:0 0 auto;padding:9px 10px;font-size:15px}
+.labtarget{font-size:12px;color:var(--muted);display:inline-flex;align-items:center;gap:4px}
+.labt{width:58px;padding:6px 6px;font-size:13px;text-align:center}
+.labpill{margin-left:auto;font-size:11.5px;font-weight:800;padding:4px 11px;border-radius:999px;white-space:nowrap}
+.labpill.labok{background:rgba(92,225,166,.18);color:var(--brand-2)}
+.labpill.labbad{background:rgba(255,107,107,.18);color:var(--danger)}
+.labpill.labnone{background:var(--panel-2);color:var(--muted);border:1px solid var(--line)}
+.labrow.labok .labname{color:var(--text)}
+.labrow.labbad{background:rgba(255,107,107,.05);border-radius:8px;padding:10px 8px;margin:0 -8px}
+.labtip{font-size:12px;color:var(--muted);margin-top:7px;border-left:2px solid var(--warn);padding:4px 0 4px 10px;line-height:1.5}
+
+.riskcard{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:10px 0;background:var(--panel-2)}
+.riskcard.risk-low{border-color:rgba(92,225,166,.45)}
+.riskcard.risk-mod{border-color:rgba(255,204,87,.5)}
+.riskcard.risk-high{border-color:rgba(255,107,107,.55)}
+.riskhead{display:flex;align-items:center;gap:8px}
+.ricon{font-size:18px}
+.rtitle{font-weight:700;font-size:14.5px}
+.rlevel{margin-left:auto;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;padding:3px 10px;border-radius:999px;white-space:nowrap}
+.rlevel.risk-low{background:rgba(92,225,166,.16);color:var(--brand-2)}
+.rlevel.risk-mod{background:rgba(255,204,87,.16);color:var(--warn)}
+.rlevel.risk-high{background:rgba(255,107,107,.16);color:var(--danger)}
+.riskfactors{margin:8px 0 0;padding-left:18px}
+.riskfactors li{font-size:13px;margin-bottom:4px}
+.risknote{font-size:12.5px;color:var(--muted);margin:8px 0 0;line-height:1.5}
+
 /* ---------- app-style bottom navigation on phones ---------- */
 @media (max-width:700px){
   .steps{
