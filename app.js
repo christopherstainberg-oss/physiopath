@@ -2105,7 +2105,7 @@ function computeRisks(){
     if(gt(L("crp"),3)){f.push("hs-CRP (inflammation) is high");s+=1;}
     if(gt(hr,90)){f.push("Resting heart rate is high");s+=1;}
     if(gt(age,70)){f.push("Age 70+");s+=2;} else if(gt(age,55)){f.push("Age 55+");s+=1;}
-    R.push(mk("cardiac","Cardiac (heart) risk","❤️",f,s,3,6,"Blood pressure, cholesterol, blood sugar, not smoking, a healthy weight and regular aerobic exercise are the biggest levers here.")); }
+    R.push(mk("cardiac","Cardiac Risk","❤️",f,s,3,6,"Blood pressure, cholesterol, blood sugar, not smoking, a healthy weight and regular aerobic exercise are the biggest levers here.")); }
 
   { let f=[],s=0;
     if(gt(sbp,160)||gt(dbp,100)){f.push("Blood pressure is high (the #1 stroke risk factor)");s+=3;} else if(gt(sbp,140)||gt(dbp,90)){f.push("Blood pressure is elevated");s+=2;}
@@ -2116,7 +2116,7 @@ function computeRisks(){
     if(gt(L("ldl"),160)){f.push("High LDL cholesterol");s+=1;}
     if(bmi!=null&&bmi>=30){f.push("BMI in the obese range");s+=1;}
     if(gt(age,75)){f.push("Age 75+");s+=2;} else if(gt(age,65)){f.push("Age 65+");s+=1;}
-    R.push(mk("stroke","Stroke risk","🧠",f,s,3,6,"Controlling blood pressure is the single biggest way to lower stroke risk; treating an irregular heart rhythm and not smoking matter a lot too.")); }
+    R.push(mk("stroke","Stroke Risk","🧠",f,s,3,6,"Controlling blood pressure is the single biggest way to lower stroke risk; treating an irregular heart rhythm and not smoking matter a lot too.")); }
 
   { let f=[],s=0;
     if(gt(L("alt"),56)||gt(L("ast"),40)){f.push("Liver enzymes (ALT/AST) are raised");s+=2;}
@@ -2126,7 +2126,7 @@ function computeRisks(){
     if(alcHeavy){f.push("Heavy alcohol use");s+=2;} else if(alcReg){f.push("Regular alcohol use");s+=1;}
     if(bmi!=null&&bmi>=30){f.push("BMI in obese range (fatty-liver risk)");s+=1;}
     if(diab){f.push("Diabetes (fatty-liver risk)");s+=1;}
-    R.push(mk("hepatic","Liver (hepatology) risk","🩺",f,s,2,5,"Cutting alcohol, reaching a healthy weight, and controlling blood sugar are the main ways to protect your liver.")); }
+    R.push(mk("hepatic","Liver Risk","🩺",f,s,2,5,"Cutting alcohol, reaching a healthy weight, and controlling blood sugar are the main ways to protect your liver.")); }
 
   { let f=[],s=0;
     if(lt(L("egfr"),45)||gt(L("creat"),1.5)){f.push("Kidney filtration (eGFR/creatinine) is reduced");s+=3;} else if(lt(L("egfr"),60)||gt(L("creat"),1.3)){f.push("Kidney filtration is mildly reduced");s+=2;}
@@ -2135,7 +2135,7 @@ function computeRisks(){
     if(diab){f.push("Diabetes");s+=1;}
     if(gt(L("potassium"),5.1)){f.push("Potassium is high");s+=1;}
     if(gt(age,70)){f.push("Age 70+");s+=1;}
-    R.push(mk("renal","Kidney (nephrology) risk","💧",f,s,3,6,"Kidneys are protected mainly by controlling blood pressure and blood sugar, staying hydrated, and avoiding NSAIDs and excess salt.")); }
+    R.push(mk("renal","Kidney Risk","💧",f,s,3,6,"Kidneys are protected mainly by controlling blood pressure and blood sugar, staying hydrated, and avoiding NSAIDs and excess salt.")); }
 
   { let f=[],s=0;
     if(state.screen&&state.screen.weightloss){f.push("Unexplained weight loss (flagged)");s+=2;}
@@ -2147,7 +2147,16 @@ function computeRisks(){
     if(bmi!=null&&bmi>=30){f.push("BMI in obese range (reflux risk)");s+=1;}
     if(smoker){f.push("Current smoker");s+=1;}
     if(state.screen&&state.screen.fever){f.push("Fever with symptoms (flagged)");s+=1;}
-    R.push(mk("gastro","Digestive (gastroenterology) risk","🩸",f,s,2,5,"Limiting alcohol and NSAIDs, not smoking, a fiber-rich diet and a healthy weight protect your gut. Unexplained weight loss, blood, or persistent symptoms need prompt review.")); }
+    R.push(mk("gastro","Digestive Risk","🩸",f,s,2,5,"Limiting alcohol and NSAIDs, not smoking, a fiber-rich diet and a healthy weight protect your gut. Unexplained weight loss, blood, or persistent symptoms need prompt review.")); }
+
+  { let f=[],s=0; const spo2v=vnum(v.spo2);
+    if(spo2v!=null&&spo2v<92){f.push("Oxygen saturation (SpO₂) is low");s+=3;} else if(spo2v!=null&&spo2v<95){f.push("Oxygen saturation is borderline");s+=1;}
+    if(smoker){f.push("Current smoker");s+=3;} else if(state.smoking==="former"){f.push("Former smoker");s+=1;}
+    if(flags.has("pulmonary")){f.push("Existing lung / breathing condition");s+=2;}
+    if(state.parq&&state.parq.pain){f.push("Breathlessness or chest tightness with exertion");s+=1;}
+    if(bmi!=null&&bmi>=35){f.push("Very high BMI (can restrict breathing)");s+=1;}
+    if(gt(age,65)){f.push("Age 65+");s+=1;}
+    R.push(mk("pulmonary","Pulmonary Risk","🫁",f,s,2,5,"Not smoking is by far the biggest protector of your lungs; regular aerobic exercise, breathing techniques, staying up to date on vaccinations and avoiding air pollutants help too. Get a lasting cough, wheeze, or new breathlessness checked.")); }
 
   return R;
 }
@@ -2213,7 +2222,7 @@ function buildCoachSystem(){
   const lifestyle = [state.smoking&&`smoking ${state.smoking}`, state.alcohol&&`alcohol ${state.alcohol}`, state.sleep&&`sleep ${state.sleep}`, state.stress&&`stress ${state.stress}`, state.falls&&`falls/yr ${state.falls}`, (state.aid&&state.aid!=="none")&&`walking aid ${state.aid}`].filter(Boolean).join(", ") || "not specified";
   const redflags = Object.entries(state.screen||{}).filter(([,val])=>val).map(([k])=>k).join(", ") || "none";
   const abnormalLabs = LABS.filter(l=>{ const s=labStatusOf(l); return s==="high"||s==="low"; }).map(l=>`${l.name} ${labStatusOf(l)}`).join(", ") || "none entered/all in range";
-  const riskAreas = computeRisks().filter(r=>r.level!=="low").map(r=>`${r.title.replace(/ risk$/,"")} = ${r.level}`).join("; ") || "none flagged";
+  const riskAreas = computeRisks().filter(r=>r.level!=="low").map(r=>`${r.title.replace(/ risk$/i,"")} = ${r.level}`).join("; ") || "none flagged";
   return `You are Jeffery, PhysioPath's AI physical therapist — an educational assistant giving general, evidence-informed physical-rehabilitation guidance. You are an AI, not a licensed clinician, and must not diagnose or replace in-person care.
 
 USER CONTEXT
