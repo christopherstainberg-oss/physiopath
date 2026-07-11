@@ -349,6 +349,14 @@ footer b{color:var(--text)}
 .toast-update{display:flex;align-items:center;gap:10px}
 .toast .updbtn{padding:6px 12px;font-size:13px;white-space:nowrap}
 
+/* symptom / red-flag screen */
+.check-row.urgent{border:1px solid rgba(255,107,107,.4);background:rgba(255,107,107,.06);border-radius:9px;padding:8px 10px;margin:8px 0}
+.screenwarn{margin-top:8px;font-size:12.5px;line-height:1.5}
+.screenwarn:empty{margin:0}
+.screenwarn:not(.urgent):not(:empty){color:var(--warn);background:rgba(255,204,87,.1);border:1px solid rgba(255,204,87,.35);border-radius:9px;padding:8px 11px}
+.screenwarn.urgent{color:var(--danger);background:rgba(255,107,107,.1);border:1px solid rgba(255,107,107,.45);border-radius:9px;padding:10px 12px}
+.screenwarn b{color:inherit}
+
 /* vital signs, max heart rate & Borg RPE */
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 @media(max-width:620px){.grid3{grid-template-columns:1fr 1fr}}

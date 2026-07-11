@@ -245,6 +245,7 @@ const state = {
   meds:"", notes:"", condIds:[], weeks:null, painRest:3, painMove:4, surgery:"no",
   surgeryType:"auto", surgeryDate:"", fitness:"mod", goal:"", program:null,
   vitals:{restHR:"",sbp:"",dbp:"",spo2:"",rr:"",height:"",weight:""},
+  screen:{}, falls:"", aid:"", smoking:"", alcohol:"", sleep:"", stress:"",
   medIds:[], medFilter:false, customPrecautions:[], log:[], apiKey:"", apiModel:"claude-opus-4-8"
 };
 const MED_FILTERABLE = ["fluoroquinolone","anticoagulant","antiplatelet","opioid","sedative","muscle_relaxant","gabapentinoid","antipsychotic"];
@@ -309,6 +310,11 @@ function gatherFlags(){
   selectedConditions().forEach(c => (c.autoFlags||[]).forEach(x=>f.add(x)));
   const surg = detectSurgery(); if(surg && surg.autoFlags) surg.autoFlags.forEach(x=>f.add(x));
   vitalFlags().forEach(x=>f.add(x));
+  const sc = state.screen||{};
+  if(Object.values(sc).some(Boolean)) f.add("red_flags");
+  if(sc.cauda) f.add("red_flags_urgent");
+  if(state.falls==="2" || (state.aid && state.aid!=="none")) f.add("balance_risk");
+  if(state.smoking==="current") f.add("smoker");
   return Array.from(f);
 }
 /* Medication-derived engine flags — applied at RENDER time only (so toggling is
@@ -1275,6 +1281,11 @@ function suggestionsCard(prog){
   if(domains.has("cardiac")) base.push("<b>Cardiac:</b> use the talk-test — you should be able to hold a conversation. Warm up and cool down fully, and never hold your breath during effort.");
   if(domains.has("pulmonary")) base.push("<b>Breathing:</b> pace exercise with pursed-lip breathing, rest when breathless, and use prescribed oxygen. Breathlessness is expected — dizziness or chest pain is not.");
   if(domains.has("neuro")) base.push("<b>Neurological recovery:</b> repetition and specificity drive change. Practice the actual movements you want back, safely and often, near support.");
+  if(state.smoking==="current") base.push("<b>Smoking &amp; healing:</b> tobacco slows tendon, bone and wound healing and lowers exercise capacity — cutting down or quitting meaningfully speeds recovery. Ask your clinician about support.");
+  if(state.sleep==="lt6") base.push("<b>Sleep:</b> under 6 hours raises pain sensitivity and slows repair — protecting sleep is one of the highest-value things you can do for recovery.");
+  if(state.stress==="high") base.push("<b>Stress:</b> high stress amplifies pain and slows healing — a few minutes of daily breathing or relaxation helps your tissues tolerate load.");
+  if(state.alcohol==="heavy") base.push("<b>Alcohol:</b> heavy use impairs muscle repair, sleep and balance — cutting back supports your recovery and lowers fall risk.");
+  if(state.falls==="2" || (state.aid && state.aid!=="none")) base.push("<b>Fall safety:</b> do balance and standing work beside a sturdy rail or counter, keep floors clear, and progress difficulty slowly.");
   return `<div class="card"><h2>Suggestions for your recovery</h2><ul class="tips">${base.map(t=>`<li>${t}</li>`).join("")}</ul>
     <p class="hint" style="margin-top:8px">Questions about any of this? Ask <b>Jeffery</b> in the <b>AI</b> tab.</p></div>`;
 }
@@ -1396,6 +1407,27 @@ function initHistory(){
     inp.value = state.vitals[key]||"";
     inp.oninput=e=>{ state.vitals[key]=e.target.value; save(); updateVitalsReadout(); }; });
   updateVitalsReadout();
+  // symptom / red-flag screen
+  state.screen = state.screen || {};
+  $$('[data-screen]').forEach(cb=>{ const k=cb.dataset.screen;
+    cb.checked = !!state.screen[k];
+    cb.onchange=()=>{ state.screen[k]=cb.checked; save(); updateScreenWarn(); }; });
+  updateScreenWarn();
+  // lifestyle & daily function
+  const LIFE_IDS = {q_smoking:"smoking",q_alcohol:"alcohol",q_sleep:"sleep",q_stress:"stress",q_falls:"falls",q_aid:"aid"};
+  Object.entries(LIFE_IDS).forEach(([id,key])=>{ const el=$("#"+id); if(!el) return;
+    el.value = state[key]||"";
+    el.onchange=e=>{ state[key]=e.target.value; save(); }; });
+}
+/* Urgent / clearance note shown live under the red-flag screen. */
+function updateScreenWarn(){
+  const el=$("#screenWarn"); if(!el) return;
+  const sc=state.screen||{};
+  if(sc.cauda){ el.className="screenwarn urgent";
+    el.innerHTML=`⛔ <b>Seek urgent medical care now.</b> Loss of bladder/bowel control or numbness around the groin/saddle can be a medical emergency (cauda equina) — do not exercise until you've been assessed.`; return; }
+  if(Object.values(sc).some(Boolean)){ el.className="screenwarn";
+    el.innerHTML=`⚠ Because you flagged a warning symptom, your program will advise <b>getting assessed by a clinician before starting</b>.`; return; }
+  el.className="screenwarn"; el.innerHTML="";
 }
 /* Live readout under the vitals inputs: max HR, target zone, BMI, out-of-range warnings + Borg scale. */
 function updateVitalsReadout(){
@@ -1701,6 +1733,8 @@ function buildCoachSystem(){
   const enteredVitals = [v.restHR&&`resting HR ${v.restHR} bpm`, (v.sbp&&v.dbp)&&`BP ${v.sbp}/${v.dbp}`, v.spo2&&`SpO₂ ${v.spo2}%`, v.rr&&`RR ${v.rr}/min`, bmiCalc(v.height,v.weight)!=null&&`BMI ${bmiCalc(v.height,v.weight)}`].filter(Boolean).join(", ") || "none entered";
   const hz = hrZones();
   const hrLine = hz ? `max HR ≈ ${hz.hrmax} bpm (Tanaka), moderate zone ${fmtRange(hz.zones.moderate)} bpm; recommended effort ${borgTarget().label}${onBetaBlocker()?"; on a beta-blocker, so HR targets are unreliable — advise RPE/talk-test":""}` : `age not set — advise Borg RPE ${borgTarget().label}`;
+  const lifestyle = [state.smoking&&`smoking ${state.smoking}`, state.alcohol&&`alcohol ${state.alcohol}`, state.sleep&&`sleep ${state.sleep}`, state.stress&&`stress ${state.stress}`, state.falls&&`falls/yr ${state.falls}`, (state.aid&&state.aid!=="none")&&`walking aid ${state.aid}`].filter(Boolean).join(", ") || "not specified";
+  const redflags = Object.entries(state.screen||{}).filter(([,val])=>val).map(([k])=>k).join(", ") || "none";
   return `You are Jeffery, PhysioPath's AI physical therapist — an educational assistant giving general, evidence-informed physical-rehabilitation guidance. You are an AI, not a licensed clinician, and must not diagnose or replace in-person care.
 
 USER CONTEXT
@@ -1709,6 +1743,8 @@ USER CONTEXT
 - Program: ${prog}
 - Vitals entered: ${enteredVitals}
 - Heart-rate & exertion: ${hrLine}
+- Lifestyle & function: ${lifestyle}
+- Red-flag screen positives: ${redflags}
 - Personalized precautions (MUST respect): ${precautions}
 
 RULES

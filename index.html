@@ -78,6 +78,25 @@
           <span>A doctor has told me to <b>only exercise under supervision</b>.</span></label>
       </div>
 
+      <div class="field parq">
+        <span class="lab">Symptom &amp; red-flag screen <span class="sub">(tick anything you've noticed — this flags when to see a clinician first)</span></span>
+        <label class="check-row"><input type="checkbox" data-screen="weightloss" />
+          <span>Unexplained <b>weight loss</b> recently.</span></label>
+        <label class="check-row"><input type="checkbox" data-screen="nightpain" />
+          <span>Pain that is <b>constant</b> or regularly <b>wakes you at night</b>.</span></label>
+        <label class="check-row"><input type="checkbox" data-screen="fever" />
+          <span><b>Fever, chills, or night sweats</b> along with your symptoms.</span></label>
+        <label class="check-row"><input type="checkbox" data-screen="cancer" />
+          <span>A personal <b>history of cancer</b>.</span></label>
+        <label class="check-row"><input type="checkbox" data-screen="numb" />
+          <span>New or <b>spreading numbness, tingling, or weakness</b>.</span></label>
+        <label class="check-row"><input type="checkbox" data-screen="trauma" />
+          <span>A recent <b>significant injury</b> (major fall, collision, or accident).</span></label>
+        <label class="check-row urgent"><input type="checkbox" data-screen="cauda" />
+          <span><b>Loss of bladder or bowel control</b>, or <b>numbness around the groin/saddle</b>.</span></label>
+        <div class="screenwarn" id="screenWarn"></div>
+      </div>
+
       <div class="field vitals">
         <span class="lab">Vital signs &amp; measurements <span class="sub">(optional — powers your heart-rate targets and tailors exercise intensity)</span></span>
         <div class="grid3">
@@ -95,6 +114,24 @@
             <input type="number" id="v_weight" min="20" max="400" inputmode="numeric" placeholder="e.g. 78" /></label>
         </div>
         <div class="vitalsreadout" id="vitalsReadout"></div>
+      </div>
+
+      <div class="field">
+        <span class="lab">Lifestyle &amp; daily function <span class="sub">(optional — helps tailor pacing, recovery advice, and fall-safety)</span></span>
+        <div class="grid3">
+          <label class="subfield"><span>Tobacco / smoking</span>
+            <select id="q_smoking"><option value="">—</option><option value="never">Never</option><option value="former">Former</option><option value="current">Current</option></select></label>
+          <label class="subfield"><span>Alcohol</span>
+            <select id="q_alcohol"><option value="">—</option><option value="none">None</option><option value="occasional">Occasional</option><option value="regular">Regular</option><option value="heavy">Heavy</option></select></label>
+          <label class="subfield"><span>Typical sleep</span>
+            <select id="q_sleep"><option value="">—</option><option value="lt6">Under 6 h</option><option value="6to7">6–7 h</option><option value="7to9">7–9 h</option><option value="gt9">Over 9 h</option></select></label>
+          <label class="subfield"><span>Stress level</span>
+            <select id="q_stress"><option value="">—</option><option value="low">Low</option><option value="mod">Moderate</option><option value="high">High</option></select></label>
+          <label class="subfield"><span>Falls in the past year</span>
+            <select id="q_falls"><option value="">—</option><option value="0">None</option><option value="1">One</option><option value="2">Two or more</option></select></label>
+          <label class="subfield"><span>Walking aid</span>
+            <select id="q_aid"><option value="">—</option><option value="none">None</option><option value="cane">Cane</option><option value="walker">Walker / rollator</option><option value="crutches">Crutches</option><option value="wheelchair">Wheelchair</option></select></label>
+        </div>
       </div>
 
       <div class="field">

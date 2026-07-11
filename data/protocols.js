@@ -834,6 +834,13 @@
       note:"Diabetes: check glucose around exercise, carry fast-acting carbs, stay hydrated, and take care of your feet (good shoes, daily checks)." },
     pacemaker_icd: { avoid:[], caution:[T.highInt],
       note:"Pacemaker/ICD: keep your heart rate below any limit your cardiologist set and avoid maximal exertion; know your device's settings." },
+    // ---- symptom / red-flag screen (from the medical-intake questions) ----
+    red_flags: { avoid:[], caution:[], clearance:true,
+      note:"You flagged a possible warning sign (e.g. unexplained weight loss, constant or night pain, fever with your symptoms, a cancer history, spreading numbness/weakness, or a major injury). These can occasionally point to something beyond a routine musculoskeletal problem — please get assessed by a clinician before starting so anything serious is ruled out first." },
+    red_flags_urgent: { avoid:[], caution:[], clearance:true,
+      note:"⛔ Loss of bladder or bowel control, or numbness around the groin/inner thighs, can signal a medical emergency (cauda equina syndrome). Do not exercise — seek urgent medical care now." },
+    smoker: { avoid:[], caution:[],
+      note:"Smoking slows tendon, bone, and wound healing and lowers exercise capacity — even cutting down helps your recovery. Ask your clinician about support to quit; keep well hydrated and warm up thoroughly." },
     // ---- objective vital-sign-derived rules (from the resting HR, blood pressure & SpO₂ you entered) ----
     vital_bp_high: { avoid:[T.valsalva,T.breath,T.grip], caution:[T.highInt,T.inversion,T.impact],
       note:"The blood pressure you entered is high: never hold your breath (exhale on effort), skip heavy isometric/grip holds and head-down positions, and keep to moderate aerobic effort (RPE 11–13). Recheck at rest — if it stays high, get it reviewed before harder exercise." },
