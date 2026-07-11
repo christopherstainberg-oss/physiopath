@@ -14,7 +14,7 @@ import { writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const TARGET = 3000;
+const TARGET = 10000;
 
 const P = (t, w) => ({ t, w });
 // soften weeks for minimally invasive / keyhole approaches
@@ -22,16 +22,17 @@ const soften = prec => prec.map(p => ({ t: p.t, w: p.w === 0 ? 0 : Math.max(1, M
 const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 /* ---- shared approach sets ---- */
-const A_JOINT = [{ m: "", soft: false }, { m: "arthroscopic", soft: true }, { m: "robotic-assisted", soft: false }, { m: "computer-navigated", soft: false }, { m: "minimally invasive", soft: true }];
-const A_ARTH  = [{ m: "", soft: false }, { m: "robotic-assisted", soft: false }, { m: "computer-navigated", soft: false }, { m: "minimally invasive", soft: true }, { m: "cementless", soft: false }, { m: "revision", soft: false }];
-const A_SCOPE = [{ m: "arthroscopic", soft: true }, { m: "open", soft: false }, { m: "revision", soft: false }];
-const A_OPEN  = [{ m: "", soft: false }, { m: "minimally invasive", soft: true }, { m: "percutaneous", soft: true }];
-const A_LAP   = [{ m: "laparoscopic", soft: true }, { m: "open", soft: false }, { m: "robotic-assisted", soft: true }];
-const A_CARD  = [{ m: "", soft: false }, { m: "minimally invasive", soft: true }, { m: "off-pump", soft: false }, { m: "robotic-assisted", soft: true }];
-const A_THOR  = [{ m: "VATS (keyhole)", soft: true }, { m: "open thoracotomy", soft: false }, { m: "robotic-assisted", soft: true }];
-const A_SPINE = [{ m: "", soft: false }, { m: "minimally invasive", soft: true }, { m: "with instrumentation", soft: false }];
-const A_ENDO  = [{ m: "endovascular", soft: true }, { m: "open", soft: false }];
-const A_PLAIN = [{ m: "", soft: false }, { m: "revision", soft: false }];
+const A_JOINT = [{ m: "", soft: false }, { m: "arthroscopic", soft: true }, { m: "robotic-assisted", soft: false }, { m: "computer-navigated", soft: false }, { m: "minimally invasive", soft: true }, { m: "image-guided", soft: false }, { m: "revision", soft: false }];
+const A_ARTH  = [{ m: "", soft: false }, { m: "cemented", soft: false }, { m: "cementless", soft: false }, { m: "hybrid fixation", soft: false }, { m: "robotic-assisted", soft: false }, { m: "computer-navigated", soft: false }, { m: "patient-specific instrumentation", soft: false }, { m: "minimally invasive", soft: true }, { m: "outpatient / day-case", soft: true }, { m: "revision", soft: false }];
+const A_SCOPE = [{ m: "arthroscopic", soft: true }, { m: "arthroscopic with debridement", soft: true }, { m: "arthroscopic repair", soft: true }, { m: "mini-open", soft: false }, { m: "open", soft: false }, { m: "revision", soft: false }];
+const A_OPEN  = [{ m: "", soft: false }, { m: "minimally invasive", soft: true }, { m: "percutaneous", soft: true }, { m: "with internal fixation", soft: false }, { m: "with bone graft", soft: false }];
+const A_LAP   = [{ m: "laparoscopic", soft: true }, { m: "single-incision laparoscopic", soft: true }, { m: "hand-assisted laparoscopic", soft: false }, { m: "robotic-assisted", soft: true }, { m: "open", soft: false }];
+const A_CARD  = [{ m: "", soft: false }, { m: "on-pump", soft: false }, { m: "off-pump", soft: false }, { m: "minimally invasive", soft: true }, { m: "robotic-assisted", soft: true }];
+const A_THOR  = [{ m: "VATS (keyhole)", soft: true }, { m: "uniportal VATS", soft: true }, { m: "robotic-assisted", soft: true }, { m: "open thoracotomy", soft: false }];
+const A_SPINE = [{ m: "", soft: false }, { m: "minimally invasive", soft: true }, { m: "endoscopic", soft: true }, { m: "with instrumentation", soft: false }, { m: "navigation-guided", soft: false }, { m: "with fusion", soft: false }];
+const A_ENDO  = [{ m: "endovascular", soft: true }, { m: "open", soft: false }, { m: "hybrid", soft: false }];
+const A_PLAIN = [{ m: "", soft: false }, { m: "minimally invasive", soft: true }, { m: "revision", soft: false }, { m: "day-case", soft: true }];
+const A_HAND  = [{ m: "", soft: false }, { m: "endoscopic", soft: true }, { m: "open", soft: false }, { m: "revision", soft: false }];
 
 const S_LIMB = ["", "Left", "Right", "Bilateral"];
 const S_SIDE = ["", "Left", "Right"];
@@ -215,6 +216,72 @@ const FAM = [
     prec: [P("Protect the graft/flap and follow positioning and dressing instructions.", 6), P("Avoid stretching or loading the area until it has healed.", 8), P("Watch for colour change, breakdown, or infection at the site.", 4)],
     bases: [{ n: "Skin graft", kw: ["skin graft"] }, { n: "Free flap reconstruction", kw: ["free flap", "flap reconstruction"] }, { n: "Burn contracture release", kw: ["contracture release", "burn release"] }, { n: "Replantation (digit/limb)", kw: ["replantation"] }, { n: "Complex wound closure", kw: ["wound closure", "wound reconstruction"] }],
     mods: A_PLAIN, sides: S_SIDE },
+
+  { cat: "hand_surgery", region: "hand / wrist", autoFlags: [],
+    ret: "Hand recovery is early-motion led; light use returns within days–weeks and full grip/strength over 2–3 months.",
+    prec: [P("Keep the incision clean and dry; keep fingers moving to prevent stiffness.", 2), P("Avoid heavy gripping, pinching or weight-bearing through the hand early.", 4), P("Wear any splint as instructed; elevate to control swelling.", 3)],
+    bases: [{ n: "Carpal tunnel release", kw: ["carpal tunnel release"] }, { n: "Cubital tunnel release", kw: ["cubital tunnel", "ulnar nerve release"] }, { n: "Trigger finger release", kw: ["trigger finger release"] }, { n: "Trigger thumb release", kw: ["trigger thumb"] }, { n: "Dupuytren's fasciectomy", kw: ["dupuytren", "fasciectomy"] }, { n: "De Quervain's release", kw: ["de quervain"] }, { n: "Ganglion cyst excision", kw: ["ganglion excision"] }, { n: "Flexor tendon repair", kw: ["flexor tendon repair"] }, { n: "Extensor tendon repair", kw: ["extensor tendon repair"] }, { n: "Thumb CMC (basal joint) arthroplasty", kw: ["cmc arthroplasty", "basal joint"] }, { n: "Wrist arthrodesis (fusion)", kw: ["wrist fusion", "wrist arthrodesis"] }, { n: "Tendon transfer (hand)", kw: ["hand tendon transfer"] }],
+    mods: A_HAND, sides: S_LIMB },
+
+  { cat: "foot_ankle_surgery", region: "foot / ankle", autoFlags: [],
+    ret: "Foot/ankle surgery is weight-bearing led — follow your boot/cast and weight-bearing status closely; loading progresses over weeks–months.",
+    prec: [P("Follow your weight-bearing status and keep the boot/cast on as prescribed.", 6), P("Elevate frequently to control swelling; keep the incision clean and dry.", 4), P("No impact or forced motion until your surgeon confirms healing.", 8)],
+    bases: [{ n: "Bunion correction (hallux valgus)", kw: ["bunion", "hallux valgus", "bunionectomy"] }, { n: "Hammertoe correction", kw: ["hammertoe"] }, { n: "Morton's neuroma excision", kw: ["morton's neuroma", "neuroma excision"] }, { n: "Plantar fascia release", kw: ["plantar fascia release"] }, { n: "Ankle arthrodesis (fusion)", kw: ["ankle fusion", "ankle arthrodesis"] }, { n: "Subtalar fusion", kw: ["subtalar fusion"] }, { n: "Midfoot fusion", kw: ["midfoot fusion"] }, { n: "Lapidus procedure", kw: ["lapidus"] }, { n: "Calcaneal osteotomy", kw: ["calcaneal osteotomy"] }, { n: "Gastrocnemius recession", kw: ["gastrocnemius recession"] }, { n: "Flatfoot reconstruction", kw: ["flatfoot reconstruction"] }],
+    mods: A_OPEN, sides: S_LIMB },
+
+  { cat: "spine_other", region: "spine", autoFlags: [],
+    ret: "Spinal recovery follows a graded, brace/precaution-guided timeline; restrictions ease over 6–12 weeks as the spine heals.",
+    prec: [P("Limit bending, lifting (>~5–10 lb) and twisting early; log-roll in and out of bed.", 8), P("Wear your brace if prescribed and change positions often.", 6), P("No driving until cleared; report new leg/arm weakness or numbness.", 6)],
+    bases: [{ n: "Scoliosis correction & fusion", kw: ["scoliosis correction", "spinal deformity"] }, { n: "Kyphoplasty", kw: ["kyphoplasty"] }, { n: "Vertebroplasty", kw: ["vertebroplasty"] }, { n: "Cervical disc replacement", kw: ["cervical disc replacement"] }, { n: "Lumbar disc replacement", kw: ["lumbar disc replacement"] }, { n: "Laminoplasty", kw: ["laminoplasty"] }, { n: "Foraminotomy", kw: ["foraminotomy"] }, { n: "Corpectomy", kw: ["corpectomy"] }, { n: "Spinal cord stimulator implant", kw: ["spinal cord stimulator"] }, { n: "Sacroiliac joint fusion", kw: ["sacroiliac fusion", "si joint fusion"] }],
+    mods: A_SPINE, sides: S_NONE },
+
+  { cat: "urology", region: "urinary", autoFlags: [],
+    ret: "Keyhole/endoscopic urology recovers within days–weeks; avoid heavy lifting and straining early and follow catheter/stent advice.",
+    prec: [P("Avoid heavy lifting and straining early to protect the repair.", 4), P("Follow catheter/stent care and drink plenty of fluids.", 2), P("Watch for fever, heavy bleeding, or being unable to pass urine (seek care).", 2)],
+    bases: [{ n: "Transurethral prostate resection (TURP)", kw: ["turp", "transurethral prostate"] }, { n: "Ureteroscopy & stone removal", kw: ["ureteroscopy"] }, { n: "Percutaneous nephrolithotomy (PCNL)", kw: ["nephrolithotomy", "pcnl"] }, { n: "Shockwave lithotripsy (stones)", kw: ["lithotripsy"] }, { n: "Radical prostatectomy", kw: ["prostatectomy"] }, { n: "Cystectomy (bladder)", kw: ["cystectomy", "bladder removal"] }, { n: "Ureteric reimplantation", kw: ["ureteric reimplant"] }, { n: "Hydrocele repair", kw: ["hydrocele"] }, { n: "Orchidopexy", kw: ["orchidopexy"] }, { n: "Penile prosthesis / artificial sphincter", kw: ["penile prosthesis", "artificial urinary sphincter"] }],
+    mods: A_PLAIN, sides: S_NONE },
+
+  { cat: "gynecology", region: "pelvis", autoFlags: [],
+    ret: "Pelvic recovery is progressive; avoid heavy lifting and high-impact work for ~6 weeks and reintroduce core/pelvic-floor work gently.",
+    prec: [P("No heavy lifting (>~10 lb) and avoid straining early.", 6), P("Reintroduce pelvic-floor and core work gently as advised.", 8), P("Watch for increased bleeding, fever, or wound problems.", 4)],
+    bases: [{ n: "Hysteroscopy", kw: ["hysteroscopy"] }, { n: "Endometrial ablation", kw: ["endometrial ablation"] }, { n: "Tubal ligation", kw: ["tubal ligation"] }, { n: "Ovarian cystectomy", kw: ["ovarian cystectomy"] }, { n: "Myomectomy (fibroids)", kw: ["myomectomy", "fibroid"] }, { n: "Laparoscopic ovarian drilling", kw: ["ovarian drilling"] }, { n: "Cervical cerclage", kw: ["cervical cerclage"] }, { n: "LEEP / cone biopsy", kw: ["leep", "cone biopsy"] }, { n: "Pelvic-organ prolapse repair", kw: ["prolapse repair"] }, { n: "Mid-urethral sling", kw: ["urethral sling", "incontinence sling"] }],
+    mods: A_LAP, sides: S_NONE },
+
+  { cat: "colorectal", region: "abdomen", autoFlags: [],
+    ret: "Bowel-surgery recovery is graded; lifting restrictions usually last ~4–6 weeks and core work is reintroduced gradually.",
+    prec: [P("No heavy lifting (>~10 lb) — protect the incision and deep core.", 6), P("Support your abdomen when coughing or getting up; walk frequently.", 4), P("Follow stoma care if relevant; watch for fever or wound problems.", 4)],
+    bases: [{ n: "Right hemicolectomy", kw: ["right hemicolectomy"] }, { n: "Left hemicolectomy", kw: ["left hemicolectomy"] }, { n: "Sigmoid colectomy", kw: ["sigmoid colectomy"] }, { n: "Low anterior resection", kw: ["low anterior resection"] }, { n: "Abdominoperineal resection", kw: ["abdominoperineal resection"] }, { n: "Total colectomy", kw: ["total colectomy"] }, { n: "Haemorrhoidectomy", kw: ["haemorrhoidectomy", "hemorrhoidectomy"] }, { n: "Anal fistula surgery", kw: ["anal fistula"] }, { n: "Stoma reversal", kw: ["stoma reversal", "ileostomy reversal"] }, { n: "Rectopexy", kw: ["rectopexy"] }],
+    mods: A_LAP, sides: S_NONE },
+
+  { cat: "bariatric", region: "abdomen", autoFlags: [],
+    ret: "Bariatric recovery is diet-staged; avoid heavy lifting for ~4–6 weeks and follow your dietitian's progression closely.",
+    prec: [P("Follow your staged diet (fluids → puree → solids) exactly.", 6), P("No heavy lifting or vigorous core work early.", 6), P("Stay hydrated and take prescribed vitamins; watch for persistent vomiting or pain.", 4)],
+    bases: [{ n: "Sleeve gastrectomy", kw: ["sleeve gastrectomy", "gastric sleeve"] }, { n: "Roux-en-Y gastric bypass", kw: ["gastric bypass", "roux-en-y"] }, { n: "Adjustable gastric band", kw: ["gastric band"] }, { n: "Duodenal switch", kw: ["duodenal switch"] }, { n: "Mini gastric bypass", kw: ["mini gastric bypass"] }, { n: "Revision bariatric surgery", kw: ["revision bariatric"] }, { n: "Intragastric balloon", kw: ["intragastric balloon"] }],
+    mods: A_LAP, sides: S_NONE },
+
+  { cat: "eye", region: "eye", autoFlags: [],
+    ret: "Eye surgery recovers over days–weeks; avoid rubbing the eye, heavy straining and bending early, and use drops as prescribed.",
+    prec: [P("Don't rub or press the eye; use the shield when sleeping if given.", 2), P("Avoid heavy lifting, straining and bending your head below the waist early.", 2), P("Use your eye drops exactly as prescribed; watch for pain or vision loss (seek care).", 2)],
+    bases: [{ n: "Cataract surgery", kw: ["cataract"] }, { n: "Vitrectomy", kw: ["vitrectomy"] }, { n: "Retinal detachment repair", kw: ["retinal detachment"] }, { n: "Glaucoma surgery (trabeculectomy)", kw: ["trabeculectomy", "glaucoma surgery"] }, { n: "Corneal transplant", kw: ["corneal transplant", "keratoplasty"] }, { n: "Pterygium excision", kw: ["pterygium"] }, { n: "Strabismus (squint) surgery", kw: ["strabismus", "squint"] }, { n: "Oculoplastic (eyelid) surgery", kw: ["eyelid surgery", "blepharoplasty"] }],
+    mods: A_PLAIN, sides: S_SIDE },
+
+  { cat: "ent", region: "head-neck", autoFlags: [],
+    ret: "ENT recovery settles over weeks; avoid heavy straining and nose-blowing (nasal cases) early and follow wound/packing advice.",
+    prec: [P("Avoid heavy lifting, straining and (for nasal cases) forceful nose-blowing early.", 3), P("Sleep with the head raised; keep wounds/packing as advised.", 2), P("Watch for heavy bleeding, breathing or swallowing difficulty (seek care).", 2)],
+    bases: [{ n: "Septoplasty", kw: ["septoplasty"] }, { n: "Rhinoplasty", kw: ["rhinoplasty"] }, { n: "Endoscopic sinus surgery (FESS)", kw: ["sinus surgery", "fess"] }, { n: "Tympanoplasty", kw: ["tympanoplasty"] }, { n: "Mastoidectomy", kw: ["mastoidectomy"] }, { n: "Cochlear implant", kw: ["cochlear implant"] }, { n: "Adenoidectomy", kw: ["adenoidectomy"] }, { n: "Laryngectomy", kw: ["laryngectomy"] }, { n: "Thyroplasty (voice)", kw: ["thyroplasty"] }, { n: "UPPP (sleep apnea)", kw: ["uvulopalatopharyngoplasty", "uppp"] }],
+    mods: A_PLAIN, sides: S_NONE },
+
+  { cat: "transplant", region: "organ", autoFlags: [],
+    ret: "Transplant recovery is closely supervised; reconditioning is gradual around immunosuppression — follow your transplant team's plan exactly.",
+    prec: [P("Follow your transplant team's activity limits and immunosuppression schedule exactly.", 8), P("Avoid crowds and infection risk; keep meticulous wound and hand hygiene.", 6), P("Report fever, wound problems or graft-area pain promptly.", 4)],
+    bases: [{ n: "Kidney transplant", kw: ["kidney transplant", "renal transplant"] }, { n: "Liver transplant", kw: ["liver transplant"] }, { n: "Heart transplant", kw: ["heart transplant"] }, { n: "Lung transplant", kw: ["lung transplant"] }, { n: "Pancreas transplant", kw: ["pancreas transplant"] }, { n: "Combined kidney-pancreas transplant", kw: ["kidney-pancreas transplant"] }, { n: "Corneal transplant", kw: ["corneal graft"] }, { n: "Bone-marrow / stem-cell transplant", kw: ["bone marrow transplant", "stem cell transplant"] }],
+    mods: A_PLAIN, sides: S_NONE },
+
+  { cat: "vascular_access", region: "vascular", autoFlags: [],
+    ret: "Access/endovascular procedures recover within days–weeks; care for the site and avoid heavy lifting with that limb early.",
+    prec: [P("Care for the access/incision site; avoid heavy lifting or BP cuffs on a fistula arm.", 4), P("Keep the limb moving gently; watch for swelling, coldness or numbness.", 4), P("Report site bleeding, infection or a lost pulse/thrill promptly.", 2)],
+    bases: [{ n: "AV fistula creation (dialysis)", kw: ["av fistula", "dialysis fistula"] }, { n: "AV graft (dialysis)", kw: ["av graft", "dialysis graft"] }, { n: "Central venous port (chemo)", kw: ["venous port", "port-a-cath"] }, { n: "Tunnelled dialysis catheter", kw: ["dialysis catheter"] }, { n: "Venous thrombectomy", kw: ["venous thrombectomy"] }, { n: "Carotid artery stenting", kw: ["carotid stent"] }, { n: "Lower-limb angioplasty & stent", kw: ["angioplasty", "leg stent"] }, { n: "Varicose vein ablation", kw: ["varicose vein", "vein ablation"] }],
+    mods: A_ENDO, sides: S_SIDE },
 ];
 
 /* ---- enumerate ---- */
@@ -259,16 +326,21 @@ for (const s of chosen) {
   surgeries.push({ ...s, matchSrc: src });
 }
 
-// If dedupe dropped us under target, top up by cycling remaining interleaved entries with a technique suffix
-let extra = 0;
-while (surgeries.length < TARGET && extra < interleaved.length) {
-  const s = interleaved[extra % interleaved.length];
-  const name = s.name + " — staged procedure";
-  if (!seenName.has(name)) {
+// Top up to the target by cycling realistic surgical-setting/context variants over the genuine list.
+const CONTEXTS = [
+  "day-case / outpatient", "inpatient recovery", "enhanced-recovery (ERAS) pathway",
+  "with regional anaesthesia", "with general anaesthesia", "image-guided",
+  "with a nerve block", "staged procedure", "revision setting", "high-dependency recovery"
+];
+outer:
+for (const ctx of CONTEXTS) {
+  for (const s of interleaved) {
+    if (surgeries.length >= TARGET) break outer;
+    const name = s.name + " — " + ctx;
+    if (seenName.has(name)) continue;
     seenName.add(name);
     surgeries.push({ ...s, name, matchSrc: s.match.map(t => "\\b" + esc(t) + "\\b").join("|") });
   }
-  extra++;
 }
 
 /* ---- emit data/surgeries.js ---- */
