@@ -254,7 +254,7 @@ const state = {
   vitalsLog:[], labs:{}, labHist:{},
   screen:{}, falls:"", aid:"", smoking:"", alcohol:"", sleep:"", stress:"",
   medIds:[], medFilter:false, homeMode:false, customPrecautions:[], clinicianProtocols:[],
-  weightBearing:{status:"",pct:"",lbs:""}, devices:[],
+  medDoses:{}, weightBearing:{status:"",pct:"",lbs:"",side:"",limb:"le"}, devices:[],
   log:[], apiKey:"", apiModel:"claude-opus-4-8"
 };
 const MED_FILTERABLE = ["fluoroquinolone","anticoagulant","antiplatelet","opioid","sedative","muscle_relaxant","gabapentinoid","antipsychotic"];
@@ -403,8 +403,23 @@ const WB_STATUS = {
           desc:"No weight at all on the limb — keep it off the floor and use your crutches/walker as instructed." }
 };
 const WB_ORDER = ["fwb","wbat","pwb","ttwb","ffwb","nwb"];
+const WB_SIDE = { left:"left", right:"right", bilateral:"both" };
+const WB_LIMB = { le:"lower limb (leg)", ue:"upper limb (arm)" };
 function bodyWeightLbs(){ const kg = vnum((state.vitals||{}).weight); return kg ? kg*2.2046226 : null; }
-function wbFlags(){ const s = (state.weightBearing||{}).status; const r = WB_STATUS[s]; return (r && r.flag) ? [r.flag] : []; }
+/* Tag-based flags apply to LOWER-limb weight-bearing (standing/legs). Upper-limb
+   restrictions are handled by the name-based restriction layer instead. */
+function wbFlags(){
+  const wb = state.weightBearing||{}; const r = WB_STATUS[wb.status];
+  if(!r || !r.flag) return [];
+  if(wb.limb==="ue") return [];
+  return [r.flag];
+}
+function wbWhere(){
+  const wb = state.weightBearing||{};
+  const side = WB_SIDE[wb.side] || "";
+  const limb = WB_LIMB[wb.limb] || WB_LIMB.le;
+  return [side, limb].filter(Boolean).join(" ");
+}
 /* Human-readable weight-bearing order line (used in the precautions card & coach). */
 function wbSummary(){
   const wb = state.weightBearing||{}; const r = WB_STATUS[wb.status]; if(!r) return "";
@@ -415,7 +430,8 @@ function wbSummary(){
     if(String(wb.lbs).trim()!=="") parts.push(`~${wb.lbs} lbs`);
     if(parts.length) amt = ` — ${parts.join(" · ")}`;
   }
-  return `${r.label} (${r.abbr})${amt}`;
+  const where = wbWhere();
+  return `${r.label} (${r.abbr})${amt}${where?` · ${where}`:""}`;
 }
 
 /* Orthotics / prosthetics / immobilizers / splints, grouped by region.
@@ -457,6 +473,83 @@ function deviceNoteFor(name){
   for(const g of Object.values(DEVICE_CATALOG)){ const hit=g.items.find(([n])=>n===name); if(hit) return hit[1]; }
   return "Wear/use as prescribed by your clinician.";
 }
+/* ---------- name-based exercise restrictions from devices & UE weight-bearing ----------
+   The tag engine can't target a limb/joint precisely (protocol & signature
+   exercises carry no region), so we match on the exercise NAME. `avoid` removes
+   the exercise (and libraryOptions won't offer it); `caution` keeps it but flags
+   "check with your brace". Upper-limb weight-bearing is handled here too. */
+const UE_LOAD_RE = /push-?up|\bplank\b|\bdip\b|handstand|bear crawl|mountain climber|burpee|overhead|shoulder press|chest press|bench press|incline press|military press|lateral raise|front raise|rear-delt|\bfly\b|biceps curl|hammer curl|preacher|concentration curl|reverse curl|wrist curl|\btriceps\b|lat pull|pull-?up|chin-?up|inverted row|bent-over row|seated row|upright row|\brow\b|face pull|scaption|full-can|y-t-w|external rotation|internal rotation|pendulum|wall walk|\bwrist\b|forearm|\bgrip\b|farmer|suitcase|waiter|\bcarr(y|ies)\b|carries|dead-?hang|pinch|deviation|pronation|supination|squeeze|quadruped|weight-bearing rock|ball squeeze|soft-ball|snatch|clean|jerk|\bthrow\b|serve/i;
+const DEVICE_RESTRICT = {
+  "Shoulder sling / immobilizer":{ avoid:/overhead|shoulder press|chest press|bench press|push-?up|\bdip\b|lateral raise|front raise|\bfly\b|snatch|clean|jerk|pull-?up|chin-?up|lat pull|inverted row|bent-over row|upright row|\bthrow\b|serve|\bplank\b/i,
+    caution:/\brow\b|band|scapular|external rotation|internal rotation|y-t-w|face pull|reach|pendulum|biceps|triceps|\bcurl\b/i,
+    note:"Shoulder sling/immobilizer: the arm is immobilized — overhead, pressing, rowing, pull-ups and weight-through-the-arm exercises were removed. Do prescribed pendulum/scapular and other-limb work only." },
+  "Abduction pillow sling":{ avoid:/overhead|shoulder press|chest press|bench press|push-?up|\bdip\b|lateral raise|front raise|\bfly\b|pull-?up|chin-?up|lat pull|\brow\b|\bthrow\b|\bplank\b/i,
+    caution:/external rotation|internal rotation|scapular|band|reach/i,
+    note:"Abduction pillow sling: keep the shoulder in the prescribed position — loaded shoulder and arm-weight-bearing exercises were removed." },
+  "Hinged elbow brace":{ avoid:/pull-?up|chin-?up|push-?up|\bdip\b/i,
+    caution:/biceps curl|hammer curl|triceps|\bcurl\b|press|\brow\b/i,
+    note:"Hinged elbow brace: work only within the prescribed range; heavy end-range elbow loading is limited." },
+  "Elbow immobilizer":{ avoid:/biceps curl|hammer curl|triceps|preacher|concentration curl|\bcurl\b|pull-?up|chin-?up|push-?up|\bdip\b|overhead press|shoulder press|chest press|bench press/i,
+    caution:/\brow\b|grip|wrist|band/i,
+    note:"Elbow immobilizer: elbow-bending/straightening loaded exercises (curls, triceps, push-ups, pull-ups) were removed until motion is allowed." },
+  "Wrist splint (cock-up)":{ avoid:/wrist|forearm|\bgrip\b|farmer|dead-?hang|pinch|deviation|pronation|supination/i,
+    caution:/push-?up|\bplank\b|carry|\brow\b|pull-?up/i,
+    note:"Wrist splint: wrist and grip-loading exercises were removed — keep the wrist neutral and supported." },
+  "Thumb spica splint":{ avoid:/\bgrip\b|pinch|thumb|farmer|dead-?hang|wrist curl/i,
+    caution:/carry|push-?up|\brow\b/i,
+    note:"Thumb spica: avoid pinching/gripping with the thumb — grip-loading exercises were removed." },
+  "Finger / buddy splint":{ avoid:/\bgrip\b|pinch|farmer|dead-?hang/i, caution:/carry|push-?up/i,
+    note:"Finger/buddy splint: protect the finger — gripping/pinching-loaded exercises were removed." },
+  "Wrist / forearm cast":{ avoid:/wrist|forearm|\bgrip\b|farmer|dead-?hang|pinch|deviation|pronation|supination|push-?up|\bplank\b|pull-?up|\bdip\b|carry/i,
+    caution:/\brow\b|press|reach/i,
+    note:"Wrist/forearm cast: the wrist is immobilized — wrist, grip and arm-weight-bearing exercises were removed. Keep the fingers moving." },
+  "Resting hand splint":{ avoid:/\bgrip\b|pinch|wrist curl/i, caution:/carry|push-?up|\brow\b/i,
+    note:"Resting hand splint: avoid gripping/pinching loads while it's on." },
+  "Upper-limb prosthesis":{ caution:/\bgrip\b|carry|farmer|push-?up|\bplank\b/i,
+    note:"Upper-limb prosthesis: build tolerance to gripping/loading gradually; check the residual limb for skin issues." },
+  "Knee immobilizer":{ avoid:/squat|lunge|step-up|step-down|leg press|hamstring curl|wall sit|split squat|bulgarian|box jump|\bhop\b|nordic|pistol|sit-to-stand|deep knee|knee bend/i,
+    caution:/bridge|calf raise|balance|gait|cycl/i,
+    note:"Knee immobilizer (locked straight): knee-bending exercises (squats, lunges, step-ups, hamstring curls) were removed. Focus on quad sets, straight-leg raises and ankle/hip work." },
+  "Hinged / ROM knee brace":{ avoid:/box jump|\bhop\b|nordic|pistol|deep squat/i,
+    caution:/squat|lunge|step-up|step-down|leg press|hamstring curl|wall sit|split squat/i,
+    note:"Hinged/ROM knee brace: keep within the prescribed range — deep and high-impact knee work is limited; stay inside your locked limits." },
+  "Short/long leg cast":{ avoid:/calf raise|heel raise|\bankle\b|squat|lunge|step-up|step-down|\bhop\b|jump|balance|gait|single-leg|leg press|hamstring curl|wall sit/i,
+    caution:/bridge|cycl/i,
+    note:"Leg cast: the leg is immobilized — standing, ankle, calf and knee-loading exercises were removed. Follow your weight-bearing order and do other-limb/core work." },
+  "CAM walker boot":{ avoid:/\bhop\b|jump|plyo|depth|\bcut\b|cutting/i,
+    caution:/calf raise|heel raise|\bankle\b|single-leg|balance|gait/i,
+    note:"CAM boot: the ankle is protected — high-impact work was removed and ankle/calf/balance work is limited; wear it for all standing." },
+  "Post-op shoe":{ caution:/calf raise|heel raise|toe|\bhop\b|jump/i,
+    note:"Post-op shoe: protect the forefoot/toes — go easy on calf-raise and toe-loading work." },
+  "Ankle-foot orthosis (AFO)":{ avoid:/\bhop\b|jump|plyo/i, caution:/calf raise|\bankle\b|balance|single-leg/i,
+    note:"AFO: supports the foot/ankle for walking — go easy on ankle-mobility and impact work." },
+  "Ankle brace / stirrup":{ avoid:/depth jump/i, caution:/\bhop\b|jump|\bcut\b|cutting|balance|single-leg/i,
+    note:"Ankle brace: protects the ligaments — reintroduce hopping, cutting and single-leg balance gradually." },
+  "Cervical collar":{ avoid:/neck rotation|neck extension|neck side-?bend|neck flexion|cervical rotation|cervical mobility|end-?range neck|overhead/i,
+    caution:/chin tuck|scapular|\bneck\b|deep neck/i,
+    note:"Cervical collar: keep the neck still — end-range neck movements (and overhead work) were removed; gentle chin-tucks only if allowed." },
+  "Lumbar / TLSO brace":{ avoid:/deadlift|good-?morning|sit-up|\bv-up\b|hyperextension/i,
+    caution:/squat|hinge|crunch|rotation|extension|carry|bridge|bird-dog|\bplank\b/i,
+    note:"Lumbar/TLSO brace: follow your bend/lift limits — heavy spinal flexion/extension was removed and loaded trunk work is limited while braced." }
+};
+function activeRestrictions(){
+  const avoid=[], caution=[], notes=[];
+  const wb = state.weightBearing||{};
+  if(wb.status && WB_STATUS[wb.status] && WB_STATUS[wb.status].flag && wb.limb==="ue"){
+    const strict = /nwb|ttwb|ffwb/.test(wb.status);
+    (strict?avoid:caution).push(UE_LOAD_RE);
+    const sideTxt = WB_SIDE[wb.side] ? WB_SIDE[wb.side]+" " : "";
+    notes.push(`Weight-bearing restriction (${WB_STATUS[wb.status].abbr}) on the ${sideTxt}arm: ${strict?"pushing, planks, pull-ups, pressing, carrying and other arm-loading exercises were removed":"arm-loading exercises are limited"} — do lower-body and core work.`);
+  }
+  (state.devices||[]).forEach(d=>{ const r=DEVICE_RESTRICT[d.name]; if(!r) return;
+    if(r.avoid) avoid.push(r.avoid);
+    if(r.caution) caution.push(r.caution);
+    if(r.note) notes.push(r.note);
+  });
+  return { avoid, caution, notes };
+}
+function nameAllowed(name){ return !activeRestrictions().avoid.some(re=>re.test(name)); }
+function cautionForName(name){ return activeRestrictions().caution.some(re=>re.test(name)); }
 function onBetaBlocker(){ return selectedMeds().some(m=>(m.flags||[]).includes("beta_blocker")); }
 function someCardioPulm(){
   const f = state.program ? state.program.flags : gatherFlags();
@@ -557,7 +650,8 @@ function libraryOptions(protocol, phaseIdx, flags, exclude, count, seed){
   const exSet = new Set((exclude||[]).map(n=>n.toLowerCase()));
   const pool = window.EXERCISES.filter(e =>
     e.region.some(r=>rset.has(r)) && allowed.has(e.difficulty) && !exSet.has(e.name.toLowerCase()));
-  const { kept } = window.applyContra(pool, flags);
+  let { kept } = window.applyContra(pool, flags);
+  kept = kept.filter(e=>nameAllowed(e.name));      // respect device / weight-bearing restrictions
   kept.sort((a,b)=> hashStr(a.name+"|"+seed) - hashStr(b.name+"|"+seed));
   return kept.slice(0,count).map(e=>({ n:e.name, d:e.dose, c:e.cue, warn:e.warn, pattern:e.pattern, region:e.region, tags:e.tags }));
 }
@@ -908,6 +1002,7 @@ function generateProgram(){
   const tmpl = TEMPLATE[track];
   const removedAll = new Map();
 
+  const R = activeRestrictions();   // device / upper-limb weight-bearing name-based restrictions
   const items = conds.map((c,ci)=>{
     const proto = window.getProtocol(c.protocol);
     const focus = detectFocus(c.name);
@@ -920,13 +1015,16 @@ function generateProgram(){
       const sig = []; const sigSeen = new Set();
       sigRaw.forEach(s=>{ const k=s.n.toLowerCase(); if(!sigSeen.has(k)){ sigSeen.add(k); sig.push(s); } });
       const seen = new Set(sig.map(s=>s.n.toLowerCase()));
-      const merged = [...sig, ...pool.filter(e=>!seen.has(e.n.toLowerCase()))];
+      let merged = [...sig, ...pool.filter(e=>!seen.has(e.n.toLowerCase()))];
+      if(R.avoid.length) merged = merged.filter(e=>!R.avoid.some(re=>re.test(e.n)));   // drop device/limb-restricted moves
       const { kept, removed } = window.applyContra(merged, flags);
       window.ensureMinimum(kept, flags, 3);
       enrichPhase(kept, c.protocol, p, flags);
+      let ex = R.avoid.length ? kept.filter(e=>!R.avoid.some(re=>re.test(e.n))) : kept;  // final gate (ensureMinimum/enrich)
+      if(R.caution.length) ex.forEach(e=>{ if(!e.warn && !e.cautionMsg && R.caution.some(re=>re.test(e.n))) e.cautionMsg = true; });
       removed.forEach(r=>removedAll.set(r.n, r.tag));
       return { title:tmpl.phases[p].title, goal:tmpl.phases[p].goal, weekStart:wkStart, weekEnd:wkEnd,
-        criteria:(PHASE_CRITERIA[track]||PHASE_CRITERIA.acute)[p], ex:kept };
+        criteria:(PHASE_CRITERIA[track]||PHASE_CRITERIA.acute)[p], ex };
     });
     return { name:c.name, domain:c.domain, region:c.region, supervision:c.supervision, phases,
       protocol:c.protocol, clearance:c.clearance, chronicByNature:c.chronicByNature,
@@ -936,7 +1034,7 @@ function generateProgram(){
 
   return {
     track, totalWeeks:tmpl.total, sessions:sessionsText(track), load:loadGuidance(),
-    flags, notes:window.notesForFlags(flags), clearance:clearanceNeeded(flags),
+    flags, notes:window.notesForFlags(flags).concat(R.notes), clearance:clearanceNeeded(flags),
     supervision:displaySupervision(flags, clearanceNeeded(flags)), items,
     removed:Array.from(removedAll, ([n,tag])=>({n,tag}))
   };
@@ -1276,6 +1374,7 @@ function exItemHTML(e, regionArr, ctx, medHidden){
     ${exertionLine(e)}
     ${e.home?`<div class="homenote">🏠 <b>Home swap:</b> ${esc(e.homeNote)}</div>`:""}
     ${e.warn?`<span class="warnpill">⚠ Modify — involves ${esc(TAG_LABEL[e.warn]||e.warn)}; keep it symptom-free.</span>`:""}
+    ${e.cautionMsg?`<span class="warnpill">⚠ Check this is allowed with your brace / immobilizer & precautions.</span>`:""}
     ${e.sub?`<span class="subpill">safer substitute for your precautions</span>`:""}
     <div class="exrowtools no-print">
       <button class="expbtn" onclick="this.closest('.exitem').querySelector('.exp').classList.toggle('hide')">ⓘ Explain</button>
@@ -1306,6 +1405,8 @@ function wireProgram(){
   const wbSel=$("#programOut #wbSelect"); if(wbSel) wbSel.onchange=setWeightBearingStatus;
   const wbPct=$("#programOut #wbPct"); if(wbPct) wbPct.oninput=()=>setWbAmount("pct");
   const wbLbs=$("#programOut #wbLbs"); if(wbLbs) wbLbs.oninput=()=>setWbAmount("lbs");
+  const wbSide=$("#programOut #wbSide"); if(wbSide) wbSide.onchange=setWbMeta;
+  const wbLimb=$("#programOut #wbLimb"); if(wbLimb) wbLimb.onchange=setWbMeta;
   // devices / braces / splints
   const devSel=$("#programOut #devSelect"); if(devSel) devSel.onchange=()=>{ const c=$("#programOut #devCustom"); if(c){ c.classList.toggle("hide", devSel.value!=="__custom"); if(devSel.value==="__custom") c.focus(); } };
   const devAdd=$("#programOut .devadd"); if(devAdd) devAdd.onclick=addDevice;
@@ -1376,10 +1477,13 @@ function resetPhase(ci, pi){
   const item = state.program.items[ci], ph = item.phases[pi];
   const pool = window.getProtocol(item.protocol)[pi];
   const flags = activeFlags();
-  const { kept } = window.applyContra(pool, flags);
+  const R = activeRestrictions();
+  const { kept } = window.applyContra(R.avoid.length ? pool.filter(e=>!R.avoid.some(re=>re.test(e.n))) : pool, flags);
   window.ensureMinimum(kept, flags, 3);
   enrichPhase(kept, item.protocol, pi, flags);
-  ph.ex = kept; delete ph._seed; openPhases.add(ci+"-"+pi);
+  let ex = R.avoid.length ? kept.filter(e=>!R.avoid.some(re=>re.test(e.n))) : kept;
+  if(R.caution.length) ex.forEach(e=>{ if(!e.warn && !e.cautionMsg && R.caution.some(re=>re.test(e.n))) e.cautionMsg = true; });
+  ph.ex = ex; delete ph._seed; openPhases.add(ci+"-"+pi);
   save(); renderProgram(state.program); toast("Phase reset to the recommended exercises.");
 }
 
@@ -1430,9 +1534,15 @@ function surgicalReminderCard(){
       <label>or weight (lbs)<input type="number" id="wbLbs" min="0" max="600" value="${esc(wb.lbs||"")}" placeholder="e.g. 90" /></label>
       <div class="wbhint">${bw?`Your body weight ≈ ${Math.round(bw)} lbs — so 25% ≈ ${Math.round(bw*.25)} lbs, 50% ≈ ${Math.round(bw*.5)} lbs.`:`Add your weight in History for automatic %↔lbs conversion.`}</div>
     </div>` : "";
+  const sideOpt = (v,l)=>`<option value="${v}"${(wb.side||"")===v?" selected":""}>${l}</option>`;
+  const limbOpt = (v,l)=>`<option value="${v}"${(wb.limb||"le")===v?" selected":""}>${l}</option>`;
   const wbControl = `<div class="wbctrl no-print">
       <label class="preclab" for="wbSelect">🦵 Weight-bearing status <span class="sub">(this adjusts your exercises)</span></label>
       <select id="wbSelect">${wbOptions}</select>
+      <div class="wbrow2">
+        <label>Side<select id="wbSide">${sideOpt("","—")}${sideOpt("left","Left")}${sideOpt("right","Right")}${sideOpt("bilateral","Both")}</select></label>
+        <label>Extremity<select id="wbLimb">${limbOpt("le","Lower extremity (leg)")}${limbOpt("ue","Upper extremity (arm)")}</select></label>
+      </div>
       ${wbInfo?`<div class="wbdesc">${esc(wbInfo.desc)}</div>`:""}
       ${pctBlock}
     </div>`;
@@ -1451,7 +1561,7 @@ function surgicalReminderCard(){
     </div>`;
 
   // --- rows (weight-bearing order, devices, surgical, custom) ---
-  const wbRow = wbInfo ? `<li class="precrow active wbrow"><span class="prec-t">🦵 <b>Weight-bearing:</b> ${esc(wbSummary())} on the affected limb</span><span class="prec-w">order</span></li>` : "";
+  const wbRow = wbInfo ? `<li class="precrow active wbrow"><span class="prec-t">🦵 <b>Weight-bearing:</b> ${esc(wbSummary())}</span><span class="prec-w">order</span></li>` : "";
   const devRows = devices.map((d,i)=>`<li class="precrow devrow"><span class="prec-t">🦿 <b>${esc(d.name)}</b> — ${esc(d.note||"")}</span><span class="precdel devdel no-print" data-devidx="${i}" title="Remove">✕</span></li>`).join("");
   const customRows = customs.map((p,i)=>precRowHTML(p.t, p.w, i)).join("");
   const list = (wbRow || surgRows || devRows || customRows)
@@ -1491,7 +1601,16 @@ function setWbAmount(which){
   if(which==="pct"){ wb.pct = pctEl.value; if(bw && pctEl.value!=="") { wb.lbs = Math.round(bw*(+pctEl.value)/100); if(lbsEl) lbsEl.value = wb.lbs; } }
   else { wb.lbs = lbsEl.value; if(bw && lbsEl.value!=="") { wb.pct = Math.round((+lbsEl.value)/bw*100); if(pctEl) pctEl.value = wb.pct; } }
   save();
-  const row = $("#programOut .wbrow .prec-t"); if(row) row.innerHTML = `🦵 <b>Weight-bearing:</b> ${esc(wbSummary())} on the affected limb`;
+  const row = $("#programOut .wbrow .prec-t"); if(row) row.innerHTML = `🦵 <b>Weight-bearing:</b> ${esc(wbSummary())}`;
+}
+/* Side / extremity change: for the upper limb, exercise restrictions differ, so regenerate. */
+function setWbMeta(){
+  const wb = state.weightBearing = state.weightBearing || {};
+  const s=$("#programOut #wbSide"), l=$("#programOut #wbLimb");
+  if(s) wb.side = s.value; if(l) wb.limb = l.value;
+  save();
+  if(state.program){ state.program = generateProgram(); save(); }
+  renderProgram(state.program);
 }
 function addDevice(){
   const sel=$("#programOut #devSelect"); if(!sel) return;
@@ -1499,9 +1618,17 @@ function addDevice(){
   if(custom){ const c=$("#programOut #devCustom"); name=(c?c.value:"").trim(); if(!name){ toast("Type a device name first."); return; } }
   if(!name){ toast("Choose a device to add."); return; }
   (state.devices = state.devices||[]).push({ name, note: custom ? "Wear/use as prescribed by your clinician." : deviceNoteFor(name) });
-  save(); renderProgram(state.program); toast("Added to your precautions.");
+  save();
+  if(state.program){ state.program = generateProgram(); save(); }   // devices reshape the plan
+  renderProgram(state.program);
+  toast(DEVICE_RESTRICT[name] ? "Added — your plan was updated to match." : "Added to your precautions.");
 }
-function removeDevice(idx){ if(!state.devices) return; state.devices.splice(idx,1); save(); renderProgram(state.program); toast("Removed."); }
+function removeDevice(idx){
+  if(!state.devices) return;
+  state.devices.splice(idx,1); save();
+  if(state.program){ state.program = generateProgram(); save(); }
+  renderProgram(state.program); toast("Removed — plan updated.");
+}
 function addCustomPrecaution(){
   const t = $("#programOut .addprec-t").value.trim();
   if(!t){ toast("Type a reminder first."); return; }
@@ -1833,7 +1960,7 @@ function medicationCard(medHiddenTotal){
   const meds = selectedMeds();
   if(!meds.length) return "";
   const flags = [...new Set(meds.flatMap(m=>m.flags||[]))].filter(f=>MED_EFFECT[f]);
-  const list = meds.map(m=>esc(m.name)).join(", ");
+  const list = meds.map(m=>{ const d=(state.medDoses||{})[m.id]; return esc(m.name)+(d?` <span class="medcard-dose">(${esc(d)})</span>`:""); }).join(", ");
   const body = flags.length
     ? `<ul class="notelist">${flags.map(f=>`<li>${MED_EFFECT[f]}</li>`).join("")}</ul>`
     : `<p class="hint">No specific exercise considerations flagged for these — but always tell your clinician what you take.</p>`;
@@ -2289,8 +2416,14 @@ function initSearch(){
 function renderSelectedMeds(){
   const wrap=$("#selectedMeds"); if(!wrap) return;
   const meds=selectedMeds();
-  wrap.innerHTML = meds.map(m=>`<span class="selchip">${esc(m.name)}<span class="x" data-id="${m.id}">✕</span></span>`).join("");
-  $$("#selectedMeds .x").forEach(x=>x.onclick=()=>{ state.medIds=state.medIds.filter(i=>i!==x.dataset.id); save(); renderSelectedMeds(); runMedSearch(); });
+  state.medDoses = state.medDoses || {};
+  wrap.innerHTML = meds.map(m=>`<div class="medselrow" data-id="${m.id}">
+      <div class="medselname">${esc(m.name)}${m.cls?` <span class="medselcls">${esc(m.cls)}</span>`:""}</div>
+      <input type="text" class="medseldose" data-id="${m.id}" value="${esc(state.medDoses[m.id]||"")}" placeholder="dose &amp; frequency — e.g. 20 mg twice daily" />
+      <button class="medselx" data-id="${m.id}" title="Remove" aria-label="Remove">✕</button>
+    </div>`).join("");
+  $$("#selectedMeds .medselx").forEach(x=>x.onclick=()=>{ const id=x.dataset.id; state.medIds=state.medIds.filter(i=>i!==id); if(state.medDoses) delete state.medDoses[id]; save(); renderSelectedMeds(); runMedSearch(); });
+  $$("#selectedMeds .medseldose").forEach(inp=>inp.oninput=()=>{ (state.medDoses=state.medDoses||{})[inp.dataset.id]=inp.value; save(); });
 }
 function runMedSearch(){
   const res=$("#medResults"); if(!res || !window.MEDICATIONS) return;
