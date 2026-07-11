@@ -413,6 +413,189 @@ function libraryOptions(protocol, phaseIdx, flags, exclude, count, seed){
   return kept.slice(0,count).map(e=>({ n:e.name, d:e.dose, c:e.cue, warn:e.warn, pattern:e.pattern, region:e.region, tags:e.tags }));
 }
 
+/* ---------- injury-specific layer ----------
+   Detects the actual diagnosis from the condition name and injects signature,
+   phase-targeted "priority" exercises + a focus note, so two conditions in the
+   same region (e.g. rotator cuff tear vs frozen shoulder) get different plans.
+   `p` = phase 1–4. Signature exercises carry engine tags so they're still filtered. */
+const INJURY_FOCUS = [
+  {re:/rotator cuff|cuff repair|cuff tear|supraspinatus tendinop|infraspinatus tendinop|subscapularis tendinop|calcific tendin/,
+   focus:"Rebuild rotator-cuff and shoulder-blade control — prioritise external-rotation strength and delay painful overhead loading.",
+   add:[{p:1,n:"Isometric external rotation (elbow at side)",d:"5×20–30s",c:"Press outward into a wall/towel, no movement"},
+        {p:2,n:"Band external rotation (arm at side)",d:"3×12–15",c:"Elbow tucked, slow return"},
+        {p:3,n:"Prone Y and T raises",d:"3×10 each",c:"Thumb up, squeeze the mid-back",tags:["prone","overhead"]},
+        {p:4,n:"Progressive overhead press (pain-free)",d:"3×8–10",c:"Add load only once the cuff is strong",tags:["overhead","valsalva"]}]},
+  {re:/adhesive capsulitis|frozen shoulder/,
+   focus:"Restore range gradually — gentle, frequent mobility beats aggressive stretching; don't force painful end-range early.",
+   add:[{p:1,n:"Pendulum swings",d:"3×30s each direction",c:"Let the arm hang and sway"},
+        {p:1,n:"Table slides / forward reach",d:"3×10",c:"Slide the hand forward to a gentle stretch"},
+        {p:2,n:"Wall walks (flexion & abduction)",d:"3×10",c:"Walk the fingers up only to a comfortable height",tags:["overhead"]},
+        {p:3,n:"Cane-assisted external rotation",d:"3×10",c:"Guide gently with the other arm"}]},
+  {re:/impingement/,
+   focus:"Create space in the shoulder — scapular control and posture, and avoid the painful overhead arc until it settles.",
+   add:[{p:1,n:"Scapular setting (retraction/depression)",d:"3×10 (5s hold)",c:"Draw the shoulder blade back and down"},
+        {p:2,n:"Band external rotation",d:"3×15",c:"Elbow tucked"},
+        {p:3,n:"Full-can raise (below shoulder first)",d:"3×12",c:"Thumb up, stay pain-free",tags:["overhead"]}]},
+  {re:/shoulder (instability|dislocation|subluxation)|bankart|glenohumeral instab|multidirectional shoulder/,
+   focus:"Rebuild dynamic stability — cuff and scapular strength and proprioception; avoid the apprehension position (external rotation with the arm out) early.",
+   add:[{p:1,n:"Rhythmic stabilisation (gentle)",d:"3×20s",c:"Small perturbations with the arm supported"},
+        {p:2,n:"Closed-chain scapular work (wall)",d:"3×10",c:"Weight through the arm, control the blade",tags:["weight_bearing"]},
+        {p:3,n:"Band internal/external rotation",d:"3×15",c:"Stay out of the apprehension position"}]},
+  {re:/lateral epicondyl|tennis elbow|common extensor tendinop/,
+   focus:"Load the wrist extensors progressively — isometrics for pain relief, then heavy-slow and eccentric work; reduce provocative gripping early.",
+   add:[{p:1,n:"Wrist-extensor isometric hold",d:"5×30–45s",c:"Hold a light weight, wrist up, no movement",tags:["grip_isometric"]},
+        {p:2,n:"Eccentric wrist extension",d:"3×15",c:"Lower slowly (3s), assist back up"},
+        {p:3,n:"Heavy-slow wrist extension / grip",d:"3×8–12",c:"Add load weekly",tags:["grip_isometric"]}]},
+  {re:/medial epicondyl|golfer'?s elbow|common flexor tendinop/,
+   focus:"Load the wrist flexors/pronators progressively — isometrics then eccentric and heavy-slow work.",
+   add:[{p:1,n:"Wrist-flexor isometric hold",d:"5×30–45s",c:"Palm up, hold a light weight",tags:["grip_isometric"]},
+        {p:2,n:"Eccentric wrist flexion",d:"3×15",c:"Lower slowly"},
+        {p:3,n:"Pronation/supination with a hammer",d:"3×15",c:"Slow and controlled"}]},
+  {re:/carpal tunnel/,
+   focus:"Settle the median nerve — nerve and tendon gliding, keep the wrist neutral, and avoid sustained heavy gripping.",
+   add:[{p:1,n:"Median nerve glides",d:"3×10",c:"Gentle — stop before tingling increases"},
+        {p:1,n:"Tendon-gliding sequence",d:"3×10",c:"Move through the finger positions"},
+        {p:2,n:"Wrist-neutral grip strengthening",d:"3×12",c:"Keep the wrist straight",tags:["grip_isometric"]}]},
+  {re:/de quervain/,
+   focus:"Offload the thumb tendons — isometrics and gradual loading; avoid repetitive thumb/wrist deviation early.",
+   add:[{p:1,n:"Thumb isometric holds",d:"5×20s",c:"Gentle resistance, no pain"},
+        {p:2,n:"Eccentric radial deviation",d:"3×12",c:"Slow lower with a light weight"}]},
+  {re:/gluteal tendinop|trochanteric|greater trochanter|gluteus medius tendinop/,
+   focus:"Load the gluteal tendons WITHOUT compressing them — isometric then progressive abduction; avoid crossing your legs, hanging on one hip, and side-lying on the sore side.",
+   add:[{p:1,n:"Isometric hip abduction (against a wall)",d:"5×30s",c:"Press the leg out, no movement"},
+        {p:2,n:"Standing hip abduction (neutral)",d:"3×12",c:"Don't let the hip drop or cross the midline",tags:["hip_add_ir"]},
+        {p:3,n:"Single-leg wall press / step progression",d:"3×10",c:"Keep the pelvis level",tags:["weight_bearing","balance"]}]},
+  {re:/femoroacetabular|\bfai\b|hip labral|labral (tear|repair).*hip|labral repair — hip/,
+   focus:"Build hip stability and control — strengthen glutes and core, and avoid deep flexion / end-range positions that pinch the hip.",
+   add:[{p:1,n:"Glute isometric sets",d:"3×10 (5s)",c:"Squeeze without deep bending"},
+        {p:2,n:"Clamshell & side-lying abduction",d:"3×15",c:"Neutral spine, controlled"},
+        {p:3,n:"Hip hinge / bridge progression",d:"3×10",c:"Avoid pinching at the front of the hip"}]},
+  {re:/adductor|groin strain|athletic pubalgia|sports hernia|osteitis pubis/,
+   focus:"Rebuild adductor strength — isometric squeezes early, then Copenhagen-style loading.",
+   add:[{p:1,n:"Adductor isometric squeeze (ball)",d:"5×30s",c:"Squeeze a ball between the knees"},
+        {p:2,n:"Short-lever Copenhagen plank",d:"3×8 each",c:"From the knee first"},
+        {p:3,n:"Copenhagen plank (full lever)",d:"3×8 each",c:"Progress the lever"}]},
+  {re:/proximal hamstring tendinop|hamstring origin/,
+   focus:"Load the hamstring tendon without compressing it — isometrics in less hip-flexion, then progressive long-lever work; limit deep hip-flexion stretching.",
+   add:[{p:1,n:"Long-lever bridge isometric",d:"5×30s",c:"Heels far out, hold"},
+        {p:2,n:"Prone/standing hamstring curl",d:"3×12",c:"Slow eccentric"},
+        {p:3,n:"Single-leg RDL (limited depth)",d:"3×10",c:"Hinge without reaching deep flexion",tags:["deep_hip_flexion","balance"]}]},
+  {re:/\bacl\b/,
+   focus:"Restore full extension and quad control first; build closed-chain strength and delay open-chain knee extension and pivoting.",
+   add:[{p:1,n:"Quad sets / straight-leg raise",d:"3×10",c:"Lock the knee straight"},
+        {p:1,n:"Heel-prop for full extension",d:"3×3 min",c:"Let the knee straighten fully"},
+        {p:3,n:"Closed-chain leg press / squat (progressive)",d:"3×10",c:"Add load pain-free",tags:["weight_bearing"]},
+        {p:4,n:"Hop, landing & deceleration drills",d:"3×8",c:"Only when cleared; soft landings",tags:["impact","balance"]}]},
+  {re:/\bpcl\b/,
+   focus:"Emphasise the quads and support the shin — avoid deep knee flexion and hamstring-heavy loading early.",
+   add:[{p:1,n:"Quad sets in extension",d:"3×12",c:"Strong quad squeeze"},
+        {p:2,n:"Short-arc quads",d:"3×12",c:"Small range near full extension"},
+        {p:3,n:"Leg press (limited depth)",d:"3×10",c:"Avoid deep flexion early",tags:["weight_bearing","deep_hip_flexion"]}]},
+  {re:/\bmcl\b|\blcl\b|collateral ligament/,
+   focus:"Protect the healing ligament from sideways stress — progress straight-plane strength before any cutting.",
+   add:[{p:1,n:"Quad sets & straight-leg raise",d:"3×10",c:"Keep the knee stable"},
+        {p:3,n:"Step-ups / squats (straight plane)",d:"3×10",c:"No sideways force",tags:["weight_bearing"]}]},
+  {re:/meniscus|meniscal/,
+   focus:"Build quad and hip strength while protecting the meniscus — avoid deep squatting and twisting under load early.",
+   add:[{p:1,n:"Quad sets & heel slides (comfortable range)",d:"3×12",c:"Gentle, avoid a deep bend"},
+        {p:3,n:"Partial-range squat / leg press",d:"3×10",c:"Avoid deep flexion and twisting",tags:["weight_bearing","deep_hip_flexion"]}]},
+  {re:/patellofemoral|runner'?s knee|chondromalacia|patellar maltrack|patellofemoral instab/,
+   focus:"Strengthen the hips and quads and manage load — hip abductor/external-rotator work is key; avoid painful deep knee bends under load.",
+   add:[{p:1,n:"Quad sets / straight-leg raise",d:"3×12",c:"Pain-free"},
+        {p:2,n:"Side-lying hip abduction & clamshell",d:"3×15",c:"Lead with the heel"},
+        {p:3,n:"Step-downs (controlled)",d:"3×10",c:"Slow; the knee tracks over the foot",tags:["weight_bearing","balance"]}]},
+  {re:/patellar tendinop|jumper'?s knee|quadriceps tendinop/,
+   focus:"Load the tendon progressively — isometric quad holds for pain relief, then heavy-slow resistance (e.g. decline squats), then energy-storage work last.",
+   add:[{p:1,n:"Isometric wall sit / Spanish squat",d:"5×30–45s",c:"Hold at a pain-free angle",tags:["weight_bearing"]},
+        {p:2,n:"Heavy-slow leg press / decline squat",d:"3×8 (3s down)",c:"Slow tempo, tolerable load",tags:["weight_bearing"]},
+        {p:4,n:"Energy-storage hops (progressive)",d:"3×8",c:"Only late; soft landings",tags:["impact"]}]},
+  {re:/iliotibial|\bitb\b/,
+   focus:"Strengthen the glutes/hip abductors and manage running load — avoid repeated downhill and high-volume flexion early.",
+   add:[{p:1,n:"Side-lying hip abduction",d:"3×15",c:"Neutral, lead with the heel"},
+        {p:3,n:"Single-leg squat / step control",d:"3×10",c:"Don't let the knee collapse inward",tags:["weight_bearing","balance"]}]},
+  {re:/lateral ankle sprain|ankle sprain \(|\batfl\b|calcaneofibular|chronic ankle instab/,
+   focus:"Prioritise balance/proprioception and peroneal strength — this prevents re-sprain more than anything else.",
+   add:[{p:1,n:"Ankle alphabet & pain-free ROM",d:"2× each",c:"Trace letters with the toes"},
+        {p:2,n:"Single-leg balance (progress eyes closed)",d:"3×30s",c:"Near support",tags:["balance"]},
+        {p:2,n:"Band eversion (peroneal) strengthening",d:"3×15",c:"Turn the sole outward"},
+        {p:4,n:"Hop and cut drills",d:"3×8",c:"Control the landing",tags:["impact","balance"]}]},
+  {re:/high ankle|syndesmosis/,
+   focus:"Protect the syndesmosis — avoid rotation and end-range dorsiflexion stress early; progress straight-plane loading before cutting.",
+   add:[{p:1,n:"Pain-free plantar/dorsiflexion (no rotation)",d:"3×15",c:"Straight plane only"},
+        {p:3,n:"Calf raises & straight-line loading",d:"3×12",c:"Avoid twisting",tags:["weight_bearing"]}]},
+  {re:/insertional achilles/,
+   focus:"Load the Achilles progressively but AVOID stretching into deep dorsiflexion (no heel drops below the step) early — it compresses the insertion.",
+   add:[{p:1,n:"Isometric calf hold (foot flat)",d:"5×30–45s",c:"Don't drop below level"},
+        {p:2,n:"Heavy-slow calf raise (floor, limited range)",d:"3×12",c:"Don't drop the heel below the step",tags:["weight_bearing"]},
+        {p:4,n:"Return-to-run / spring progression",d:"walk-run",c:"When single-leg raises are strong",tags:["impact"]}]},
+  {re:/achilles tendinop|achilles.*midportion|achilles paratenon/,
+   focus:"Load the Achilles progressively — isometrics, then heavy-slow calf raises (double then single), then energy-storage/plyometric work.",
+   add:[{p:1,n:"Isometric calf hold",d:"5×30–45s",c:"Mid-range, two feet"},
+        {p:2,n:"Heavy-slow double-leg calf raise",d:"3×12 (3s down)",c:"Full range, slow",tags:["weight_bearing"]},
+        {p:3,n:"Single-leg heavy calf raise / heel drop",d:"3×12",c:"Slow lower below level",tags:["weight_bearing","balance"]},
+        {p:4,n:"Pogo hops / skipping",d:"3×20s",c:"Light, rhythmic",tags:["impact"]}]},
+  {re:/plantar fascii|plantar fascia|plantar heel|heel fat pad/,
+   focus:"Load the plantar fascia and calf — high-load resistance with the toes extended, plus calf and foot-intrinsic strengthening; a morning stretch helps.",
+   add:[{p:1,n:"Plantar fascia & calf stretch",d:"3×30s",c:"Gentle, especially in the morning"},
+        {p:2,n:"High-load calf raise (towel under the toes)",d:"3×12 (3s)",c:"Toes propped up on a rolled towel",tags:["weight_bearing"]},
+        {p:2,n:"Foot-intrinsic (short-foot) work",d:"3×10",c:"Dome the arch"}]},
+  {re:/posterior tibial|tibialis posterior tendinop|flatfoot|pes planus/,
+   focus:"Strengthen tibialis posterior and support the arch — resisted inversion and calf raises; consider arch support.",
+   add:[{p:1,n:"Resisted inversion (band)",d:"3×15",c:"Turn the sole inward"},
+        {p:2,n:"Heel raises with arch control",d:"3×12",c:"Keep the arch lifted",tags:["weight_bearing"]}]},
+  {re:/flexion-intolerant|disc (herniation|bulge|protrusion|extrusion)|lumbar disc|radiculopathy at l|\bsciatica\b/,
+   focus:"Favour extension-biased movement and avoid loaded/repeated bending early; find your directional preference and keep walking.",
+   add:[{p:1,n:"Prone press-ups (extension in lying)",d:"3×10",c:"Only if it centralises symptoms",tags:["spine_extension","prone"]},
+        {p:1,n:"Frequent short walks",d:"5–10 min ×2/day",c:"Easy pace",tags:["aerobic"]},
+        {p:2,n:"Sciatic nerve glides",d:"3×10",c:"Gentle — don't provoke leg symptoms"},
+        {p:3,n:"Hip hinge / dead-bug core",d:"3×10",c:"Keep the spine neutral"}]},
+  {re:/extension-intolerant|stenosis|spondylolisth|spondylolysis|\bpars\b/,
+   focus:"Favour flexion-biased movement and core control; avoid repeated/loaded extension early.",
+   add:[{p:1,n:"Knee-to-chest / flexion in lying",d:"3×20s",c:"Gentle — eases symptoms",tags:["deep_hip_flexion"]},
+        {p:2,n:"Dead-bug & bird-dog core control",d:"3×10",c:"Keep the low back still"},
+        {p:3,n:"Hip hinge with a neutral spine",d:"3×10",c:"Avoid arching the back"}]},
+  {re:/non-specific low back|lumbar strain|low back pain|lumbar multifidus|erector spinae strain/,
+   focus:"Stay active and rebuild core and hip control — the 'big-3' plus hip hinge; movement is the medicine.",
+   add:[{p:1,n:"Pelvic tilts & cat–camel",d:"3×10",c:"Gentle motion, breathe"},
+        {p:2,n:"McGill big-3 (curl-up, side plank, bird-dog)",d:"3×8 each",c:"Brace; keep the spine neutral"},
+        {p:3,n:"Hip hinge / loaded carry",d:"3×10",c:"Neutral spine; progress load",tags:["grip_isometric"]}]},
+  {re:/sacroiliac|si joint|pelvic girdle|pubic symphysis/,
+   focus:"Improve pelvic control and glute strength; avoid heavy asymmetric/single-leg loading early.",
+   add:[{p:1,n:"Glute bridges & isometric adduction",d:"3×12",c:"Squeeze evenly"},
+        {p:3,n:"Split squat / step control (progressive)",d:"3×10",c:"Keep the pelvis level",tags:["weight_bearing","balance"]}]},
+  {re:/whiplash|neck strain|cervical radiculopathy|\bwad\b|text neck/,
+   focus:"Restore gentle motion early and build deep-neck-flexor and scapular endurance; don't hold one posture too long.",
+   add:[{p:1,n:"Chin tucks (deep neck flexor)",d:"3×10 (5s)",c:"Gentle nod; lengthen the neck"},
+        {p:1,n:"Gentle pain-free neck ROM",d:"3×8",c:"All directions, within comfort",tags:["end_range_neck"]},
+        {p:2,n:"Scapular rows & band pull-aparts",d:"3×15",c:"Squeeze the mid-back"}]},
+  {re:/cervicogenic headache|tension-type headache|occipital neuralgia/,
+   focus:"Target the upper neck and posture — deep-neck-flexor control, upper-trap release, and thoracic mobility.",
+   add:[{p:1,n:"Deep neck flexor holds",d:"3×10s",c:"Chin tuck + gentle hold"},
+        {p:2,n:"Thoracic extension mobility",d:"3×10",c:"Open the upper back",tags:["spine_extension"]}]},
+  {re:/hamstring (strain|tear)|sprinter'?s hamstring/,
+   focus:"Rebuild hamstring length and eccentric strength — the eccentric (lengthening) work is what protects against re-injury.",
+   add:[{p:1,n:"Isometric hamstring holds",d:"5×20s",c:"Gentle press, no pain"},
+        {p:3,n:"Nordic hamstring (assisted → full)",d:"3×6",c:"Resist the lowering"},
+        {p:4,n:"Accelerations / strides",d:"6×40m",c:"Build to 80–90%",tags:["impact"]}]},
+  {re:/calf (strain|tear)|gastrocnemius (strain|tear)|tennis leg/,
+   focus:"Rebuild calf strength and load tolerance — isometrics then progressive calf raises and return to running.",
+   add:[{p:1,n:"Isometric calf hold",d:"5×30s",c:"Two feet, mid-range"},
+        {p:3,n:"Single-leg calf raises",d:"3×12",c:"Full range, slow lower",tags:["weight_bearing"]}]},
+  {re:/tendinop|tendinosis|tendinitis/,
+   focus:"Load the tendon progressively — start with isometrics for pain relief, build to heavy-slow resistance, then add speed/energy-storage last.",
+   add:[{p:1,n:"Isometric hold for the affected tendon",d:"5×30–45s",c:"Sub-maximal; eases pain"},
+        {p:3,n:"Heavy-slow resistance loading",d:"3×8 (3s tempo)",c:"Tolerable load; progress weekly"}]},
+  {re:/fracture/,
+   focus:"Protect the healing bone and follow your weight-bearing status — restore motion and gentle strength around it, then progress loading once healed.",
+   add:[{p:1,n:"Pain-free ROM around the injury",d:"3×10",c:"Within your allowed range"},
+        {p:1,n:"Isometrics for the nearby muscles",d:"3×10s",c:"Maintain strength without moving the bone"}]}
+];
+function detectFocus(name){ const l=String(name).toLowerCase(); for(const f of INJURY_FOCUS) if(f.re.test(l)) return f; return null; }
+function signatureFor(focus, phase){
+  if(!focus) return [];
+  return focus.add.filter(a=>a.p===phase).map(a=>({ n:a.n, d:a.d, c:a.c, tags:a.tags||[], sig:true }));
+}
+
 /* ---------- build the program ---------- */
 function generateProgram(){
   const conds = selectedConditions();
@@ -424,16 +607,22 @@ function generateProgram(){
 
   const items = conds.map(c=>{
     const proto = window.getProtocol(c.protocol);
+    const focus = detectFocus(c.name);
     let cursor=1;
     const phases = proto.map((pool,p)=>{
       const len = phaseWeeks[p], wkStart=cursor, wkEnd=cursor+len-1; cursor=wkEnd+1;
-      const { kept, removed } = window.applyContra(pool, flags);
+      // prepend injury-specific signature exercises (dedupe against the generic pool)
+      const sig = signatureFor(focus, p+1);
+      const seen = new Set(sig.map(s=>s.n.toLowerCase()));
+      const merged = [...sig, ...pool.filter(e=>!seen.has(e.n.toLowerCase()))];
+      const { kept, removed } = window.applyContra(merged, flags);
       window.ensureMinimum(kept, flags, 3);
       removed.forEach(r=>removedAll.set(r.n, r.tag));
       return { title:tmpl.phases[p].title, goal:tmpl.phases[p].goal, weekStart:wkStart, weekEnd:wkEnd, ex:kept };
     });
     return { name:c.name, domain:c.domain, region:c.region, supervision:c.supervision, phases,
       protocol:c.protocol, clearance:c.clearance, chronicByNature:c.chronicByNature,
+      focus: focus ? focus.focus : "",
       about:aboutText(c, track), redflags:DOMAIN_REDFLAGS[c.domain] };
   });
 
@@ -653,7 +842,7 @@ function exItemHTML(e, regionArr, ctx, medHidden){
   const swap = ctx ? `<button class="swapbtn" ${dc}>⇄ Swap…</button>` : "";
   const swapbox = ctx ? `<div class="swapbox hide"></div>` : "";
   return `<li class="exitem${medHidden?" medhidden":""}">
-    <div class="top"><span class="en">${esc(e.n)}</span><span class="ed">${esc(e.d)}</span></div>
+    <div class="top"><span class="en">${e.sig?`<span class="sigpill">🎯 key</span> `:""}${esc(e.n)}</span><span class="ed">${esc(e.d)}</span></div>
     <div class="ec">${esc(e.c)}</div>
     ${e.warn?`<span class="warnpill">⚠ Modify — involves ${esc(TAG_LABEL[e.warn]||e.warn)}; keep it symptom-free.</span>`:""}
     ${e.sub?`<span class="subpill">safer substitute for your precautions</span>`:""}
@@ -912,7 +1101,8 @@ function renderProgram(prog){
 
   prog.items.forEach((item, ci)=>{
     html += `<div class="card"><h2>${esc(item.name)}</h2>
-      <p class="hint">${esc(conditionExplain(item, prog.track))}</p>`;
+      <p class="hint">${esc(conditionExplain(item, prog.track))}</p>
+      ${item.focus?`<div class="focusline"><b>🎯 Injury-specific focus:</b> ${esc(item.focus)}</div>`:""}`;
     item.phases.forEach((ph,i)=>{
       const key = ci+"-"+i;
       const open = (i===0 || openPhases.has(key)) ? "open" : "";

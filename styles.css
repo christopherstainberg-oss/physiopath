@@ -133,6 +133,11 @@ input[type=range]{flex:1;accent-color:var(--brand);height:30px}
 .notelist{margin:10px 0 0;padding-left:18px}
 .notelist li{margin-bottom:7px;font-size:13.5px}
 
+.focusline{background:rgba(62,166,255,.09);border:1px solid rgba(62,166,255,.3);border-radius:10px;
+  padding:9px 12px;margin:0 0 12px;font-size:13px;line-height:1.5}
+.focusline b{color:var(--brand)}
+.sigpill{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.3px;color:#04121f;
+  background:var(--brand);border-radius:999px;padding:1px 7px;vertical-align:1px}
 .phase{border:1px solid var(--line);border-radius:12px;margin:12px 0;overflow:hidden}
 .phase .head{padding:13px 14px;cursor:pointer;display:flex;align-items:center;gap:12px;background:var(--panel-2)}
 .phase .pnum{width:32px;height:32px;border-radius:9px;flex:0 0 auto;display:grid;place-items:center;font-weight:800;
