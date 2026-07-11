@@ -671,11 +671,93 @@ plainList(["COPD (GOLD stage 4, supervised)","Severe persistent asthma (step 4�
  "Chronic hyperventilation (breathing retraining)","Exercise-induced laryngeal obstruction","Post-lobectomy (left) reconditioning",
  "Post-lobectomy (right) reconditioning","Post-decortication (empyema) reconditioning","Sarcoidosis (multisystem reconditioning)"],"pulmonary","Respiratory","pulmonary_rehab");
 
+/* ==================== COMPREHENSIVE ADDITIONS — more genuine named conditions ==================== */
+
+/* Osteochondritis dissecans / chondral lesions (correct joint protocols) */
+latList(["Osteochondritis dissecans of the knee","Osteochondritis dissecans of the femoral condyle",
+ "Osteochondritis dissecans of the patella","Chondral flap tear of the knee","Patellar chondral lesion"],"msk","Knee","knee_ligament",{supervision:"supervised",chronic:true});
+latList(["Osteochondritis dissecans of the capitellum","Elbow chondral lesion"],"msk","Elbow","elbow",{supervision:"supervised",chronic:true});
+latList(["Osteochondritis dissecans of the talus","Talar osteochondral lesion (revision)","Focal chondral defect of the ankle"],"msk","Ankle","ankle",{supervision:"supervised",chronic:true});
+latList(["Femoral head chondral lesion","Acetabular chondral lesion"],"msk","Hip","hip",{supervision:"supervised",chronic:true});
+
+/* Sport-named overuse — grouped by region for correct protocols */
+latList(["Swimmer's shoulder (freestyle)","Overhead-athlete internal impingement","Weightlifter's distal clavicle osteolysis",
+ "CrossFit shoulder overuse","Painter's overhead shoulder tendinopathy","Volleyball suprascapular neuropathy"],"msk","Shoulder","shoulder",{chronic:true});
+latList(["Thrower's elbow (UCL insufficiency)","Little Leaguer's elbow","Climber's medial elbow tendinopathy","Javelin thrower's elbow"],"msk","Elbow","elbow",{chronic:true});
+latList(["Climber's A2 pulley injury","Gymnast's wrist (physeal stress)","Cyclist's handlebar (ulnar) palsy","Golfer's hamate/ECU wrist injury"],"msk","Wrist / Hand","wrist_hand",{chronic:true});
+latList(["Rower's proximal hamstring tendinopathy","Dancer's snapping hip","Footballer's adductor (groin) strain","Ice-hockey femoroacetabular impingement","Hurdler's hip-flexor strain"],"msk","Hip","hip",{chronic:true});
+latList(["Runner's iliotibial band syndrome","Cyclist's patellofemoral pain","Basketball jumper's knee","Alpine-skier's ACL injury","Footballer's MCL sprain"],"msk","Knee","knee_pf",{chronic:true});
+latList(["Runner's Achilles tendinopathy","Badminton Achilles strain","Basketball lateral ankle sprain","Footballer's anterior ankle impingement","Trail-runner's peroneal tendinopathy"],"msk","Ankle","ankle",{chronic:true});
+plainList(["Rower's low-back pain","Golfer's low-back pain","Cricket fast-bowler's lumbar stress","Gymnast's spondylolysis","Powerlifter's low-back strain","Equestrian's low-back pain","Deadlift-related low-back strain"],"msk","Lumbar spine","lumbar",{chronic:true});
+plainList(["Triathlete's overtraining syndrome","Marathoner's overuse syndrome","Distance-runner's tibial stress reaction","Multisport overtraining reconditioning"],"msk","Sports / activity","general_msk",{chronic:true});
+
+/* Occupational / repetitive strain — grouped by region */
+latList(["Carpenter's lateral elbow tendinopathy","Assembly-line medial elbow tendinopathy"],"msk","Elbow","elbow",{chronic:true});
+latList(["Keyboard-worker's wrist tendinopathy","Cashier's wrist repetitive strain","Hand-arm vibration syndrome","Hairdresser's thumb tendinopathy"],"msk","Wrist / Hand","wrist_hand",{chronic:true});
+latList(["Hairdresser's shoulder tendinopathy","Roofer's shoulder tendinopathy","Delivery-driver's shoulder overuse","Warehouse overhead-lift shoulder strain"],"msk","Shoulder","shoulder",{chronic:true});
+plainList(["Nursing-related low-back injury","Warehouse lifting low-back injury","Manual-handling low-back strain","Long-haul-driver's low-back pain"],"msk","Lumbar spine","lumbar",{chronic:true});
+plainList(["Dental-clinician's neck pain","Desk-worker's cervical strain","Sonographer's neck/shoulder strain"],"msk","Cervical spine","cervical",{chronic:true});
+latList(["Construction-worker's knee (kneeling)","Carpet-layer's knee","Miner's beat knee"],"msk","Knee","knee_pf",{chronic:true});
+plainList(["Prolonged-standing plantar heel pain","Retail-worker's foot pain"],"msk","Foot","foot",{chronic:true});
+plainList(["Musician's focal upper-limb overuse","Violinist's neck & shoulder strain","Pianist's wrist tendinopathy","Drummer's wrist overuse"],"msk","Performing-arts overuse","wrist_hand",{chronic:true});
+
+/* Spine — more detail */
+for(const lv of THOR) add(`Facet joint arthropathy at ${lv}`,"msk","Thoracic spine","thoracic",{chronic:true});
+plainList(["Lumbar disc sequestration (reconditioning)","Central canal stenosis (lumbar)","Lateral recess stenosis (lumbar)","Bertolotti syndrome",
+ "Adult idiopathic scoliosis (conservative)","Adult degenerative scoliosis","Sagittal-imbalance reconditioning","Lumbar segmental instability (conservative)",
+ "Cluneal nerve entrapment","Maigne syndrome (thoracolumbar junction)","Lumbar multifidus dysfunction","Spinal epidural lipomatosis (reconditioning)"],"msk","Spine","lumbar",{chronic:true});
+plainList(["Postural thoracic kyphosis","Thoracic hyperkyphosis (reconditioning)","Upper-crossed syndrome","Lower-crossed syndrome"],"msk","Thoracic spine","thoracic",{chronic:true});
+
+/* Hand / wrist (more) */
+latList(["Preiser disease (scaphoid AVN)","Wartenberg syndrome","Bowler's thumb","Extensor pollicis longus repair recovery","Sagittal band rupture (chronic)",
+ "Central slip (boutonnière) injury — early","Scaphoid nonunion (reconditioning)","TFCC repair recovery","Ulnar impaction syndrome","Distal radioulnar joint instability"],"msk","Wrist / Hand","wrist_hand",{chronic:true,supervision:"supervised"});
+
+/* Foot / ankle (more) */
+latList(["Peroneal tendon tear (reconditioning)","Flexor hallucis longus tenosynovitis","Cuboid syndrome","Sesamoid stress fracture recovery","Os trigonum impingement",
+ "Plantar plate repair recovery","Ankle syndesmosis reconstruction recovery","Chronic exertional compartment syndrome (anterior)","Chronic exertional compartment syndrome (deep posterior)"],"msk","Foot / ankle","foot",{chronic:true,supervision:"supervised"});
+
+/* Rheumatologic / systemic (more) */
+plainList(["Adult-onset Still's disease (reconditioning)","Lyme arthritis (reconditioning)","Post-viral reactive arthralgia","Behçet's arthropathy",
+ "Familial Mediterranean fever arthropathy","Relapsing polychondritis (reconditioning)","Sarcoid arthropathy","IgG4-related disease (reconditioning)",
+ "Undifferentiated connective tissue disease (reconditioning)","Eosinophilic fasciitis (reconditioning)","SAPHO syndrome (reconditioning)"],"msk","Systemic","general_msk",{chronic:true,supervision:"supervised"});
+
+/* Metabolic bone */
+plainList(["Osteomalacia (reconditioning)","Renal osteodystrophy (reconditioning)","Post-fragility-fracture reconditioning","Osteoporosis with vertebral wedge fractures",
+ "Steroid-induced osteoporosis (reconditioning)","Osteogenesis imperfecta (adult reconditioning)","Fibrous dysplasia (reconditioning)","Hyperparathyroid bone disease (reconditioning)"],"msk","Metabolic bone","general_msk",{chronic:true,supervision:"supervised"});
+
+/* NEURO — stroke & hemorrhage (more) */
+plainList(["Subarachnoid hemorrhage recovery","Spontaneous intracerebral hemorrhage recovery","Cerebral venous sinus thrombosis recovery",
+ "Carotid artery dissection stroke recovery","Vertebral artery dissection recovery","Moyamoya disease (post-revascularization)","Cerebellar hemorrhage recovery",
+ "Cardioembolic stroke recovery","Post-craniotomy motor reconditioning","Recurrent stroke reconditioning"],"neuro","Brain","stroke",{supervision:"clinical",clearance:true});
+
+/* NEURO — headache / facial */
+plainList(["Chronic migraine (cervical component)","Cluster headache (reconditioning)","Medication-overuse headache (reconditioning)","New daily persistent headache (reconditioning)",
+ "Trigeminal neuralgia (post-procedure reconditioning)","Post-traumatic headache (concussion-related)"],"neuro","Head / face","balance_neuro");
+
+/* NEURO — autonomic / functional / cognitive-motor */
+plainList(["Pure autonomic failure (reconditioning)","Baroreflex failure (reconditioning)","Diabetic autonomic neuropathy (reconditioning)",
+ "Functional movement disorder (rehabilitation)","Functional gait disorder (rehabilitation)","Camptocormia (reconditioning)","Dropped-head syndrome (reconditioning)",
+ "Mild cognitive impairment (exercise program)","Dementia-related mobility (gentle exercise)","Parkinson-plus gait reconditioning"],"neuro","Nervous system","balance_neuro",{chronic:true});
+
+/* CARDIAC — more */
+plainList(["Vasospastic (Prinzmetal) angina (reconditioning)","Cardiac amyloidosis (gentle exercise)","Left bundle branch block (reconditioning)",
+ "Post-LAA-closure (Watchman) reconditioning","Athlete's heart (reassurance reconditioning)","Post-septal-myectomy recovery","Chronic stable heart failure (Stage C)",
+ "Post-CRT (resynchronization) reconditioning","Diastolic dysfunction (reconditioning)","Post-infective-endocarditis reconditioning"],"cardiac","Heart","cardiac_rehab",{supervision:"clinical",clearance:true});
+plainList(["Chronic limb-threatening ischemia (supervised)","Lower-limb lymphedema (exercise management)","Post-lymph-node-dissection lymphedema (limb)",
+ "Superficial thrombophlebitis (reconditioning)","Post-thrombotic syndrome (reconditioning)","Chronic venous ulcer (exercise adjunct)"],"cardiac","Vascular","pad",{supervision:"clinical",clearance:true});
+
+/* PULMONARY — more */
+plainList(["Post-COVID exertional dyspnea (paced)","Eosinophilic asthma (reconditioning)","Allergic bronchopulmonary aspergillosis (reconditioning)",
+ "Nontuberculous mycobacterial lung disease (reconditioning)","Post-lung-volume-reduction reconditioning","Pulmonary Langerhans cell histiocytosis (reconditioning)",
+ "Lymphangioleiomyomatosis (reconditioning)","Combined pulmonary fibrosis & emphysema (reconditioning)","Post-COVID lung fibrosis (reconditioning)"],"pulmonary","Lungs","ild",{supervision:"supervised",clearance:true,chronic:true});
+plainList(["Chronic breathlessness syndrome (breathing retraining)","Dysfunctional breathing pattern","Inducible laryngeal obstruction (exercise)",
+ "Post-tracheostomy reconditioning","Diaphragm plication recovery","Respiratory-muscle-training program"],"pulmonary","Respiratory","asthma",{supervision:"supervised"});
+
 /* ==================== Defensible top-up to reach target breadth ====================
    Clinical presentation stratifications genuinely change program tuning
    (return-to-sport load, work ergonomics, older-adult bone/fall caution).
    Applied only to primary MSK conditions, only until the target is reached. */
-const TARGET = 10000;
+const TARGET = 15000;
 const PRESENTATIONS = [
   ["return-to-sport focus", {}],
   ["return-to-work / ergonomic focus", {}],
@@ -694,7 +776,17 @@ const PRESENTATIONS = [
   ["weight-management / metabolic focus", {}],
   ["recurrent / relapse-prevention", {}],
   ["tele-rehab / remotely monitored", {}],
-  ["pool-based / aquatic option", {}]
+  ["pool-based / aquatic option", {}],
+  ["night-shift / irregular-hours worker", {}],
+  ["prolonged-sitting / driver adaptation", {}],
+  ["overhead-work adaptation", {}],
+  ["low-back-sparing progression", {}],
+  ["joint-protection focused", {}],
+  ["cardiometabolic-comorbidity aware", {}],
+  ["heavy-manual-work return", {}],
+  ["minimal-pain-provocation approach", {}],
+  ["strength-and-conditioning progression", {}],
+  ["mobility-and-flexibility emphasis", {}]
 ];
 const primaryMSK = out.filter(c =>
   c.domain === "msk" &&
