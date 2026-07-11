@@ -1026,6 +1026,15 @@
     vital_hypoxia: { avoid:[T.highInt], caution:[T.aerobic],
       clearance:true,
       note:"The oxygen saturation you entered is low: keep effort light, monitor SpO₂ during exercise, use prescribed oxygen, and get this reviewed before progressing. Stop if SpO₂ falls below your clinician's threshold or you feel very breathless." },
+    // ---- weight-bearing orders (from the Precautions card) ----
+    wb_nwb: { avoid:[T.wb,T.impact,T.balance], caution:[T.highInt],
+      note:"Non-weight-bearing (NWB): keep ALL weight off the affected limb — no standing or stepping on it; use your crutches/walker as instructed. Standing, weight-bearing, balance and impact exercises for that limb have been removed — do the seated, lying, core and other-limb work instead until your order changes." },
+    wb_ttwb: { avoid:[T.impact], caution:[T.wb,T.balance,T.highInt],
+      note:"Toe-touch / touch-down weight-bearing (TTWB): the foot may rest on the floor only for balance — 'like standing on eggshells' (about the weight of the leg, under ~20 lb), not for support. Load any standing work very lightly and keep using your crutches." },
+    wb_pwb: { avoid:[], caution:[T.wb,T.impact,T.highInt],
+      note:"Partial weight-bearing (PWB): put only the allowed share of your body weight through the limb. Practise the amount on a bathroom scale so you know how it feels, and progress only as your surgeon allows." },
+    wb_wbat: { avoid:[], caution:[T.impact],
+      note:"Weight-bearing as tolerated (WBAT): put as much weight through the limb as stays comfortable, using aids as needed and easing off if pain or swelling rises. Progress gradually." },
     // ---- optional medication-derived rules (only applied when the user turns on medication safety filtering) ----
     fluoroquinolone: { avoid:[T.impact], caution:[],
       note:"On a fluoroquinolone antibiotic: high-impact and heavy tendon-loading exercises are removed to protect your tendons (raised Achilles-rupture risk) while taking it and for a few weeks after." },

@@ -253,7 +253,9 @@ const state = {
   vitals:{restHR:"",sbp:"",dbp:"",spo2:"",rr:"",height:"",weight:""},
   vitalsLog:[], labs:{}, labHist:{},
   screen:{}, falls:"", aid:"", smoking:"", alcohol:"", sleep:"", stress:"",
-  medIds:[], medFilter:false, homeMode:false, customPrecautions:[], clinicianProtocols:[], log:[], apiKey:"", apiModel:"claude-opus-4-8"
+  medIds:[], medFilter:false, homeMode:false, customPrecautions:[], clinicianProtocols:[],
+  weightBearing:{status:"",pct:"",lbs:""}, devices:[],
+  log:[], apiKey:"", apiModel:"claude-opus-4-8"
 };
 const MED_FILTERABLE = ["fluoroquinolone","anticoagulant","antiplatelet","opioid","sedative","muscle_relaxant","gabapentinoid","antipsychotic"];
 const MEDMAP = new Map();
@@ -317,6 +319,7 @@ function gatherFlags(){
   selectedConditions().forEach(c => (c.autoFlags||[]).forEach(x=>f.add(x)));
   const surg = detectSurgery(); if(surg && surg.autoFlags) surg.autoFlags.forEach(x=>f.add(x));
   vitalFlags().forEach(x=>f.add(x));
+  wbFlags().forEach(x=>f.add(x));
   const sc = state.screen||{};
   if(Object.values(sc).some(Boolean)) f.add("red_flags");
   if(sc.cauda) f.add("red_flags_urgent");
@@ -381,6 +384,78 @@ function vitalFlags(){
   else if(hr!=null&&hr>0&&hr<50) out.push("vital_brady");
   if(spo2!=null&&spo2>0&&spo2<92) out.push("vital_hypoxia");
   return out;
+}
+/* ---------- weight-bearing status & orthoses/prostheses ---------- */
+/* Weight-bearing orders (most → least restrictive). `flag` feeds the
+   contraindication engine via gatherFlags so the plan is reshaped. */
+const WB_STATUS = {
+  fwb:  { abbr:"FWB",        label:"Full weight-bearing", flag:null,
+          desc:"No restriction — put your full weight through the limb." },
+  wbat: { abbr:"WBAT",       label:"Weight-bearing as tolerated", flag:"wb_wbat",
+          desc:"Put as much weight through the limb as stays comfortable; use aids as needed and ease off if pain or swelling rises." },
+  pwb:  { abbr:"PWB",        label:"Partial weight-bearing", flag:"wb_pwb", pct:true,
+          desc:"Put only the allowed share of your body weight through the limb (commonly 25–50%). Practise the amount on a bathroom scale." },
+  ttwb: { abbr:"TTWB / TDWB", label:"Toe-touch / touch-down weight-bearing", flag:"wb_ttwb",
+          desc:"The foot may rest on the floor for balance only — 'like standing on eggshells' (about the weight of the leg, under ~20 lb / 10–15% body weight), not for support." },
+  ffwb: { abbr:"FFWB",       label:"Feather / featherweight bearing", flag:"wb_ttwb",
+          desc:"Barely any load — just a whisper of contact for balance (a few pounds)." },
+  nwb:  { abbr:"NWB",        label:"Non-weight-bearing", flag:"wb_nwb",
+          desc:"No weight at all on the limb — keep it off the floor and use your crutches/walker as instructed." }
+};
+const WB_ORDER = ["fwb","wbat","pwb","ttwb","ffwb","nwb"];
+function bodyWeightLbs(){ const kg = vnum((state.vitals||{}).weight); return kg ? kg*2.2046226 : null; }
+function wbFlags(){ const s = (state.weightBearing||{}).status; const r = WB_STATUS[s]; return (r && r.flag) ? [r.flag] : []; }
+/* Human-readable weight-bearing order line (used in the precautions card & coach). */
+function wbSummary(){
+  const wb = state.weightBearing||{}; const r = WB_STATUS[wb.status]; if(!r) return "";
+  let amt = "";
+  if(wb.status==="pwb"){
+    const parts = [];
+    if(String(wb.pct).trim()!=="") parts.push(`${wb.pct}%`);
+    if(String(wb.lbs).trim()!=="") parts.push(`~${wb.lbs} lbs`);
+    if(parts.length) amt = ` — ${parts.join(" · ")}`;
+  }
+  return `${r.label} (${r.abbr})${amt}`;
+}
+
+/* Orthotics / prosthetics / immobilizers / splints, grouped by region.
+   Reminders (with a default note); the user can also add a custom one. */
+const DEVICE_CATALOG = {
+  le:{ label:"Lower extremity", items:[
+    ["CAM walker boot","Wear it for all standing/walking; remove only for prescribed exercises or hygiene."],
+    ["Post-op shoe","Wear whenever you're on your feet to protect the forefoot/toes."],
+    ["Hinged / ROM knee brace","Keep it set to the range your surgeon prescribed; don't exceed the locked limits."],
+    ["Knee immobilizer","Keep the knee locked straight as instructed — usually for standing, walking and sleeping."],
+    ["Unloader knee brace","Wear during weight-bearing activity to offload the affected side."],
+    ["Ankle brace / stirrup","Wear for weight-bearing and higher-risk activity to protect the ligaments."],
+    ["Ankle-foot orthosis (AFO)","Wear as prescribed for foot clearance and ankle support when walking."],
+    ["Short/long leg cast","Keep it clean and dry; follow your weight-bearing order exactly."],
+    ["Foot orthotic / insole","Wear inside supportive shoes as prescribed."],
+    ["Patellar / IT-band strap","Wear during aggravating activity to reduce load on the tendon."],
+    ["Compression stocking","Wear as advised to manage swelling and clot risk."],
+    ["Lower-limb prosthesis","Follow your prosthetist's wear schedule; check the residual limb for redness/skin breakdown."]
+  ]},
+  ue:{ label:"Upper extremity", items:[
+    ["Shoulder sling / immobilizer","Keep the arm supported; remove only for prescribed pendulum/ROM work."],
+    ["Abduction pillow sling","Keep the shoulder in the prescribed abduction; don't let the arm hang across the body."],
+    ["Hinged elbow brace","Keep it set to the prescribed range; don't force beyond the stops."],
+    ["Elbow immobilizer","Keep the elbow at the set angle as instructed."],
+    ["Wrist splint (cock-up)","Keep the wrist supported; remove only for prescribed motion."],
+    ["Thumb spica splint","Keep the thumb immobilized; avoid pinching/gripping with it."],
+    ["Finger / buddy splint","Keep the finger protected; move only as prescribed."],
+    ["Wrist / forearm cast","Keep it clean and dry; keep the fingers moving to reduce stiffness/swelling."],
+    ["Resting hand splint","Wear on the prescribed schedule (often at night) to maintain position."],
+    ["Clavicle brace / figure-8","Wear to hold the shoulders back as prescribed."],
+    ["Upper-limb prosthesis","Follow your prosthetist's wear schedule; check the residual limb daily."]
+  ]},
+  spine:{ label:"Spine / neck", items:[
+    ["Cervical collar","Wear as prescribed; avoid end-range neck movements while it's on."],
+    ["Lumbar / TLSO brace","Wear for upright/loaded activity as prescribed; follow your bend/lift limits."]
+  ]}
+};
+function deviceNoteFor(name){
+  for(const g of Object.values(DEVICE_CATALOG)){ const hit=g.items.find(([n])=>n===name); if(hit) return hit[1]; }
+  return "Wear/use as prescribed by your clinician.";
 }
 function onBetaBlocker(){ return selectedMeds().some(m=>(m.flags||[]).includes("beta_blocker")); }
 function someCardioPulm(){
@@ -1226,7 +1301,14 @@ function wireProgram(){
   if(addBtn) addBtn.onclick = ()=>{ const f=$("#programOut .addprecform"); f.classList.toggle("hide"); if(!f.classList.contains("hide")) f.querySelector(".addprec-t").focus(); };
   const saveBtn = $("#programOut .addprec-save");
   if(saveBtn) saveBtn.onclick = addCustomPrecaution;
-  $$("#programOut .precdel").forEach(b=>b.onclick=()=>removeCustomPrecaution(+b.dataset.idx));
+  $$("#programOut .precdel").forEach(b=>b.onclick=()=> b.dataset.devidx!=null ? removeDevice(+b.dataset.devidx) : removeCustomPrecaution(+b.dataset.idx));
+  // weight-bearing status + amount
+  const wbSel=$("#programOut #wbSelect"); if(wbSel) wbSel.onchange=setWeightBearingStatus;
+  const wbPct=$("#programOut #wbPct"); if(wbPct) wbPct.oninput=()=>setWbAmount("pct");
+  const wbLbs=$("#programOut #wbLbs"); if(wbLbs) wbLbs.oninput=()=>setWbAmount("lbs");
+  // devices / braces / splints
+  const devSel=$("#programOut #devSelect"); if(devSel) devSel.onchange=()=>{ const c=$("#programOut #devCustom"); if(c){ c.classList.toggle("hide", devSel.value!=="__custom"); if(devSel.value==="__custom") c.focus(); } };
+  const devAdd=$("#programOut .devadd"); if(devAdd) devAdd.onclick=addDevice;
   const mf = $("#programOut #medFilterToggle");
   if(mf) mf.onchange = ()=>{
     state.medFilter = mf.checked; save();
@@ -1335,10 +1417,47 @@ function surgicalReminderCard(){
     disclaimer = `<p class="hint" style="margin-top:10px">These are <b>generalized</b> timeframes for education — your surgeon's own protocol always takes precedence.
       Seek care for spreading redness, discharge, fever, new calf pain/swelling, or chest pain/breathlessness.</p>`;
   }
+  const devices = state.devices || [];
+
+  // --- weight-bearing status control ---
+  const wb = state.weightBearing || {};
+  const wbInfo = WB_STATUS[wb.status];
+  const bw = bodyWeightLbs();
+  const wbOptions = `<option value="">— not specified —</option>` + WB_ORDER.map(k=>{
+      const r=WB_STATUS[k]; return `<option value="${k}"${wb.status===k?" selected":""}>${esc(r.label)} (${esc(r.abbr)})</option>`; }).join("");
+  const pctBlock = (wb.status==="pwb") ? `<div class="wbamt">
+      <label>% of body weight<input type="number" id="wbPct" min="0" max="100" step="5" value="${esc(wb.pct||"")}" placeholder="e.g. 50" /></label>
+      <label>or weight (lbs)<input type="number" id="wbLbs" min="0" max="600" value="${esc(wb.lbs||"")}" placeholder="e.g. 90" /></label>
+      <div class="wbhint">${bw?`Your body weight ≈ ${Math.round(bw)} lbs — so 25% ≈ ${Math.round(bw*.25)} lbs, 50% ≈ ${Math.round(bw*.5)} lbs.`:`Add your weight in History for automatic %↔lbs conversion.`}</div>
+    </div>` : "";
+  const wbControl = `<div class="wbctrl no-print">
+      <label class="preclab" for="wbSelect">🦵 Weight-bearing status <span class="sub">(this adjusts your exercises)</span></label>
+      <select id="wbSelect">${wbOptions}</select>
+      ${wbInfo?`<div class="wbdesc">${esc(wbInfo.desc)}</div>`:""}
+      ${pctBlock}
+    </div>`;
+
+  // --- braces / orthotics / prosthetics / splints control ---
+  const devOptions = Object.values(DEVICE_CATALOG).map(g=>
+      `<optgroup label="${esc(g.label)}">${g.items.map(([n])=>`<option value="${esc(n)}">${esc(n)}</option>`).join("")}</optgroup>`
+    ).join("") + `<optgroup label="Other"><option value="__custom">Other / custom…</option></optgroup>`;
+  const devControl = `<div class="devctrl no-print">
+      <label class="preclab" for="devSelect">🦿 Braces, orthotics, prosthetics &amp; splints</label>
+      <div class="devrow">
+        <select id="devSelect"><option value="">— choose a device to add —</option>${devOptions}</select>
+        <button class="btn primary devadd" type="button">＋ Add</button>
+      </div>
+      <input type="text" id="devCustom" class="hide" placeholder="Name your device / splint (e.g. custom night splint)" />
+    </div>`;
+
+  // --- rows (weight-bearing order, devices, surgical, custom) ---
+  const wbRow = wbInfo ? `<li class="precrow active wbrow"><span class="prec-t">🦵 <b>Weight-bearing:</b> ${esc(wbSummary())} on the affected limb</span><span class="prec-w">order</span></li>` : "";
+  const devRows = devices.map((d,i)=>`<li class="precrow devrow"><span class="prec-t">🦿 <b>${esc(d.name)}</b> — ${esc(d.note||"")}</span><span class="precdel devdel no-print" data-devidx="${i}" title="Remove">✕</span></li>`).join("");
   const customRows = customs.map((p,i)=>precRowHTML(p.t, p.w, i)).join("");
-  const list = (surgRows || customRows)
-    ? `<ul class="preclist">${surgRows}${customRows}</ul>`
-    : `<p class="hint">Add your own reminders below — e.g. a specific instruction from your surgeon or clinician.</p>`;
+  const list = (wbRow || surgRows || devRows || customRows)
+    ? `<ul class="preclist">${wbRow}${surgRows}${devRows}${customRows}</ul>`
+    : `<p class="hint">Set your weight-bearing status or add a brace/splint above, or add your own reminder below.</p>`;
+
   const addCtrl = `<div class="addprec no-print">
       <button class="addprecbtn">＋ Add your own precaution / reminder</button>
       <div class="addprecform hide">
@@ -1350,9 +1469,39 @@ function surgicalReminderCard(){
   const title = surg ? "🩹 Surgical precautions &amp; reminders" : "📌 Precautions &amp; reminders";
   return `<div class="card surgcard${surg?"":" plain"}">
     <h2>${title}</h2>
-    ${head}${list}${timeline}${addCtrl}${disclaimer}
+    ${head}
+    <div class="preccontrols no-print">${wbControl}${devControl}</div>
+    ${list}${timeline}${addCtrl}${disclaimer}
   </div>`;
 }
+function setWeightBearingStatus(){
+  const sel = $("#programOut #wbSelect"); if(!sel) return;
+  const status = sel.value;
+  const wb = state.weightBearing = state.weightBearing || {};
+  wb.status = status;
+  if(status!=="pwb"){ wb.pct=""; wb.lbs=""; }
+  save();
+  if(state.program){ state.program = generateProgram(); save(); }   // WB order reshapes the plan
+  renderProgram(state.program);
+  toast(status ? `Weight-bearing set to ${WB_STATUS[status].abbr} — your plan was updated to match.` : "Weight-bearing status cleared.");
+}
+function setWbAmount(which){
+  const wb = state.weightBearing = state.weightBearing || {};
+  const pctEl=$("#programOut #wbPct"), lbsEl=$("#programOut #wbLbs"), bw=bodyWeightLbs();
+  if(which==="pct"){ wb.pct = pctEl.value; if(bw && pctEl.value!=="") { wb.lbs = Math.round(bw*(+pctEl.value)/100); if(lbsEl) lbsEl.value = wb.lbs; } }
+  else { wb.lbs = lbsEl.value; if(bw && lbsEl.value!=="") { wb.pct = Math.round((+lbsEl.value)/bw*100); if(pctEl) pctEl.value = wb.pct; } }
+  save();
+  const row = $("#programOut .wbrow .prec-t"); if(row) row.innerHTML = `🦵 <b>Weight-bearing:</b> ${esc(wbSummary())} on the affected limb`;
+}
+function addDevice(){
+  const sel=$("#programOut #devSelect"); if(!sel) return;
+  let name = sel.value, custom = (name==="__custom");
+  if(custom){ const c=$("#programOut #devCustom"); name=(c?c.value:"").trim(); if(!name){ toast("Type a device name first."); return; } }
+  if(!name){ toast("Choose a device to add."); return; }
+  (state.devices = state.devices||[]).push({ name, note: custom ? "Wear/use as prescribed by your clinician." : deviceNoteFor(name) });
+  save(); renderProgram(state.program); toast("Added to your precautions.");
+}
+function removeDevice(idx){ if(!state.devices) return; state.devices.splice(idx,1); save(); renderProgram(state.program); toast("Removed."); }
 function addCustomPrecaution(){
   const t = $("#programOut .addprec-t").value.trim();
   if(!t){ toast("Type a reminder first."); return; }
@@ -3506,6 +3655,8 @@ function buildCoachSystem(){
   const lifestyle = [state.smoking&&`smoking ${state.smoking}`, state.alcohol&&`alcohol ${state.alcohol}`, state.sleep&&`sleep ${state.sleep}`, state.stress&&`stress ${state.stress}`, state.falls&&`falls/yr ${state.falls}`, (state.aid&&state.aid!=="none")&&`walking aid ${state.aid}`].filter(Boolean).join(", ") || "not specified";
   const redflags = Object.entries(state.screen||{}).filter(([,val])=>val).map(([k])=>k).join(", ") || "none";
   const goals = [ (state.returnActivities||[]).length && `activities: ${state.returnActivities.join(", ")}`, (state.returnSports||[]).length && `sport: ${state.returnSports.join(", ")}` ].filter(Boolean).join("; ") || "none specified";
+  const wbLine = wbSummary() || "not specified";
+  const deviceLine = (state.devices||[]).map(d=>d.name).join(", ") || "none";
   const abnormalLabs = LABS.filter(l=>{ const s=labStatusOf(l); return s==="high"||s==="low"; }).map(l=>`${l.name} ${labStatusOf(l)}`).join(", ") || "none entered/all in range";
   const riskAreas = computeRisks().filter(r=>r.level!=="low").map(r=>`${r.title.replace(/ risk$/i,"")} = ${r.level}`).join("; ") || "none flagged";
   return `You are Jeffery, PhysioPath's AI rehabilitation specialist — an educational assistant giving general, evidence-informed physical-rehabilitation guidance. You are an AI, not a licensed clinician, and must not diagnose or replace in-person care.
@@ -3519,6 +3670,7 @@ USER CONTEXT
 - Lifestyle & function: ${lifestyle}
 - Red-flag screen positives: ${redflags}
 - Return-to goals: ${goals}
+- Weight-bearing order: ${wbLine}; braces/orthoses/prostheses: ${deviceLine}
 - Out-of-range labs entered: ${abnormalLabs}
 - Educational risk areas (not diagnostic): ${riskAreas}
 - Personalized precautions (MUST respect): ${precautions}
