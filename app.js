@@ -1984,17 +1984,17 @@ const LABS = [
     improveHigh:"A high TSH suggests an underactive thyroid — discuss thyroid testing and any medication with your doctor.", improveLow:"A low TSH suggests an overactive thyroid — discuss with your doctor." }
 ];
 const LAB_DOMAINS = [
-  { key:"cardiac",      label:"Cardiac & metabolic" },
-  { key:"renal",        label:"Kidney (renal)" },
-  { key:"electrolyte",  label:"Electrolytes & minerals" },
-  { key:"hepatic",      label:"Liver (hepatic)" },
-  { key:"cbc",          label:"Complete blood count (CBC)" },
-  { key:"iron",         label:"Iron studies" },
-  { key:"thyroid",      label:"Thyroid & hormones" },
-  { key:"vitamins",     label:"Vitamins & nutrition" },
-  { key:"inflammation", label:"Inflammation" },
-  { key:"coagulation",  label:"Clotting (coagulation)" },
-  { key:"gastro",       label:"Digestive & pancreas" }
+  { key:"cardiac",      label:"🫀 Cardiac & metabolic" },
+  { key:"renal",        label:"🫘 Renal (kidney) function" },
+  { key:"electrolyte",  label:"🧂 Electrolytes & minerals" },
+  { key:"hepatic",      label:"🩺 Hepatic (liver) panel" },
+  { key:"cbc",          label:"🩸 Complete blood count (CBC)" },
+  { key:"iron",         label:"🧲 Iron studies" },
+  { key:"thyroid",      label:"🦋 Thyroid & endocrine" },
+  { key:"vitamins",     label:"💊 Vitamins & nutrition" },
+  { key:"inflammation", label:"🔥 Inflammatory markers" },
+  { key:"coagulation",  label:"🩹 Coagulation (clotting)" },
+  { key:"gastro",       label:"🍽️ Gastrointestinal & pancreatic" }
 ];
 function labStatusOf(lab){
   const e=state.labs[lab.id];
@@ -2020,7 +2020,7 @@ function labRowHTML(lab){
     <div class="labname">${esc(lab.name)} <span class="labunit">${esc(lab.unit)}</span></div>
     <div class="labinputs">
       <input class="labval" data-lab="${lab.id}" value="${esc(String(v))}" placeholder="your value" inputmode="decimal" />
-      <span class="labtarget">target <input class="labt" data-lab="${lab.id}" data-b="lo" value="${esc(String(lo))}" inputmode="decimal" aria-label="target low" />–<input class="labt" data-lab="${lab.id}" data-b="hi" value="${esc(String(hi))}" inputmode="decimal" aria-label="target high" /></span>
+      <span class="labtarget">reference range <input class="labt" data-lab="${lab.id}" data-b="lo" value="${esc(String(lo))}" inputmode="decimal" aria-label="reference range low" />–<input class="labt" data-lab="${lab.id}" data-b="hi" value="${esc(String(hi))}" inputmode="decimal" aria-label="reference range high" /></span>
       <span class="labpill ${cls}">${pill}</span>
     </div>
     <div class="labtip"${tip?"":' style="display:none"'}>💡 ${tip}</div>
@@ -2260,7 +2260,7 @@ function computeRisks(){
     if(gt(L("crp"),3)){f.push("hs-CRP (inflammation) is high");s+=1;}
     if(gt(hr,90)){f.push("Resting heart rate is high");s+=1;}
     if(gt(age,70)){f.push("Age 70+");s+=2;} else if(gt(age,55)){f.push("Age 55+");s+=1;}
-    R.push(mk("cardiac","Cardiac Risk","❤️",f,s,3,6,"Blood pressure, cholesterol, blood sugar, not smoking, a healthy weight and regular aerobic exercise are the biggest levers here.")); }
+    R.push(mk("cardiac","Cardiovascular Risk","🫀",f,s,3,6,"Blood pressure, cholesterol, blood sugar, not smoking, a healthy weight and regular aerobic exercise are the biggest levers here.")); }
 
   { let f=[],s=0;
     if(gt(sbp,160)||gt(dbp,100)){f.push("Blood pressure is high (the #1 stroke risk factor)");s+=3;} else if(gt(sbp,140)||gt(dbp,90)){f.push("Blood pressure is elevated");s+=2;}
@@ -2271,7 +2271,7 @@ function computeRisks(){
     if(gt(L("ldl"),160)){f.push("High LDL cholesterol");s+=1;}
     if(bmi!=null&&bmi>=30){f.push("BMI in the obese range");s+=1;}
     if(gt(age,75)){f.push("Age 75+");s+=2;} else if(gt(age,65)){f.push("Age 65+");s+=1;}
-    R.push(mk("stroke","Stroke Risk","🧠",f,s,3,6,"Controlling blood pressure is the single biggest way to lower stroke risk; treating an irregular heart rhythm and not smoking matter a lot too.")); }
+    R.push(mk("stroke","Cerebrovascular Risk","🧠",f,s,3,6,"Controlling blood pressure is the single biggest way to lower cerebrovascular (stroke) risk; treating an irregular heart rhythm and not smoking matter a lot too.")); }
 
   { let f=[],s=0;
     if(gt(L("alt"),56)||gt(L("ast"),40)){f.push("Liver enzymes (ALT/AST) are raised");s+=2;}
@@ -2281,7 +2281,7 @@ function computeRisks(){
     if(alcHeavy){f.push("Heavy alcohol use");s+=2;} else if(alcReg){f.push("Regular alcohol use");s+=1;}
     if(bmi!=null&&bmi>=30){f.push("BMI in obese range (fatty-liver risk)");s+=1;}
     if(diab){f.push("Diabetes (fatty-liver risk)");s+=1;}
-    R.push(mk("hepatic","Liver Risk","🩺",f,s,2,5,"Cutting alcohol, reaching a healthy weight, and controlling blood sugar are the main ways to protect your liver.")); }
+    R.push(mk("hepatic","Hepatic Risk","🩺",f,s,2,5,"Cutting alcohol, reaching a healthy weight, and controlling blood sugar are the main ways to protect your liver.")); }
 
   { let f=[],s=0;
     if(lt(L("egfr"),45)||gt(L("creat"),1.5)){f.push("Kidney filtration (eGFR/creatinine) is reduced");s+=3;} else if(lt(L("egfr"),60)||gt(L("creat"),1.3)){f.push("Kidney filtration is mildly reduced");s+=2;}
@@ -2290,7 +2290,7 @@ function computeRisks(){
     if(diab){f.push("Diabetes");s+=1;}
     if(gt(L("potassium"),5.1)){f.push("Potassium is high");s+=1;}
     if(gt(age,70)){f.push("Age 70+");s+=1;}
-    R.push(mk("renal","Kidney Risk","💧",f,s,3,6,"Kidneys are protected mainly by controlling blood pressure and blood sugar, staying hydrated, and avoiding NSAIDs and excess salt.")); }
+    R.push(mk("renal","Renal Risk","🫘",f,s,3,6,"Kidneys are protected mainly by controlling blood pressure and blood sugar, staying hydrated, and avoiding NSAIDs and excess salt.")); }
 
   { let f=[],s=0;
     if(state.screen&&state.screen.weightloss){f.push("Unexplained weight loss (flagged)");s+=2;}
@@ -2302,7 +2302,7 @@ function computeRisks(){
     if(bmi!=null&&bmi>=30){f.push("BMI in obese range (reflux risk)");s+=1;}
     if(smoker){f.push("Current smoker");s+=1;}
     if(state.screen&&state.screen.fever){f.push("Fever with symptoms (flagged)");s+=1;}
-    R.push(mk("gastro","Digestive Risk","🩸",f,s,2,5,"Limiting alcohol and NSAIDs, not smoking, a fiber-rich diet and a healthy weight protect your gut. Unexplained weight loss, blood, or persistent symptoms need prompt review.")); }
+    R.push(mk("gastro","Gastrointestinal Risk","🍽️",f,s,2,5,"Limiting alcohol and NSAIDs, not smoking, a fiber-rich diet and a healthy weight protect your gut. Unexplained weight loss, blood, or persistent symptoms need prompt review.")); }
 
   { let f=[],s=0; const spo2v=vnum(v.spo2);
     if(spo2v!=null&&spo2v<92){f.push("Oxygen saturation (SpO₂) is low");s+=3;} else if(spo2v!=null&&spo2v<95){f.push("Oxygen saturation is borderline");s+=1;}
