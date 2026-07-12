@@ -811,6 +811,28 @@ plainList(["Rheumatoid arthritis (hand-dominant)","Rheumatoid arthritis (foot-do
 plainList(["Pelvic girdle pain","Pubic symphysis dysfunction","Sacroiliac joint dysfunction (chronic)","Temporomandibular joint dysfunction",
  "TMJ disc displacement (reconditioning)"],"msk","Pelvis / other","lumbar",{chronic:true});
 
+/* ==================== PAEDIATRIC (0–18 yr) — genuine conditions ==================== */
+/* Paediatric orthopaedic */
+latList(["Clubfoot (talipes equinovarus)","Developmental dysplasia of the hip (DDH)","Legg-Calvé-Perthes disease",
+ "Slipped capital femoral epiphysis (SCFE)","Sever's disease (calcaneal apophysitis)","Iselin disease (5th metatarsal apophysitis)",
+ "Blount's disease (tibia vara)","Congenital muscular torticollis","Idiopathic toe walking","Metatarsus adductus",
+ "Paediatric flexible flatfoot","Genu valgum (knock knees)","Genu varum (bow legs)","Osgood-Schlatter disease (adolescent)",
+ "Sinding-Larsen-Johansson syndrome (adolescent)","Paediatric anterior knee pain","Discoid meniscus (paediatric)",
+ "Tarsal coalition (paediatric)","Congenital vertical talus"],"msk","Paediatric orthopaedic","foot",{chronic:true,supervision:"supervised"});
+latList(["Perthes disease (hip)","Hip dysplasia (adolescent, residual)"],"msk","Hip","hip",{chronic:true,supervision:"supervised"});
+plainList(["Adolescent idiopathic scoliosis (conservative)","Juvenile kyphosis (Scheuermann's)","Paediatric spondylolysis (young athlete)",
+ "Back pain in the young athlete"],"msk","Paediatric spine","lumbar",{chronic:true});
+plainList(["Juvenile idiopathic arthritis (JIA)","Juvenile idiopathic arthritis (polyarticular)","Juvenile idiopathic arthritis (oligoarticular)",
+ "Juvenile dermatomyositis (reconditioning)","Benign joint hypermobility (paediatric)"],"msk","Paediatric rheumatology","general_msk",{chronic:true,supervision:"supervised"});
+/* Paediatric neurological / developmental */
+plainList(["Cerebral palsy (spastic diplegia)","Cerebral palsy (spastic hemiplegia)","Cerebral palsy (spastic quadriplegia)",
+ "Cerebral palsy (dyskinetic)","Cerebral palsy (ataxic)","Spina bifida (myelomeningocele)","Duchenne muscular dystrophy",
+ "Becker muscular dystrophy","Spinal muscular atrophy","Developmental coordination disorder (dyspraxia)","Hypotonia (low muscle tone)",
+ "Gross motor developmental delay","Global developmental delay","Paediatric traumatic brain injury (recovery)",
+ "Paediatric acquired brain injury (recovery)","Charcot-Marie-Tooth disease (juvenile)","Paediatric Guillain-Barré (recovery)",
+ "Autism-related motor coordination (exercise support)","Down syndrome (motor / exercise support)"],"neuro","Paediatric neuro","balance_neuro",{chronic:true,supervision:"supervised",clearance:true});
+latList(["Brachial plexus birth injury (Erb's palsy)","Brachial plexus birth injury (Klumpke's palsy)"],"neuro","Peripheral nerve","neuropathy",{chronic:true,supervision:"supervised"});
+
 /* ==================== Defensible top-up to reach target breadth ====================
    Clinical presentation stratifications genuinely change program tuning
    (return-to-sport load, work ergonomics, older-adult bone/fall caution).
