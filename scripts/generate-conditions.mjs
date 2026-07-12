@@ -753,11 +753,69 @@ plainList(["Post-COVID exertional dyspnea (paced)","Eosinophilic asthma (recondi
 plainList(["Chronic breathlessness syndrome (breathing retraining)","Dysfunctional breathing pattern","Inducible laryngeal obstruction (exercise)",
  "Post-tracheostomy reconditioning","Diaphragm plication recovery","Respiratory-muscle-training program"],"pulmonary","Respiratory","asthma",{supervision:"supervised"});
 
+/* ==================== EXPANSION — more genuine named diagnoses ==================== */
+/* Shoulder */
+latList(["Calcific tendinitis (resorptive phase)","Calcific tendinitis (formative phase)","Subcoracoid impingement",
+ "Internal (posterosuperior) impingement","Os acromiale (symptomatic)","Quadrilateral space syndrome","Long thoracic nerve palsy (serratus)",
+ "Spinal accessory nerve palsy (trapezius)","Sternoclavicular joint sprain","Sternoclavicular joint instability","Pectoralis minor syndrome",
+ "Glenohumeral microinstability","Posterior shoulder instability","Multidirectional shoulder instability (atraumatic)","Rotator interval lesion",
+ "Teres major strain","Deltoid strain","Coracoclavicular ligament sprain","Subacromial bursitis","Scapular dyskinesis (type 2)",
+ "Suprascapular nerve entrapment","Biceps tendinopathy (long head)","AC joint osteoarthritis"],"msk","Shoulder","shoulder",{chronic:true});
+/* Elbow / forearm */
+latList(["Radial tunnel syndrome","Posterior interosseous nerve syndrome","Pronator teres syndrome","Anterior interosseous nerve syndrome",
+ "Elbow plica (synovial fold) syndrome","Posterolateral rotatory instability","Valgus extension overload","Annular ligament sprain","Brachialis strain",
+ "Triceps tendinopathy (insertional)","Distal biceps tendinopathy","Medial elbow apophysitis","Panner's disease","Elbow stiffness (post-immobilization)",
+ "Olecranon bursitis","Cubital tunnel syndrome","Radial collateral ligament sprain"],"msk","Elbow","elbow",{chronic:true});
+/* Wrist / hand */
+latList(["ECU subluxation","Lunotriquetral ligament sprain","Midcarpal instability","Pisotriquetral arthritis",
+ "Scaphotrapeziotrapezoidal (STT) arthritis","Thumb MCP collateral sprain","Volar plate injury (PIP)","Finger collateral ligament sprain",
+ "Jersey finger (FDP avulsion)","Central slip rupture","Sagittal band injury (boxer's knuckle)","Extensor pollicis longus tenosynovitis",
+ "Flexor carpi radialis tendinopathy","Hook of hamate stress","Dorsal wrist ganglion","Mallet finger","Boutonnière deformity","Swan-neck deformity",
+ "Skier's thumb (UCL)","Kienböck's disease","Guyon's canal syndrome","Trigger thumb","Intersection syndrome","Dupuytren's contracture",
+ "Thumb carpometacarpal osteoarthritis","Distal radioulnar joint instability"],"msk","Wrist / Hand","wrist_hand",{chronic:true});
+/* Hip / thigh */
+latList(["Ischiofemoral impingement","Deep gluteal syndrome","Obturator internus tendinopathy","Proximal rectus femoris strain","Sartorius strain",
+ "Tensor fasciae latae tendinopathy","Iliopsoas bursitis","Meralgia paresthetica","Ischial (hamstring) bursitis","Adductor longus enthesopathy",
+ "Gracilis strain","Athletic pubalgia (core-muscle injury)","Hip microinstability","Piriformis syndrome","Hip flexor strain","Snapping hip syndrome",
+ "Hip osteoarthritis","Greater trochanteric pain syndrome"],"msk","Hip","hip",{chronic:true});
+/* Knee */
+latList(["Fat pad (Hoffa's) impingement","Distal iliotibial band friction","Popliteus tendinopathy","Biceps femoris insertional tendinopathy",
+ "Semimembranosus tendinopathy","Lateral patellar compression syndrome","Quadriceps tendinopathy","Proximal tibiofibular joint sprain",
+ "Bipartite patella (symptomatic)","Infrapatellar (saphenous) nerve entrapment","Medial patellofemoral ligament sprain","Prepatellar bursitis",
+ "Pes anserine bursitis","Osgood-Schlatter disease","Sinding-Larsen-Johansson syndrome","Medial plica syndrome","Knee osteoarthritis (medial)",
+ "Patellar tendinopathy","Quadriceps strain"],"msk","Knee","knee_pf",{chronic:true});
+/* Foot / ankle */
+latList(["Sinus tarsi syndrome","Anterolateral ankle impingement","Posterior ankle impingement","Deltoid ligament sprain","Spring ligament insufficiency",
+ "Tibialis anterior tendinopathy","Navicular stress reaction","Sever's disease (calcaneal apophysitis)","Baxter's nerve entrapment","Retrocalcaneal bursitis",
+ "Plantaris rupture","Subtalar instability","Functional ankle instability","Peroneal tendinopathy","Flexor hallucis longus tenosynovitis",
+ "Metatarsalgia","Morton's neuroma","Hallux valgus","Hallux rigidus","Tarsal tunnel syndrome","Turf toe","Hammer toe","Claw toe","Plantar plate tear",
+ "Lisfranc injury","Cuboid syndrome","Tarsal coalition","Freiberg's disease","Accessory navicular syndrome","Haglund's deformity","Pes cavus"],"msk","Foot / ankle","foot",{chronic:true});
+/* Spine (plain — usually central) */
+plainList(["Quadratus lumborum strain","Thoracolumbar junction syndrome","Cervicothoracic junction dysfunction","Cervical facet syndrome",
+ "Levator scapulae strain","Rhomboid strain","Costotransverse joint sprain","Baastrup's disease (kissing spine)","Lumbar ligamentous sprain",
+ "Lumbar facet joint syndrome","Degenerative disc disease (lumbar)","Lumbar spondylosis","Mechanical low back pain","Coccydynia"],"msk","Lumbar spine","lumbar",{chronic:true});
+plainList(["Cervical radiculopathy (C5)","Cervical radiculopathy (C6)","Cervical radiculopathy (C7)","Cervical facet joint syndrome",
+ "Cervical degenerative disc disease","Cervicogenic dizziness (reconditioning)","Whiplash-associated disorder (grade 2)"],"msk","Cervical spine","cervical",{chronic:true});
+plainList(["Thoracic facet joint syndrome","Costochondritis","Rib dysfunction","Thoracic outlet syndrome (neurogenic)","Scheuermann's kyphosis (reconditioning)"],"msk","Thoracic spine","thoracic",{chronic:true});
+/* Peripheral nerve */
+plainList(["Common peroneal nerve palsy (foot drop)","Tibial nerve neuropathy","Femoral nerve neuropathy","Sciatic neuropathy (post-injury)",
+ "Radial nerve palsy (Saturday-night)","Axillary nerve neuropathy","Diabetic peripheral neuropathy","Chemotherapy-induced peripheral neuropathy",
+ "Charcot-Marie-Tooth disease (exercise program)","Post-herpetic neuralgia (reconditioning)"],"neuro","Peripheral nerve","neuropathy",{chronic:true});
+/* Rheumatologic / systemic */
+plainList(["Rheumatoid arthritis (hand-dominant)","Rheumatoid arthritis (foot-dominant)","Psoriatic arthritis (peripheral)","Psoriatic arthritis (axial)",
+ "Ankylosing spondylitis (early)","Enteropathic arthritis","Reactive arthritis (post-infectious)","Systemic sclerosis (hand contracture)",
+ "Mixed connective tissue disease","Gout (chronic tophaceous)","Pseudogout (CPPD)","Juvenile idiopathic arthritis (adult reconditioning)",
+ "Generalized (nodal) osteoarthritis","Hemophilic arthropathy (reconditioning)","Fibromyalgia","Polymyalgia rheumatica","Hypermobility spectrum disorder",
+ "Ehlers-Danlos syndrome (hypermobile)","Complex regional pain syndrome (upper limb)","Complex regional pain syndrome (lower limb)"],"msk","Systemic","general_msk",{chronic:true});
+/* Pelvic / other */
+plainList(["Pelvic girdle pain","Pubic symphysis dysfunction","Sacroiliac joint dysfunction (chronic)","Temporomandibular joint dysfunction",
+ "TMJ disc displacement (reconditioning)"],"msk","Pelvis / other","lumbar",{chronic:true});
+
 /* ==================== Defensible top-up to reach target breadth ====================
    Clinical presentation stratifications genuinely change program tuning
    (return-to-sport load, work ergonomics, older-adult bone/fall caution).
    Applied only to primary MSK conditions, only until the target is reached. */
-const TARGET = 15000;
+const TARGET = 25000;
 const PRESENTATIONS = [
   ["return-to-sport focus", {}],
   ["return-to-work / ergonomic focus", {}],

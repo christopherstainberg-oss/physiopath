@@ -883,6 +883,10 @@ const INJURY_FOCUS = [
    focus:"Cubital tunnel (ulnar nerve at the elbow): reduce sustained elbow bending and pressure and use nerve glides — avoid leaning on the elbow and prolonged full flexion.",
    add:[{p:1,n:"Ulnar nerve glides (gentle)",d:"3×10",c:"Stop before tingling increases"},
         {p:2,n:"Grip & forearm strengthening (elbow neutral)",d:"3×12",c:"Avoid full elbow bend",tags:["grip_isometric"]}]},
+  {re:/radial tunnel|posterior interosseous|pronator( teres)? syndrome|anterior interosseous|\bpin\b syndrome/,
+   focus:"Forearm nerve entrapment (radial tunnel / PIN / pronator / AIN): reduce repetitive forceful gripping and forearm rotation, use nerve glides, and strengthen in a neutral position — avoid provocative sustained postures.",
+   add:[{p:1,n:"Radial/median nerve glides (gentle)",d:"3×10",c:"Stop before symptoms increase"},
+        {p:2,n:"Grip & forearm strengthening (neutral)",d:"3×12",c:"Avoid provocative positions",tags:["grip_isometric"]}]},
   {re:/distal biceps|triceps tendinop|triceps tendinitis/,
    focus:"Elbow biceps/triceps tendinopathy: progressive isometric then eccentric loading of the affected tendon; cut provocative repetitive loading early.",
    add:[{p:1,n:"Isometric elbow flexion/extension hold",d:"5×30s",c:"Sub-maximal, pain-easing"},
@@ -975,6 +979,82 @@ const INJURY_FOCUS = [
    focus:"Thoracic/rib pain: restore mid-back mobility and posture, strengthen the shoulder-blade muscles, and breathe fully — avoid sustained slumped postures.",
    add:[{p:1,n:"Thoracic mobility (cat-camel, open-book)",d:"3×10",c:"Restore mid-back motion"},
         {p:2,n:"Scapular & postural strengthening",d:"3×12",c:"Support upright posture"}]},
+  // ---- wrist / hand (specific) ----
+  {re:/kienb|preiser|carpal (avn|osteonecrosis|avascular)|lunate (avn|osteonecrosis)|scaphoid (avn|osteonecrosis)/,
+   focus:"Carpal avascular necrosis (Kienböck's/Preiser): protect the wrist and load VERY gradually — gentle pain-free motion and grip within comfort, avoid heavy axial loading and impact on the hand.",
+   add:[{p:1,n:"Pain-free wrist range of motion",d:"3×10",c:"Gentle, all directions"},
+        {p:2,n:"Light grip & forearm isometrics",d:"3×12",c:"Avoid heavy axial loading",tags:["grip_isometric"]}]},
+  {re:/mallet finger|extensor tendon (repair|injury|avulsion)|drop finger/,
+   focus:"Mallet finger (extensor tendon at the fingertip): the DIP joint must stay splinted straight continuously for the healing period — then regain motion gradually; don't let the tip drop during healing.",
+   add:[{p:1,n:"Keep DIP splinted; move the other finger joints",d:"3×10",c:"Never let the fingertip bend while healing"},
+        {p:3,n:"Gradual DIP flexion & tendon glides (after splinting)",d:"3×10",c:"Once cleared; regain motion slowly"}]},
+  {re:/(skier'?s|gamekeeper'?s) thumb|thumb ucl|ulnar collateral.*thumb|thumb collateral ligament/,
+   focus:"Skier's/gamekeeper's thumb (thumb UCL): protect the thumb from sideways stress early, then rebuild pinch and grip — avoid forceful pinching and side-stress until stable.",
+   add:[{p:1,n:"Protected thumb & wrist range of motion",d:"3×10",c:"Avoid side-to-side thumb stress"},
+        {p:2,n:"Progressive pinch & grip strengthening",d:"3×12",c:"Build once stable and pain-free",tags:["grip_isometric"]}]},
+  {re:/boutonni|swan-?neck|central slip|sagittal band|pip (contracture|deformity)|finger (deformity|contracture)/,
+   focus:"Finger tendon-balance injuries (boutonnière/swan-neck/central slip): targeted splinting and controlled tendon-gliding restore the finger's balance — follow the specific splint/exercise pattern for your injury.",
+   add:[{p:1,n:"Prescribed splinting + isolated joint blocking",d:"3×10",c:"Follow your hand-therapy pattern"},
+        {p:2,n:"Graded tendon-gliding sequence",d:"3×10",c:"Smooth, controlled range"}]},
+  {re:/jersey finger|flexor tendon (repair|injury|avulsion)|fdp avulsion/,
+   focus:"Flexor tendon injury/repair (jersey finger): the repaired flexor tendon is protected in a splint with a carefully graded early-motion protocol — do not grip forcefully until cleared.",
+   add:[{p:1,n:"Protected place-and-hold / passive flexion",d:"3×10",c:"Only your therapist's early-motion protocol"},
+        {p:3,n:"Graded active flexion & grip (once cleared)",d:"3×10",c:"Build very gradually",tags:["grip_isometric"]}]},
+  {re:/dupuytren/,
+   focus:"Dupuytren's (after release/needling): regain finger extension and manage the scar — stretch into extension, glide the tendons, and splint as prescribed to prevent recurrence.",
+   add:[{p:1,n:"Finger extension stretch & scar massage",d:"3×30s",c:"Ease into full extension"},
+        {p:2,n:"Tendon glides & grip",d:"3×10",c:"Restore function",tags:["grip_isometric"]}]},
+  {re:/ganglion/,
+   focus:"Ganglion cyst: usually harmless — maintain wrist/hand motion and grip and reduce provocative repetitive loading; most settle without limiting exercise.",
+   add:[{p:1,n:"Wrist & hand range of motion",d:"3×12",c:"Keep it moving"},
+        {p:2,n:"Grip strengthening (comfortable)",d:"3×12",c:"Pain-free",tags:["grip_isometric"]}]},
+  {re:/guyon'?s canal|ulnar (nerve|neuropathy).*(wrist|hand)|wartenberg|handlebar palsy|superficial radial nerve/,
+   focus:"Wrist-level nerve entrapment (Guyon's canal/handlebar palsy/radial sensory): offload the pressure point, use nerve glides, and strengthen grip in neutral — avoid prolonged pressure and extreme wrist positions.",
+   add:[{p:1,n:"Nerve glides (gentle)",d:"3×10",c:"Stop before symptoms increase"},
+        {p:2,n:"Grip strengthening (wrist neutral)",d:"3×12",c:"Avoid pressure on the nerve",tags:["grip_isometric"]}]},
+  {re:/intersection syndrome|\becu\b|extensor carpi ulnaris|hamate|wrist tendinop|wrist stiffness|druj|ulnar impaction/,
+   focus:"Wrist tendinopathy/stiffness (intersection/ECU/post-cast/DRUJ): restore motion and progressively load the wrist tendons — isometrics first, then controlled strengthening; limit provocative repetitive gripping/rotation early.",
+   add:[{p:1,n:"Pain-free wrist range & isometric holds",d:"3×15",c:"Gentle, then hold",tags:["grip_isometric"]},
+        {p:2,n:"Progressive wrist & grip loading",d:"3×12",c:"Add load weekly",tags:["grip_isometric"]}]},
+  // ---- foot / ankle (specific) ----
+  {re:/(hammer|claw|mallet) toe|lesser toe deformity|toe (contracture|deformity)/,
+   focus:"Toe deformities (hammer/claw/mallet toe): strengthen the foot intrinsics and toe muscles, mobilise the toes, and use roomy footwear/toe props — keep the toes moving to limit stiffening.",
+   add:[{p:1,n:"Toe mobility & short-foot exercise",d:"3×10",c:"Move and straighten the toes"},
+        {p:2,n:"Foot-intrinsic & toe strengthening",d:"3×12",c:"Support the toes",tags:["weight_bearing"]}]},
+  {re:/plantar plate|turf toe.*plate|2nd mtp instability/,
+   focus:"Plantar plate injury: offload and protect the forefoot (taping, stiff sole), then restore toe control and calf/foot strength — avoid forced toe extension and high forefoot impact early.",
+   add:[{p:1,n:"Protected toe range (avoid forced extension)",d:"3×10",c:"Gentle, taped/stiff sole"},
+        {p:2,n:"Foot-intrinsic & calf strengthening",d:"3×12",c:"Rebuild forefoot control",tags:["weight_bearing"]}]},
+  {re:/lisfranc|tarsometatarsal (injury|sprain)|midfoot (sprain|injury)/,
+   focus:"Lisfranc/midfoot injury: protect the midfoot and follow your weight-bearing timeline strictly, then progressively restore strength and loading — this joint needs patient, graded return.",
+   add:[{p:1,n:"Pain-free ankle/toe motion (offloaded)",d:"3×10",c:"Within your weight-bearing order"},
+        {p:3,n:"Graded midfoot loading & calf strengthening",d:"3×12",c:"Slow, progressive",tags:["weight_bearing"]}]},
+  {re:/peroneal (tendinop|tendon|tear|subluxation)|fibularis (tendinop|tendon)/,
+   focus:"Peroneal (fibularis) tendinopathy: progressive eversion strengthening and balance work, and address ankle stability — limit provocative side-loading and unstable surfaces early.",
+   add:[{p:1,n:"Resisted eversion (band)",d:"3×15",c:"Turn the sole outward, controlled"},
+        {p:2,n:"Calf & single-leg balance",d:"3×30s",c:"Build ankle stability",tags:["weight_bearing","balance"]}]},
+  {re:/tarsal coalition|freiberg|accessory navicular|cuboid syndrome|pes cavus|cavus foot|plantar fibromatosis|haglund|sinus tarsi|subtalar (instability|impingement)|spring ligament|(anterolateral|posterior) ankle impingement/,
+   focus:"Structural / impingement foot & ankle conditions (coalition, Freiberg, accessory navicular, cuboid, cavus, Haglund, sinus tarsi, ankle impingement): work within a comfortable range, strengthen the foot, calf and ankle stabilisers, and use footwear/orthoses to offload the sore area.",
+   add:[{p:1,n:"Pain-free foot & ankle range of motion",d:"3×10",c:"Comfortable range"},
+        {p:2,n:"Foot-intrinsic & calf strengthening",d:"3×12",c:"Support and offload the area",tags:["weight_bearing"]}]},
+  {re:/flexor hallucis longus|\bfhl\b|dancer'?s (tendinopathy|ankle)|os trigonum/,
+   focus:"Posterior ankle / FHL (dancer's) conditions: settle the irritable posterior ankle, then progressively load the calf and big-toe flexor — avoid forced pointing (plantarflexion) end-range early.",
+   add:[{p:1,n:"Pain-free ankle & big-toe motion",d:"3×10",c:"Avoid forced pointing"},
+        {p:2,n:"Calf & big-toe flexor strengthening",d:"3×12",c:"Progressive",tags:["weight_bearing"]}]},
+  // ---- systemic / whole-body (specific) ----
+  {re:/fibromyalgia|chronic widespread pain|central sensiti|chronic fatigue|\bme\/cfs\b|myalgic encephal/,
+   focus:"Fibromyalgia / chronic widespread pain: gentle, graded aerobic and strengthening exercise with careful PACING is the best-evidenced treatment — start low, go slow, and avoid boom-and-bust. Flares are normal and safe.",
+   add:[{p:1,n:"Gentle paced walking or pool work",d:"5–10 min",c:"Little and often; stay below a flare",tags:["aerobic"]},
+        {p:2,n:"Light whole-body strengthening",d:"2–3×10",c:"Very gradual progression"},
+        {p:3,n:"Graded aerobic conditioning",d:"15–20 min",c:"Build minutes slowly over weeks",tags:["aerobic"]}]},
+  {re:/complex regional pain|\bcrps\b|reflex sympathetic dystrophy/,
+   focus:"Complex regional pain syndrome (CRPS): gentle graded movement, desensitisation and (where used) graded motor imagery/mirror therapy — keep the limb moving gently; avoid aggressive painful loading.",
+   add:[{p:1,n:"Desensitisation & gentle active movement",d:"several × day",c:"Little and often, stay calm"},
+        {p:2,n:"Graded functional loading",d:"3×10",c:"Progress within tolerance"}]},
+  {re:/hypermobility|\behlers|joint hypermobility|marfan/,
+   focus:"Joint hypermobility (incl. hEDS): strength, control and proprioception protect the joints — favour controlled mid-range strengthening and stability over stretching, and progress load steadily.",
+   add:[{p:1,n:"Mid-range isometric & control drills",d:"3×10",c:"Control, not end-range stretch"},
+        {p:2,n:"Progressive strengthening & proprioception",d:"3×12",c:"Build stability",tags:["balance"]}]},
   // ---- generic catch-alls (only used when nothing more specific matched) ----
   {re:/tendinop|tendinosis|tendinitis/, generic:true,
    focus:"Load the tendon progressively — start with isometrics for pain relief, build to heavy-slow resistance, then add speed/energy-storage last.",
@@ -1025,16 +1105,21 @@ const INJURY_FOCUS = [
    add:[{p:1,n:"Gentle pain-free movement",d:"3×10",c:"Keep it moving"},
         {p:2,n:"Progressive strengthening",d:"3×12",c:"Rebuild as pain settles"}]}
 ];
-/* Prefer the most specific match: a non-generic diagnosis wins; generic
-   catch-alls (tendinopathy, fracture, OA, sprain, strain, bursitis…) only
-   apply when nothing specific matched. */
+/* Prefer the most specific match. A non-generic diagnosis always beats a
+   generic catch-all (tendinopathy, fracture, OA, sprain, strain, bursitis…);
+   within each tier, the entry matching the LONGEST substring wins (so
+   "distal biceps tendinopathy" beats "biceps", "chronic ankle instability"
+   beats "instability"), which also makes the result order-independent. */
 function detectFocus(name){
   const l=String(name).toLowerCase();
-  let generic=null;
+  let bestSpec=null, bestSpecLen=-1, bestGen=null, bestGenLen=-1;
   for(const f of INJURY_FOCUS){
-    if(f.re.test(l)){ if(f.generic){ if(!generic) generic=f; } else return f; }
+    const m=f.re.exec(l); if(!m) continue;
+    const len=m[0].length;
+    if(f.generic){ if(len>bestGenLen){ bestGenLen=len; bestGen=f; } }
+    else if(len>bestSpecLen){ bestSpecLen=len; bestSpec=f; }
   }
-  return generic;
+  return bestSpec || bestGen;
 }
 function signatureFor(focus, phase){
   if(!focus) return [];
