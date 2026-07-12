@@ -301,6 +301,10 @@ const MED_EFFECT = {
 let chatHistory = [];
 const CONMAP = new Map();
 let domainFilter = "all";
+/* Paediatric (0–18 yr) is a cross-cutting view, not a domain — detect it from
+   the paediatric regions and genuinely-paediatric diagnosis names. */
+const PED_RE = /paediatric|pediatric|juvenile|adolescent|congenital|developmental|cerebral palsy|clubfoot|talipes|perthes|\bscfe\b|slipped capital|sever'?s|osgood|sinding-larsen|iselin|apophysitis|torticollis|spina bifida|myelomeningocele|muscular dystrophy|duchenne|becker muscular|spinal muscular atrophy|erb'?s|klumpke|brachial plexus birth|hip dysplasia|\bddh\b|blount|metatarsus adductus|dyspraxia|hypotonia|growth plate|physeal|little leaguer|gymnast'?s wrist|down syndrome/i;
+function isPediatric(c){ return /^paediatric/i.test(c.region||"") || PED_RE.test((c.name||"")+" "+(c.region||"")); }
 
 /* ---------- persistence ---------- */
 function save(){ try{ localStorage.setItem("physiopath", JSON.stringify(state)); }catch(e){} }
@@ -2723,7 +2727,8 @@ function runSearch(){
   const q=$("#condSearch").value.trim().toLowerCase();
   const toks=q.split(/\s+/).filter(Boolean);
   let list=window.CONDITIONS;
-  if(domainFilter!=="all") list=list.filter(c=>c.domain===domainFilter);
+  if(domainFilter==="pediatric") list=list.filter(isPediatric);
+  else if(domainFilter!=="all") list=list.filter(c=>c.domain===domainFilter);
   if(toks.length) list=list.filter(c=>{ const hay=(c.name+" "+c.region+" "+(c.synonyms||[]).join(" ")).toLowerCase();
     return toks.every(t=>hay.includes(t)); });
   const total=list.length; list=list.slice(0,60);
