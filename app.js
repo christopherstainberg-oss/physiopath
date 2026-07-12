@@ -10,22 +10,48 @@ const $$ = s => Array.from(document.querySelectorAll(s));
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
 
 /* ---------- medical-history questionnaire → contraindication flags ---------- */
+/* Groups organise the history checklist; each item's flag drives a
+   CONTRA_RULE (in protocols.js) so ticking it adjusts the exercise plan. */
+const HIST_GROUPS = [
+  { key:"heart",   icon:"🫀", label:"Heart & circulation" },
+  { key:"lungs",   icon:"🫁", label:"Lungs & breathing" },
+  { key:"bones",   icon:"🦴", label:"Bones & joints" },
+  { key:"neuro",   icon:"🧠", label:"Nerves, balance & brain" },
+  { key:"general", icon:"🩺", label:"General health" }
+];
 const HISTORY_ITEMS = [
-  { flag:"cardiac",         label:"Heart condition (heart disease, prior heart attack, heart failure, angina)" },
-  { flag:"hypertension",    label:"High blood pressure" },
-  { flag:"pacemaker_icd",   label:"Pacemaker or ICD" },
-  { flag:"pulmonary",       label:"Lung / breathing condition (COPD, asthma, etc.)" },
-  { flag:"osteoporosis",    label:"Osteoporosis or low bone density" },
-  { flag:"recent_fracture", label:"A fracture in the last 3 months" },
-  { flag:"hip_replacement", label:"Recent hip replacement" },
-  { flag:"knee_replacement",label:"Recent knee replacement" },
-  { flag:"balance_risk",    label:"Dizziness, vertigo, or balance / falls problems" },
-  { flag:"neuropathy",      label:"Numbness, tingling, or nerve damage" },
-  { flag:"dvt",             label:"Blood-clot history (DVT/PE) or taking blood thinners" },
-  { flag:"pregnancy",       label:"Pregnant or recently postpartum" },
-  { flag:"seizure",         label:"Seizures or epilepsy" },
-  { flag:"recent_surgery",  label:"Any surgery in the last 6 weeks" },
-  { flag:"diabetes",        label:"Diabetes" }
+  // heart & circulation
+  { flag:"cardiac",              group:"heart", label:"Heart condition (heart disease, prior heart attack, heart failure, angina)" },
+  { flag:"hypertension",         group:"heart", label:"High blood pressure" },
+  { flag:"pacemaker_icd",        group:"heart", label:"Pacemaker or ICD" },
+  { flag:"dvt",                  group:"heart", label:"Blood-clot history (DVT/PE) or taking blood thinners" },
+  { flag:"pad",                  group:"heart", label:"Peripheral artery disease / poor leg circulation (claudication)" },
+  { flag:"bleeding_disorder",    group:"heart", label:"Bleeding disorder (haemophilia, low platelets)" },
+  // lungs
+  { flag:"pulmonary",            group:"lungs", label:"Lung / breathing condition (COPD, asthma, etc.)" },
+  { flag:"fatigue",              group:"lungs", label:"Chronic fatigue, post-viral, or long COVID" },
+  // bones & joints
+  { flag:"osteoporosis",         group:"bones", label:"Osteoporosis or low bone density" },
+  { flag:"recent_fracture",      group:"bones", label:"A fracture in the last 3 months" },
+  { flag:"hip_replacement",      group:"bones", label:"Recent hip replacement" },
+  { flag:"knee_replacement",     group:"bones", label:"Recent knee replacement" },
+  { flag:"inflammatory_arthritis", group:"bones", label:"Inflammatory arthritis (rheumatoid, psoriatic, ankylosing, lupus, gout)" },
+  { flag:"hypermobility",        group:"bones", label:"Very flexible / hypermobile joints (or hEDS)" },
+  // nerves, balance & brain
+  { flag:"balance_risk",         group:"neuro", label:"Dizziness, vertigo, or balance / falls problems" },
+  { flag:"neuropathy",           group:"neuro", label:"Numbness, tingling, or nerve damage" },
+  { flag:"neuro_condition",      group:"neuro", label:"Neurological condition (MS, Parkinson's, prior stroke)" },
+  { flag:"seizure",              group:"neuro", label:"Seizures or epilepsy" },
+  // general health
+  { flag:"diabetes",             group:"general", label:"Diabetes" },
+  { flag:"ckd",                  group:"general", label:"Chronic kidney disease" },
+  { flag:"cancer_treatment",     group:"general", label:"Cancer, or in active treatment (chemo / radiation)" },
+  { flag:"lymphedema",           group:"general", label:"Lymphedema, or lymph nodes removed" },
+  { flag:"chronic_pain",         group:"general", label:"Chronic widespread pain or fibromyalgia" },
+  { flag:"reflux",               group:"general", label:"Acid reflux (GORD) or hiatal hernia" },
+  { flag:"hernia",               group:"general", label:"Abdominal or groin hernia (not yet repaired)" },
+  { flag:"pregnancy",            group:"general", label:"Pregnant or recently postpartum" },
+  { flag:"recent_surgery",       group:"general", label:"Any surgery in the last 6 weeks" }
 ];
 
 /* ---------- program phase templates ---------- */
@@ -2655,14 +2681,20 @@ function goStep(n){
 /* ---------- history UI ---------- */
 function initHistory(){
   const wrap=$("#historyChecks");
-  HISTORY_ITEMS.forEach(it=>{
-    const on=state.flags.includes(it.flag);
-    const d=document.createElement("div"); d.className="check"+(on?" on":""); d.dataset.flag=it.flag;
-    d.innerHTML=`<span class="box">${on?"✓":""}</span><span>${esc(it.label)}</span>`;
-    d.onclick=()=>{ d.classList.toggle("on"); const active=d.classList.contains("on");
-      d.querySelector(".box").textContent=active?"✓":"";
-      if(active) state.flags.push(it.flag); else state.flags=state.flags.filter(f=>f!==it.flag); save(); };
-    wrap.appendChild(d);
+  wrap.classList.remove("checks");                       // grouped sub-grids replace the flat grid
+  wrap.innerHTML = HIST_GROUPS.map(g=>{
+    const items = HISTORY_ITEMS.filter(it=>it.group===g.key);
+    if(!items.length) return "";
+    return `<div class="histgroup"><div class="histgrouplab">${g.icon} ${esc(g.label)}</div>
+      <div class="checks">${items.map(it=>{ const on=state.flags.includes(it.flag);
+        return `<div class="check${on?" on":""}" data-flag="${it.flag}"><span class="box">${on?"✓":""}</span><span>${esc(it.label)}</span></div>`;
+      }).join("")}</div></div>`;
+  }).join("");
+  wrap.querySelectorAll(".check").forEach(d=>d.onclick=()=>{
+    d.classList.toggle("on"); const active=d.classList.contains("on");
+    d.querySelector(".box").textContent=active?"✓":"";
+    const flag=d.dataset.flag;
+    if(active) state.flags.push(flag); else state.flags=state.flags.filter(f=>f!==flag); save();
   });
   $("#q_age").value=state.age; $("#q_sex").value=state.sex; $("#q_meds").value=state.meds; $("#q_notes").value=state.notes;
   $("#parq_pain").checked=state.parq.pain; $("#parq_faint").checked=state.parq.faint; $("#parq_doc").checked=state.parq.doc;

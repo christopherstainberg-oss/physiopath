@@ -85,6 +85,8 @@ input[type=range]{flex:1;accent-color:var(--brand);height:30px}
 /* checkboxes */
 .checks{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 @media(max-width:560px){.checks{grid-template-columns:1fr}}
+.histgroup{margin:0 0 14px}
+.histgrouplab{font-size:11.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);margin:2px 0 7px}
 .check{display:flex;align-items:center;gap:10px;padding:11px 12px;border:1px solid var(--line);border-radius:10px;
   background:var(--panel-2);cursor:pointer;font-size:14px;user-select:none}
 .check.on{border-color:var(--brand);background:rgba(62,166,255,.12)}
