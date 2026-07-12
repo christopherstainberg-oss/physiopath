@@ -281,7 +281,7 @@ const state = {
   screen:{}, falls:"", aid:"", smoking:"", alcohol:"", sleep:"", stress:"",
   medIds:[], medFilter:false, homeMode:false, customPrecautions:[], clinicianProtocols:[],
   medDoses:{}, weightBearing:{status:"",pct:"",lbs:"",side:"",limb:"le"}, devices:[],
-  cardiacDevice:{type:"",icdRate:""},
+  cardiacDevice:{type:"",icdRate:""}, specialPrecautions:[],
   log:[], apiKey:"", apiModel:"claude-opus-4-8"
 };
 const MED_FILTERABLE = ["fluoroquinolone","anticoagulant","antiplatelet","opioid","sedative","muscle_relaxant","gabapentinoid","antipsychotic"];
@@ -352,6 +352,7 @@ function gatherFlags(){
   vitalFlags().forEach(x=>f.add(x));
   wbFlags().forEach(x=>f.add(x));
   deviceFlags().forEach(x=>f.add(x));
+  specialPrecautionFlags().forEach(x=>f.add(x));
   const sc = state.screen||{};
   if(Object.values(sc).some(Boolean)) f.add("red_flags");
   if(sc.cauda) f.add("red_flags_urgent");
@@ -567,6 +568,52 @@ const DEVICE_RESTRICT = {
     caution:/squat|hinge|crunch|rotation|extension|carry|bridge|bird-dog|\bplank\b/i,
     note:"Lumbar/TLSO brace: follow your bend/lift limits — heavy spinal flexion/extension was removed and loaded trunk work is limited while braced." }
 };
+/* ---------- special surgical precautions (sternal / abdominal) ----------
+   Toggle-able precaution SETS a clinician can switch on. Each carries a plain-
+   language explanation ("what"), the concrete do/don't rules (shown as rows),
+   a typical weeks-to-follow window, an engine `flag` (→ CONTRA_RULES so the tag
+   engine reshapes the plan) and a name-based avoid/caution layer (so pushing,
+   pulling, pressing, core-loading etc. are removed by exercise NAME too). */
+const SPECIAL_PRECAUTIONS = {
+  sternal: {
+    key:"sternal", icon:"🫀", label:"Sternal precautions",
+    sub:"after open-heart surgery / breastbone (sternotomy)",
+    weeks:8, flag:"sternal_precautions",
+    what:"After most open-heart surgery the surgeon reaches the heart by cutting straight down through the breastbone (the sternum) — a “median sternotomy” — then wires the two halves back together. That bone takes about 6–8 weeks to knit. Sternal precautions are the rules that protect the healing breastbone by limiting how hard you push, pull, lift and reach with your arms, so the halves don't shift apart while they fuse.",
+    rules:[
+      "Don't lift, push or pull anything heavier than ~5–10 lb (about a milk jug) with your arms.",
+      "Don't push yourself up out of a bed or chair with your arms — scoot to the edge and stand with your legs.",
+      "Keep both elbows close to your sides — avoid reaching both arms overhead, out to the sides, or behind your back at the same time.",
+      "Hug a firm pillow against your chest when you cough, sneeze or laugh (“splinting”).",
+      "No driving until your surgeon clears you (often around 4 weeks).",
+      "Stop and tell your care team if you feel or hear clicking, popping or grinding in your breastbone."
+    ],
+    avoid:/push-?up|\bplank\b|\bdip\b|bench press|chest press|shoulder press|overhead press|military press|incline press|lat pull|pull-?up|chin-?up|inverted row|bent-over row|upright row|seated row|\brow\b|deadlift|farmer|suitcase|waiter|\bcarr(y|ies)\b|dead-?hang|bear crawl|burpee|mountain climber|snatch|clean|jerk|wall walk|handstand/i,
+    caution:/band|biceps|triceps|\bcurl\b|lateral raise|front raise|reach|scapular|resistance|pull-?down|pec|reverse fly|\bfly\b/i,
+    note:"Sternal precautions: your breastbone is healing — pushing, pulling, pressing, overhead work and lifting/carrying more than ~5–10 lb with the arms were removed. Focus on gentle legs, walking and breathing work; hug a pillow to your chest when you cough."
+  },
+  abdominal: {
+    key:"abdominal", icon:"🩹", label:"Abdominal precautions",
+    sub:"after abdominal / hernia / C-section surgery",
+    weeks:6, flag:"abdominal_precautions",
+    what:"After surgery on the belly — for example a bowel operation, hernia repair, hysterectomy or C-section — the abdominal wall and incision need time (usually about 4–6 weeks) to heal and regain strength. Abdominal precautions limit lifting, straining and direct “ab” work so the healing tissue and incision aren't stretched or pulled apart, which could cause a hernia or a wound problem.",
+    rules:[
+      "Don't lift, push or pull more than ~5–10 lb (or the limit your surgeon set) until you're cleared.",
+      "Never hold your breath and bear down — breathe out during any effort (and don't strain on the toilet).",
+      "Skip sit-ups, crunches, planks, leg-lowers and other direct abdominal exercises for now.",
+      "Support your incision with a hand or a pillow when you cough, sneeze or stand up.",
+      "Roll onto your side and push up with your arms (“log-roll”) to get out of bed instead of sitting straight up.",
+      "Report a new bulge, increasing pain, redness, swelling or drainage at the incision."
+    ],
+    avoid:/sit-?up|crunch|\bplank\b|\bv-?up\b|hollow|russian twist|flutter|jackknife|jack-?knife|bicycle|hanging (?:knee|leg)|double-?leg (?:raise|lower)|leg lower|toe touch|roll-?up|dragon flag|ab wheel|dead-?hang|deadlift|good-?morning|hyperextension|farmer|suitcase|\bcarr(y|ies)\b/i,
+    caution:/twist|rotation|oblique|pallof|bird-?dog|dead ?bug|bridge|\bhinge\b|mountain climber|band|woodchop|\bcarry\b|superman/i,
+    note:"Abdominal precautions: your abdominal wall/incision is healing — sit-ups, crunches, planks, leg-lowers and other direct core-loading were removed, along with heavy lifting and breath-holding/straining. Support the incision when you cough and log-roll out of bed."
+  }
+};
+function activeSpecialPrecautions(){ return (state.specialPrecautions||[]).map(k=>SPECIAL_PRECAUTIONS[k]).filter(Boolean); }
+/* Engine flags so the exercise SELECTION also adjusts for the precaution set. */
+function specialPrecautionFlags(){ return activeSpecialPrecautions().map(p=>p.flag); }
+
 function activeRestrictions(){
   const avoid=[], caution=[], notes=[];
   const wb = state.weightBearing||{};
@@ -580,6 +627,11 @@ function activeRestrictions(){
     if(r.avoid) avoid.push(r.avoid);
     if(r.caution) caution.push(r.caution);
     if(r.note) notes.push(r.note);
+  });
+  activeSpecialPrecautions().forEach(p=>{
+    if(p.avoid) avoid.push(p.avoid);
+    if(p.caution) caution.push(p.caution);
+    if(p.note) notes.push(p.note);
   });
   return { avoid, caution, notes };
 }
@@ -1821,6 +1873,8 @@ function wireProgram(){
   // devices / braces / splints
   const devSel=$("#programOut #devSelect"); if(devSel) devSel.onchange=()=>{ const c=$("#programOut #devCustom"); if(c){ c.classList.toggle("hide", devSel.value!=="__custom"); if(devSel.value==="__custom") c.focus(); } };
   const devAdd=$("#programOut .devadd"); if(devAdd) devAdd.onclick=addDevice;
+  // special surgical-site precautions (sternal / abdominal)
+  $$("#programOut .spcheck").forEach(c=>c.onchange=()=>toggleSpecialPrecaution(c.dataset.sp, c.checked));
   const mf = $("#programOut #medFilterToggle");
   if(mf) mf.onchange = ()=>{
     state.medFilter = mf.checked; save();
@@ -1971,13 +2025,30 @@ function surgicalReminderCard(){
       <input type="text" id="devCustom" class="hide" placeholder="Name your device / splint (e.g. custom night splint)" />
     </div>`;
 
-  // --- rows (weight-bearing order, devices, surgical, custom) ---
+  // --- special surgical-site precautions (sternal / abdominal) control ---
+  const spActive = new Set(state.specialPrecautions||[]);
+  const spToggles = Object.values(SPECIAL_PRECAUTIONS).map(p=>{
+      const on = spActive.has(p.key);
+      return `<label class="sptoggle${on?" on":""}"><input type="checkbox" class="spcheck" data-sp="${esc(p.key)}"${on?" checked":""} />
+        <span class="sptop">${p.icon} ${esc(p.label)}</span><small>${esc(p.sub)}</small></label>`;
+    }).join("");
+  const spControl = `<div class="spctrl no-print">
+      <label class="preclab">🫀 Surgical-site precautions <span class="sub">(this adjusts your exercises)</span></label>
+      <div class="sptoggles">${spToggles}</div>
+    </div>`;
+
+  // --- rows (weight-bearing order, devices, special precautions, surgical, custom) ---
   const wbRow = wbInfo ? `<li class="precrow active wbrow"><span class="prec-t">🦵 <b>Weight-bearing:</b> ${esc(wbSummary())}</span><span class="prec-w">order</span></li>` : "";
   const devRows = devices.map((d,i)=>`<li class="precrow devrow"><span class="prec-t">🦿 <b>${esc(d.name)}</b> — ${esc(d.note||"")}</span><span class="precdel devdel no-print" data-devidx="${i}" title="Remove">✕</span></li>`).join("");
+  const spRows = activeSpecialPrecautions().map(p=>{
+      const what = `<li class="precrow spwhat"><span class="prec-t">${p.icon} <b>${esc(p.label)} — what they are:</b> ${esc(p.what)}</span></li>`;
+      const rules = p.rules.map(r=>precRowHTML(r, p.weeks, null)).join("");
+      return what + rules;
+    }).join("");
   const customRows = customs.map((p,i)=>precRowHTML(p.t, p.w, i)).join("");
-  const list = (wbRow || surgRows || devRows || customRows)
-    ? `<ul class="preclist">${wbRow}${surgRows}${devRows}${customRows}</ul>`
-    : `<p class="hint">Set your weight-bearing status or add a brace/splint above, or add your own reminder below.</p>`;
+  const list = (wbRow || surgRows || devRows || spRows || customRows)
+    ? `<ul class="preclist">${wbRow}${surgRows}${devRows}${spRows}${customRows}</ul>`
+    : `<p class="hint">Set your weight-bearing status, add a brace/splint, or switch on a surgical-site precaution above — or add your own reminder below.</p>`;
 
   const addCtrl = `<div class="addprec no-print">
       <button class="addprecbtn">＋ Add your own precaution / reminder</button>
@@ -1991,7 +2062,7 @@ function surgicalReminderCard(){
   return `<div class="card surgcard${surg?"":" plain"}">
     <h2>${title}</h2>
     ${head}
-    <div class="preccontrols no-print">${wbControl}${devControl}</div>
+    <div class="preccontrols no-print">${wbControl}${devControl}${spControl}</div>
     ${list}${timeline}${addCtrl}${disclaimer}
   </div>`;
 }
@@ -2022,6 +2093,15 @@ function setWbMeta(){
   save();
   if(state.program){ state.program = generateProgram(); save(); }
   renderProgram(state.program);
+}
+function toggleSpecialPrecaution(key, on){
+  const p = SPECIAL_PRECAUTIONS[key]; if(!p) return;
+  const set = new Set(state.specialPrecautions||[]);
+  on ? set.add(key) : set.delete(key);
+  state.specialPrecautions = Array.from(set); save();
+  if(state.program){ state.program = generateProgram(); save(); }   // precaution reshapes the plan
+  renderProgram(state.program);
+  toast(on ? `${p.label} on — your plan was updated to match.` : `${p.label} cleared.`);
 }
 function addDevice(){
   const sel=$("#programOut #devSelect"); if(!sel) return;
@@ -4246,6 +4326,7 @@ function buildCoachSystem(){
   const goals = [ (state.returnActivities||[]).length && `activities: ${state.returnActivities.join(", ")}`, (state.returnSports||[]).length && `sport: ${state.returnSports.join(", ")}` ].filter(Boolean).join("; ") || "none specified";
   const wbLine = wbSummary() || "not specified";
   const deviceLine = (state.devices||[]).map(d=>d.name).join(", ") || "none";
+  const spLine = activeSpecialPrecautions().map(p=>p.label).join(", ") || "none";
   const abnormalLabs = LABS.filter(l=>{ const s=labStatusOf(l); return s==="high"||s==="low"; }).map(l=>`${l.name} ${labStatusOf(l)}`).join(", ") || "none entered/all in range";
   const riskAreas = computeRisks().filter(r=>r.level!=="low").map(r=>`${r.title.replace(/ risk$/i,"")} = ${r.level}`).join("; ") || "none flagged";
   return `You are Jeffery, PhysioPath's AI rehabilitation specialist — an educational assistant giving general, evidence-informed physical-rehabilitation guidance. You are an AI, not a licensed clinician, and must not diagnose or replace in-person care.
@@ -4261,6 +4342,7 @@ USER CONTEXT
 - Red-flag screen positives: ${redflags}
 - Return-to goals: ${goals}
 - Weight-bearing order: ${wbLine}; braces/orthoses/prostheses: ${deviceLine}
+- Surgical-site precautions active: ${spLine}
 - Out-of-range labs entered: ${abnormalLabs}
 - Educational risk areas (not diagnostic): ${riskAreas}
 - Personalized precautions (MUST respect): ${precautions}
