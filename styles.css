@@ -407,6 +407,33 @@ svg.chart .dot{fill:var(--brand)}
   padding:8px 12px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit}
 .rerollbtn:hover{border-color:var(--brand-2)}
 .resetbtn:hover{border-color:var(--brand)}
+/* add / remove exercises per phase */
+.removeexbtn{border:1px solid rgba(255,107,107,.45);background:var(--panel-2);color:var(--danger);border-radius:8px;
+  font-size:12.5px;font-weight:700;cursor:pointer;padding:6px 12px;font-family:inherit;display:inline-flex;align-items:center;gap:4px}
+.removeexbtn:hover{background:rgba(255,107,107,.12)}
+.addexbtn{border:1px solid rgba(92,225,166,.5);background:var(--panel-2);color:var(--brand-2);border-radius:9px;
+  padding:8px 12px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit}
+.addexbtn:hover{background:rgba(92,225,166,.12)}
+.addexbox{margin-top:10px;border:1px solid var(--brand-2);border-radius:10px;background:var(--panel-2);padding:12px}
+.addexhint{font-size:12.5px;color:var(--muted);margin-bottom:8px}
+.addexsearch{width:100%;margin-bottom:8px}
+.addexresults{max-height:240px;overflow-y:auto;overscroll-behavior:contain}
+.addexopt{display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:1px solid var(--line);cursor:pointer}
+.addexopt:last-child{border-bottom:none}
+.addexopt:hover .en{color:var(--brand-2)}
+.addexopt .en{flex:1;font-size:13.5px;font-weight:600}
+.addexopt .ed{font-size:12.5px;color:var(--muted);white-space:nowrap}
+.addexopt .exwarn{color:var(--warn);font-size:11px;white-space:nowrap}
+.addexnone{font-size:12.5px;color:var(--muted);padding:6px 0}
+.addexcustom{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)}
+.addexcustomlbl{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:6px}
+.addex-n{width:100%;margin-bottom:8px}
+.addexcustrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.addexcustrow .addex-d{flex:1;min-width:110px}
+.addexcustrow .addex-c{flex:2;min-width:150px}
+.addexcustrow .addex-save{flex:0 0 auto}
+.custompill{display:inline-block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;
+  color:var(--brand-2);background:rgba(92,225,166,.16);border-radius:999px;padding:1px 7px;vertical-align:1px}
 
 /* explanations */
 .expbtn{margin-top:0;background:none;border:none;color:var(--brand);font-size:12px;font-weight:600;cursor:pointer;padding:2px 0;font-family:inherit}

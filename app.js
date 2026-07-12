@@ -1830,9 +1830,10 @@ function exItemHTML(e, regionArr, ctx, medHidden){
   const dc = ctx ? `data-ci="${ctx.ci}" data-pi="${ctx.pi}" data-ei="${ctx.ei}"` : "";
   const rotate = ctx ? `<button class="rotatebtn" ${dc} title="Rotate to the next option">⟳ Rotate</button>` : "";
   const swap = ctx ? `<button class="swapbtn" ${dc}>⇄ Swap…</button>` : "";
+  const remove = ctx ? `<button class="removeexbtn" ${dc} title="Remove this exercise from the phase">🗑 Remove</button>` : "";
   const swapbox = ctx ? `<div class="swapbox hide"></div>` : "";
   return `<li class="exitem${medHidden?" medhidden":""}">
-    <div class="top"><span class="en">${e.home?`<span class="homepill">🏠 home</span> `:""}${e.sport?`<span class="sportpill">🏅 sport</span> `:""}${e.sig?`<span class="sigpill">🎯 key</span> `:""}${esc(e.n)}</span><span class="ed">${esc(e.d)}</span></div>
+    <div class="top"><span class="en">${e.custom?`<span class="custompill">✎ yours</span> `:""}${e.home?`<span class="homepill">🏠 home</span> `:""}${e.sport?`<span class="sportpill">🏅 sport</span> `:""}${e.sig?`<span class="sigpill">🎯 key</span> `:""}${esc(e.n)}</span><span class="ed">${esc(e.d)}</span></div>
     <div class="ec">${esc(e.c)}</div>
     ${exertionLine(e)}
     ${e.home?`<div class="homenote">🏠 <b>Home swap:</b> ${esc(e.homeNote)}</div>`:""}
@@ -1841,7 +1842,7 @@ function exItemHTML(e, regionArr, ctx, medHidden){
     ${e.sub?`<span class="subpill">safer substitute for your precautions</span>`:""}
     <div class="exrowtools no-print">
       <button class="expbtn" onclick="this.closest('.exitem').querySelector('.exp').classList.toggle('hide')">ⓘ Explain</button>
-      ${rotate}${swap}
+      ${rotate}${swap}${remove}
     </div>
     <div class="exp hide">${movementExplain(e.n, e.pattern, e.region||regionArr)}</div>
     ${swapbox}
@@ -1873,6 +1874,12 @@ function wireProgram(){
   $$("#programOut .swapbtn").forEach(b=>b.onclick=()=>openSwap(b));
   $$("#programOut .rerollbtn").forEach(b=>b.onclick=()=>rerollPhase(+b.dataset.ci, +b.dataset.pi));
   $$("#programOut .resetbtn").forEach(b=>b.onclick=()=>resetPhase(+b.dataset.ci, +b.dataset.pi));
+  // add / remove exercises per phase
+  $$("#programOut .addexbtn").forEach(b=>b.onclick=()=>toggleAddExercise(+b.dataset.ci, +b.dataset.pi));
+  $$("#programOut .removeexbtn").forEach(b=>b.onclick=()=>removeExercise(+b.dataset.ci, +b.dataset.pi, +b.dataset.ei));
+  $$("#programOut .addexbox").forEach(box=>{               // re-open + refill any pickers the user left open
+    if(openAddBoxes.has(box.dataset.ci+"-"+box.dataset.pi)){ fillAddExercise(box, +box.dataset.ci, +box.dataset.pi); box.classList.remove("hide"); }
+  });
   const mf = $("#programOut #medFilterToggle");
   if(mf) mf.onchange = ()=>{
     state.medFilter = mf.checked; save();
@@ -1948,6 +1955,96 @@ function resetPhase(ci, pi){
   if(R.caution.length) ex.forEach(e=>{ if(!e.warn && !e.cautionMsg && R.caution.some(re=>re.test(e.n))) e.cautionMsg = true; });
   ph.ex = ex; delete ph._seed; openPhases.add(ci+"-"+pi);
   save(); renderProgram(state.program); toast("Phase reset to the recommended exercises.");
+}
+/* ---- delete an exercise from a phase ---- */
+function removeExercise(ci, pi, ei){
+  const ph = state.program.items[ci].phases[pi];
+  if(!ph || !ph.ex[ei]) return;
+  if(ph.ex.length<=1){ toast("A phase needs at least one exercise — use ↩ Reset to restore the recommended set."); return; }
+  const name = ph.ex[ei].n;
+  ph.ex.splice(ei,1); openPhases.add(ci+"-"+pi);
+  save(); renderProgram(state.program); toast(`Removed “${name}” from this phase.`);
+}
+
+/* ---- add an exercise to a phase (library search / suggestions / custom) ---- */
+const openAddBoxes = new Set();                     // which phases' add-exercise pickers are open
+function toggleAddExercise(ci, pi){
+  const key = ci+"-"+pi;
+  const box = $(`#programOut .addexbox[data-ci="${ci}"][data-pi="${pi}"]`); if(!box) return;
+  if(openAddBoxes.has(key)){ openAddBoxes.delete(key); box.classList.add("hide"); box.innerHTML=""; box.dataset.filled=""; }
+  else { openAddBoxes.add(key); openPhases.add(key); fillAddExercise(box, ci, pi); box.classList.remove("hide"); }
+}
+function fillAddExercise(box, ci, pi){
+  box.innerHTML = addExercisePickerHTML();
+  wireAddExercise(box, ci, pi);
+  box.dataset.filled = "1";
+}
+function addExercisePickerHTML(){
+  return `<div class="addexhint">Search the ${((window.EXERCISES||[]).length||0).toLocaleString()}-exercise library, or add your own — tap to add it to this phase.</div>
+    <input type="text" class="addexsearch" placeholder="Search e.g. ‘ankle pumps’, ‘glute bridge’, ‘band row’…" autocomplete="off" />
+    <div class="addexresults"></div>
+    <div class="addexcustom">
+      <div class="addexcustomlbl">Or add your own custom exercise:</div>
+      <input type="text" class="addex-n" placeholder="Exercise name (required)" />
+      <div class="addexcustrow">
+        <input type="text" class="addex-d" placeholder="Sets × reps / time (e.g. 3×10)" />
+        <input type="text" class="addex-c" placeholder="Cue / how-to (optional)" />
+        <button class="btn primary addex-save" type="button">＋ Add</button>
+      </div>
+    </div>`;
+}
+function addExOptsHTML(opts){
+  if(!opts.length) return `<div class="addexnone">No safe matches — try another search, or add a custom exercise below.</div>`;
+  return opts.map((o,oi)=>`<div class="addexopt" data-oi="${oi}"><span class="en">${esc(o.n)}</span><span class="ed">${esc(o.d||"")}</span>${o.warn?`<span class="exwarn">⚠ modify</span>`:""}</div>`).join("");
+}
+/* Full-library search for the add picker — respects precautions (device/WB name
+   restrictions + contraindication flags) so suggestions stay safe. */
+function searchLibraryForAdd(q, exclude){
+  if(!window.EXERCISES) return [];
+  const toks = q.toLowerCase().split(/\s+/).filter(Boolean); if(!toks.length) return [];
+  const exSet = new Set((exclude||[]).map(n=>n.toLowerCase()));
+  const matched = [];
+  for(let i=0;i<window.EXERCISES.length && matched.length<80;i++){
+    const e = window.EXERCISES[i], l = e.name.toLowerCase();
+    if(exSet.has(l)) continue;
+    if(toks.every(t=>l.includes(t)) && nameAllowed(e.name)) matched.push(e);
+  }
+  let { kept } = window.applyContra(matched, activeFlags());     // drop contraindicated, mark cautioned
+  return kept.slice(0,30).map(e=>({ n:e.name, d:e.dose, c:e.cue, warn:e.warn, pattern:e.pattern, region:e.region, tags:e.tags }));
+}
+function wireAddExercise(box, ci, pi){
+  const item = state.program.items[ci], ph = item.phases[pi];
+  const resultsEl = box.querySelector(".addexresults");
+  const suggest = () => libraryOptions(item.protocol, pi, activeFlags(), ph.ex.map(x=>x.n), 12, ph._addseed||0);
+  let curOpts = [];
+  const draw = (opts) => {
+    curOpts = opts;
+    resultsEl.innerHTML = addExOptsHTML(opts);
+    resultsEl.querySelectorAll(".addexopt").forEach(op=>op.onclick=()=>addExerciseToPhase(ci, pi, curOpts[+op.dataset.oi]));
+  };
+  draw(suggest());
+  const search = box.querySelector(".addexsearch");
+  let t;
+  search.oninput = () => { clearTimeout(t); t=setTimeout(()=>{
+    const q = search.value.trim();
+    draw(q ? searchLibraryForAdd(q, ph.ex.map(x=>x.n)) : suggest());
+  }, 140); };
+  const saveBtn = box.querySelector(".addex-save");
+  saveBtn.onclick = () => {
+    const n = box.querySelector(".addex-n").value.trim();
+    if(!n){ toast("Type an exercise name first."); return; }
+    const d = box.querySelector(".addex-d").value.trim() || "as prescribed";
+    const c = box.querySelector(".addex-c").value.trim() || "Added by you — perform with control and keep it pain-free.";
+    addExerciseToPhase(ci, pi, { n, d, c, custom:true });
+  };
+}
+function addExerciseToPhase(ci, pi, ex){
+  if(!ex || !ex.n) return;
+  const ph = state.program.items[ci].phases[pi];
+  if(ph.ex.some(e=>e.n.toLowerCase()===ex.n.toLowerCase())){ toast("That exercise is already in this phase."); return; }
+  ph.ex.push({ n:ex.n, d:ex.d, c:ex.c, warn:ex.warn, pattern:ex.pattern, region:ex.region, tags:ex.tags, custom:ex.custom });
+  openPhases.add(ci+"-"+pi); openAddBoxes.add(ci+"-"+pi);        // keep phase + picker open to add more
+  save(); renderProgram(state.program); toast(`Added “${ex.n}” to this phase.`);
 }
 
 /* status of a precaution given its weeks-to-follow (w) and the user's weeks post-op */
@@ -2685,9 +2782,11 @@ function renderProgram(prog){
         <div class="body"><ul class="exlist">${rows}</ul>
           <div class="phasetools no-print">
             <span class="phasetoolslbl">Whole phase:</span>
+            <button class="addexbtn" data-ci="${ci}" data-pi="${i}">＋ Add exercise</button>
             <button class="rerollbtn" data-ci="${ci}" data-pi="${i}">🔄 Rotate all exercises</button>
             <button class="resetbtn" data-ci="${ci}" data-pi="${i}">↩ Reset to recommended</button>
           </div>
+          <div class="addexbox hide no-print" data-ci="${ci}" data-pi="${i}"></div>
           <div class="freq"><b>Advance to the next phase when:</b> ${esc(ph.criteria || "this phase feels controlled and symptoms are low & stable")}. The weeks are a guide, not a rule.</div>
         </div></div>`;
     });
