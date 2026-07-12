@@ -22,7 +22,11 @@ const T = { impact:"impact", valsalva:"valsalva", overhead:"overhead", flexLoad:
 const EQUIP = {
   bw:["",[]], db:["Dumbbell",[]], kb:["Kettlebell",[]], bb:["Barbell",[T.valsalva]],
   band:["Band",[]], cable:["Cable",[]], mach:["Machine",[]], mb:["Med-ball",[]],
-  trx:["Suspension",[]], sb:["Sandbag",[T.valsalva]]
+  trx:["Suspension",[]], sb:["Sandbag",[T.valsalva]],
+  // ---- ordinary household objects used as improvised equipment ----
+  can:["Soup-can",[]], bottle:["Water-bottle",[]], jug:["Water-jug",[]], book:["Heavy-book",[]],
+  pack:["Backpack",[]], towel:["Towel",[]], loop:["Loop-band",[]], broom:["Broomstick",[]],
+  chair:["Chair",[]], stair:["Stair-step",[]]
 };
 
 /* Base movements. tags = always-on tags for this pattern. */
@@ -120,7 +124,32 @@ const BASES = [
   {b:"jogging / run progression", pat:"cardio", reg:["Cardio","Knee","Ankle"], tags:[T.aerobic,T.impact,T.highInt,T.wb], eq:["bw"], mods:["walk-run intervals","easy continuous","tempo","strides"]},
   {b:"swimming / aquatic", pat:"cardio", reg:["Cardio","Full body"], tags:[T.aerobic], eq:["bw"], mods:["freestyle","aqua-jogging","kickboard","aqua-therapy drills"]},
   {b:"breathing exercise", pat:"breathing", reg:["Breathing","Core"], tags:[], eq:["bw"], mods:["diaphragmatic","pursed-lip","segmental (rib)","paced","incentive-spirometry","box-breathing"]},
+
+  // ---- Pediatric / developmental (0–18 yrs; play-based, low-load, parent/therapist supervised) ----
+  {b:"(infant)", pat:"general", reg:["Full body"], tags:["pediatric"], eq:["bw"], cue:"Parent-led play — gentle, on the floor, and always supervised.",
+   mods:["tummy time","supported sitting","rolling side-to-side","reaching for toys","assisted crawling","pull-to-stand","cruising along furniture","supported standing","assisted stepping","gentle kicking play"]},
+  {b:"(toddler)", pat:"gait", reg:["Gait","Balance","Full body"], tags:["pediatric","balance"], eq:["bw"], cue:"Turn it into a game; supervise closely and keep it fun.",
+   mods:["walking practice","stair climbing with help","stepping over toys","squat-to-stand play","ball-rolling play","gentle two-foot jumping","marching game","backward-walking game","balance-line walk","obstacle crawl"]},
+  {b:"(kids balance game)", pat:"balance", reg:["Balance","Full body"], tags:["pediatric","balance"], eq:["bw"], cue:"Make it playful; stand near help and progress slowly.",
+   mods:["single-leg flamingo stand","tightrope-line walk","hopscotch hops","balance-board play","freeze-dance stops","beanbag balance","stepping-stones","heel-to-toe walk","spin-and-steady","catch on one leg"]},
+  {b:"(kids animal walk)", pat:"general", reg:["Full body","Core"], tags:["pediatric","weight_bearing"], eq:["bw"], cue:"Playful animal walks build strength; keep it light and fun.",
+   mods:["bear crawl","crab walk","frog jumps","bunny hops","wheelbarrow walk with helper","donkey kicks","inchworm","duck walk","superhero plank","assisted monkey hang"]},
+  {b:"(kids jumping game)", pat:"plyo", reg:["Knee","Ankle","Balance"], tags:["pediatric","impact","balance"], eq:["bw"], cue:"Soft, quiet landings; short playful bursts with rest.",
+   mods:["two-foot jumps","jump over a line","star jumps","hopscotch","skipping practice","side-to-side hops","jump-and-freeze","bunny-hop course","leapfrog","cone-weave run"]},
+  {b:"(teen)", pat:"squat", reg:["Knee","Hip","Full body"], tags:["pediatric","weight_bearing"], eq:["bw","band","can","bottle","pack"], cue:"Learn good form first with light or bodyweight load.",
+   mods:["squat","split squat","step-up","glute bridge","wall sit","calf raise","reverse lunge","single-leg balance","incline push-up","plank hold"]},
 ];
+
+/* Ordinary household objects double as improvised equipment — inject them into
+   the loadable / band / support movements so many exercises get a home variant. */
+for(const b of BASES){
+  if(b.eq.includes("db")) for(const e of ["can","bottle","jug","book","pack"]) if(!b.eq.includes(e)) b.eq.push(e);
+  if(b.eq.includes("kb")) for(const e of ["jug","pack"]) if(!b.eq.includes(e)) b.eq.push(e);
+  if(b.eq.includes("bb")) for(const e of ["broom","pack"]) if(!b.eq.includes(e)) b.eq.push(e);
+  if(b.eq.includes("mb")) for(const e of ["pack","book"]) if(!b.eq.includes(e)) b.eq.push(e);
+  if(b.eq.includes("band")) for(const e of ["loop","towel"]) if(!b.eq.includes(e)) b.eq.push(e);
+  if(/step-up|wall sit|calf raise|chest press|push-up|dip|single-leg balance|sit-to-stand|glute/i.test(b.b)) if(!b.eq.includes("chair")) b.eq.push("chair");
+}
 
 /* ---- generation ---- */
 const out = [];
@@ -168,7 +197,8 @@ const DOSE = {
   push:["3×8–12","3×10","3×12"], pull:["3×10–15","3×12","3×10 each"], hinge:["3×8–10","3×10","4×8"],
   squat:["3×8–12","3×10","4×8"], lunge:["3×8–10 each","3×10 each"], calf:["3×12–15","4×12","3×15"],
   extension:["3×10–12","3×12","3×15"], flexion:["3×10–12","3×12","3×15"], gait:["3×15–20 m","3×20 m","4×15 m"], rotate:["3×10 each","3×8 each","3×12 each"],
-  agility:["3×20–30s","3×5 each way","4–6 reps","3×10–20 m"]
+  agility:["3×20–30s","3×5 each way","4–6 reps","3×10–20 m"],
+  general:["play for 5–10 min","2–3 short bouts","3×8–10 playful reps","a few times a day"]
 };
 const CUE = {
   squat:"Knees track over toes; control the descent.", hinge:"Hinge from the hips, neutral spine, brace lightly.",
@@ -198,7 +228,7 @@ for(const base of BASES){
       const diff = difficulty(name, base);
       const doseKey = DOSE[base.pat] ? base.pat : (base.pat in DOSE ? base.pat : "strength");
       const dose = pick(DOSE[doseKey] || DOSE.strength, idx);
-      const cue = CUE[base.pat] || "Move with control, keep it pain-free.";
+      const cue = base.cue || CUE[base.pat] || "Move with control, keep it pain-free.";
       out.push({ id:"e"+(out.length+1), name, region:base.reg, pattern:base.pat,
         equipment: elabel || "bodyweight", difficulty:diff, tags, dose, cue });
       idx++;
@@ -211,9 +241,13 @@ for(const base of BASES){
 const CONTEXT = [
   ["slow-tempo (3s eccentric)", 0], ["with 2s pause", 0], ["partial-range", 0], ["full-range", 0],
   ["on unstable surface", 1], ["banded (accommodating)", 0], ["unilateral", 1], ["with isometric hold", 0],
-  ["low-load / high-rep", -1], ["progressive-overload", 1], ["deload / technique", -1]
+  ["low-load / high-rep", -1], ["progressive-overload", 1], ["deload / technique", -1],
+  ["tempo 3-1-3", 0], ["with a 1s pause", 0], ["paused mid-range", 0], ["1.5-rep style", 1],
+  ["cluster set", 0], ["circuit format", 0], ["EMOM style", 0], ["for-time (quality)", 0],
+  ["seated variation", -1], ["supported variation", -1], ["standing variation", 0], ["eccentric-only", 0],
+  ["explosive concentric", 1], ["controlled negatives", 0], ["extended range", 1], ["short-range / pain-free", -1]
 ];
-const TARGET = 5000;
+const TARGET = 20000;
 const baseCount = out.length;
 outer:
 for(const [ctx, dBump] of CONTEXT){
@@ -221,6 +255,7 @@ for(const [ctx, dBump] of CONTEXT){
     if(out.length >= TARGET) break outer;
     const src = out[i];
     if(src._ctx) continue;
+    if(src.tags && src.tags.includes("pediatric")) continue;   // keep kids' play exercises clean
     const name = cap(`${src.name} — ${ctx}`);
     const key = slug(name); if(seen.has(key)) continue; seen.add(key);
     let diff = Math.max(1, Math.min(4, src.difficulty + dBump));

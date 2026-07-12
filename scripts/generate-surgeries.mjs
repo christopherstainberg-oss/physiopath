@@ -284,6 +284,80 @@ const FAM = [
     mods: A_ENDO, sides: S_SIDE },
 ];
 
+/* ===================================================================
+   PEDIATRIC families (0–18 yrs). Same shape as FAM, but the third
+   dimension is an AGE BAND (not laterality), and each entry gets an
+   age-appropriate note. Precautions are kept concise. Education only. */
+const PED_AGE = [
+  { label: "neonatal (0–1 mo)",     note: "Newborn: all care is parent-led — gentle handling, positioning and feeding support exactly as the team taught." },
+  { label: "infant (1–12 mo)",      note: "Infant: keep up gentle developmental play (tummy time, reaching) as allowed; a parent/therapist guides all activity." },
+  { label: "toddler (1–3 yr)",      note: "Toddler: expect a gradual return to crawling/walking as healing allows; supervise closely and childproof the space." },
+  { label: "preschool (3–5 yr)",    note: "Preschooler: reintroduce play in short, supervised bouts; use games to encourage the prescribed movement." },
+  { label: "school-age (6–11 yr)",  note: "School-age: phase back into PE and play on the surgeon's timeline; avoid contact/impact until cleared." },
+  { label: "adolescent (12–18 yr)", note: "Adolescent: follow a graded return-to-sport plan with strength/function milestones and clearance." }
+];
+const PED_CONTEXTS = [
+  "day-surgery", "inpatient with parent rooming-in", "enhanced-recovery pathway", "with child-life support",
+  "staged reconstruction", "cast/brace in place", "fast-track discharge", "with home-therapy program", "tertiary-centre care", "with school-reintegration plan"
+];
+const PED_FAM = [
+  { cat: "ped_hip", region: "hip", autoFlags: [],
+    ret: "Bracing/casting protects the growing hip for weeks; walking and play return gradually on the surgeon's timeline.",
+    prec: [P("Keep the hip brace/harness or spica cast on exactly as prescribed.", 8), P("Follow the weight-bearing/positioning rules the surgeon gave (often protected early).", 8), P("Keep the other joints and gentle overall play active as allowed.", 4)],
+    bases: [{ n: "DDH closed reduction & spica cast", kw: ["developmental dysplasia", "ddh", "hip dysplasia", "closed reduction hip"] }, { n: "DDH open reduction", kw: ["open reduction hip", "ddh open"] }, { n: "Pemberton osteotomy", kw: ["pemberton osteotomy"] }, { n: "Salter innominate osteotomy", kw: ["salter osteotomy"] }, { n: "Dega osteotomy", kw: ["dega osteotomy"] }, { n: "Femoral varus derotation osteotomy (hip)", kw: ["femoral varus derotation", "vdro"] }, { n: "Perthes containment surgery", kw: ["perthes", "legg-calve-perthes"] }, { n: "SCFE in-situ pinning", kw: ["scfe", "slipped capital femoral epiphysis"] }, { n: "SCFE corrective osteotomy", kw: ["scfe osteotomy"] }, { n: "Pavlik harness treatment (DDH)", kw: ["pavlik harness"] }],
+    mods: A_OPEN },
+  { cat: "ped_foot", region: "foot / ankle", autoFlags: [],
+    ret: "Clubfoot care is bracing-led for months to years; the foot-abduction brace prevents relapse.",
+    prec: [P("Keep the casts, or the boots-and-bar (foot-abduction brace), on for the FULL prescribed hours — this prevents relapse.", 0), P("Do the stretches the physio taught between casts.", 6), P("Check the toes for colour, warmth and skin problems under the cast.", 4)],
+    bases: [{ n: "Ponseti clubfoot casting", kw: ["clubfoot", "talipes", "ponseti"] }, { n: "Percutaneous Achilles tenotomy (clubfoot)", kw: ["achilles tenotomy", "clubfoot tenotomy"] }, { n: "Posteromedial release (clubfoot)", kw: ["posteromedial release"] }, { n: "Tibialis anterior tendon transfer", kw: ["tibialis anterior tendon transfer", "tatt"] }, { n: "Tarsal coalition resection", kw: ["tarsal coalition"] }, { n: "Congenital vertical talus correction", kw: ["vertical talus"] }, { n: "Clubfoot revision surgery", kw: ["clubfoot revision"] }, { n: "Accessory navicular excision", kw: ["accessory navicular"] }],
+    mods: A_PLAIN },
+  { cat: "ped_limb", region: "bone", autoFlags: [],
+    ret: "Bone healing and (for lengthening) the frame/nail schedule set the pace; motion is kept up throughout.",
+    prec: [P("Do the frame/pin care and lengthening turns exactly as taught.", 8), P("Follow weight-bearing limits; keep the knee and ankle moving to prevent stiffness.", 6), P("Keep up the daily stretches to maintain motion during lengthening.", 0)],
+    bases: [{ n: "Guided growth (hemiepiphysiodesis / 8-plate)", kw: ["guided growth", "hemiepiphysiodesis", "8-plate"] }, { n: "Limb lengthening (external fixator)", kw: ["limb lengthening", "external fixator", "ilizarov"] }, { n: "Limb lengthening (magnetic nail)", kw: ["magnetic lengthening nail", "precice nail"] }, { n: "Corrective femoral osteotomy (deformity)", kw: ["femoral osteotomy"] }, { n: "Corrective tibial osteotomy (deformity)", kw: ["tibial osteotomy"] }, { n: "Epiphysiodesis (leg-length correction)", kw: ["epiphysiodesis"] }, { n: "Rotational osteotomy (torsion)", kw: ["rotational osteotomy", "derotation osteotomy"] }],
+    mods: A_OPEN },
+  { cat: "ped_spine", region: "spine", autoFlags: [],
+    ret: "Spinal fusion consolidates over months; restrictions ease gradually and contact sport waits for clearance.",
+    prec: [P("Follow log-roll and no-bend/lift/twist advice; wear the brace if prescribed.", 12), P("Do your breathing exercises and walk regularly as advised.", 6), P("No contact sport or heavy PE until the surgeon clears you.", 24)],
+    bases: [{ n: "Posterior spinal fusion (idiopathic scoliosis)", kw: ["scoliosis", "spinal fusion", "idiopathic scoliosis"] }, { n: "Posterior spinal fusion (neuromuscular scoliosis)", kw: ["neuromuscular scoliosis"] }, { n: "Anterior scoliosis correction", kw: ["anterior scoliosis"] }, { n: "Growing-rods insertion", kw: ["growing rods"] }, { n: "Growing-rods lengthening", kw: ["growing rods lengthening"] }, { n: "VEPTR insertion", kw: ["veptr"] }, { n: "Vertebral body tethering", kw: ["vertebral body tethering", "vbt"] }, { n: "Kyphosis correction (Scheuermann)", kw: ["scheuermann", "kyphosis correction"] }, { n: "Hemivertebra excision", kw: ["hemivertebra"] }, { n: "Tethered cord release", kw: ["tethered cord"] }],
+    mods: A_SPINE },
+  { cat: "ped_cp", region: "limb", autoFlags: [],
+    ret: "Neuromuscular surgery is followed by intensive graded physiotherapy over months.",
+    prec: [P("Follow the post-op positioning, casting and bracing plan closely.", 8), P("Begin the physio stretching/strengthening program on schedule — early motion matters.", 6), P("Manage pain and spasticity as advised so therapy can progress.", 4)],
+    bases: [{ n: "Selective dorsal rhizotomy (SDR)", kw: ["selective dorsal rhizotomy", "sdr"] }, { n: "Single-event multilevel surgery (SEMLS)", kw: ["single-event multilevel", "semls"] }, { n: "Hamstring lengthening", kw: ["hamstring lengthening"] }, { n: "Gastrocnemius / Achilles lengthening", kw: ["gastrocnemius lengthening", "tendo-achilles lengthening"] }, { n: "Adductor release (hip)", kw: ["adductor release"] }, { n: "Hip reconstruction (cerebral palsy)", kw: ["hip reconstruction", "cerebral palsy hip"] }, { n: "Femoral derotation osteotomy (CP)", kw: ["femoral derotation"] }, { n: "Tendon transfer (cerebral palsy)", kw: ["tendon transfer cp"] }, { n: "Intrathecal baclofen pump", kw: ["baclofen pump"] }],
+    mods: A_OPEN },
+  { cat: "ped_upper", region: "hand / wrist", autoFlags: [],
+    ret: "Hand/arm recovery is early-motion led; splinting protects the repair while gentle movement returns.",
+    prec: [P("Keep the splint or cast on as prescribed; keep the fingers moving to prevent stiffness.", 3), P("Avoid rough play, gripping or weight-bearing through the arm early.", 4), P("Do the gentle motion exercises the hand therapist taught.", 4)],
+    bases: [{ n: "Syndactyly release", kw: ["syndactyly"] }, { n: "Polydactyly excision", kw: ["polydactyly"] }, { n: "Paediatric trigger thumb release", kw: ["trigger thumb"] }, { n: "Radial club-hand correction", kw: ["radial club hand", "radial dysplasia"] }, { n: "Supracondylar humerus fracture fixation", kw: ["supracondylar", "supracondylar humerus"] }, { n: "Both-bone forearm fracture fixation", kw: ["both-bone forearm", "forearm fracture"] }, { n: "Brachial plexus (Erb's palsy) reconstruction", kw: ["brachial plexus", "erb's palsy"] }, { n: "Pollicization", kw: ["pollicization"] }, { n: "Upper-limb tendon transfer", kw: ["upper limb tendon transfer"] }],
+    mods: A_HAND },
+  { cat: "ped_sports", region: "knee", autoFlags: [],
+    ret: "Adolescent sports surgery follows a milestone-based return over ~6–12 months with clearance.",
+    prec: [P("Wear your brace and follow the weight-bearing and motion limits.", 6), P("Regain full motion and quad / rotator-cuff activation early.", 6), P("No pivoting or contact sport until strength and function milestones are met.", 24)],
+    bases: [{ n: "Physeal-sparing ACL reconstruction", kw: ["physeal-sparing acl", "acl reconstruction"] }, { n: "Transphyseal ACL reconstruction", kw: ["transphyseal acl"] }, { n: "MPFL reconstruction (patellar stabilisation)", kw: ["mpfl reconstruction", "patellar stabilisation"] }, { n: "Tibial spine fracture fixation", kw: ["tibial spine"] }, { n: "OCD fixation / drilling (knee)", kw: ["osteochondritis dissecans", "ocd knee"] }, { n: "Meniscus repair (adolescent)", kw: ["meniscus repair"] }, { n: "Adolescent shoulder stabilisation", kw: ["shoulder stabilisation"] }, { n: "Discoid meniscus saucerization", kw: ["discoid meniscus"] }],
+    mods: A_SCOPE },
+  { cat: "ped_cardiac", region: "heart", autoFlags: ["cardiac"],
+    ret: "Chest/sternal precautions last about 6 weeks; the cardiology team guides the return to activity and sport.",
+    prec: [P("Chest precautions: no lifting the child under the arms, and limit pulling-up and overhead reaching for ~6 weeks.", 6), P("Support the chest with a small pillow when coughing; keep the wound clean and dry.", 6), P("Attend cardiology follow-up; progress activity gently as the team advises.", 6)],
+    bases: [{ n: "Ventricular septal defect (VSD) repair", kw: ["vsd repair", "ventricular septal defect"] }, { n: "Atrial septal defect (ASD) repair", kw: ["asd repair", "atrial septal defect"] }, { n: "Tetralogy of Fallot repair", kw: ["tetralogy of fallot", "tof repair"] }, { n: "Coarctation of the aorta repair", kw: ["coarctation"] }, { n: "PDA ligation", kw: ["patent ductus", "pda ligation"] }, { n: "Arterial switch operation (TGA)", kw: ["arterial switch", "transposition great arteries"] }, { n: "Norwood procedure", kw: ["norwood"] }, { n: "Glenn (bidirectional) procedure", kw: ["glenn procedure"] }, { n: "Fontan procedure", kw: ["fontan"] }, { n: "Atrioventricular canal repair", kw: ["av canal", "atrioventricular septal defect"] }, { n: "Ross procedure", kw: ["ross procedure"] }, { n: "Congenital valve repair", kw: ["congenital valve"] }],
+    mods: A_CARD },
+  { cat: "ped_neuro", region: "brain", autoFlags: [],
+    ret: "Neurosurgical recovery is closely supervised and symptom-guided; follow the team's timeline exactly.",
+    prec: [P("Follow the neurosurgery team's positioning and activity limits closely.", 6), P("Avoid straining, rough play and head-down positions early.", 6), P("Watch for shunt/wound problems — vomiting, drowsiness, headache or wound swelling (seek care).", 0)],
+    bases: [{ n: "VP shunt insertion", kw: ["vp shunt", "ventriculoperitoneal shunt"] }, { n: "VP shunt revision", kw: ["shunt revision"] }, { n: "Endoscopic third ventriculostomy (ETV)", kw: ["endoscopic third ventriculostomy", "etv"] }, { n: "Myelomeningocele (spina bifida) closure", kw: ["myelomeningocele", "spina bifida"] }, { n: "Chiari decompression", kw: ["chiari"] }, { n: "Craniosynostosis repair (strip craniectomy)", kw: ["craniosynostosis", "strip craniectomy"] }, { n: "Craniosynostosis repair (cranial vault remodelling)", kw: ["cranial vault remodelling", "cranial vault remodeling"] }, { n: "Encephalocele repair", kw: ["encephalocele"] }, { n: "Spinal lipoma resection", kw: ["spinal lipoma"] }],
+    mods: [{ m: "", soft: false }, { m: "endoscopic", soft: true }, { m: "revision", soft: false }] },
+  { cat: "ped_general", region: "abdomen", autoFlags: [],
+    ret: "Most children return to gentle activity within 1–2 weeks; rough or impact play waits a little longer.",
+    prec: [P("No heavy lifting or vigorous/rough play for the advised period; keep the wound clean.", 3), P("Keep young children off ride-on toys and climbing early; supervise closely.", 3), P("Watch for fever, wound redness or discharge, or feeding problems (seek care).", 2)],
+    bases: [{ n: "Inguinal hernia repair (paediatric)", kw: ["inguinal hernia"] }, { n: "Umbilical hernia repair (paediatric)", kw: ["umbilical hernia"] }, { n: "Pyloromyotomy (pyloric stenosis)", kw: ["pyloromyotomy", "pyloric stenosis"] }, { n: "Appendectomy (paediatric)", kw: ["appendectomy"] }, { n: "Orchidopexy (undescended testis)", kw: ["orchidopexy", "undescended testis"] }, { n: "Hypospadias repair", kw: ["hypospadias"] }, { n: "Nissen fundoplication (paediatric)", kw: ["fundoplication", "nissen"] }, { n: "Gastrostomy (feeding tube)", kw: ["gastrostomy", "g-tube"] }, { n: "Hirschsprung pull-through", kw: ["hirschsprung", "pull-through"] }, { n: "Imperforate anus repair", kw: ["imperforate anus", "anorectal malformation"] }, { n: "Intussusception reduction", kw: ["intussusception"] }, { n: "Ladd procedure (malrotation)", kw: ["ladd procedure", "malrotation"] }, { n: "Hydrocele repair (paediatric)", kw: ["hydrocele"] }, { n: "Circumcision", kw: ["circumcision"] }],
+    mods: A_LAP },
+  { cat: "ped_ent_cranio", region: "head-neck", autoFlags: [],
+    ret: "ENT/craniofacial recovery settles over 1–3 weeks; follow the feeding and activity advice closely.",
+    prec: [P("Follow feeding, wound and (for cleft) arm-restraint/splint advice exactly.", 3), P("Avoid straining, hard or sharp foods, and rough play as advised.", 3), P("Watch for bleeding, breathing or swallowing trouble, or wound problems (seek care).", 2)],
+    bases: [{ n: "Tonsillectomy (paediatric)", kw: ["tonsillectomy"] }, { n: "Adenoidectomy", kw: ["adenoidectomy"] }, { n: "Myringotomy & ear tubes (grommets)", kw: ["grommets", "ear tubes", "myringotomy"] }, { n: "Cochlear implant (paediatric)", kw: ["cochlear implant"] }, { n: "Cleft lip repair", kw: ["cleft lip"] }, { n: "Cleft palate repair", kw: ["cleft palate"] }, { n: "Tongue-tie (frenotomy)", kw: ["tongue-tie", "frenotomy"] }, { n: "Microtia (ear) reconstruction", kw: ["microtia"] }, { n: "Choanal atresia repair", kw: ["choanal atresia"] }, { n: "Mandibular distraction", kw: ["mandibular distraction"] }],
+    mods: A_PLAIN }
+];
+
 /* ---- enumerate ---- */
 function buildFamily(f) {
   const out = [];
@@ -302,59 +376,86 @@ function buildFamily(f) {
   return out;
 }
 
-// build per family, then round-robin interleave for variety
-const perFam = FAM.map(buildFamily);
-const interleaved = [];
-let idx = 0, remaining = true;
-while (remaining) {
-  remaining = false;
-  for (const list of perFam) {
-    if (idx < list.length) { interleaved.push(list[idx]); remaining = true; }
+// pediatric enumeration: third dimension is an AGE BAND, plus an age note
+function buildPedFamily(f) {
+  const out = [];
+  for (const base of f.bases) {
+    for (const mod of f.mods) {
+      for (const age of PED_AGE) {
+        const name = base.n + (mod.m ? ` — ${mod.m}` : "") + ` · age ${age.label}`;
+        const prec = (mod.soft ? soften(f.prec) : f.prec.map(p => ({ t: p.t, w: p.w }))).concat([P(age.note, 0)]);
+        const ret = f.ret + (mod.soft ? " Keyhole/minimally invasive approaches often recover a little faster — still follow the surgeon's timeline." : "");
+        out.push({ name, cat: f.cat, region: f.region, autoFlags: f.autoFlags.slice(), match: [...new Set(base.kw)], precautions: prec, ret });
+      }
+    }
   }
-  idx++;
+  return out;
 }
 
-const chosen = interleaved.slice(0, TARGET);
-
-// assign ids + compile match regex source
-const seenName = new Set();
-const surgeries = [];
-for (const s of chosen) {
-  if (seenName.has(s.name)) continue;
-  seenName.add(s.name);
-  const src = s.match.map(t => "\\b" + esc(t) + "\\b").join("|");
-  surgeries.push({ ...s, matchSrc: src });
+// round-robin interleave families, cap at `target`, then top up with context variants
+function assemble(perFamLists, target, contexts) {
+  const interleaved = [];
+  let idx = 0, remaining = true;
+  while (remaining) {
+    remaining = false;
+    for (const list of perFamLists) { if (idx < list.length) { interleaved.push(list[idx]); remaining = true; } }
+    idx++;
+  }
+  const seen = new Set(), out = [];
+  for (const s of interleaved) {
+    if (seen.has(s.name) || out.length >= target) continue;
+    seen.add(s.name);
+    out.push({ ...s, matchSrc: s.match.map(t => "\\b" + esc(t) + "\\b").join("|") });
+  }
+  outer:
+  for (const ctx of contexts) {
+    for (const s of interleaved) {
+      if (out.length >= target) break outer;
+      const name = s.name + " — " + ctx;
+      if (seen.has(name)) continue;
+      seen.add(name);
+      out.push({ ...s, name, matchSrc: s.match.map(t => "\\b" + esc(t) + "\\b").join("|") });
+    }
+  }
+  return out.slice(0, target);
 }
 
-// Top up to the target by cycling realistic surgical-setting/context variants over the genuine list.
-const CONTEXTS = [
+const ADULT_CONTEXTS = [
   "day-case / outpatient", "inpatient recovery", "enhanced-recovery (ERAS) pathway",
   "with regional anaesthesia", "with general anaesthesia", "image-guided",
   "with a nerve block", "staged procedure", "revision setting", "high-dependency recovery"
 ];
-outer:
-for (const ctx of CONTEXTS) {
-  for (const s of interleaved) {
-    if (surgeries.length >= TARGET) break outer;
-    const name = s.name + " — " + ctx;
-    if (seenName.has(name)) continue;
-    seenName.add(name);
-    surgeries.push({ ...s, name, matchSrc: s.match.map(t => "\\b" + esc(t) + "\\b").join("|") });
-  }
-}
 
-/* ---- emit data/surgeries.js ---- */
-const rows = surgeries.slice(0, TARGET).map((s, i) => {
-  const prec = s.precautions.map(p => `{t:${JSON.stringify(p.t)},w:${p.w}}`).join(",");
-  return `{id:"sg${i + 1}",name:${JSON.stringify(s.name)},cat:${JSON.stringify(s.cat)},region:${JSON.stringify(s.region)},autoFlags:${JSON.stringify(s.autoFlags)},match:/${s.matchSrc}/i,precautions:[${prec}],ret:${JSON.stringify(s.ret)}}`;
-});
+const adult = assemble(FAM.map(buildFamily), TARGET, ADULT_CONTEXTS);
+const ped   = assemble(PED_FAM.map(buildPedFamily), TARGET, PED_CONTEXTS);
+const surgeries = adult.concat(ped);   // 10,000 adult + 10,000 paediatric (0–18 yr)
+
+/* ---- emit data/surgeries.js ----
+   The long `ret`, `precautions` and `match` values repeat across the many
+   context-variants of each base, so dedupe them into shared arrays (_R/_P/_M)
+   and reference by index. Transparent to the app: each entry still exposes a
+   real string / array / RegExp — this just shrinks the file ~5x. */
+const retList = [], retMap = new Map();
+const precList = [], precMap = new Map();
+const matchList = [], matchMap = new Map();
+const retIdx = r => { if (!retMap.has(r)) { retMap.set(r, retList.length); retList.push(r); } return retMap.get(r); };
+const precIdx = p => { const k = JSON.stringify(p); if (!precMap.has(k)) { precMap.set(k, precList.length); precList.push(p); } return precMap.get(k); };
+const matchIdx = m => { if (!matchMap.has(m)) { matchMap.set(m, matchList.length); matchList.push(m); } return matchMap.get(m); };
+
+const rows = surgeries.map((s, i) =>
+  `{id:"sg${i + 1}",name:${JSON.stringify(s.name)},cat:${JSON.stringify(s.cat)},region:${JSON.stringify(s.region)},autoFlags:${JSON.stringify(s.autoFlags)},match:_M[${matchIdx(s.matchSrc)}],precautions:_P[${precIdx(s.precautions)}],ret:_R[${retIdx(s.ret)}]}`);
+
+const preludeR = `var _R=${JSON.stringify(retList)};`;
+const preludeP = `var _P=[${precList.map(p => "[" + p.map(x => `{t:${JSON.stringify(x.t)},w:${x.w}}`).join(",") + "]").join(",")}];`;
+const preludeM = `var _M=[${matchList.map(src => `/${src}/i`).join(",")}];`;
 
 const banner = `/* PhysioPath surgical-procedure database — GENERATED by scripts/generate-surgeries.mjs.
-   ${rows.length} procedures across orthopedic, spine, cardiac, vascular, thoracic,
-   abdominal, pelvic, neuro, breast and soft-tissue surgery. General education only —
-   a surgeon's own protocol always takes precedence. Do not edit by hand. */`;
+   ${rows.length} procedures (${adult.length} adult + ${ped.length} paediatric, 0–18 yr) across
+   orthopedic, spine, cardiac, vascular, thoracic, abdominal, pelvic, neuro, ENT/craniofacial,
+   congenital and soft-tissue surgery. General education only — a surgeon's own protocol always
+   takes precedence. Do not edit by hand. */`;
 
-const body = `${banner}\nwindow.SURGERY_DB = [\n${rows.join(",\n")}\n];\n`;
+const body = `${banner}\n${preludeR}\n${preludeP}\n${preludeM}\nwindow.SURGERY_DB=[\n${rows.join(",\n")}\n];\n`;
 const outPath = join(__dirname, "..", "data", "surgeries.js");
 writeFileSync(outPath, body);
-console.log(`Wrote ${rows.length} surgeries to ${outPath} (${(body.length / 1024 / 1024).toFixed(2)} MB)`);
+console.log(`Wrote ${rows.length} surgeries (${adult.length} adult + ${ped.length} paediatric) to ${outPath} (${(body.length / 1024 / 1024).toFixed(2)} MB; ${retList.length} rets, ${precList.length} prec-sets, ${matchList.length} matchers deduped)`);
