@@ -68,6 +68,24 @@
         <div id="historyChecks"></div>
       </div>
 
+      <div class="field cardiacdev hide" id="cardiacDevWrap">
+        <span class="lab">💠 Cardiac device details <span class="sub">(sets safe heart-rate &amp; effort limits for your plan)</span></span>
+        <div class="grid2">
+          <label class="subfield"><span>Device type</span>
+            <select id="cd_type">
+              <option value="">Choose…</option>
+              <option value="pacemaker">Pacemaker</option>
+              <option value="icd">ICD (defibrillator)</option>
+              <option value="crtp">CRT pacemaker (CRT-P)</option>
+              <option value="crtd">CRT defibrillator (CRT-D)</option>
+              <option value="lvad">LVAD (heart pump)</option>
+            </select></label>
+          <label class="subfield hide" id="cd_rateWrap"><span>ICD therapy heart-rate threshold <i>bpm — from your cardiologist</i></span>
+            <input type="number" id="cd_rate" min="100" max="240" inputmode="numeric" placeholder="e.g. 170" /></label>
+        </div>
+        <div class="cdhint" id="cdHint"></div>
+      </div>
+
       <div class="field parq">
         <span class="lab">Quick safety screen</span>
         <label class="check-row"><input type="checkbox" id="parq_pain" />

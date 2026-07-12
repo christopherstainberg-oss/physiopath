@@ -1006,6 +1006,10 @@
       note:"Diabetes: check glucose around exercise, carry fast-acting carbs, stay hydrated, and take care of your feet (good shoes, daily checks)." },
     pacemaker_icd: { avoid:[], caution:[T.highInt],
       note:"Pacemaker/ICD: keep your heart rate below any limit your cardiologist set and avoid maximal exertion; know your device's settings." },
+    cardiac_icd: { avoid:[T.highInt], caution:[T.valsalva,T.impact,T.breath], clearance:true,
+      note:"Implanted defibrillator (ICD / CRT-D): keep your heart rate WELL BELOW the device's therapy threshold — going above it can trigger a shock. Stay light–moderate (RPE ≤13), skip maximal / high-intensity efforts, and avoid breath-holding and heavy straining. Confirm your safe heart-rate ceiling with your cardiologist and, ideally, join supervised cardiac rehab." },
+    cardiac_lvad: { avoid:[T.highInt,T.impact,T.valsalva,T.breath], caution:[T.aerobic], clearance:true,
+      note:"Left ventricular assist device (LVAD): heart rate and blood pressure are unreliable with continuous flow — judge effort by RPE / the talk-test only. Avoid contact, high-impact activity and breath-holding / straining, protect the driveline site, and follow your VAD team's exercise plan exactly." },
     // ---- additional medical-history conditions (from the intake form) ----
     pad: { avoid:[], caution:[T.highInt],
       note:"Peripheral artery disease / poor leg circulation: a structured walking program is the best-evidenced treatment — walk to moderate calf (claudication) pain, rest until it eases, then repeat. Stop for chest pain; report new coldness, numbness, or a non-healing wound." },

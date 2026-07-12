@@ -281,6 +281,7 @@ const state = {
   screen:{}, falls:"", aid:"", smoking:"", alcohol:"", sleep:"", stress:"",
   medIds:[], medFilter:false, homeMode:false, customPrecautions:[], clinicianProtocols:[],
   medDoses:{}, weightBearing:{status:"",pct:"",lbs:"",side:"",limb:"le"}, devices:[],
+  cardiacDevice:{type:"",icdRate:""},
   log:[], apiKey:"", apiModel:"claude-opus-4-8"
 };
 const MED_FILTERABLE = ["fluoroquinolone","anticoagulant","antiplatelet","opioid","sedative","muscle_relaxant","gabapentinoid","antipsychotic"];
@@ -350,6 +351,7 @@ function gatherFlags(){
   const surg = detectSurgery(); if(surg && surg.autoFlags) surg.autoFlags.forEach(x=>f.add(x));
   vitalFlags().forEach(x=>f.add(x));
   wbFlags().forEach(x=>f.add(x));
+  deviceFlags().forEach(x=>f.add(x));
   const sc = state.screen||{};
   if(Object.values(sc).some(Boolean)) f.add("red_flags");
   if(sc.cauda) f.add("red_flags_urgent");
@@ -401,7 +403,10 @@ function hrZones(){
   const zones = useHRR
     ? { warmup:band(.30,.40), moderate:band(.40,.60), vigorous:band(.60,.85) }
     : { warmup:band(.57,.64), moderate:band(.64,.76), vigorous:band(.76,.93) };
-  return { hrmax, rest: useHRR?rest:null, zones };
+  const cap = deviceHRCeiling();               // ICD: cap zones below the shock threshold
+  if(cap){ const clamp=z=>[Math.min(z[0],cap), Math.min(z[1],cap)];
+    zones.warmup=clamp(zones.warmup); zones.moderate=clamp(zones.moderate); zones.vigorous=clamp(zones.vigorous); }
+  return { hrmax, rest: useHRR?rest:null, zones, deviceCap: cap };
 }
 
 // Objective-data-derived engine flags (baked into the program through gatherFlags).
@@ -581,6 +586,27 @@ function activeRestrictions(){
 function nameAllowed(name){ return !activeRestrictions().avoid.some(re=>re.test(name)); }
 function cautionForName(name){ return activeRestrictions().caution.some(re=>re.test(name)); }
 function onBetaBlocker(){ return selectedMeds().some(m=>(m.flags||[]).includes("beta_blocker")); }
+/* ---------- cardiac device (ICD / pacemaker / CRT / LVAD) → intensity limits ---------- */
+function cardiacDeviceType(){ return (state.cardiacDevice||{}).type || ""; }
+function hasICD(){ return /^(icd|crtd)$/.test(cardiacDeviceType()); }         // shockable device
+function hasLVAD(){ return cardiacDeviceType()==="lvad"; }
+function hasCardiacDevice(){ return !!cardiacDeviceType() || (state.flags||[]).includes("pacemaker_icd"); }
+/* Safe HR ceiling: keep ~20 bpm below the ICD's therapy (shock) threshold. */
+function deviceHRCeiling(){
+  const rate = vnum((state.cardiacDevice||{}).icdRate);
+  return (hasICD() && rate!=null && rate>=100) ? Math.max(90, Math.round(rate-20)) : null;
+}
+function cardiacDeviceLabel(){
+  const t=cardiacDeviceType();
+  return t==="icd"?"ICD (defibrillator)":t==="crtd"?"CRT-D (defibrillator)":t==="crtp"?"CRT pacemaker":t==="pacemaker"?"pacemaker":t==="lvad"?"LVAD (heart pump)":"cardiac device";
+}
+/* Engine flags so the exercise SELECTION also adjusts for the device. */
+function deviceFlags(){
+  const out=[];
+  if(hasICD()) out.push("cardiac_icd");
+  if(hasLVAD()) out.push("cardiac_lvad");
+  return out;
+}
 function someCardioPulm(){
   const f = state.program ? state.program.flags : gatherFlags();
   return f.some(x=>["cardiac","pulmonary","hypertension","pad","dvt","vital_hypoxia","vital_bp_high","vital_bp_crisis","vital_tachy"].includes(x));
@@ -598,6 +624,10 @@ function borgTarget(){
   const flags = state.program ? state.program.flags : gatherFlags();
   const cardioCap = flags.some(f=>["cardiac","pulmonary","hypertension","pad","dvt","vital_bp_high","vital_bp_crisis","vital_tachy","vital_hypoxia"].includes(f));
   const track = state.program ? state.program.track : (classify(state.weeks)||"acute");
+  // cardiac devices take precedence — go by RPE and cap the intensity
+  if(hasLVAD()) return {lo:9,hi:12,label:"very light–light · RPE 9–12 (an LVAD makes HR unreliable — go by RPE)"};
+  if(hasICD()) return {lo:11,hi:13,label:"light–moderate · RPE 11–13 (stay well below your ICD's shock threshold)"};
+  if(hasCardiacDevice()) return {lo:11,hi:13,label:"light–moderate · RPE 11–13 (respect your device's rate limit)"};
   if(cardioCap) return {lo:11,hi:13,label:"light–moderate · RPE 11–13 (stay able to talk)"};
   if(track==="acute") return {lo:9,hi:12,label:"very light–light · RPE 9–12"};
   return {lo:12,hi:15,label:"moderate–hard · RPE 12–15"};
@@ -1737,7 +1767,10 @@ function exertionLine(e){
   if(!e || !e.tags || !e.tags.includes("aerobic")) return "";
   const b = borgTarget(), z = hrZones(), beta = onBetaBlocker();
   let hr = "";
-  if(beta) hr = "HR unreliable on your beta-blocker — go by RPE";
+  if(hasLVAD()) hr = "HR is unreliable with your LVAD — go strictly by RPE";
+  else if(z && z.deviceCap) hr = `keep HR under ${z.deviceCap} bpm (below your ICD threshold) · ~${fmtRange(z.zones.moderate)}`;
+  else if(beta) hr = "HR unreliable on your beta-blocker — go by RPE";
+  else if(hasCardiacDevice() && z) hr = `stay in ~${fmtRange(z.zones.moderate)} bpm, below your device's limit`;
   else if(z) hr = `target HR ~${fmtRange(z.zones.moderate)} bpm`;
   return `<div class="hrtarget">🎯 <b>Cardio target:</b> ${hr?esc(hr)+" · ":""}RPE ${b.lo}–${b.hi}${someCardioPulm()?" · watch SpO₂ if you monitor it":""}</div>`;
 }
@@ -2398,10 +2431,20 @@ function vitalsCard(prog){
   const vf = vitalFlags();
   const warn = vf.length ? `<div class="banner clear" style="margin:0 0 12px"><b>⚠ Some readings need attention</b><ul class="notelist">${window.notesForFlags(vf).map(n=>`<li>${esc(n)}</li>`).join("")}</ul></div>` : "";
 
+  let deviceBanner = "";
+  if(hasCardiacDevice()){
+    const cap = deviceHRCeiling(), rate = vnum((state.cardiacDevice||{}).icdRate);
+    let msg;
+    if(hasLVAD()) msg = "Heart rate and blood pressure aren't reliable with a continuous-flow LVAD — judge effort by the <b>RPE / talk-test</b> below only. Avoid breath-holding, straining and contact, protect the driveline, and follow your VAD team's plan.";
+    else if(hasICD()) msg = `Keep your heart rate <b>well below the device's therapy threshold${rate?` (${rate} bpm)`:""}</b> — going above it can trigger a shock.${cap?` We've capped your target zones at <b>${cap} bpm</b>.`:" Add the threshold in the History step and we'll cap your zones; ask your cardiologist for the number."} Judge effort by RPE and stay light–moderate.`;
+    else msg = "Respect your device's <b>upper rate limit</b> — build intensity gradually and judge effort by the RPE / talk-test. Ask your cardiologist for your safe ceiling.";
+    deviceBanner = `<div class="banner clear" style="margin:0 0 12px"><b>💠 You have a ${esc(cardiacDeviceLabel())}.</b> ${msg}</div>`;
+  }
+
   return `<div class="card vitalcard">
     <h2>❤️ Heart rate, vitals &amp; exertion targets</h2>
     <p class="hint">Objective targets for how hard to work — personalized from your age and any vitals you entered. Educational only; your care team's limits always take precedence.</p>
-    ${warn}
+    ${warn}${deviceBanner}
     ${chips.length?`<div class="vitalchips">${chips.join("")}</div>`:""}
     ${hrBlock}
     <b class="safeh">Your recommended effort: ${esc(b.label)}</b>
@@ -2678,6 +2721,31 @@ function goStep(n){
   if(n===6) initLibrary();
 }
 
+/* ---------- cardiac device detail (shown when Pacemaker/ICD is ticked) ---------- */
+function cdHintText(){
+  const cd=state.cardiacDevice||{};
+  if(cd.type==="lvad") return "LVAD: heart rate is unreliable — your plan goes by RPE / talk-test and caps intensity, and removes high-impact and breath-holding work.";
+  if(/^(icd|crtd)$/.test(cd.type)){ const cap=deviceHRCeiling();
+    return cap ? `We'll keep your target heart rate under ~${cap} bpm — safely below your ICD's ${esc(String(cd.icdRate))} bpm threshold — and cap effort at RPE ≤13.`
+               : "Enter your ICD's therapy heart-rate threshold and we'll cap your target zones ~20 bpm below it. Ask your cardiologist for the number."; }
+  if(cd.type==="pacemaker"||cd.type==="crtp") return "We'll keep effort light–moderate (RPE ≤13) and respect your device's upper rate limit.";
+  return "Choose your device so we can set safe heart-rate and effort limits.";
+}
+function syncCardiacDevWrap(){
+  const wrap=$("#cardiacDevWrap"); if(!wrap) return;
+  wrap.classList.toggle("hide", !(state.flags||[]).includes("pacemaker_icd"));
+  const t=(state.cardiacDevice||{}).type;
+  const rw=$("#cd_rateWrap"); if(rw) rw.classList.toggle("hide", !/^(icd|crtd)$/.test(t));
+  const h=$("#cdHint"); if(h) h.textContent=cdHintText();
+}
+function initCardiacDevice(){
+  state.cardiacDevice = state.cardiacDevice || {type:"",icdRate:""};
+  const ts=$("#cd_type"), rt=$("#cd_rate");
+  if(ts){ ts.value=state.cardiacDevice.type||""; ts.onchange=()=>{ state.cardiacDevice.type=ts.value; save(); syncCardiacDevWrap(); }; }
+  if(rt){ rt.value=state.cardiacDevice.icdRate||""; rt.oninput=()=>{ state.cardiacDevice.icdRate=rt.value; save(); const h=$("#cdHint"); if(h) h.textContent=cdHintText(); }; }
+  syncCardiacDevWrap();
+}
+
 /* ---------- history UI ---------- */
 function initHistory(){
   const wrap=$("#historyChecks");
@@ -2695,7 +2763,9 @@ function initHistory(){
     d.querySelector(".box").textContent=active?"✓":"";
     const flag=d.dataset.flag;
     if(active) state.flags.push(flag); else state.flags=state.flags.filter(f=>f!==flag); save();
+    if(flag==="pacemaker_icd") syncCardiacDevWrap();
   });
+  initCardiacDevice();
   $("#q_age").value=state.age; $("#q_sex").value=state.sex; $("#q_meds").value=state.meds; $("#q_notes").value=state.notes;
   $("#parq_pain").checked=state.parq.pain; $("#parq_faint").checked=state.parq.faint; $("#parq_doc").checked=state.parq.doc;
   $("#q_age").oninput=e=>{state.age=e.target.value;save();updateVitalsReadout();};
@@ -4170,6 +4240,7 @@ function buildCoachSystem(){
   const enteredVitals = [v.restHR&&`resting HR ${v.restHR} bpm`, (v.sbp&&v.dbp)&&`BP ${v.sbp}/${v.dbp}`, v.spo2&&`SpO₂ ${v.spo2}%`, v.rr&&`RR ${v.rr}/min`, bmiCalc(v.height,v.weight)!=null&&`BMI ${bmiCalc(v.height,v.weight)}`].filter(Boolean).join(", ") || "none entered";
   const hz = hrZones();
   const hrLine = hz ? `max HR ≈ ${hz.hrmax} bpm (Tanaka), moderate zone ${fmtRange(hz.zones.moderate)} bpm; recommended effort ${borgTarget().label}${onBetaBlocker()?"; on a beta-blocker, so HR targets are unreliable — advise RPE/talk-test":""}` : `age not set — advise Borg RPE ${borgTarget().label}`;
+  const deviceLineHR = hasCardiacDevice() ? `${cardiacDeviceLabel()}${deviceHRCeiling()?` — keep HR under ~${deviceHRCeiling()} bpm (below ICD threshold ${vnum((state.cardiacDevice||{}).icdRate)} bpm)`:""}${hasLVAD()?" — HR unreliable, RPE only":""}; cap intensity, avoid maximal effort` : "none";
   const lifestyle = [state.smoking&&`smoking ${state.smoking}`, state.alcohol&&`alcohol ${state.alcohol}`, state.sleep&&`sleep ${state.sleep}`, state.stress&&`stress ${state.stress}`, state.falls&&`falls/yr ${state.falls}`, (state.aid&&state.aid!=="none")&&`walking aid ${state.aid}`].filter(Boolean).join(", ") || "not specified";
   const redflags = Object.entries(state.screen||{}).filter(([,val])=>val).map(([k])=>k).join(", ") || "none";
   const goals = [ (state.returnActivities||[]).length && `activities: ${state.returnActivities.join(", ")}`, (state.returnSports||[]).length && `sport: ${state.returnSports.join(", ")}` ].filter(Boolean).join("; ") || "none specified";
@@ -4185,6 +4256,7 @@ USER CONTEXT
 - Program: ${prog}
 - Vitals entered: ${enteredVitals}
 - Heart-rate & exertion: ${hrLine}
+- Cardiac device: ${deviceLineHR}
 - Lifestyle & function: ${lifestyle}
 - Red-flag screen positives: ${redflags}
 - Return-to goals: ${goals}
