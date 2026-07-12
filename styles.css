@@ -60,6 +60,17 @@ header.app{display:flex;align-items:center;gap:12px;
 /* cards & fields */
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin:14px 0;box-shadow:var(--shadow)}
 .card h2{margin:0 0 4px;font-size:19px}
+/* auto-collapsed cards (Safety notes, Heart-rate/vitals) */
+details.collapsecard>summary.collapsesum{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+details.collapsecard>summary.collapsesum::-webkit-details-marker{display:none}
+details.collapsecard>summary.collapsesum h2{margin:0;flex:1 1 auto}
+.collapsechev{color:var(--muted);font-size:15px;transition:transform .18s;flex:0 0 auto}
+details.collapsecard[open]>summary .collapsechev{transform:rotate(180deg)}
+.collapsehint{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;opacity:.72}
+details.collapsecard[open]>summary .collapsehint{display:none}
+.collapsebadge{font-size:11px;font-weight:800;color:var(--danger);background:rgba(255,107,107,.14);border-radius:999px;padding:2px 9px;white-space:nowrap}
+.collapsebody{margin-top:12px}
+@media print{ details.collapsecard>.collapsebody{display:block!important} .collapsechev,.collapsehint{display:none!important} }
 .hint{color:var(--muted);font-size:13.5px;margin:0 0 16px}
 .field{display:block;margin-bottom:14px}
 .field .lab{display:block;font-weight:600;font-size:13.5px;margin-bottom:6px}

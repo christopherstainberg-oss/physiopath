@@ -596,7 +596,7 @@ const SPECIAL_PRECAUTIONS = {
     key:"abdominal", icon:"🩹", label:"Abdominal precautions",
     sub:"after abdominal / hernia / C-section surgery",
     weeks:6, flag:"abdominal_precautions",
-    what:"After surgery on the belly — for example a bowel operation, hernia repair, hysterectomy or C-section — the abdominal wall and incision need time (usually about 4–6 weeks) to heal and regain strength. Abdominal precautions limit lifting, straining and direct “ab” work so the healing tissue and incision aren't stretched or pulled apart, which could cause a hernia or a wound problem.",
+    what:"After surgery inside the belly — for example a bowel operation, hernia repair, appendix removal, hysterectomy or a C-section — the surgeon cuts through the layers of the abdominal wall (skin, muscle and the lining underneath), which are then stitched back together. Those layers and the incision need about 4–6 weeks to heal and regain their strength. Abdominal precautions protect that healing by limiting lifting, bearing-down/straining and direct “ab” exercises — each of those sharply raises the pressure inside your belly and tugs on the incision, which can tear the repair, pull the wound open, or push tissue out through a weak spot to form a hernia.",
     rules:[
       "Don't lift, push or pull more than ~5–10 lb (or the limit your surgeon set) until you're cleared.",
       "Never hold your breath and bear down — breathe out during any effort (and don't strain on the toilet).",
@@ -1854,27 +1854,25 @@ function togglePhase(head, key){
   const ph = head.parentElement; ph.classList.toggle("open");
   if(ph.classList.contains("open")) openPhases.add(key); else openPhases.delete(key);
 }
+/* Collapsible card (auto-collapsed by default). `openCards` remembers, within
+   the session, which ones the user expanded so re-renders don't re-close them. */
+const openCards = new Set();
+function collapsibleCard(id, cls, titleHTML, bodyHTML, badgeHTML){
+  const open = openCards.has(id) ? " open" : "";
+  return `<details class="card ${cls} collapsecard" data-card="${esc(id)}"${open}>
+    <summary class="collapsesum"><h2>${titleHTML}</h2>${badgeHTML||""}<span class="collapsehint">tap to expand</span><span class="collapsechev" aria-hidden="true">▾</span></summary>
+    <div class="collapsebody">${bodyHTML}</div>
+  </details>`;
+}
 function wireProgram(){
+  // auto-collapsed cards (Safety notes, Vitals) — remember expand state across re-renders
+  $$("#programOut details.collapsecard").forEach(d=>d.addEventListener("toggle",()=>{
+    if(d.open) openCards.add(d.dataset.card); else openCards.delete(d.dataset.card);
+  }));
   $$("#programOut .rotatebtn").forEach(b=>b.onclick=()=>rotateExercise(+b.dataset.ci, +b.dataset.pi, +b.dataset.ei));
   $$("#programOut .swapbtn").forEach(b=>b.onclick=()=>openSwap(b));
   $$("#programOut .rerollbtn").forEach(b=>b.onclick=()=>rerollPhase(+b.dataset.ci, +b.dataset.pi));
   $$("#programOut .resetbtn").forEach(b=>b.onclick=()=>resetPhase(+b.dataset.ci, +b.dataset.pi));
-  const addBtn = $("#programOut .addprecbtn");
-  if(addBtn) addBtn.onclick = ()=>{ const f=$("#programOut .addprecform"); f.classList.toggle("hide"); if(!f.classList.contains("hide")) f.querySelector(".addprec-t").focus(); };
-  const saveBtn = $("#programOut .addprec-save");
-  if(saveBtn) saveBtn.onclick = addCustomPrecaution;
-  $$("#programOut .precdel").forEach(b=>b.onclick=()=> b.dataset.devidx!=null ? removeDevice(+b.dataset.devidx) : removeCustomPrecaution(+b.dataset.idx));
-  // weight-bearing status + amount
-  const wbSel=$("#programOut #wbSelect"); if(wbSel) wbSel.onchange=setWeightBearingStatus;
-  const wbPct=$("#programOut #wbPct"); if(wbPct) wbPct.oninput=()=>setWbAmount("pct");
-  const wbLbs=$("#programOut #wbLbs"); if(wbLbs) wbLbs.oninput=()=>setWbAmount("lbs");
-  const wbSide=$("#programOut #wbSide"); if(wbSide) wbSide.onchange=setWbMeta;
-  const wbLimb=$("#programOut #wbLimb"); if(wbLimb) wbLimb.onchange=setWbMeta;
-  // devices / braces / splints
-  const devSel=$("#programOut #devSelect"); if(devSel) devSel.onchange=()=>{ const c=$("#programOut #devCustom"); if(c){ c.classList.toggle("hide", devSel.value!=="__custom"); if(devSel.value==="__custom") c.focus(); } };
-  const devAdd=$("#programOut .devadd"); if(devAdd) devAdd.onclick=addDevice;
-  // special surgical-site precautions (sternal / abdominal)
-  $$("#programOut .spcheck").forEach(c=>c.onchange=()=>toggleSpecialPrecaution(c.dataset.sp, c.checked));
   const mf = $("#programOut #medFilterToggle");
   if(mf) mf.onchange = ()=>{
     state.medFilter = mf.checked; save();
@@ -2066,71 +2064,93 @@ function surgicalReminderCard(){
     ${list}${timeline}${addCtrl}${disclaimer}
   </div>`;
 }
+/* The Precautions & reminders card now lives in the Details step (#precautionsOut).
+   Render + wire it there; changes regenerate the (hidden) plan so step 3 is ready. */
+function renderPrecautions(){
+  const host = $("#precautionsOut"); if(!host) return;
+  host.innerHTML = surgicalReminderCard();
+  wirePrecautions();
+}
+function wirePrecautions(){
+  const addBtn = $("#precautionsOut .addprecbtn");
+  if(addBtn) addBtn.onclick = ()=>{ const f=$("#precautionsOut .addprecform"); f.classList.toggle("hide"); if(!f.classList.contains("hide")) f.querySelector(".addprec-t").focus(); };
+  const saveBtn = $("#precautionsOut .addprec-save"); if(saveBtn) saveBtn.onclick = addCustomPrecaution;
+  $$("#precautionsOut .precdel").forEach(b=>b.onclick=()=> b.dataset.devidx!=null ? removeDevice(+b.dataset.devidx) : removeCustomPrecaution(+b.dataset.idx));
+  const wbSel=$("#precautionsOut #wbSelect"); if(wbSel) wbSel.onchange=setWeightBearingStatus;
+  const wbPct=$("#precautionsOut #wbPct"); if(wbPct) wbPct.oninput=()=>setWbAmount("pct");
+  const wbLbs=$("#precautionsOut #wbLbs"); if(wbLbs) wbLbs.oninput=()=>setWbAmount("lbs");
+  const wbSide=$("#precautionsOut #wbSide"); if(wbSide) wbSide.onchange=setWbMeta;
+  const wbLimb=$("#precautionsOut #wbLimb"); if(wbLimb) wbLimb.onchange=setWbMeta;
+  const devSel=$("#precautionsOut #devSelect"); if(devSel) devSel.onchange=()=>{ const c=$("#precautionsOut #devCustom"); if(c){ c.classList.toggle("hide", devSel.value!=="__custom"); if(devSel.value==="__custom") c.focus(); } };
+  const devAdd=$("#precautionsOut .devadd"); if(devAdd) devAdd.onclick=addDevice;
+  $$("#precautionsOut .spcheck").forEach(c=>c.onchange=()=>toggleSpecialPrecaution(c.dataset.sp, c.checked));
+}
+/* Regenerate the (hidden) plan after a plan-affecting precaution change, then
+   re-render the card. Step 3 re-renders from state.program when navigated to. */
+function afterPrecautionChange(regen){
+  if(regen && state.program){ state.program = generateProgram(); save(); if(state.step===3) renderProgram(state.program); }
+  renderPrecautions();
+}
 function setWeightBearingStatus(){
-  const sel = $("#programOut #wbSelect"); if(!sel) return;
+  const sel = $("#precautionsOut #wbSelect"); if(!sel) return;
   const status = sel.value;
   const wb = state.weightBearing = state.weightBearing || {};
   wb.status = status;
   if(status!=="pwb"){ wb.pct=""; wb.lbs=""; }
   save();
-  if(state.program){ state.program = generateProgram(); save(); }   // WB order reshapes the plan
-  renderProgram(state.program);
+  afterPrecautionChange(true);   // WB order reshapes the plan
   toast(status ? `Weight-bearing set to ${WB_STATUS[status].abbr} — your plan was updated to match.` : "Weight-bearing status cleared.");
 }
 function setWbAmount(which){
   const wb = state.weightBearing = state.weightBearing || {};
-  const pctEl=$("#programOut #wbPct"), lbsEl=$("#programOut #wbLbs"), bw=bodyWeightLbs();
+  const pctEl=$("#precautionsOut #wbPct"), lbsEl=$("#precautionsOut #wbLbs"), bw=bodyWeightLbs();
   if(which==="pct"){ wb.pct = pctEl.value; if(bw && pctEl.value!=="") { wb.lbs = Math.round(bw*(+pctEl.value)/100); if(lbsEl) lbsEl.value = wb.lbs; } }
   else { wb.lbs = lbsEl.value; if(bw && lbsEl.value!=="") { wb.pct = Math.round((+lbsEl.value)/bw*100); if(pctEl) pctEl.value = wb.pct; } }
-  save();
-  const row = $("#programOut .wbrow .prec-t"); if(row) row.innerHTML = `🦵 <b>Weight-bearing:</b> ${esc(wbSummary())}`;
+  save();   // amount doesn't change which exercises are removed — update the row text in place (keeps input focus)
+  const row = $("#precautionsOut .wbrow .prec-t"); if(row) row.innerHTML = `🦵 <b>Weight-bearing:</b> ${esc(wbSummary())}`;
 }
 /* Side / extremity change: for the upper limb, exercise restrictions differ, so regenerate. */
 function setWbMeta(){
   const wb = state.weightBearing = state.weightBearing || {};
-  const s=$("#programOut #wbSide"), l=$("#programOut #wbLimb");
+  const s=$("#precautionsOut #wbSide"), l=$("#precautionsOut #wbLimb");
   if(s) wb.side = s.value; if(l) wb.limb = l.value;
   save();
-  if(state.program){ state.program = generateProgram(); save(); }
-  renderProgram(state.program);
+  afterPrecautionChange(true);
 }
 function toggleSpecialPrecaution(key, on){
   const p = SPECIAL_PRECAUTIONS[key]; if(!p) return;
   const set = new Set(state.specialPrecautions||[]);
   on ? set.add(key) : set.delete(key);
   state.specialPrecautions = Array.from(set); save();
-  if(state.program){ state.program = generateProgram(); save(); }   // precaution reshapes the plan
-  renderProgram(state.program);
+  afterPrecautionChange(true);   // precaution reshapes the plan
   toast(on ? `${p.label} on — your plan was updated to match.` : `${p.label} cleared.`);
 }
 function addDevice(){
-  const sel=$("#programOut #devSelect"); if(!sel) return;
+  const sel=$("#precautionsOut #devSelect"); if(!sel) return;
   let name = sel.value, custom = (name==="__custom");
-  if(custom){ const c=$("#programOut #devCustom"); name=(c?c.value:"").trim(); if(!name){ toast("Type a device name first."); return; } }
+  if(custom){ const c=$("#precautionsOut #devCustom"); name=(c?c.value:"").trim(); if(!name){ toast("Type a device name first."); return; } }
   if(!name){ toast("Choose a device to add."); return; }
   (state.devices = state.devices||[]).push({ name, note: custom ? "Wear/use as prescribed by your clinician." : deviceNoteFor(name) });
   save();
-  if(state.program){ state.program = generateProgram(); save(); }   // devices reshape the plan
-  renderProgram(state.program);
+  afterPrecautionChange(true);   // devices reshape the plan
   toast(DEVICE_RESTRICT[name] ? "Added — your plan was updated to match." : "Added to your precautions.");
 }
 function removeDevice(idx){
   if(!state.devices) return;
   state.devices.splice(idx,1); save();
-  if(state.program){ state.program = generateProgram(); save(); }
-  renderProgram(state.program); toast("Removed — plan updated.");
+  afterPrecautionChange(true); toast("Removed — plan updated.");
 }
 function addCustomPrecaution(){
-  const t = $("#programOut .addprec-t").value.trim();
+  const t = $("#precautionsOut .addprec-t").value.trim();
   if(!t){ toast("Type a reminder first."); return; }
-  const wv = $("#programOut .addprec-w").value;
+  const wv = $("#precautionsOut .addprec-w").value;
   const w = wv==="" ? null : Math.max(0, parseInt(wv));
   (state.customPrecautions = state.customPrecautions || []).push({ t, w: isNaN(w)?null:w });
-  save(); renderProgram(state.program); toast("Reminder added.");
+  save(); afterPrecautionChange(false); toast("Reminder added.");   // custom reminders don't reshape the plan
 }
 function removeCustomPrecaution(idx){
   if(!state.customPrecautions) return;
-  state.customPrecautions.splice(idx,1); save(); renderProgram(state.program); toast("Reminder removed.");
+  state.customPrecautions.splice(idx,1); save(); afterPrecautionChange(false); toast("Reminder removed.");
 }
 
 /* =====================================================================
@@ -2256,9 +2276,7 @@ function removeClinProtocol(idx){
 
 /* Consolidated safety notes card (universal guidance; prints with the program). */
 function safetyNotesCard(prog){
-  return `<div class="card safetycard">
-    <h2>🛟 Safety notes</h2>
-    <p class="hint">Read this before you start. PhysioPath is educational and does not replace your doctor or physiotherapist — any specific instructions from your care team always take precedence.</p>
+  const body = `<p class="hint">Read this before you start. PhysioPath is educational and does not replace your doctor or physiotherapist — any specific instructions from your care team always take precedence.</p>
     <div class="banner clear" style="margin:0 0 12px"><b>⛔ Stop and rest right away if you feel:</b> sharp, spreading, or rapidly worsening pain · chest pain or pressure · severe or unusual breathlessness · dizziness, light-headedness, or faintness · palpitations · or sudden weakness, numbness, or trouble speaking.</div>
     <b class="safeh">How much pain is okay — the traffic-light rule</b>
     <ul class="safelist">
@@ -2275,8 +2293,9 @@ function safetyNotesCard(prog){
       <li>Stay hydrated, and stop if you feel unwell, faint, or overheated.</li>
     </ul>
     <div class="redflags" style="margin-top:12px"><b>⚠ Seek urgent care</b> for: chest pain, severe breathlessness, fainting, sudden weakness/numbness or trouble speaking, loss of bladder or bowel control, a hot swollen joint with fever, or calf pain/swelling with breathlessness.</div>
-    ${prog && prog.clearance ? `<p class="hint" style="margin-top:10px"><b>Because of your history, get medical clearance before starting</b> — ideally with supervised rehab. See your personalised precautions below.</p>` : ""}
-  </div>`;
+    ${prog && prog.clearance ? `<p class="hint" style="margin-top:10px"><b>Because of your history, get medical clearance before starting</b> — ideally with supervised rehab. See your personalised precautions in the Details step.</p>` : ""}`;
+  const badge = prog && prog.clearance ? `<span class="collapsebadge">⚠ clearance</span>` : "";
+  return collapsibleCard("safety", "safetycard", "🛟 Safety notes", body, badge);
 }
 
 /* =====================================================================
@@ -2521,16 +2540,15 @@ function vitalsCard(prog){
     deviceBanner = `<div class="banner clear" style="margin:0 0 12px"><b>💠 You have a ${esc(cardiacDeviceLabel())}.</b> ${msg}</div>`;
   }
 
-  return `<div class="card vitalcard">
-    <h2>❤️ Heart rate, vitals &amp; exertion targets</h2>
-    <p class="hint">Objective targets for how hard to work — personalized from your age and any vitals you entered. Educational only; your care team's limits always take precedence.</p>
+  const body = `<p class="hint">Objective targets for how hard to work — personalized from your age and any vitals you entered. Educational only; your care team's limits always take precedence.</p>
     ${warn}${deviceBanner}
     ${chips.length?`<div class="vitalchips">${chips.join("")}</div>`:""}
     ${hrBlock}
     <b class="safeh">Your recommended effort: ${esc(b.label)}</b>
     ${borgScaleHTML(b)}
-    ${monitor}
-  </div>`;
+    ${monitor}`;
+  const badge = (vf.length || hasCardiacDevice()) ? `<span class="collapsebadge">⚠ alerts</span>` : "";
+  return collapsibleCard("vitals", "vitalcard", "❤️ Heart rate, vitals &amp; exertion targets", body, badge);
 }
 
 /* Condition- & history-specific "other risks to be aware of" (complements the generic safety notes). */
@@ -2643,7 +2661,6 @@ function renderProgram(prog){
   html += safetyNotesCard(prog);
   html += riskAwarenessCard(prog);
   html += vitalsCard(prog);
-  html += surgicalReminderCard();
   html += medicationCard(medHiddenTotal);
 
   prog.items.forEach((item, ci)=>{
@@ -2796,6 +2813,8 @@ function goStep(n){
   const act=document.querySelector(".step.active");        // keep the active step visible in the scrollable nav
   if(act&&act.scrollIntoView) try{ act.scrollIntoView({inline:"center",block:"nearest",behavior:"smooth"}); }catch(e){}
   window.scrollTo({top:0,behavior:"smooth"});
+  if(n===2) renderPrecautions();                              // Precautions card lives in Details — keep it current
+  if(n===3 && state.program) renderProgram(state.program);    // reflect precaution/detail changes made in step 2
   if(n===4){ renderProgress(); renderHealth(); }
   if(n===5) initCoach();
   if(n===6) initLibrary();
@@ -3015,6 +3034,7 @@ function initDetails(){
     { onChange:()=>{ if(state.program && state.step===3) renderProgram(state.program); } });
   setupAutocomplete("sportSearch","sportResults","sportChips", window.SPORTS, "returnSports",
     { onChange:()=>{ if(state.program){ state.program=generateProgram(); save(); if(state.step===3) renderProgram(state.program); } } });
+  renderPrecautions();   // Precautions & reminders card (weight-bearing, braces, sternal/abdominal, custom)
 }
 /* ---- reusable auto-populate (typeahead + multi-add chips) ---- */
 function acFilter(data, q, limit){

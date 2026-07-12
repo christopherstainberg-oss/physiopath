@@ -124,6 +124,10 @@ const BASES = [
   {b:"jogging / run progression", pat:"cardio", reg:["Cardio","Knee","Ankle"], tags:[T.aerobic,T.impact,T.highInt,T.wb], eq:["bw"], mods:["walk-run intervals","easy continuous","tempo","strides"]},
   {b:"swimming / aquatic", pat:"cardio", reg:["Cardio","Full body"], tags:[T.aerobic], eq:["bw"], mods:["freestyle","aqua-jogging","kickboard","aqua-therapy drills"]},
   {b:"breathing exercise", pat:"breathing", reg:["Breathing","Core"], tags:[], eq:["bw"], mods:["diaphragmatic","pursed-lip","segmental (rib)","paced","incentive-spirometry","box-breathing"]},
+  // ---- Circulation / early-mobility (safe non-weight-bearing; great after surgery, bed rest or when immobilized) ----
+  {b:"", pat:"pump", reg:["Ankle","Calf"], tags:[], eq:["bw"],
+   cue:"Point your toes away, then pull them back up toward you — pump slowly and fully to keep blood moving, reduce swelling and lower clot risk. Safe to do lying or seated, even when non-weight-bearing.",
+   mods:["ankle pumps","seated ankle pumps","ankle pumps with legs elevated","point-and-flex ankle pumps","ankle circles","ankle alphabet","long-sitting ankle pumps","towel-assisted ankle pumps","hourly ankle pumps (bed or desk)","toe-and-heel rock"]},
 
   // ---- Pediatric / developmental (0–18 yrs; play-based, low-load, parent/therapist supervised) ----
   {b:"(infant)", pat:"general", reg:["Full body"], tags:["pediatric"], eq:["bw"], cue:"Parent-led play — gentle, on the floor, and always supervised.",
@@ -181,6 +185,7 @@ function deriveTags(name, base, extra){
 }
 function difficulty(name, base){
   const l = name.toLowerCase();
+  if(base.pat==="pump") return 1;   // ankle pumps / circulation drills are beginner-level
   if(/pro-agility|5-10-5|t-drill|cutting|zig-zag|reactive|mirror drill|bound-and-stick|cut-and-stick|depth-drop|shuttle run/.test(l)) return 4;
   if(/agility|ladder|carioca|shuffle|dot drill|line hops|backpedal|box drill|figure-8|a-skip|deceleration|drop-and-stick|hop-and-stick|hop-to-balance/.test(l)) return 3;
   if(/plyo|jump|hop|bound|pogo|depth|sprint|explosive|nordic|pistol|single-leg romanian|clap|advanced/.test(l)) return 4;
@@ -193,6 +198,7 @@ const DOSE = {
   balance:["3×30s","3×45s","3×30s each"], plyo:["3×6–10","4×5","3×8 each"],
   strength:["3×8–12","3×10","4×8","3×12"], carry:["3×20–40 m","4×30 s","3×2 lengths"],
   cardio:["15–25 min","10–20 min (intervals)","20–30 min"], vestibular:["3×1 min","2–3× day, 1 min","3×30–60s"],
+  pump:["3×20 slow","2×20 each","hourly ×15–20","10–15 each, several × day"],
   breathing:["3×1 min","5×6 breaths","2–3 min"], anti:["3×10 each","3×8 slow","3×12"],
   push:["3×8–12","3×10","3×12"], pull:["3×10–15","3×12","3×10 each"], hinge:["3×8–10","3×10","4×8"],
   squat:["3×8–12","3×10","4×8"], lunge:["3×8–10 each","3×10 each"], calf:["3×12–15","4×12","3×15"],
@@ -207,7 +213,7 @@ const CUE = {
   mobility:"Slow and pain-free through range.", balance:"Steady near support; progress difficulty gradually.",
   plyo:"Soft, quiet landings; quality over quantity.", carry:"Tall posture, braced, even steps.",
   cardio:"Conversational pace unless intervals prescribed.", vestibular:"Provoke mild symptoms, then let them settle.",
-  breathing:"Slow, relaxed; never hold your breath.", "anti-ext":"Keep the low back flat; move the limbs, not the spine.",
+  breathing:"Slow, relaxed; never hold your breath.", pump:"Slow, full point-and-flex; keep it easy and pain-free.", "anti-ext":"Keep the low back flat; move the limbs, not the spine.",
   "anti-rot":"Resist the twist; keep hips and shoulders square.", extension:"Small controlled range; avoid pinching.",
   flexion:"Curl through the upper spine; avoid straining the neck.", gait:"Even, deliberate steps; look ahead.",
   rotate:"Rotate through the trunk, control the return.",
