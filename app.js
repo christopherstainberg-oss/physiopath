@@ -2987,7 +2987,41 @@ const KB = [
       const hz=hrZones(), b=borgTarget();
       if(hz) return `Your estimated **maximum heart rate is about ${hz.hrmax} bpm** (Tanaka: 208 − 0.7 × age). A good **moderate** zone is **${fmtRange(hz.zones.moderate)} bpm**${hz.rest?" (Karvonen, from your resting HR)":""}; **vigorous** (only as cleared) is **${fmtRange(hz.zones.vigorous)} bpm**. ${onBetaBlocker()?"Because you take a **beta-blocker**, your heart rate won't rise normally — use **Borg RPE** instead. ":""}Prefer effort-based? Aim for **${b.label}**. Simplest of all is the **talk-test**: you should be able to talk but not sing.`;
       return `Add your **age** (and ideally resting heart rate) in the History step and I'll calculate your **maximum heart rate** (Tanaka formula) and target zones. Meanwhile, gauge effort with **Borg RPE**: aim for **${b.label}** — you should be able to talk but not sing.`;
-    } }
+    } },
+  { kw:["doms","sore muscles","muscle soreness","sore after","day after","aching muscles","muscle ache","stiff after exercise"], a:()=>"Delayed-onset muscle soreness (**DOMS**) — achy, tender muscles 1–3 days after new or harder exercise — is normal and **not damage**. It settles on its own; **gentle movement, light activity, hydration and sleep** help more than total rest. It should be dull and roughly symmetrical, easing by ~72h. Sharp, one-sided, or joint (rather than muscle) pain is different — ease off. Soreness fades as you adapt." },
+  { kw:["foam roll","foam rolling","massage","trigger point","roller","self massage","rolling"], a:()=>"Foam rolling and massage **temporarily ease tightness and improve comfort and range** — handy as a warm-up. They don't 'break up' scar tissue or fix the underlying cause, so pair them with strengthening. Roll slowly, breathe, and avoid rolling directly over bone, joints, or a fresh injury." },
+  { kw:["isometric","static hold","isometrics for pain","hold the muscle","quad set","wall sit pain"], a:()=>"**Isometrics** — holding a muscle tight without moving the joint (quad sets, wall pushes, planks) — build strength and often **reduce pain**, so they're ideal when movement hurts or very early after injury. Try ~5 holds of 30–45s at a firm but comfortable effort, breathing normally. Your early phases lean on these." },
+  { kw:["tendon","tendinopathy","tendinitis","tendinosis","achilles","patellar tendon","tennis elbow","golfer","rotator cuff load"], a:()=>"Tendons respond to **gradual, progressive load** — not rest or aggressive stretching. Start with isometrics for pain relief, build to slow heavy strength, then spring/energy-storage work. Expect a **slow trend over weeks–months**; pain that stays stable during and settles by the next morning is acceptable. Load spikes are the usual trigger — increase gently (~10%/week)." },
+  { kw:["arthritis","osteoarthritis","joint wear","bone on bone","degenerative","joint pain older","oa"], a:()=>`For osteoarthritis, **movement is medicine** — regular strengthening and low-impact aerobic exercise reduce pain and stiffness better than rest, and a 'bone-on-bone' scan doesn't dictate what you can do. Build the muscles around the joint, keep active within comfort, and manage weight (every pound off is several off the knee). ${state.painMove>=6?"Start gentle and let some ache be okay. ":""}Some discomfort with activity is normal.` },
+  { kw:["osteoporosis","osteopenia","bone density","bone health","brittle bones","dexa","fragile bones"], a:()=>"Bones strengthen to **load**: progressive resistance training and, if safe, some impact/weight-bearing work — plus **balance training to prevent falls**. With osteoporosis, avoid heavy end-range spinal bending/twisting and high-impact until cleared. Adequate calcium, vitamin D and protein, and not smoking, all support bone." },
+  { kw:["diabetes","blood sugar","glucose","diabetic","insulin","hypo","hyperglyc"], a:()=>"Exercise **lowers blood glucose and improves insulin sensitivity** — both aerobic and resistance training help. Check glucose around sessions, carry fast-acting carbs for a low, stay hydrated, and look after your feet (good shoes, daily checks). Skip vigorous exercise if glucose is very high with ketones. I can't manage your medication — coordinate with your team." },
+  { kw:["lose weight","weight loss","overweight","body fat","losing weight","slim down"], a:()=>`Losing excess weight meaningfully **reduces joint load and pain** — several times your body-weight change goes through the knee with each step. The best mix is **diet + activity + strength** to keep muscle while losing fat. ${bmiCalc((state.vitals||{}).height,(state.vitals||{}).weight)!=null?`Your BMI is about ${bmiCalc(state.vitals.height,state.vitals.weight)}. `:""}Small, steady changes beat crash diets; a dietitian can tailor it.` },
+  { kw:["balance","falling","fall","unsteady","prevent falls","wobbly","steadiness"], a:()=>"To improve balance and cut fall risk: practise **standing balance near a sturdy support** (single-leg stands, tandem stance, weight shifts), strengthen your legs, and only progress to eyes-closed or softer surfaces once steady. Keep floors clear, good lighting, and supportive footwear. Sudden or severe dizziness — especially with headache, or visual/speech changes — needs review, not exercise." },
+  { kw:["pacing","chronic pain","fibromyalgia","fatigue","long covid","boom and bust","crash","post-exertional","cfs","me/cfs"], a:()=>"With persistent pain or fatigue, **pace** rather than push to your limit: short bouts within a comfortable ceiling, rest **before** you're wiped out, and increase gradually. Consistency beats big days followed by crashes. Some flare is safe and expected — gentle graded activity is the best-evidenced approach. A slow, kind trend wins." },
+  { kw:["afraid to move","scared to move","fear of movement","cause damage","kinesiophobia","nervous to exercise","worried i'll hurt"], a:()=>"It's normal to fear that hurting means harming — but with most conditions, and especially persistent pain, **pain doesn't equal damage**. Gentle, graded exposure to the movements you're avoiding — starting easy and building confidence — is exactly how you get them back. Your program starts well within your capacity for this reason. Unsure a move is safe? Ask, or check with a clinician." },
+  { kw:["hrv","heart rate variability","recovery score","readiness","how recovered","rmssd"], a:()=>"Heart-rate variability (**HRV**) reflects nervous-system recovery — generally **your-normal-or-above = well recovered**; a notable dip can mean fatigue, stress, poor sleep or coming illness. Track **your own trend**, not others'. Low today? Favour lighter/mobility work. You can read live HRV from a Bluetooth monitor in the **Health** tab." },
+  { kw:["spo2","oxygen saturation","oxygen level","desaturate","low oxygen","pulse ox","sats"], a:()=>`Resting **SpO₂ is normally ~95–100%**. A small dip during hard effort can be normal, but dropping **below ~90%**, or feeling very breathless, dizzy or blue-lipped, means stop and rest — and get reviewed if it persists (especially with a heart/lung condition). ${(state.vitals||{}).spo2?`You logged SpO₂ ${state.vitals.spo2}%. `:""}You can track SpO₂ from a Bluetooth pulse oximeter in the **Health** tab.` },
+  { kw:["steps","how many steps","walking goal","10000 steps","daily steps","walk more","step count"], a:()=>"Walking is superb all-round recovery — it pumps swelling away, keeps joints moving and builds aerobic base. There's nothing magic about 10,000: **beating your current average is the win**, with benefits climbing from ~4–8k. Build up ~10%/week, split into short walks if needed, and log steps in the **Health** tab to watch the trend." },
+  { kw:["pool","water exercise","aquatic","swimming rehab","hydrotherapy","water therapy","aqua"], a:()=>"Water is excellent early rehab: **buoyancy offloads sore or healing joints** (chest-deep water takes ~50–70% of your leg weight off) while giving gentle all-round resistance and warmth. There's a **Pool / aquatic** set in the exercise library. Stay where you can stand if you're not a confident swimmer, and never swim alone." },
+  { kw:["no equipment","at home","home workout","no gym","without weights","household","home exercise"], a:()=>"You don't need a gym — **bodyweight, household objects and bands** cover most rehab: soup cans/water bottles for light weight, a loaded backpack for more, a towel for resistance, a sturdy chair for support. Flip on **Home mode** in the Program tab and PhysioPath swaps your exercises to everyday-object versions with how-to notes." },
+  { kw:["how many reps","sets and reps","how many sets","rep range","how many exercises","reps"], a:()=>"General guide: **strength** ~2–4 sets of 6–12 reps at a challenging-but-controlled effort (last 1–2 reps hard); **endurance/early rehab** 2–3 sets of 12–20; **isometric holds** ~5 × 30–45s. Leave 1–2 reps 'in the tank' early. Your program lists sets×reps per exercise — full range and quality beat chasing numbers." },
+  { kw:["progressive overload","how to progress","progress an exercise","how do i progress","progress my","make it harder","progression","increase weight","level up exercise"], a:()=>"You get stronger by **gradually asking a bit more** — add reps, then sets, then load/difficulty, about **~10% a week**. When an exercise feels easy (you could do several more good reps), progress it. Your later phases do this automatically; use **⟳ Rotate / ⇄ Swap** on any exercise to step it up or down, or **＋ Add exercise** to a phase." },
+  { kw:["eccentric","slow lowering","negatives","lengthening","nordic","3 second lower"], a:()=>"**Eccentric** work — emphasising the slow lowering/lengthening phase (e.g. a 3-second lower) — is especially good for **tendon and muscle strength** and is a staple of tendinopathy rehab. Control the lowering, don't rush, and expect some manageable soreness early on." },
+  { kw:["weight bearing","weightbearing","wbat","nwb","pwb","toe touch","weight on leg","put weight on my"], a:()=>{ const w=wbSummary(); return (w?`Your set order is **${w}**. `:"")+"Weight-bearing orders say how much load to put through a healing leg: **NWB** none · **TTWB** a light touch for balance only · **PWB** a set share (often 25–50%) · **WBAT** as much as stays comfortable · **FWB** full. Follow your surgeon's order exactly and practise the amount on a bathroom scale. Setting it in the Program tab reshapes your exercises to match."; } },
+  { kw:["blood thinner","anticoagulant","warfarin","eliquis","apixaban","rivaroxaban","bruise easily","on thinners"], a:()=>"On blood thinners, exercise is encouraged but **avoid contact and high-impact activities** (bruising/bleeding risk) and take extra care to prevent falls. Report a newly swollen or painful joint/muscle, or any unusual bleeding. I can't advise on your medication — check with your prescriber before contact sport." },
+  { kw:["cancer","chemo","radiation","oncology","tumor","during treatment","chemotherapy"], a:()=>"Exercise is **safe and beneficial during and after cancer treatment** — it reduces fatigue and helps strength, mood and function — but **pace around fatigue** and keep intensity moderate. Get your oncology team's clearance; if there's any bone involvement, avoid high-impact and heavy loading of that area. Watch for anaemia-related breathlessness." },
+  { kw:["pregnant","pregnancy","postpartum","expecting","after birth","pelvic floor","post-natal"], a:()=>"In an uncomplicated pregnancy, staying active is recommended: **after the first trimester avoid lying flat on your back** and face-down positions, skip breath-holding and contact/fall-risk activities, and stay cool and hydrated. Include pelvic-floor work. Stop and contact your provider for bleeding, dizziness, contractions or fluid leakage. Any complications → get individual advice." },
+  { kw:["elderly","older adult","senior","too old","age to exercise","my age","70s","80s"], a:()=>"It's never too late — older adults gain strength, balance and independence from training just like younger ones, and **strength + balance work is the best fall-prevention there is**. Start gentle, progress steadily, work near support if unsteady, and prioritise protein and sleep for muscle. Consistency matters more than intensity." },
+  { kw:["cramp","charley horse","spasm","cramping","muscle cramp"], a:()=>"Cramps often come from **fatigue, dehydration or electrolyte loss** (or simply new exercise). During one, gently stretch and massage the muscle; to prevent them, warm up, build load gradually, stay hydrated and don't over-fatigue. Frequent night cramps, or cramps with numbness/weakness, are worth mentioning to your doctor." },
+  { kw:["hydration","water intake","dehydrated","drink water","how much water","fluids"], a:()=>"Drink to thirst and keep urine pale — roughly **1.5–2 L a day**, more when hot or exercising hard. Good hydration supports performance, cuts cramp risk and aids recovery. Plain water is fine for typical rehab; you rarely need sports drinks." },
+  { kw:["alcohol","drinking","beer","wine","booze"], a:()=>"Alcohol **impairs recovery** — it worsens sleep, blunts muscle repair, raises inflammation and injury risk, and dehydrates you. Cutting back, especially around harder training and after injury or surgery, meaningfully helps healing." },
+  { kw:["stress","anxiety","mental health","mood","depression","overwhelmed","burnout"], a:()=>"Stress genuinely **amplifies pain and slows healing** by ramping up your nervous system. Regular movement, sleep, breathing/relaxation and social connection all turn the dial down — exercise itself is one of the best mood and pain regulators. If low mood or anxiety is persistent, please reach out to a GP or mental-health professional." },
+  { kw:["plateau","stuck","not improving","no progress","consistency","habit","stalled","stopped improving"], a:()=>"Plateaus are normal — the fix is usually to **progress the challenge** (more reps/load/difficulty) or **check the basics** (sleep, protein, consistency, total load). Anchor sessions to an existing daily habit and keep them short so they actually happen. No trend for several weeks despite that? A physio can spot what to change." },
+  { kw:["scar","scar tissue","stiff after surgery","mobilize scar","adhesion","tight scar","incision"], a:()=>"Once the wound is fully healed and your surgeon clears it, **gentle scar massage plus regular movement** keep the area supple and reduce stiffness. Don't rub a fresh or unhealed incision. Most post-surgical stiffness responds to consistent range-of-motion work — respect your surgeon's timeline and precautions." },
+  { kw:["numb","numbness","tingling","pins and needles","nerve","radiating","shooting pain","sciatica"], a:()=>"Brief, positional tingling from an irritable nerve often eases with movement and nerve-gliding drills. But **spreading or worsening numbness/weakness, a dropping foot, or symptoms in both legs** — and especially any loss of bladder/bowel control or numbness around the groin — need **prompt medical review**. Don't push through worsening nerve symptoms." },
+  { kw:["heart attack","cardiac rehab","heart failure","angina","after heart","cardiac exercise","bypass","stent"], a:()=>`After a heart event, **supervised cardiac rehab** is one of the highest-value things you can do — it safely rebuilds fitness and cuts future risk. Use the **talk-test / Borg RPE**, warm up and cool down fully, never hold your breath, and stop for chest pain, undue breathlessness or dizziness. ${hasCardiacDevice()?`With your ${cardiacDeviceLabel()}, keep effort light–moderate and respect the device limit. `:""}Get your cardiologist's clearance first.` },
+  { kw:["icd","pacemaker","defibrillator","crt","lvad","heart device","implant"], a:()=>{ if(!hasCardiacDevice()) return "If you have an implanted cardiac device (pacemaker, ICD/CRT-D or LVAD), tick **Pacemaker or ICD** in the History step and add any ICD therapy heart-rate threshold — I'll then cap your training zones safely below it and adjust your plan."; const cap=deviceHRCeiling(); return `With your **${cardiacDeviceLabel()}**, `+(hasLVAD()?"your heart rate isn't reliable — judge effort by **RPE / talk-test**, avoid breath-holding, impact and straining, and follow your VAD team's plan.":`keep your heart rate **well below the device's therapy threshold**${cap?` (your zones are capped at ~${cap} bpm)`:""}, stay light–moderate (RPE ≤13) and skip maximal efforts.`)+" Confirm your safe ceiling with your cardiologist."; } },
+  { kw:["how do i use","how does this app","what can this app","features","how to use physiopath","edit my program","add exercise","swap exercise"], a:()=>"Quick tour: **Clinician** step lets a clinician add a protocol; **Injury → Details** build and personalise your plan; the **Program** tab lets you **⟳ Rotate**, **⇄ Swap**, **🗑 Remove** or **＋ Add** exercises per phase, set weight-bearing/braces/precautions, and toggle **Home mode**; **Health** tracks vitals, labs, risks and **syncs a smartwatch/heart-rate monitor**; and I'm here in the **AI** tab. Ask me about any of it." }
 ];
 
 function coachAnswer(qRaw){
@@ -3005,7 +3039,7 @@ function coachAnswer(qRaw){
     if(state.program) return `Your plan is a **${state.program.totalWeeks}-week, 4-phase program** (${state.program.track} track): ${TEMPLATE[state.program.track].phases.map(p=>p.title).join(" → ")}. Advance a phase when the current one feels controlled and symptoms are low. See the **Program** tab for exercises.`;
     return "Build a program first (History → Injury → Details), then I can walk you through your phases and exercises.";
   }
-  return `I'm not sure I caught that. I can help most with: **ice vs heat · how much pain is okay · how often to train · your precautions · when to see a doctor · returning to sport · swelling · nutrition · sleep · flare-ups · motivation**.\n\nTry *"What should I avoid with my condition?"* or *"How much pain is normal?"* — and for anything serious or not improving, see a clinician in person.`;
+  return `I'm not sure I caught that${coachOnline()?"":" (I'm answering offline — add a Claude API key below and I can tackle anything in your own words)"}. I can help most with: **ice vs heat · how much pain is okay · sets & reps · progressing exercises · target heart rate & HRV · SpO₂ · steps · pool/aquatic work · tendons · arthritis & bone health · your precautions & weight-bearing · flare-ups & pacing · nutrition · sleep · returning to sport · when to see a doctor**.\n\nTry *"How do I progress an exercise?"*, *"What should I avoid with my condition?"*, or *"How do I read my HRV?"* — and for anything serious or not improving, see a clinician in person.`;
 }
 
 /* ---------- chat UI ---------- */
@@ -3016,15 +3050,30 @@ function addMsg(text, who){
   $("#chatlog").appendChild(div); $("#chatlog").scrollTop=$("#chatlog").scrollHeight;
 }
 const mdLite = t => esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/\*(.+?)\*/g,"<i>$1</i>").replace(/\n/g,"<br>");
-const SUGGESTED = ["Should I use ice or heat?","How much pain is normal?","What's my target heart rate?","What should I avoid with my condition?","When should I see a doctor?","How often should I train?","How do I return to sport safely?"];
+const SUGGESTED_BASE = ["Should I use ice or heat?","How much pain is normal?","What's my target heart rate?","What should I avoid with my condition?","When should I see a doctor?","How often should I train?","How many sets and reps?","How do I progress an exercise?","What is DOMS / muscle soreness?","Is pool or water exercise good for me?","How do I return to sport safely?","What should I eat to heal faster?","How do I read my HRV?","How do I prevent flare-ups?","Can I exercise at home with no equipment?"];
+/* Suggested chips — condition/feature-aware, so the most relevant ones come first. */
+function suggestedQuestions(){
+  const s = SUGGESTED_BASE.slice();
+  const front = [];
+  const conds = selectedConditions();
+  const c0 = conds[0];
+  if(c0) front.push(`Tell me about ${c0.name.split(/[ (]/)[0].toLowerCase()}`);
+  if(activeSpecialPrecautions().length) front.push(`What are my ${activeSpecialPrecautions()[0].label.toLowerCase()}?`);
+  if(wbSummary()) front.push("What does my weight-bearing order mean?");
+  if(hasCardiacDevice()) front.push("How hard can I exercise with my heart device?");
+  if((state.devices||[]).length) front.push("How should I train with my brace / device?");
+  if(/tendinop|tendinit|achilles|epicondyl|cuff/i.test((c0&&c0.name)||"")) front.push("How do I load a tendon safely?");
+  if((state.returnSports||[]).length) front.push(`How do I get back to ${state.returnSports[0]}?`);
+  return [...front, ...s];
+}
 function initCoach(){
   $("#chatlog").innerHTML=""; chatHistory=[]; updateCoachMode();
   const conds=selectedConditions();
   const intro = conds.length ? `I can see you're working on: **${conds.map(c=>c.name).join(", ")}**. ` : "";
-  const mode = coachOnline() ? " (Claude API connected)" : "";
-  addMsg(`Hi, I'm Jeffery, your AI rehabilitation specialist${mode}. ${intro}Ask me anything about your recovery, program, or medical precautions.`, "bot");
+  const mode = coachOnline() ? " (Claude API connected)" : " (offline — add a Claude API key below for richer, tailored answers)";
+  addMsg(`Hi, I'm Jeffery, your AI rehabilitation specialist${mode}. ${intro}Ask me anything about your recovery, program, exercises, vitals, or medical precautions — or tap a suggestion below.`, "bot");
   const sug=$("#suggests"); sug.innerHTML="";
-  SUGGESTED.forEach(s=>{ const c=document.createElement("div"); c.className="s"; c.textContent=s;
+  suggestedQuestions().forEach(s=>{ const c=document.createElement("div"); c.className="s"; c.textContent=s;
     c.onclick=()=>{ $("#chatInput").value=s; $("#chatform").requestSubmit(); }; sug.appendChild(c); });
 }
 
@@ -4852,12 +4901,25 @@ USER CONTEXT
 - Educational risk areas (not diagnostic): ${riskAreas}
 - Personalized precautions (MUST respect): ${precautions}
 
+WHAT PHYSIOPATH CAN DO (point the user to these when relevant)
+- A phased Program of exercises the user can Rotate / Swap / Remove / Add per phase, with step-by-step "Explain", and a Home mode that swaps to household objects.
+- A 20,000-exercise library incl. Supine / Seated / Standing / Pool-aquatic therapeutic sets and ankle pumps.
+- Precautions controls: weight-bearing orders, braces/orthoses, sternal/abdominal/spinal precautions, plus a clinician protocol.
+- Health tab: vitals log & trend (incl. steps), labs, risk read-outs, and live smartwatch sync (heart rate, HRV, SpO₂ via Bluetooth, or import an Apple Health / TCX / GPX / CSV file).
+- Heart-rate zones, Borg RPE and cardiac-device-aware intensity caps.
+
+ANSWER STYLE
+- Lead with a direct, useful answer in the first sentence — then the brief why/how.
+- Personalise: weave in THIS user's data above (their phase, zones, precautions, vitals, goals) instead of generic advice; give concrete numbers, sets/reps, or steps they can act on today.
+- Prefer short paragraphs or tight bullets; bold the key takeaway. Offer one relevant next step or follow-up question when natural.
+- Match depth to the question — a quick question gets a quick answer; "explain/why/how" gets more detail.
+
 RULES
 - You are an educational aid, NOT a clinician. Never diagnose or give specific medication doses.
-- Always honor the precautions above. If a request is unsafe for these conditions, say so and offer a safer alternative.
-- Recommend in-person assessment for anything serious, worsening, or uncertain.
+- Always honor the precautions above. If a request is unsafe for these conditions, say so plainly and offer a safer alternative — don't just refuse.
+- Recommend in-person assessment for anything serious, worsening, or uncertain; don't over-warn on routine questions.
 - Treat these as urgent-care red flags: chest pain/pressure, severe breathlessness, fainting, sudden weakness/numbness, trouble speaking, loss of bladder/bowel control, or a hot swollen joint with fever.
-- Be concise, warm, and practical (short paragraphs or bullets). Respond with your final answer only — no meta-commentary about your reasoning.`;
+- Warm, practical, and confident. Respond with your final answer only — no meta-commentary about your reasoning.`;
 }
 function addTyping(){
   const div=document.createElement("div"); div.className="msg bot typing"; div.textContent="thinking…";
@@ -4877,7 +4939,7 @@ async function askClaude(q){
       },
       body:JSON.stringify({
         model: state.apiModel || "claude-opus-4-8",
-        max_tokens: 800,
+        max_tokens: 1100,
         system: buildCoachSystem(),
         messages: chatHistory.slice(-10)
       })
