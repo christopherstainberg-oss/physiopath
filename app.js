@@ -2492,7 +2492,7 @@ function removeClinProtocol(idx){
   if(!state.clinicianProtocols) return;
   state.clinicianProtocols.splice(idx,1); save();
   if(state.program) renderProgram(state.program);
-  if(state.step===3) initClinician();                // refresh the Clinician summary if we're on that step
+  if(state.step===1) initClinician();                // refresh the Clinician summary if we're on that step
   toast("Clinician protocol removed.");
 }
 
@@ -3036,8 +3036,8 @@ function goStep(n){
   const act=document.querySelector(".step.active");        // keep the active step visible in the scrollable nav
   if(act&&act.scrollIntoView) try{ act.scrollIntoView({inline:"center",block:"nearest",behavior:"smooth"}); }catch(e){}
   window.scrollTo({top:0,behavior:"smooth"});
-  if(n===2) renderPrecautions();                              // Precautions card lives in Details — keep it current
-  if(n===3) initClinician();                                  // Clinician section (protocols + precaution protocol)
+  if(n===1) initClinician();                                  // Clinician section (now right after History)
+  if(n===3) renderPrecautions();                              // Precautions card lives in Details — keep it current
   if(n===4 && state.program) renderProgram(state.program);    // Program reflects precaution/detail/clinician changes
   if(n===5){ renderProgress(); renderHealth(); }
   if(n===6) initCoach();
@@ -3348,7 +3348,7 @@ function runSurgerySearch(){
 }
 
 function doGenerate(){
-  if(!state.condIds.length){ toast("Pick at least one injury or condition first."); goStep(1); return; }
+  if(!state.condIds.length){ toast("Pick at least one injury or condition first."); goStep(2); return; }
   if(state.weeks===null){ toast("Enter how many weeks ago it started."); return; }
   state.program=generateProgram(); save();
   renderProgram(state.program); goStep(4);
@@ -4708,20 +4708,20 @@ function renderExResults(){
 document.addEventListener("DOMContentLoaded",()=>{
   load();
   initHistory(); initMeds(); initSearch(); initDetails(); initProgress(); initCoachSettings();
-  // Details/Program/Health need a condition; the Clinician step (3) is reachable without one (it's a setup form).
+  // Details(3)/Program(4)/Health(5) need a condition; Injury(2) is where you pick it; Clinician(1) is a setup form (no condition needed).
   $$("[data-goto]").forEach(b=>b.onclick=()=>{
     const n=+b.dataset.goto;
-    if([2,4,5].includes(n) && !state.condIds.length){ toast("Pick at least one condition first."); goStep(1); return; }
+    if([3,4,5].includes(n) && !state.condIds.length){ toast("Pick at least one condition first."); goStep(2); return; }
     goStep(n);
   });
   $$(".step").forEach(s=>s.onclick=()=>{ const n=+s.dataset.step;
-    if([2,4,5].includes(n) && !state.condIds.length){ toast("Pick a condition first."); goStep(1); return; }
+    if([3,4,5].includes(n) && !state.condIds.length){ toast("Pick a condition first."); goStep(2); return; }
     goStep(n); });
-  // History → next: clinician-guided goes to the Clinician step; otherwise to Injury
-  const histNext = $("#historyNext"); if(histNext) histNext.onclick=()=>goStep(state.clinicianGuided ? 3 : 1);
+  // History → next: clinician-guided goes to the Clinician step (1); otherwise to Injury (2)
+  const histNext = $("#historyNext"); if(histNext) histNext.onclick=()=>goStep(state.clinicianGuided ? 1 : 2);
   const cg = $("#q_clinicianGuided"); if(cg){ cg.checked = !!state.clinicianGuided; cg.onchange=()=>{ state.clinicianGuided=cg.checked; save(); syncClinGuide(); }; syncClinGuide(); }
   const clinNext = $("#clinToProgram"); if(clinNext) clinNext.onclick=()=>{
-    if(!state.condIds.length){ toast("Now choose the injury so the program can be built."); goStep(1); return; }
+    if(!state.condIds.length){ toast("Now choose the injury so the program can be built."); goStep(2); return; }
     state.program=generateProgram(); save();   // fold clinician inputs into the plan
     goStep(4);
   };
@@ -4736,7 +4736,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   });
   if(state.program) renderProgram(state.program);
   // PWA app-shortcut routing (?go=coach|library|build|progress)
-  const goMap={ build:1, details:2, clinician:3, program:4, progress:5, coach:6, library:7 };
+  const goMap={ build:2, details:3, clinician:1, program:4, progress:5, coach:6, library:7 };
   const go=new URLSearchParams(location.search).get("go");
   goStep(go && goMap[go]!=null ? goMap[go] : (state.step||0));
 });

@@ -32,9 +32,9 @@
 <!-- step progress -->
 <nav class="steps no-print" id="steps">
   <button class="step" data-step="0"><i>1</i><span>History</span></button>
-  <button class="step" data-step="1"><i>2</i><span>Injury</span></button>
-  <button class="step" data-step="2"><i>3</i><span>Details</span></button>
-  <button class="step" data-step="3"><i>4</i><span>Clinician</span></button>
+  <button class="step" data-step="1"><i>2</i><span>Clinician</span></button>
+  <button class="step" data-step="2"><i>3</i><span>Injury</span></button>
+  <button class="step" data-step="3"><i>4</i><span>Details</span></button>
   <button class="step" data-step="4"><i>5</i><span>Program</span></button>
   <button class="step" data-step="5"><i>6</i><span>Health</span></button>
   <button class="step" data-step="6"><i>7</i><span>AI</span></button>
@@ -181,8 +181,17 @@
     </div>
   </section>
 
-  <!-- ============ STEP 1: INJURY SELECTION ============ -->
+  <!-- ============ STEP 2: CLINICIAN ============ -->
   <section class="panel hide" id="panel-1">
+    <div id="clinicianOut"></div>
+    <div class="rowbtns">
+      <button class="btn ghost" data-goto="0">← Back</button>
+      <button class="btn primary" id="clinToProgram">Save &amp; view program →</button>
+    </div>
+  </section>
+
+  <!-- ============ STEP 3: INJURY SELECTION ============ -->
+  <section class="panel hide" id="panel-2">
     <div class="card">
       <h2>Find your injury or condition</h2>
       <p class="hint">Search our catalog of <b id="catCount">25,000</b> conditions across
@@ -206,13 +215,13 @@
 
       <div class="rowbtns">
         <button class="btn ghost" data-goto="0">← Back</button>
-        <button class="btn primary" data-goto="2" id="toDetails">Next: injury details →</button>
+        <button class="btn primary" data-goto="3" id="toDetails">Next: injury details →</button>
       </div>
     </div>
   </section>
 
-  <!-- ============ STEP 2: DETAILS ============ -->
-  <section class="panel hide" id="panel-2">
+  <!-- ============ STEP 4: DETAILS ============ -->
+  <section class="panel hide" id="panel-3">
     <div class="card">
       <h2>About your injury</h2>
       <p class="hint">This sets your <b>acuteness</b> and how hard we start you.</p>
@@ -282,17 +291,8 @@
     <div id="precautionsOut"></div>
 
     <div class="rowbtns">
-      <button class="btn ghost" data-goto="1">← Back</button>
+      <button class="btn ghost" data-goto="2">← Back</button>
       <button class="btn primary" id="generateBtn">Generate my program →</button>
-    </div>
-  </section>
-
-  <!-- ============ STEP 4: CLINICIAN ============ -->
-  <section class="panel hide" id="panel-3">
-    <div id="clinicianOut"></div>
-    <div class="rowbtns">
-      <button class="btn ghost" data-goto="2">← Adjust details</button>
-      <button class="btn primary" id="clinToProgram">Save &amp; view program →</button>
     </div>
   </section>
 
@@ -303,7 +303,7 @@
         <div>No program yet — complete the earlier steps and generate.</div></div>
     </div>
     <div class="rowbtns no-print">
-      <button class="btn ghost" data-goto="2">← Adjust details</button>
+      <button class="btn ghost" data-goto="3">← Adjust details</button>
       <button class="btn primary" data-goto="5">Track health &amp; progress →</button>
     </div>
   </section>
