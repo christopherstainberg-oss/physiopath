@@ -3527,6 +3527,135 @@ function saveVitalsEntry(){
 }
 function deleteVitals(date){ state.vitalsLog=(state.vitalsLog||[]).filter(e=>e.date!==date); save(); renderVitalsLog(); renderRisks(); }
 
+/* =====================================================================
+   SMARTWATCH / HEART-RATE MONITOR (Web Bluetooth)
+   Reads LIVE data straight from a standard BLE Heart Rate device
+   (service 0x180D) — chest straps, bands and compatible watches — with
+   no account, cable or server. Feeds resting HR + the vitals log, shows
+   the live training zone, and estimates HRV (RMSSD) from RR intervals.
+   Nothing leaves the device. Web Bluetooth = Chrome/Edge (desktop/Android).
+===================================================================== */
+let hrDevice=null, hrChar=null, hrLatestBpm=null, hrRRBuffer=[], hrBattery=null;
+function bleSupported(){ return typeof navigator!=="undefined" && !!navigator.bluetooth; }
+/* Parse a Heart Rate Measurement (0x2A37) DataView → { bpm, rr[ms] }. */
+function parseHeartRate(value){
+  const flags = value.getUint8(0); let i = 1, bpm;
+  if(flags & 0x01){ bpm = value.getUint16(i, true); i += 2; }   // 16-bit HR
+  else { bpm = value.getUint8(i); i += 1; }                     // 8-bit HR
+  if(flags & 0x08) i += 2;                                      // energy expended present → skip
+  const rr = [];
+  if(flags & 0x10){                                            // RR intervals present (1/1024 s each)
+    for(; i + 1 < value.byteLength; i += 2) rr.push(Math.round(value.getUint16(i, true) / 1024 * 1000));
+  }
+  return { bpm, rr };
+}
+/* HRV (RMSSD, ms) over the recent RR-interval buffer. */
+function hrvFromBuffer(){
+  const rr = hrRRBuffer; if(rr.length < 5) return null;
+  let sum = 0, n = 0;
+  for(let k=1;k<rr.length;k++){ const d = rr[k]-rr[k-1]; sum += d*d; n++; }
+  return n ? Math.round(Math.sqrt(sum/n)) : null;
+}
+/* Live training-zone label for a bpm, using the user's HR zones. */
+function liveZoneLabel(bpm, z){
+  if(bpm==null) return `<span class="hrzone">Waiting for a reading…</span>`;
+  if(!z) return `<span class="hrzone">${bpm} bpm — add your <b>age</b> in History for training zones.</span>`;
+  const cap = z.deviceCap;
+  const inR = r => bpm>=r[0] && bpm<=r[1];
+  let zone="", cls="";
+  if(bpm < z.zones.warmup[0]){ zone="Below warm-up · very light"; cls="zw"; }
+  else if(inR(z.zones.warmup)){ zone="Warm-up · very light"; cls="zw"; }
+  else if(inR(z.zones.moderate)){ zone="Moderate · building fitness"; cls="zm"; }
+  else if(bpm > z.zones.vigorous[1]){ zone="Above vigorous · ease off"; cls="zv"; }
+  else { zone="Vigorous · only as cleared"; cls="zv"; }
+  const capWarn = (cap && bpm >= cap) ? ` <span class="hrzcap">⚠ at/over your device limit (${cap} bpm)</span>` : "";
+  return `<span class="hrzone ${cls}">${zone}</span>${capWarn}`;
+}
+function hrMonitorCardHTML(){
+  if(!bleSupported()){
+    return `<p class="hint">Live syncing uses <b>Web Bluetooth</b> — available in <b>Chrome or Edge</b> on a computer or Android phone (not on iPhone/Safari). It reads your <b>live heart rate</b> straight from a standard Bluetooth heart-rate monitor, chest strap or compatible watch/band.</p>
+      <div class="banner info">Web Bluetooth isn't available on this browser. You can still type your resting HR and other vitals into the log below, or open PhysioPath in Chrome/Edge to connect a monitor.</div>`;
+  }
+  if(!hrDevice){
+    return `<p class="hint">Connect a Bluetooth <b>heart-rate monitor, chest strap or compatible watch/band</b> to pull your <b>live heart rate</b> straight into PhysioPath — set it as your resting HR, log a reading, and watch your training zone in real time. Nothing leaves your device.</p>
+      <button class="btn primary" id="hrConnectBtn">⌚ Connect a heart-rate monitor / smartwatch</button>
+      <p class="hint" style="margin-top:8px">Works with standard BLE heart-rate devices (Polar, Wahoo, many watches &amp; chest straps). Apple Watch, Fitbit &amp; Garmin keep heart rate inside their own apps — for those, read the number off the watch and enter it below.</p>`;
+  }
+  const z = hrZones();
+  const hrv = hrvFromBuffer();
+  return `<div class="hrlive">
+      <div class="hrlivetop"><span class="hrlivedev">🟢 ${esc(hrDevice.name||"Heart-rate monitor")}${hrBattery!=null?` · 🔋 ${hrBattery}%`:""}</span>
+        <button class="btn ghost hrdiscbtn" id="hrDisconnectBtn">Disconnect</button></div>
+      <div class="hrbignum"><span id="hrLiveBpm">${hrLatestBpm!=null?hrLatestBpm:"—"}</span> <small>bpm</small></div>
+      <div class="hrlivezone" id="hrLiveZone">${liveZoneLabel(hrLatestBpm, z)}</div>
+      <div class="hrlivehrv"><span id="hrLiveHrv">${hrv!=null?`HRV (RMSSD): <b>${hrv}</b> ms`:"Collecting beat-to-beat data for HRV…"}</span></div>
+      <div class="hrlivebtns">
+        <button class="btn primary" id="hrUseRestBtn">Set as resting HR</button>
+        <button class="btn ghost" id="hrLogBtn">Log this reading</button>
+      </div>
+      <p class="hint" style="margin-top:6px">The reading refreshes as your monitor streams it. <b>Set as resting HR</b> fills your History vitals (feeds your training zones); <b>Log this reading</b> adds today's HR to your vitals log &amp; trend.</p>`;
+}
+function renderHRMonitor(){
+  const host = $("#hrMonitorOut"); if(!host) return;
+  host.innerHTML = hrMonitorCardHTML();
+  const c=$("#hrConnectBtn"); if(c) c.onclick = connectHRMonitor;
+  const d=$("#hrDisconnectBtn"); if(d) d.onclick = disconnectHRMonitor;
+  const r=$("#hrUseRestBtn"); if(r) r.onclick = ()=>{
+    if(hrLatestBpm==null){ toast("No reading yet — give your monitor a moment."); return; }
+    (state.vitals = state.vitals||{}).restHR = String(hrLatestBpm); save();
+    toast(`Resting HR set to ${hrLatestBpm} bpm from your monitor.`);
+  };
+  const l=$("#hrLogBtn"); if(l) l.onclick = logHRReading;
+}
+async function connectHRMonitor(){
+  if(!bleSupported()){ toast("Web Bluetooth isn't available on this browser."); return; }
+  try{
+    const dev = await navigator.bluetooth.requestDevice({ filters:[{ services:["heart_rate"] }], optionalServices:["battery_service"] });
+    hrDevice = dev; hrLatestBpm = null; hrRRBuffer = []; hrBattery = null;
+    dev.addEventListener("gattserverdisconnected", onHRDisconnected);
+    const server = await dev.gatt.connect();
+    const svc = await server.getPrimaryService("heart_rate");
+    hrChar = await svc.getCharacteristic("heart_rate_measurement");
+    hrChar.addEventListener("characteristicvaluechanged", onHRNotify);
+    await hrChar.startNotifications();
+    try{ const b = await server.getPrimaryService("battery_service"); const bc = await b.getCharacteristic("battery_level"); hrBattery = (await bc.readValue()).getUint8(0); }catch(e){}
+    renderHRMonitor();
+    toast(`Connected to ${dev.name||"your heart-rate monitor"} — live heart rate incoming.`);
+  }catch(err){
+    if(err && (err.name==="NotFoundError" || err.name==="AbortError")) return;   // user closed the chooser
+    toast("Couldn't connect: "+((err&&err.message)||"unknown error"));
+  }
+}
+function onHRNotify(e){
+  const { bpm, rr } = parseHeartRate(e.target.value);
+  hrLatestBpm = bpm;
+  if(rr && rr.length){ hrRRBuffer.push(...rr); if(hrRRBuffer.length>60) hrRRBuffer = hrRRBuffer.slice(-60); }
+  const bpmEl=$("#hrLiveBpm"); if(bpmEl) bpmEl.textContent = bpm!=null?bpm:"—";
+  const zEl=$("#hrLiveZone"); if(zEl) zEl.innerHTML = liveZoneLabel(bpm, hrZones());
+  const hrv=hrvFromBuffer(); const hEl=$("#hrLiveHrv"); if(hEl) hEl.innerHTML = hrv!=null?`HRV (RMSSD): <b>${hrv}</b> ms`:"Collecting beat-to-beat data for HRV…";
+}
+function logHRReading(){
+  if(hrLatestBpm==null){ toast("No reading yet — give your monitor a moment."); return; }
+  const date = todayISO();
+  state.vitalsLog = state.vitalsLog||[];
+  const i = state.vitalsLog.findIndex(en=>en.date===date);
+  if(i>=0) state.vitalsLog[i] = { ...state.vitalsLog[i], restHR:String(hrLatestBpm) };
+  else state.vitalsLog.push({ date, restHR:String(hrLatestBpm), sbp:"", dbp:"", spo2:"", weight:"", glucose:"", temp:"" });
+  state.vitalsLog.sort((a,b)=>a.date<b.date?-1:1);
+  save(); renderVitalsLog(); renderRisks();
+  toast(`Logged ${hrLatestBpm} bpm to today's vitals.`);
+}
+function disconnectHRMonitor(){
+  try{ if(hrChar) hrChar.removeEventListener("characteristicvaluechanged", onHRNotify); }catch(e){}
+  try{ if(hrDevice && hrDevice.gatt && hrDevice.gatt.connected) hrDevice.gatt.disconnect(); }catch(e){}
+  onHRDisconnected();
+  toast("Monitor disconnected.");
+}
+function onHRDisconnected(){
+  hrDevice=null; hrChar=null; hrLatestBpm=null; hrRRBuffer=[]; hrBattery=null;
+  renderHRMonitor();
+}
+
 function renderVitalsLog(){
   const el=$("#vitalsLogBody"); if(!el) return;
   const log=(state.vitalsLog||[]).slice();
@@ -4524,7 +4653,7 @@ function renderOtherRisks(){
   }).join("") + `<div class="redflags" style="margin-top:12px"><b>Educational only — not a diagnosis.</b> These interpretations use general adult thresholds and only the values you entered; some vary by sex, age and lab. Discuss anything relevant with your clinician.</div>`;
 }
 
-function renderHealth(){ renderVitalsLog(); renderLabs(); renderRisks(); }
+function renderHealth(){ renderHRMonitor(); renderVitalsLog(); renderLabs(); renderRisks(); }
 function initHealth(){
   const d=$("#vlDate"); if(d && !d.value) d.value=todayISO();
   const sv=$("#vlSave"); if(sv) sv.onclick=saveVitalsEntry;
