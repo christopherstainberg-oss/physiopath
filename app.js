@@ -608,6 +608,24 @@ const SPECIAL_PRECAUTIONS = {
     avoid:/sit-?up|crunch|\bplank\b|\bv-?up\b|hollow|russian twist|flutter|jackknife|jack-?knife|bicycle|hanging (?:knee|leg)|double-?leg (?:raise|lower)|leg lower|toe touch|roll-?up|dragon flag|ab wheel|dead-?hang|deadlift|good-?morning|hyperextension|farmer|suitcase|\bcarr(y|ies)\b/i,
     caution:/twist|rotation|oblique|pallof|bird-?dog|dead ?bug|bridge|\bhinge\b|mountain climber|band|woodchop|\bcarry\b|superman/i,
     note:"Abdominal precautions: your abdominal wall/incision is healing — sit-ups, crunches, planks, leg-lowers and other direct core-loading were removed, along with heavy lifting and breath-holding/straining. Support the incision when you cough and log-roll out of bed."
+  },
+  spinal: {
+    key:"spinal", icon:"🦴", label:"Spinal precautions",
+    sub:"after spine surgery (fusion / laminectomy / discectomy)",
+    weeks:12, flag:"spinal_precautions",
+    what:"After spine surgery — a fusion, laminectomy, discectomy or similar — the healing bone, any hardware and the soft tissue around it need time to consolidate (often up to about 12 weeks for a fusion). Spinal precautions protect that healing with the classic “BLT” rule — no Bending, Lifting or Twisting of the spine — plus a lifting limit, so you don't stress the surgical site or shift hardware before it's solid.",
+    rules:[
+      "No BENDING forward through your back — hinge at the hips and knees with a straight back, and squat to reach low things.",
+      "No LIFTING more than ~5–10 lb (about a milk jug), or the limit your surgeon set.",
+      "No TWISTING your spine — turn your whole body as one unit (“nose over toes”) instead of rotating your trunk.",
+      "Log-roll to get in and out of bed — roll your shoulders and hips together, without twisting.",
+      "Change position often and walk regularly, but avoid prolonged sitting or slumping.",
+      "No driving until your surgeon clears you; wear your back brace (TLSO/LSO) if one was prescribed.",
+      "Seek urgent care for new or worsening leg weakness or numbness, or any loss of bladder or bowel control."
+    ],
+    avoid:/deadlift|good-?morning|sit-?up|crunch|\bv-?up\b|russian twist|woodchop|hyperextension|back extension|superman|toe touch|windmill|jackknife|hanging|\brotation\b|\btwist\b|roll-?up|dragon flag|\bplank\b|mountain climber|burpee|clean|snatch|jerk|farmer|suitcase|\bcarr(y|ies)\b|kettlebell swing|sit-to-stand/i,
+    caution:/squat|lunge|\bhinge\b|bridge|bird-?dog|dead ?bug|pallof|band|\brow\b|pull-?down|overhead|step-up|hip thrust|bend/i,
+    note:"Spinal precautions (after spine surgery): protect the healing spine with the “BLT” rule — no Bending, Lifting (>~5–10 lb) or Twisting. Loaded trunk bending/arching/rotation and heavy lifting/carrying were removed; hinge at the hips with a straight back, log-roll, and turn as one unit. Keep walking, and wear your brace if prescribed. Follow your surgeon's timeline."
   }
 };
 function activeSpecialPrecautions(){ return (state.specialPrecautions||[]).map(k=>SPECIAL_PRECAUTIONS[k]).filter(Boolean); }
@@ -1667,6 +1685,7 @@ const PATTERN_INFO = {
   rotate:{what:"A rotational exercise trains controlled trunk turning and power.",how:"Rotate through the trunk with control and return smoothly.",why:"Builds rotational strength for sport and daily twisting tasks."},
   supine:{what:"A supine (lying on your back) therapeutic exercise — a gentle, low-load movement done on a mat, floor or bed.",how:"Lie on your back and move the target leg or muscle slowly through a comfortable range, or build a steady hold, keeping your core gently braced.",why:"Rebuilds early strength, control and range with almost no joint loading — ideal after surgery, when weight-bearing is limited, or when standing is painful."},
   seated:{what:"A seated therapeutic exercise — a gentle, controlled movement done sitting in a sturdy chair.",how:"Sit tall with your feet supported (or the working leg free to move) and take the joint slowly through range, or hold, staying pain-free.",why:"Builds strength and range safely, with support and no standing-balance demand — good early in recovery or when standing is limited."},
+  standing:{what:"A standing therapeutic exercise — a supported, weight-bearing movement done holding a counter or rail.",how:"Stand tall beside a sturdy support and move the working leg (or your whole body) slowly and controlled through a pain-free range, or hold — keeping your hips level.",why:"Rebuilds standing strength, hip control and balance in a functional upright position — the bridge from table-based exercises to walking and daily life."},
   general:{what:"A general conditioning exercise for the area.",how:"Perform with control through a pain-free range, exhaling on effort.",why:"Helps restore strength, movement and function."}
 };
 /* Step-by-step technique detail per movement pattern — feeds the "How to do it" block. */
@@ -1766,7 +1785,11 @@ const PATTERN_HOWTO = {
   seated:{setup:"Sit tall toward the front of a sturdy, stable chair with your feet flat and hip-width (or the working leg free to move). Sit up straight rather than slumping back.",
     steps:["Set your posture — tall spine, relaxed shoulders, core gently braced.","Move the working joint slowly through the prescribed range (for example straighten or lift the leg) — or build a steady hold.","Pause briefly at the working end of the range if it feels controlled.","Lower slowly under control and reset for the next rep."],
     tempo:"Move for about 2–3 seconds each way, or hold for the prescribed time; exhale on the effort and keep breathing.",
-    avoid:"Don't swing with momentum, slump, or push into sharp pain — keep it slow and controlled."}
+    avoid:"Don't swing with momentum, slump, or push into sharp pain — keep it slow and controlled."},
+  standing:{setup:"Stand tall facing or beside a sturdy, stable surface (a kitchen counter, heavy table or rail) you can rest a hand on for balance. Feet hip-width, weight even, knees soft.",
+    steps:["Set your posture — stand tall, core gently braced, shoulders relaxed; rest one or both hands lightly on the support.","Move the working leg (or lower and raise your body) slowly and deliberately through the prescribed range — or hold the position steady.","Keep your standing leg strong and your hips level — don't let the pelvis drop or your trunk lean to cheat the movement.","Return under control to the start, staying tall throughout."],
+    tempo:"Move for about 2–3 seconds each way, or hold for the prescribed time; breathe normally throughout.",
+    avoid:"Don't grip the support for dear life or twist/lean to compensate — use just enough support to stay steady, and reduce the range if your form breaks down."}
 };
 function inferPattern(name){
   const l = name.toLowerCase();
