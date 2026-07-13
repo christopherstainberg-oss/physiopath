@@ -3528,14 +3528,17 @@ function saveVitalsEntry(){
 function deleteVitals(date){ state.vitalsLog=(state.vitalsLog||[]).filter(e=>e.date!==date); save(); renderVitalsLog(); renderRisks(); }
 
 /* =====================================================================
-   SMARTWATCH / HEART-RATE MONITOR (Web Bluetooth)
-   Reads LIVE data straight from a standard BLE Heart Rate device
-   (service 0x180D) — chest straps, bands and compatible watches — with
-   no account, cable or server. Feeds resting HR + the vitals log, shows
-   the live training zone, and estimates HRV (RMSSD) from RR intervals.
-   Nothing leaves the device. Web Bluetooth = Chrome/Edge (desktop/Android).
+   SMARTWATCH / WEARABLE DATA HARVEST
+   1) Web Bluetooth LIVE sync from standard BLE devices — Heart Rate
+      (0x180D) for HR/HRV/zone and Pulse Oximeter (0x1822) for SpO₂/PR.
+   2) FILE IMPORT (works everywhere, incl. iPhone) from an Apple Health
+      export.xml, a .tcx/.gpx workout, or a CSV — pulls HR, SpO₂ & steps.
+   Feeds resting HR + SpO₂ into vitals & the vitals log. All on-device.
 ===================================================================== */
-let hrDevice=null, hrChar=null, hrLatestBpm=null, hrRRBuffer=[], hrBattery=null;
+let hrDevice=null, hrChar=null, spo2Char=null, hrLatestBpm=null, hrRRBuffer=[], hrBattery=null,
+    spo2Latest=null, prLatest=null, hrHasHR=false, hrHasSpo2=false, hrImport=null;
+const BT_HR_SVC=0x180D, BT_HR_MEAS=0x2A37, BT_BATT_SVC=0x180F, BT_BATT=0x2A19,
+      BT_PLX_SVC=0x1822, BT_PLX_CONT=0x2A5F, BT_PLX_SPOT=0x2A5E;
 function bleSupported(){ return typeof navigator!=="undefined" && !!navigator.bluetooth; }
 /* Parse a Heart Rate Measurement (0x2A37) DataView → { bpm, rr[ms] }. */
 function parseHeartRate(value){
@@ -3556,6 +3559,24 @@ function hrvFromBuffer(){
   for(let k=1;k<rr.length;k++){ const d = rr[k]-rr[k-1]; sum += d*d; n++; }
   return n ? Math.round(Math.sqrt(sum/n)) : null;
 }
+/* IEEE-11073 16-bit SFLOAT (used by the Pulse Oximeter characteristics). */
+function parseSFLOAT(dv, off){
+  const raw = dv.getUint16(off, true);
+  let mant = raw & 0x0FFF, exp = (raw>>12)&0x0F;
+  if(exp>=0x8) exp -= 0x10;                 // signed 4-bit exponent
+  if(mant>=0x0800) mant -= 0x1000;          // signed 12-bit mantissa
+  return mant * Math.pow(10, exp);
+}
+/* Parse a PLX Continuous (0x2A5F) or Spot-check (0x2A5E) measurement → {spo2, pr}.
+   Both start: flags(1) · SpO₂ SFLOAT · PulseRate SFLOAT. */
+function parsePLX(value){
+  try{
+    const spo2 = parseSFLOAT(value, 1), pr = parseSFLOAT(value, 3);
+    const s = (isFinite(spo2)&&spo2>=40&&spo2<=100) ? Math.round(spo2) : null;
+    const p = (isFinite(pr)&&pr>=25&&pr<=300) ? Math.round(pr) : null;
+    return { spo2:s, pr:p };
+  }catch(e){ return { spo2:null, pr:null }; }
+}
 /* Live training-zone label for a bpm, using the user's HR zones. */
 function liveZoneLabel(bpm, z){
   if(bpm==null) return `<span class="hrzone">Waiting for a reading…</span>`;
@@ -3571,29 +3592,39 @@ function liveZoneLabel(bpm, z){
   const capWarn = (cap && bpm >= cap) ? ` <span class="hrzcap">⚠ at/over your device limit (${cap} bpm)</span>` : "";
   return `<span class="hrzone ${cls}">${zone}</span>${capWarn}`;
 }
-function hrMonitorCardHTML(){
-  if(!bleSupported()){
-    return `<p class="hint">Live syncing uses <b>Web Bluetooth</b> — available in <b>Chrome or Edge</b> on a computer or Android phone (not on iPhone/Safari). It reads your <b>live heart rate</b> straight from a standard Bluetooth heart-rate monitor, chest strap or compatible watch/band.</p>
-      <div class="banner info">Web Bluetooth isn't available on this browser. You can still type your resting HR and other vitals into the log below, or open PhysioPath in Chrome/Edge to connect a monitor.</div>`;
-  }
-  if(!hrDevice){
-    return `<p class="hint">Connect a Bluetooth <b>heart-rate monitor, chest strap or compatible watch/band</b> to pull your <b>live heart rate</b> straight into PhysioPath — set it as your resting HR, log a reading, and watch your training zone in real time. Nothing leaves your device.</p>
-      <button class="btn primary" id="hrConnectBtn">⌚ Connect a heart-rate monitor / smartwatch</button>
-      <p class="hint" style="margin-top:8px">Works with standard BLE heart-rate devices (Polar, Wahoo, many watches &amp; chest straps). Apple Watch, Fitbit &amp; Garmin keep heart rate inside their own apps — for those, read the number off the watch and enter it below.</p>`;
-  }
-  const z = hrZones();
-  const hrv = hrvFromBuffer();
-  return `<div class="hrlive">
-      <div class="hrlivetop"><span class="hrlivedev">🟢 ${esc(hrDevice.name||"Heart-rate monitor")}${hrBattery!=null?` · 🔋 ${hrBattery}%`:""}</span>
-        <button class="btn ghost hrdiscbtn" id="hrDisconnectBtn">Disconnect</button></div>
-      <div class="hrbignum"><span id="hrLiveBpm">${hrLatestBpm!=null?hrLatestBpm:"—"}</span> <small>bpm</small></div>
+function hrLiveHTML(){
+  const z=hrZones(), hrv=hrvFromBuffer();
+  const bpmBlock = hrHasHR ? `<div class="hrbignum"><span id="hrLiveBpm">${hrLatestBpm!=null?hrLatestBpm:"—"}</span> <small>bpm</small></div>
       <div class="hrlivezone" id="hrLiveZone">${liveZoneLabel(hrLatestBpm, z)}</div>
-      <div class="hrlivehrv"><span id="hrLiveHrv">${hrv!=null?`HRV (RMSSD): <b>${hrv}</b> ms`:"Collecting beat-to-beat data for HRV…"}</span></div>
-      <div class="hrlivebtns">
-        <button class="btn primary" id="hrUseRestBtn">Set as resting HR</button>
-        <button class="btn ghost" id="hrLogBtn">Log this reading</button>
-      </div>
-      <p class="hint" style="margin-top:6px">The reading refreshes as your monitor streams it. <b>Set as resting HR</b> fills your History vitals (feeds your training zones); <b>Log this reading</b> adds today's HR to your vitals log &amp; trend.</p>`;
+      <div class="hrlivehrv"><span id="hrLiveHrv">${hrv!=null?`HRV (RMSSD): <b>${hrv}</b> ms`:"Collecting beat-to-beat data for HRV…"}</span></div>` : "";
+  const spo2Block = hrHasSpo2 ? `<div class="hrspo2" id="hrLiveSpo2">${spo2Latest!=null?`🫁 SpO₂ <b>${spo2Latest}%</b>${prLatest!=null?` · PR ${prLatest} bpm`:""}`:"🫁 SpO₂ — waiting for a reading…"}</div>` : "";
+  return `<div class="hrlive">
+      <div class="hrlivetop"><span class="hrlivedev">🟢 ${esc(hrDevice.name||"Monitor")}${hrBattery!=null?` · 🔋 ${hrBattery}%`:""}</span>
+        <button class="btn ghost hrdiscbtn" id="hrDisconnectBtn">Disconnect</button></div>
+      ${bpmBlock}${spo2Block}
+      <div class="hrlivebtns">${hrHasHR?`<button class="btn primary" id="hrUseRestBtn">Set as resting HR</button>`:""}
+        <button class="btn ghost" id="hrLogBtn">Log this reading</button></div>
+      <p class="hint" style="margin-top:6px">Refreshes as your monitor streams it. <b>Log this reading</b> saves the current ${hrHasHR?"heart rate":""}${hrHasHR&&hrHasSpo2?" &amp; ":""}${hrHasSpo2?"SpO₂":""} to today's vitals log.</p>`;
+}
+function hrMonitorCardHTML(){
+  let live;
+  if(!bleSupported()){
+    live = `<div class="banner info">Live Bluetooth sync isn't available on this browser (it needs <b>Chrome or Edge</b> on a computer or Android — not iPhone/Safari). Use <b>Import</b> below, which works everywhere.</div>`;
+  } else if(!hrDevice){
+    live = `<p class="hint">Connect a Bluetooth <b>heart-rate monitor or pulse oximeter</b> (chest strap, band or compatible watch) to stream your <b>live heart rate, training zone, HRV and SpO₂</b> straight in. Nothing leaves your device.</p>
+      <button class="btn primary" id="hrConnectBtn">⌚ Connect a monitor / smartwatch</button>
+      <p class="hint" style="margin-top:8px">Works with standard BLE devices (Polar, Wahoo, pulse oximeters, many watches). Apple&nbsp;Watch, Fitbit &amp; Garmin keep data in their own apps — use <b>Import</b> for those.</p>`;
+  } else {
+    live = hrLiveHTML();
+  }
+  const imp = `<b class="hrsech">⬆ Import from a watch / health-app export</b>
+    <p class="hint">Bulk-import from a <b>file</b> — works on any device, including iPhone. Accepts an Apple&nbsp;Health <b>export.xml</b> (unzip the export first), a workout <b>.tcx</b>/<b>.gpx</b>, or a <b>.csv</b> with HR / SpO₂ / steps columns. Read on your device only.</p>
+    <label class="hrimportbtn" for="hrFile">⬆ Choose an export file</label>
+    <input type="file" id="hrFile" accept=".xml,.tcx,.gpx,.csv,.tsv,.txt,application/xml,text/xml,text/csv,text/plain" hidden />
+    <div id="hrImportReview"></div>`;
+  return `<div class="hrsec"><b class="hrsech">📡 Live sync (Bluetooth)</b>${live}</div>
+    <div class="hrdiv"></div>
+    <div class="hrsec">${imp}</div>`;
 }
 function renderHRMonitor(){
   const host = $("#hrMonitorOut"); if(!host) return;
@@ -3606,21 +3637,30 @@ function renderHRMonitor(){
     toast(`Resting HR set to ${hrLatestBpm} bpm from your monitor.`);
   };
   const l=$("#hrLogBtn"); if(l) l.onclick = logHRReading;
+  const f=$("#hrFile"); if(f) f.onchange = onHRFile;
+  if(hrImport) renderImportReview();
 }
 async function connectHRMonitor(){
   if(!bleSupported()){ toast("Web Bluetooth isn't available on this browser."); return; }
   try{
-    const dev = await navigator.bluetooth.requestDevice({ filters:[{ services:["heart_rate"] }], optionalServices:["battery_service"] });
-    hrDevice = dev; hrLatestBpm = null; hrRRBuffer = []; hrBattery = null;
+    const dev = await navigator.bluetooth.requestDevice({
+      filters:[{ services:[BT_HR_SVC] }, { services:[BT_PLX_SVC] }],
+      optionalServices:[BT_BATT_SVC, BT_HR_SVC, BT_PLX_SVC]
+    });
+    hrDevice=dev; hrLatestBpm=null; hrRRBuffer=[]; hrBattery=null; spo2Latest=null; prLatest=null; hrHasHR=false; hrHasSpo2=false;
     dev.addEventListener("gattserverdisconnected", onHRDisconnected);
     const server = await dev.gatt.connect();
-    const svc = await server.getPrimaryService("heart_rate");
-    hrChar = await svc.getCharacteristic("heart_rate_measurement");
-    hrChar.addEventListener("characteristicvaluechanged", onHRNotify);
-    await hrChar.startNotifications();
-    try{ const b = await server.getPrimaryService("battery_service"); const bc = await b.getCharacteristic("battery_level"); hrBattery = (await bc.readValue()).getUint8(0); }catch(e){}
+    // Heart Rate (0x180D)
+    try{ const s=await server.getPrimaryService(BT_HR_SVC); hrChar=await s.getCharacteristic(BT_HR_MEAS);
+      hrChar.addEventListener("characteristicvaluechanged", onHRNotify); await hrChar.startNotifications(); hrHasHR=true; }catch(e){}
+    // Pulse Oximeter / SpO₂ (0x1822)
+    try{ const s=await server.getPrimaryService(BT_PLX_SVC);
+      let ch; try{ ch=await s.getCharacteristic(BT_PLX_CONT); }catch(e){ ch=await s.getCharacteristic(BT_PLX_SPOT); }
+      spo2Char=ch; ch.addEventListener("characteristicvaluechanged", onSpo2Notify); await ch.startNotifications(); hrHasSpo2=true; }catch(e){}
+    try{ const b=await server.getPrimaryService(BT_BATT_SVC); const bc=await b.getCharacteristic(BT_BATT); hrBattery=(await bc.readValue()).getUint8(0); }catch(e){}
     renderHRMonitor();
-    toast(`Connected to ${dev.name||"your heart-rate monitor"} — live heart rate incoming.`);
+    if(!hrHasHR && !hrHasSpo2) toast("Connected, but this device doesn't expose a standard heart-rate or SpO₂ service.");
+    else toast(`Connected to ${dev.name||"your monitor"} — live ${[hrHasHR&&"heart rate", hrHasSpo2&&"SpO₂"].filter(Boolean).join(" & ")} incoming.`);
   }catch(err){
     if(err && (err.name==="NotFoundError" || err.name==="AbortError")) return;   // user closed the chooser
     toast("Couldn't connect: "+((err&&err.message)||"unknown error"));
@@ -3634,26 +3674,114 @@ function onHRNotify(e){
   const zEl=$("#hrLiveZone"); if(zEl) zEl.innerHTML = liveZoneLabel(bpm, hrZones());
   const hrv=hrvFromBuffer(); const hEl=$("#hrLiveHrv"); if(hEl) hEl.innerHTML = hrv!=null?`HRV (RMSSD): <b>${hrv}</b> ms`:"Collecting beat-to-beat data for HRV…";
 }
+function onSpo2Notify(e){
+  const { spo2, pr } = parsePLX(e.target.value);
+  if(spo2!=null) spo2Latest = spo2;
+  if(pr!=null) prLatest = pr;
+  const el=$("#hrLiveSpo2"); if(el) el.innerHTML = spo2Latest!=null?`🫁 SpO₂ <b>${spo2Latest}%</b>${prLatest!=null?` · PR ${prLatest} bpm`:""}`:"🫁 SpO₂ — waiting for a reading…";
+}
 function logHRReading(){
-  if(hrLatestBpm==null){ toast("No reading yet — give your monitor a moment."); return; }
-  const date = todayISO();
-  state.vitalsLog = state.vitalsLog||[];
-  const i = state.vitalsLog.findIndex(en=>en.date===date);
-  if(i>=0) state.vitalsLog[i] = { ...state.vitalsLog[i], restHR:String(hrLatestBpm) };
-  else state.vitalsLog.push({ date, restHR:String(hrLatestBpm), sbp:"", dbp:"", spo2:"", weight:"", glucose:"", temp:"" });
+  if(hrLatestBpm==null && spo2Latest==null){ toast("No reading yet — give your monitor a moment."); return; }
+  const patch={}; if(hrLatestBpm!=null) patch.restHR=String(hrLatestBpm); if(spo2Latest!=null) patch.spo2=String(spo2Latest);
+  mergeVitalsToday(patch);
+  toast("Logged "+[hrLatestBpm!=null?hrLatestBpm+" bpm":"", spo2Latest!=null?spo2Latest+"% SpO₂":""].filter(Boolean).join(" · ")+" to today's vitals.");
+}
+/* Merge a partial reading into today's vitals-log entry. */
+function mergeVitalsToday(patch){
+  if(!patch || !Object.keys(patch).length) return;
+  const date=todayISO(); state.vitalsLog=state.vitalsLog||[];
+  const i=state.vitalsLog.findIndex(en=>en.date===date);
+  if(i>=0) state.vitalsLog[i]={ ...state.vitalsLog[i], ...patch };
+  else state.vitalsLog.push({ date, restHR:"", sbp:"", dbp:"", spo2:"", weight:"", glucose:"", temp:"", ...patch });
   state.vitalsLog.sort((a,b)=>a.date<b.date?-1:1);
   save(); renderVitalsLog(); renderRisks();
-  toast(`Logged ${hrLatestBpm} bpm to today's vitals.`);
 }
 function disconnectHRMonitor(){
   try{ if(hrChar) hrChar.removeEventListener("characteristicvaluechanged", onHRNotify); }catch(e){}
+  try{ if(spo2Char) spo2Char.removeEventListener("characteristicvaluechanged", onSpo2Notify); }catch(e){}
   try{ if(hrDevice && hrDevice.gatt && hrDevice.gatt.connected) hrDevice.gatt.disconnect(); }catch(e){}
   onHRDisconnected();
   toast("Monitor disconnected.");
 }
 function onHRDisconnected(){
-  hrDevice=null; hrChar=null; hrLatestBpm=null; hrRRBuffer=[]; hrBattery=null;
+  hrDevice=null; hrChar=null; spo2Char=null; hrLatestBpm=null; hrRRBuffer=[]; hrBattery=null; spo2Latest=null; prLatest=null; hrHasHR=false; hrHasSpo2=false;
   renderHRMonitor();
+}
+/* ---- File import: Apple Health export.xml · TCX · GPX · CSV ---- */
+function onHRFile(e){
+  const f = e.target.files && e.target.files[0]; if(!f) return;
+  const rev=$("#hrImportReview"); if(rev) rev.innerHTML=`<div class="banner info">Reading ${esc(f.name)}…</div>`;
+  const reader=new FileReader();
+  reader.onload=()=>{ try{ hrImport=parseHealthFile(f.name, String(reader.result||"")); renderImportReview(); }
+    catch(err){ if(rev) rev.innerHTML=`<div class="banner clear">Couldn't read that file: ${esc((err&&err.message)||"unknown")}.</div>`; } };
+  reader.onerror=()=>{ if(rev) rev.innerHTML=`<div class="banner clear">Couldn't read the file.</div>`; };
+  reader.readAsText(f);
+  e.target.value="";
+}
+function parseHealthFile(name, text){
+  const out={ source:"", hr:[], restingHR:null, spo2:[], steps:0 };
+  const pushHR=v=>{ v=+v; if(v>20&&v<250) out.hr.push(v); };
+  const pushSpo2=v=>{ v=+v; if(v<=1) v*=100; if(v>=50&&v<=100) out.spo2.push(Math.round(v)); };
+  if(/HKQuantityTypeIdentifier|<HealthData/.test(text)){                       // Apple Health export.xml
+    out.source="Apple Health export";
+    const re=/<Record\b[^>]*?\/?>/g; let m;
+    while((m=re.exec(text))){ const tag=m[0];
+      const type=(tag.match(/type="([^"]+)"/)||[])[1]; const val=(tag.match(/value="([\d.]+)"/)||[])[1];
+      if(!type || val==null) continue;
+      if(type==="HKQuantityTypeIdentifierHeartRate") pushHR(val);
+      else if(type==="HKQuantityTypeIdentifierRestingHeartRate") out.restingHR=Math.round(+val);
+      else if(type==="HKQuantityTypeIdentifierOxygenSaturation") pushSpo2(val);
+      else if(type==="HKQuantityTypeIdentifierStepCount") out.steps+=+val;
+    }
+  } else if(/TrainingCenterDatabase|HeartRateBpm/.test(text)){                 // TCX workout
+    out.source="TCX workout"; let m; const re=/<HeartRateBpm[^>]*>\s*<Value>\s*([\d.]+)\s*<\/Value>/g;
+    while((m=re.exec(text))) pushHR(m[1]);
+  } else if(/<gpx|TrackPointExtension|<trkpt/i.test(text)){                     // GPX workout
+    out.source="GPX workout"; let m; const re=/<(?:[a-z0-9]+:)?hr>\s*([\d.]+)\s*<\/(?:[a-z0-9]+:)?hr>/gi;
+    while((m=re.exec(text))) pushHR(m[1]);
+  } else {                                                                     // CSV / TSV / table
+    out.source="CSV / table";
+    const lines=text.split(/\r?\n/).filter(l=>l.trim());
+    if(lines.length){
+      const delim = lines[0].includes("\t")?"\t":(lines[0].includes(";")&&!lines[0].includes(",")?";":",");
+      const hdr=lines[0].split(delim).map(h=>h.trim().toLowerCase().replace(/^"|"$/g,""));
+      const find=re=>hdr.findIndex(h=>re.test(h));
+      const iHR=find(/heart|(^|\W)hr($|\W)|bpm/), iSpo=find(/spo2|oxygen|sao2|sp02/), iStep=find(/step/), iRest=find(/resting/);
+      for(let r=1;r<lines.length;r++){ const c=lines[r].split(delim).map(x=>x.replace(/^"|"$/g,""));
+        if(iHR>=0 && c[iHR]) pushHR(c[iHR]);
+        if(iSpo>=0 && c[iSpo]) pushSpo2(c[iSpo]);
+        if(iStep>=0 && +c[iStep]>0) out.steps+=+c[iStep];
+        if(iRest>=0 && +c[iRest]>20) out.restingHR=Math.round(+c[iRest]);
+      }
+    }
+  }
+  if(out.restingHR==null && out.hr.length) out.restingHR=Math.min(...out.hr);   // fall back to lowest HR
+  return out;
+}
+function importAvg(arr){ return arr && arr.length ? Math.round(arr.reduce((a,b)=>a+b,0)/arr.length) : null; }
+function renderImportReview(){
+  const rev=$("#hrImportReview"); if(!rev) return;
+  const d=hrImport; if(!d){ rev.innerHTML=""; return; }
+  const avgHR=importAvg(d.hr), maxHR=d.hr.length?Math.max(...d.hr):null, avgSpo2=importAvg(d.spo2);
+  const rows=[];
+  if(d.restingHR!=null) rows.push(`Resting HR: <b>${d.restingHR}</b> bpm`);
+  if(avgHR!=null) rows.push(`Average HR: <b>${avgHR}</b> bpm · Max <b>${maxHR}</b> <span class="sub">(${d.hr.length} readings)</span>`);
+  if(avgSpo2!=null) rows.push(`SpO₂: <b>${avgSpo2}%</b> <span class="sub">(${d.spo2.length} readings)</span>`);
+  if(d.steps) rows.push(`Steps: <b>${d.steps.toLocaleString()}</b>`);
+  if(!rows.length){ rev.innerHTML=`<div class="banner info">No heart-rate, SpO₂ or step data recognised in <b>${esc(d.source||"that file")}</b>. Supported: Apple Health export.xml, a .tcx/.gpx workout, or a CSV with HR / SpO₂ / steps columns.</div>`; return; }
+  rev.innerHTML=`<div class="hrreview"><div class="hrreviewhead">Found in ${esc(d.source||"your file")}:</div>
+      <ul class="hrreviewlist">${rows.map(r=>`<li>${r}</li>`).join("")}</ul>
+      <button class="btn primary" id="hrApplyBtn">Apply to my vitals</button>
+      <span class="hint" style="margin-left:8px">Sets your resting HR${avgSpo2!=null?" &amp; SpO₂":""} and logs today.</span></div>`;
+  const b=$("#hrApplyBtn"); if(b) b.onclick=applyImport;
+}
+function applyImport(){
+  const d=hrImport; if(!d) return;
+  const avgSpo2=importAvg(d.spo2); const v=state.vitals=state.vitals||{}; const applied=[], patch={};
+  if(d.restingHR!=null){ v.restHR=String(d.restingHR); patch.restHR=String(d.restingHR); applied.push("resting HR"); }
+  if(avgSpo2!=null){ v.spo2=String(avgSpo2); patch.spo2=String(avgSpo2); applied.push("SpO₂"); }
+  save(); mergeVitalsToday(patch);
+  toast(applied.length?`Applied ${applied.join(" & ")} from your export${d.steps?` (steps: ${d.steps.toLocaleString()})`:""}.`:"Nothing numeric to apply from that file.");
 }
 
 function renderVitalsLog(){

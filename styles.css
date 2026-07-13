@@ -569,6 +569,19 @@ footer b{color:var(--text)}
 .hrlivebtns{display:flex;gap:10px;flex-wrap:wrap}
 .hrlivebtns .btn{flex:0 0 auto}
 @media (prefers-reduced-motion: reduce){ .hrbignum span{animation:none} }
+.hrsec{margin:2px 0}
+.hrsech{display:block;font-weight:800;font-size:13.5px;margin-bottom:6px}
+.hrdiv{height:1px;background:var(--line);margin:14px 0}
+.hrspo2{font-size:20px;font-weight:700;color:var(--brand);margin:2px 0 8px}
+.hrspo2 b{font-size:26px;font-variant-numeric:tabular-nums}
+.hrimportbtn{display:inline-block;border:1px dashed var(--brand);color:var(--brand);border-radius:10px;padding:9px 14px;
+  font-size:13.5px;font-weight:700;cursor:pointer}
+.hrimportbtn:hover{background:rgba(62,166,255,.1)}
+.hrreview{margin-top:12px;border:1px solid var(--brand);border-radius:10px;background:var(--panel-2);padding:12px}
+.hrreviewhead{font-weight:700;margin-bottom:6px;color:var(--brand)}
+.hrreviewlist{list-style:none;margin:0 0 10px;padding:0;font-size:13.5px}
+.hrreviewlist li{padding:4px 0;border-bottom:1px solid var(--line)}
+.hrreviewlist li:last-child{border-bottom:none}
 .borgwrap{border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:6px 0 4px}
 .borghead{background:var(--panel-2);padding:8px 12px;font-size:12.5px;font-weight:700;border-bottom:1px solid var(--line)}
 .borghead .sub{color:var(--muted);font-weight:400}
