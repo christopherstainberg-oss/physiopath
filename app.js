@@ -2389,8 +2389,6 @@ function initClinician(){
   const host = $("#clinicianOut"); if(!host) return;
   host.innerHTML = clinicianIntroCard() + clinicianFormCard() + clinPrecautionCard() + clinicianAddedSummary();
   wireClinician();
-  // forward button reflects the linear flow: no injury picked yet → go choose it; otherwise view the program
-  const fwd = $("#clinToProgram"); if(fwd) fwd.textContent = state.condIds.length ? "Update my program →" : "Next: choose your injury →";
   // clinician-guided session → auto-populate an editable starter protocol whenever the form is empty
   // and nothing's been added yet (so it survives navigating away and back before adding).
   if(state.clinicianGuided && !(state.clinicianProtocols||[]).length){
@@ -2404,7 +2402,6 @@ function initClinician(){
 function syncClinGuide(){
   const on = !!state.clinicianGuided;
   const card = $("#clinGuideCard"); if(card) card.classList.toggle("on", on);
-  const btn = $("#historyNext"); if(btn) btn.textContent = on ? "Next: clinician setup →" : "Next: continue →";
   const sub = $("#clinGuideSub"); if(sub) sub.innerHTML = on
     ? `<b>On.</b> <b>Next</b> opens the <b>Clinician step</b> pre-filled with a protocol to adjust, then Injury and Details.`
     : `Tick this if a <b>clinician</b> is setting up this program — the Clinician step will arrive pre-filled with a protocol to adjust. Either way, <b>Next</b> continues through <b>Clinician → Injury → Details</b> (the Clinician step is optional — patients can just click through it).`;
@@ -4725,11 +4722,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   // controls whether the Clinician step auto-populates a starter protocol; it never bypasses it.
   const histNext = $("#historyNext"); if(histNext) histNext.onclick=()=>goStep(1);
   const cg = $("#q_clinicianGuided"); if(cg){ cg.checked = !!state.clinicianGuided; cg.onchange=()=>{ state.clinicianGuided=cg.checked; save(); syncClinGuide(); }; syncClinGuide(); }
-  const clinNext = $("#clinToProgram"); if(clinNext) clinNext.onclick=()=>{
-    if(!state.condIds.length){ toast("Now choose the injury so the program can be built."); goStep(2); return; }
-    state.program=generateProgram(); save();   // fold clinician inputs into the plan
-    goStep(4);
-  };
+  const clinNext = $("#clinToProgram"); if(clinNext) clinNext.onclick=()=>goStep(2);   // Clinician → Injury (consecutive)
   $("#generateBtn").onclick=doGenerate;
   $("#printBtn").onclick=()=>window.print();
   $("#resetBtn").onclick=doReset;

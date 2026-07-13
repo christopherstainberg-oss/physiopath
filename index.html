@@ -176,7 +176,7 @@
 
       <div class="rowbtns">
         <span></span>
-        <button class="btn primary" id="historyNext">Next: choose your injury →</button>
+        <button class="btn primary" id="historyNext">Next History-Clinician</button>
       </div>
     </div>
   </section>
@@ -185,8 +185,8 @@
   <section class="panel hide" id="panel-1">
     <div id="clinicianOut"></div>
     <div class="rowbtns">
-      <button class="btn ghost" data-goto="0">← Back</button>
-      <button class="btn primary" id="clinToProgram">Update my program →</button>
+      <button class="btn ghost" data-goto="0">Back Clinician-History</button>
+      <button class="btn primary" id="clinToProgram">Next Clinician-Injury</button>
     </div>
   </section>
 
@@ -214,8 +214,8 @@
       <div class="results" id="condResults"></div>
 
       <div class="rowbtns">
-        <button class="btn ghost" data-goto="0">← Back</button>
-        <button class="btn primary" data-goto="3" id="toDetails">Next: injury details →</button>
+        <button class="btn ghost" data-goto="1">Back Injury-Clinician</button>
+        <button class="btn primary" data-goto="3" id="toDetails">Next Injury-Details</button>
       </div>
     </div>
   </section>
@@ -291,8 +291,8 @@
     <div id="precautionsOut"></div>
 
     <div class="rowbtns">
-      <button class="btn ghost" data-goto="2">← Back</button>
-      <button class="btn primary" id="generateBtn">Generate my program →</button>
+      <button class="btn ghost" data-goto="2">Back Details-Injury</button>
+      <button class="btn primary" id="generateBtn">Next Details-Program</button>
     </div>
   </section>
 
@@ -303,8 +303,8 @@
         <div>No program yet — complete the earlier steps and generate.</div></div>
     </div>
     <div class="rowbtns no-print">
-      <button class="btn ghost" data-goto="3">← Adjust details</button>
-      <button class="btn primary" data-goto="5">Track health &amp; progress →</button>
+      <button class="btn ghost" data-goto="3">Back Program-Details</button>
+      <button class="btn primary" data-goto="5">Next Program-Health</button>
     </div>
   </section>
 
@@ -380,8 +380,8 @@
     </div>
 
     <div class="rowbtns no-print">
-      <button class="btn ghost" data-goto="4">← Back to program</button>
-      <button class="btn primary" data-goto="6">Ask Jeffery →</button>
+      <button class="btn ghost" data-goto="4">Back Health-Program</button>
+      <button class="btn primary" data-goto="6">Next Health-AI</button>
     </div>
   </section>
 
@@ -429,8 +429,8 @@
         <button class="btn primary" type="submit">Send</button>
       </form>
     </div>
-    <div class="rowbtns no-print"><button class="btn ghost" data-goto="5">← Back to progress</button>
-      <button class="btn primary" data-goto="7">Browse exercise library →</button></div>
+    <div class="rowbtns no-print"><button class="btn ghost" data-goto="5">Back AI-Health</button>
+      <button class="btn primary" data-goto="7">Next AI-Library</button></div>
   </section>
 
   <!-- ============ STEP 8: EXERCISE LIBRARY ============ -->
@@ -455,7 +455,7 @@
       </div>
       <div class="results" id="exResults"></div>
     </div>
-    <div class="rowbtns no-print"><button class="btn ghost" data-goto="4">← Back to program</button><span></span></div>
+    <div class="rowbtns no-print"><button class="btn ghost" data-goto="6">Back Library-AI</button><span></span></div>
   </section>
 
   <footer>
