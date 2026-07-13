@@ -13,6 +13,7 @@ await import("./generate-medications.mjs");
 await import("./generate-surgeries.mjs");
 await import("./generate-sports.mjs");
 await import("./generate-activities.mjs");
+await import("./generate-coach-kb.mjs");
 await import("./generate-icons.mjs");
 
 // 2) fresh dist

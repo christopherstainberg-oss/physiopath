@@ -3033,8 +3033,10 @@ function coachAnswer(qRaw){
       return `**${c.name}** — ${aboutText(c, state.program?state.program.track:classify(state.weeks)||"acute")}\n\n${DOMAIN_REDFLAGS[c.domain]}`;
   }
   let best=null, score=0;
-  for(const item of KB){ let s=0; for(const kw of item.kw) if(q.includes(kw)) s+=kw.split(" ").length; if(s>score){score=s;best=item;} }
-  if(best && score>0) return best.a();
+  const scan = arr => { for(const item of arr){ let s=0; for(const kw of item.kw) if(q.includes(kw)) s+=kw.split(" ").length; if(s>score){ score=s; best=item; } } };
+  scan(KB);                          // personalized (dynamic) entries — win ties
+  scan(window.COACH_KB || []);       // ~5,000 generated condition/topic answers — win when more specific
+  if(best && score>0) return typeof best.a==="function" ? best.a() : best.a;
   if(/program|phase|week|routine|plan/.test(q)){
     if(state.program) return `Your plan is a **${state.program.totalWeeks}-week, 4-phase program** (${state.program.track} track): ${TEMPLATE[state.program.track].phases.map(p=>p.title).join(" → ")}. Advance a phase when the current one feels controlled and symptoms are low. See the **Program** tab for exercises.`;
     return "Build a program first (History → Injury → Details), then I can walk you through your phases and exercises.";
