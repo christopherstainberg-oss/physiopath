@@ -2402,6 +2402,7 @@ function initClinician(){
 function syncClinGuide(){
   const on = !!state.clinicianGuided;
   const card = $("#clinGuideCard"); if(card) card.classList.toggle("on", on);
+  const btn = $("#historyNext"); if(btn) btn.textContent = on ? "Next: clinician setup →" : "Next: continue →";
   const sub = $("#clinGuideSub"); if(sub) sub.innerHTML = on
     ? `<b>On.</b> <b>Next</b> opens the <b>Clinician step</b> pre-filled with a protocol to adjust, then Injury and Details.`
     : `Tick this if a <b>clinician</b> is setting up this program — the Clinician step will arrive pre-filled with a protocol to adjust. Either way, <b>Next</b> continues through <b>Clinician → Injury → Details</b> (the Clinician step is optional — patients can just click through it).`;
