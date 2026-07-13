@@ -3498,7 +3498,8 @@ const VITAL_METRICS = [
   { k:"spo2",    label:"SpO₂",         unit:"%",    good:"up" },
   { k:"glucose", label:"Glucose",      unit:"mg/dL",good:"down" },
   { k:"weight",  label:"Weight",       unit:"kg",   good:"neutral" },
-  { k:"temp",    label:"Temp",         unit:"°C",   good:"neutral" }
+  { k:"temp",    label:"Temp",         unit:"°C",   good:"neutral" },
+  { k:"steps",   label:"Steps",        unit:"",     good:"up" }
 ];
 let healthChartMetric = "sbp";
 
@@ -3515,13 +3516,13 @@ function latestVitals(){
 function saveVitalsEntry(){
   const g = id => { const el=$(id); return el?el.value.trim():""; };
   const entry = { date: $("#vlDate").value || todayISO(), restHR:g("#vlHR"), sbp:g("#vlSBP"), dbp:g("#vlDBP"),
-    spo2:g("#vlSpo2"), weight:g("#vlWeight"), glucose:g("#vlGlucose"), temp:g("#vlTemp") };
-  if(!["restHR","sbp","dbp","spo2","weight","glucose","temp"].some(k=>entry[k]!=="")){ toast("Enter at least one vital first."); return; }
+    spo2:g("#vlSpo2"), weight:g("#vlWeight"), glucose:g("#vlGlucose"), temp:g("#vlTemp"), steps:g("#vlSteps") };
+  if(!["restHR","sbp","dbp","spo2","weight","glucose","temp","steps"].some(k=>entry[k]!=="")){ toast("Enter at least one vital first."); return; }
   state.vitalsLog = state.vitalsLog||[];
   const i = state.vitalsLog.findIndex(e=>e.date===entry.date);
   if(i>=0) state.vitalsLog[i]=entry; else state.vitalsLog.push(entry);
   state.vitalsLog.sort((a,b)=>a.date<b.date?-1:1);
-  save(); ["#vlHR","#vlSBP","#vlDBP","#vlSpo2","#vlWeight","#vlGlucose","#vlTemp"].forEach(id=>{ const el=$(id); if(el) el.value=""; });
+  save(); ["#vlHR","#vlSBP","#vlDBP","#vlSpo2","#vlWeight","#vlGlucose","#vlTemp","#vlSteps"].forEach(id=>{ const el=$(id); if(el) el.value=""; });
   renderVitalsLog(); renderRisks();
   toast(i>=0 ? "Updated vitals for that date." : "Vitals saved — keep logging to see the trend.");
 }
@@ -3692,7 +3693,7 @@ function mergeVitalsToday(patch){
   const date=todayISO(); state.vitalsLog=state.vitalsLog||[];
   const i=state.vitalsLog.findIndex(en=>en.date===date);
   if(i>=0) state.vitalsLog[i]={ ...state.vitalsLog[i], ...patch };
-  else state.vitalsLog.push({ date, restHR:"", sbp:"", dbp:"", spo2:"", weight:"", glucose:"", temp:"", ...patch });
+  else state.vitalsLog.push({ date, restHR:"", sbp:"", dbp:"", spo2:"", weight:"", glucose:"", temp:"", steps:"", ...patch });
   state.vitalsLog.sort((a,b)=>a.date<b.date?-1:1);
   save(); renderVitalsLog(); renderRisks();
 }
@@ -3780,8 +3781,9 @@ function applyImport(){
   const avgSpo2=importAvg(d.spo2); const v=state.vitals=state.vitals||{}; const applied=[], patch={};
   if(d.restingHR!=null){ v.restHR=String(d.restingHR); patch.restHR=String(d.restingHR); applied.push("resting HR"); }
   if(avgSpo2!=null){ v.spo2=String(avgSpo2); patch.spo2=String(avgSpo2); applied.push("SpO₂"); }
+  if(d.steps){ patch.steps=String(d.steps); applied.push("steps"); }
   save(); mergeVitalsToday(patch);
-  toast(applied.length?`Applied ${applied.join(" & ")} from your export${d.steps?` (steps: ${d.steps.toLocaleString()})`:""}.`:"Nothing numeric to apply from that file.");
+  toast(applied.length?`Applied ${applied.join(" & ")} from your export → logged to today.`:"Nothing numeric to apply from that file.");
 }
 
 function renderVitalsLog(){
@@ -3806,7 +3808,7 @@ function renderVitalsLog(){
   const list = log.slice().reverse().map(e=>{
     const parts=[];
     if(e.sbp!==""||e.dbp!=="") parts.push(`BP ${e.sbp||"?"}/${e.dbp||"?"}`);
-    VITAL_METRICS.filter(x=>!["sbp","dbp"].includes(x.k) && e[x.k]!=="").forEach(x=>parts.push(`${x.label} ${e[x.k]}`));
+    VITAL_METRICS.filter(x=>!["sbp","dbp"].includes(x.k) && e[x.k]!=="" && e[x.k]!=null).forEach(x=>parts.push(`${x.label} ${e[x.k]}`));
     return `<li class="logrow"><span class="ld">${fmtDate(e.date)}</span><span class="ln">${esc(parts.join(" · "))}</span><span class="lx" data-vdate="${e.date}" title="Delete">✕</span></li>`;
   }).join("");
   el.innerHTML=`<div class="vtrendgrid">${cells}</div>
