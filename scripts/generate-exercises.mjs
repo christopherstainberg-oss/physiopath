@@ -16,7 +16,7 @@ const OUT = `${__dirname}/../data/exercises.js`;
 const T = { impact:"impact", valsalva:"valsalva", overhead:"overhead", flexLoad:"spine_flexion_load",
   ext:"spine_extension", deepHipFlex:"deep_hip_flexion", hipAddIR:"hip_add_ir", balance:"balance",
   highInt:"high_intensity", supine:"supine_flat", prone:"prone", inversion:"inversion",
-  endNeck:"end_range_neck", wb:"weight_bearing", grip:"grip_isometric", breath:"breath_hold", aerobic:"aerobic" };
+  endNeck:"end_range_neck", wb:"weight_bearing", grip:"grip_isometric", breath:"breath_hold", aerobic:"aerobic", deepWater:"deep_water" };
 
 /* Equipment: [display prefix, extra tag hints] */
 const EQUIP = {
@@ -176,6 +176,23 @@ const BASES = [
      "low forward step-ups (holding a rail)","low lateral step-ups",
      "supported mini lunges","supported partial-range split squat",
      "standing hamstring stretch (heel on a step)","standing calf stretch (against a wall)"]},
+  // ---- Pool / aquatic therapeutic set (buoyancy offloads the joints — great when weight-bearing hurts). Deep-water moves tagged deep_water (gated by water confidence/age). Several variations per exercise. ----
+  {b:"", pat:"pool", reg:["Hip","Knee","Cardio","Pool / aquatic (therapeutic)"], tags:[], eq:["bw"],
+   cue:"Work in chest-deep water so buoyancy offloads your joints; move slowly against the water's resistance, hold the pool wall or edge when you need support, and keep it pain-free.",
+   mods:[
+     "water walking (forward)","water walking (backward)","water walking (sideways)","water walking with high knees",
+     "pool marching","pool marching with arm drive","high-knee pool marching",
+     "shallow-water jogging","aqua jogging (chest-deep)","deep-water running (flotation belt)",
+     "standing hip abduction (at the pool wall)","standing hip abduction with a hold (pool)","standing hip adduction (pool)","standing hip flexion (at the pool wall)","standing hip extension (at the pool wall)",
+     "standing knee bends (pool)","mini squats (pool)","wall-supported squats (pool)",
+     "heel raises (pool)","toe raises (pool)",
+     "flutter kicks (holding the wall)","scissor kicks (holding the wall)","bicycle kicks (holding the wall)",
+     "pool leg swings (front-to-back)","pool leg swings (side-to-side)",
+     "standing balance (pool)","single-leg stance (pool)","tandem stance (pool)",
+     "supported pool lunges","forward step-ups (pool step)",
+     "standing trunk rotation (water resistance)","arm sweeps (water resistance)",
+     "treading water","cross-country ski (pool, no-touch)","aqua jumping jacks",
+     "kickboard flutter kick (deep end)","standing hamstring stretch (pool)","standing calf stretch (at the pool wall)","wall push-offs (pool)"]},
 
   // ---- Pediatric / developmental (0–18 yrs; play-based, low-load, parent/therapist supervised) ----
   {b:"(infant)", pat:"general", reg:["Full body"], tags:["pediatric"], eq:["bw"], cue:"Parent-led play — gentle, on the floor, and always supervised.",
@@ -225,6 +242,10 @@ function deriveTags(name, base, extra){
   if(/carry|farmer|suitcase|dead-hang|grip|hang/.test(l)) t.add(T.grip);
   if(base.pat==="cardio" && !/aqua|swim|cycl|recumbent/.test(l)) t.add(T.wb);
   if(base.pat==="cardio") t.add(T.aerobic);
+  if(base.pat==="pool"){                                   // aquatic: buoyancy offloads joints (no weight_bearing tag)
+    if(/jog|run|jumping jack|cross-country|tread|cycl/.test(l)) t.add(T.aerobic);
+    if(/deep-?water|deep end|treading|flotation|belt|no-touch/.test(l)) t.add(T.deepWater);
+  }
   if(base.pat==="agility" || /agility|ladder|carioca|shuffle|shuttle|cutting|zig-zag|dot drill|line hops|backpedal|figure-8|mirror drill|a-skip|box drill|5-10-5|t-drill/.test(l)){
     t.add(T.wb); t.add(T.highInt); t.add(T.balance);
   }
@@ -233,7 +254,7 @@ function deriveTags(name, base, extra){
 }
 function difficulty(name, base){
   const l = name.toLowerCase();
-  if(base.pat==="pump"||base.pat==="supine"||base.pat==="seated") return 1;   // circulation & supine/seated therapeutic sets are beginner-level
+  if(base.pat==="pump"||base.pat==="supine"||base.pat==="seated"||base.pat==="pool") return 1;   // circulation, supine/seated & aquatic therapeutic sets are beginner-level
   if(/pro-agility|5-10-5|t-drill|cutting|zig-zag|reactive|mirror drill|bound-and-stick|cut-and-stick|depth-drop|shuttle run/.test(l)) return 4;
   if(/agility|ladder|carioca|shuffle|dot drill|line hops|backpedal|box drill|figure-8|a-skip|deceleration|drop-and-stick|hop-and-stick|hop-to-balance/.test(l)) return 3;
   if(/plyo|jump|hop|bound|pogo|depth|sprint|explosive|nordic|pistol|single-leg romanian|clap|advanced/.test(l)) return 4;
@@ -249,6 +270,7 @@ const DOSE = {
   pump:["3×20 slow","2×20 each","hourly ×15–20","10–15 each, several × day"],
   supine:["3×10","3×12","2×15","3×10 (5s hold)"], seated:["3×10","3×12","2×15","3×10 each"],
   standing:["3×10","3×12","2×15","3×10 each"],
+  pool:["2–3×10","3×12","10–15 min","2×20 steps"],
   breathing:["3×1 min","5×6 breaths","2–3 min"], anti:["3×10 each","3×8 slow","3×12"],
   push:["3×8–12","3×10","3×12"], pull:["3×10–15","3×12","3×10 each"], hinge:["3×8–10","3×10","4×8"],
   squat:["3×8–12","3×10","4×8"], lunge:["3×8–10 each","3×10 each"], calf:["3×12–15","4×12","3×15"],
@@ -265,7 +287,8 @@ const CUE = {
   cardio:"Conversational pace unless intervals prescribed.", vestibular:"Provoke mild symptoms, then let them settle.",
   breathing:"Slow, relaxed; never hold your breath.", pump:"Slow, full point-and-flex; keep it easy and pain-free.",
   supine:"Lie on your back; move slowly, brace gently, stay pain-free.", seated:"Sit tall in a sturdy chair; slow and controlled, pain-free.",
-  standing:"Hold a sturdy support; keep hips level, move slow and controlled.", "anti-ext":"Keep the low back flat; move the limbs, not the spine.",
+  standing:"Hold a sturdy support; keep hips level, move slow and controlled.",
+  pool:"In chest-deep water; move slow against the water, hold the wall if needed.", "anti-ext":"Keep the low back flat; move the limbs, not the spine.",
   "anti-rot":"Resist the twist; keep hips and shoulders square.", extension:"Small controlled range; avoid pinching.",
   flexion:"Curl through the upper spine; avoid straining the neck.", gait:"Even, deliberate steps; look ahead.",
   rotate:"Rotate through the trunk, control the return.",

@@ -384,6 +384,17 @@ svg.chart .dot{fill:var(--brand)}
 .clinprevn{color:var(--muted);font-size:12px}
 .clinbtns{display:flex;gap:10px;flex-wrap:wrap}
 .clinbtns .btn{flex:0 0 auto}
+/* clinician step */
+.clinintro{border-color:var(--brand-2)}
+.clinintro h2{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.clinformcard>textarea{width:100%;min-height:110px;font-family:inherit;line-height:1.5;margin-top:8px}
+.clinsumcard{border-color:rgba(92,225,166,.5)}
+.clinsumlist{list-style:none;margin:8px 0 0;padding:0}
+.clinsumrow{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.clinsumrow:last-child{border-bottom:none}
+.clindel2{cursor:pointer;color:var(--muted);border:1px solid var(--line);border-radius:8px;width:26px;height:26px;flex:0 0 auto;background:none;font-family:inherit;font-size:12px}
+.clindel2:hover{border-color:var(--danger);color:var(--danger)}
+.precrow.spwhat.clinprecrow{border-color:rgba(92,225,166,.45);background:rgba(92,225,166,.07)}
 
 /* program editing controls */
 .exrowtools{display:flex;gap:14px;align-items:center;margin-top:7px;flex-wrap:wrap}

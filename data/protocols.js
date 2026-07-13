@@ -13,7 +13,7 @@
     impact:"impact", valsalva:"valsalva", overhead:"overhead", flexLoad:"spine_flexion_load",
     ext:"spine_extension", deepHipFlex:"deep_hip_flexion", hipAddIR:"hip_add_ir", balance:"balance",
     highInt:"high_intensity", supine:"supine_flat", prone:"prone", inversion:"inversion",
-    endNeck:"end_range_neck", wb:"weight_bearing", grip:"grip_isometric", breath:"breath_hold", aerobic:"aerobic"
+    endNeck:"end_range_neck", wb:"weight_bearing", grip:"grip_isometric", breath:"breath_hold", aerobic:"aerobic", deepWater:"deep_water"
   };
   const E = (n, d, c, ...tags) => ({ n, d, c, tags });
 
@@ -1042,6 +1042,8 @@
       note:"Abdominal precautions (after abdominal / hernia / C-section surgery): the abdominal wall and incision take ~4–6 weeks to heal — don't lift more than ~5–10 lb (or your surgeon's limit), never hold your breath and bear down (breathe out on effort), and skip sit-ups, crunches, planks and leg-lowers for now. Support the incision when you cough and log-roll out of bed. Report a new bulge, increasing pain, or wound drainage, and follow your surgeon's timeline." },
     spinal_precautions: { avoid:[T.flexLoad,T.ext,T.valsalva,T.breath], caution:[T.highInt,T.impact,T.overhead], clearance:true,
       note:"Spinal precautions (after spine surgery — fusion, laminectomy, discectomy): protect the healing spine with the “BLT” rule — no Bending, Lifting (more than ~5–10 lb) or Twisting. Loaded spinal flexion, extension and rotation and heavy lifting/carrying were removed; hinge at the hips with a straight back, log-roll in and out of bed, and turn your whole body as one unit. Keep walking (it's the best medicine), wear your brace if one was prescribed, and follow your surgeon's timeline. Seek urgent care for new leg weakness/numbness or loss of bladder or bowel control." },
+    low_water_confidence: { avoid:[T.deepWater], caution:[],
+      note:"Pool / aquatic work: because you're less confident in water (or would be steadier with more support), out-of-depth deep-water drills were removed — stay where you can stand, in about chest-deep water, holding the wall or a rail. Never swim or exercise in a pool alone, use the steps/ramp to get in and out, and take care on slippery edges." },
     // ---- symptom / red-flag screen (from the medical-intake questions) ----
     red_flags: { avoid:[], caution:[], clearance:true,
       note:"You flagged a possible warning sign (e.g. unexplained weight loss, constant or night pain, fever with your symptoms, a cancer history, spreading numbness/weakness, or a major injury). These can occasionally point to something beyond a routine musculoskeletal problem — please get assessed by a clinician before starting so anything serious is ruled out first." },

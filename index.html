@@ -34,10 +34,11 @@
   <button class="step" data-step="0"><i>1</i><span>History</span></button>
   <button class="step" data-step="1"><i>2</i><span>Injury</span></button>
   <button class="step" data-step="2"><i>3</i><span>Details</span></button>
-  <button class="step" data-step="3"><i>4</i><span>Program</span></button>
-  <button class="step" data-step="4"><i>5</i><span>Health</span></button>
-  <button class="step" data-step="5"><i>6</i><span>AI</span></button>
-  <button class="step" data-step="6"><i>7</i><span>Library</span></button>
+  <button class="step" data-step="3"><i>4</i><span>Clinician</span></button>
+  <button class="step" data-step="4"><i>5</i><span>Program</span></button>
+  <button class="step" data-step="5"><i>6</i><span>Health</span></button>
+  <button class="step" data-step="6"><i>7</i><span>AI</span></button>
+  <button class="step" data-step="7"><i>8</i><span>Library</span></button>
 </nav>
 
 <main class="wrap">
@@ -149,6 +150,8 @@
             <select id="q_falls"><option value="">—</option><option value="0">None</option><option value="1">One</option><option value="2">Two or more</option></select></label>
           <label class="subfield"><span>Walking aid</span>
             <select id="q_aid"><option value="">—</option><option value="none">None</option><option value="cane">Cane</option><option value="walker">Walker / rollator</option><option value="crutches">Crutches</option><option value="wheelchair">Wheelchair</option></select></label>
+          <label class="subfield"><span>Confidence in water <i>(for pool therapy)</i></span>
+            <select id="q_waterConf"><option value="">—</option><option value="none">Can't swim / not safe in water</option><option value="low">Low — nervous, shallow only</option><option value="moderate">Moderate — comfortable chest-deep</option><option value="high">High — confident swimmer</option></select></label>
         </div>
       </div>
 
@@ -276,20 +279,29 @@
     </div>
   </section>
 
-  <!-- ============ STEP 3: PROGRAM ============ -->
+  <!-- ============ STEP 4: CLINICIAN ============ -->
   <section class="panel hide" id="panel-3">
+    <div id="clinicianOut"></div>
+    <div class="rowbtns">
+      <button class="btn ghost" data-goto="2">← Adjust details</button>
+      <button class="btn primary" id="clinToProgram">Save &amp; view program →</button>
+    </div>
+  </section>
+
+  <!-- ============ STEP 5: PROGRAM ============ -->
+  <section class="panel hide" id="panel-4">
     <div id="programOut">
       <div class="card empty"><div class="big">🗓️</div>
         <div>No program yet — complete the earlier steps and generate.</div></div>
     </div>
     <div class="rowbtns no-print">
       <button class="btn ghost" data-goto="2">← Adjust details</button>
-      <button class="btn primary" data-goto="4">Track health &amp; progress →</button>
+      <button class="btn primary" data-goto="5">Track health &amp; progress →</button>
     </div>
   </section>
 
-  <!-- ============ STEP 4: PROGRESS ============ -->
-  <section class="panel hide" id="panel-4">
+  <!-- ============ STEP 6: PROGRESS ============ -->
+  <section class="panel hide" id="panel-5">
     <div class="card">
       <h2>Log today's session</h2>
       <p class="hint">Track pain and sessions over time to see your trend. Stored on your device only.</p>
@@ -360,13 +372,13 @@
     </div>
 
     <div class="rowbtns no-print">
-      <button class="btn ghost" data-goto="3">← Back to program</button>
-      <button class="btn primary" data-goto="5">Ask Jeffery →</button>
+      <button class="btn ghost" data-goto="4">← Back to program</button>
+      <button class="btn primary" data-goto="6">Ask Jeffery →</button>
     </div>
   </section>
 
-  <!-- ============ STEP 5: COACH ============ -->
-  <section class="panel hide" id="panel-5">
+  <!-- ============ STEP 7: COACH ============ -->
+  <section class="panel hide" id="panel-6">
     <div class="card">
       <div class="coachhead">
         <div>
@@ -409,12 +421,12 @@
         <button class="btn primary" type="submit">Send</button>
       </form>
     </div>
-    <div class="rowbtns no-print"><button class="btn ghost" data-goto="4">← Back to progress</button>
-      <button class="btn primary" data-goto="6">Browse exercise library →</button></div>
+    <div class="rowbtns no-print"><button class="btn ghost" data-goto="5">← Back to progress</button>
+      <button class="btn primary" data-goto="7">Browse exercise library →</button></div>
   </section>
 
-  <!-- ============ STEP 6: EXERCISE LIBRARY ============ -->
-  <section class="panel hide" id="panel-6">
+  <!-- ============ STEP 8: EXERCISE LIBRARY ============ -->
+  <section class="panel hide" id="panel-7">
     <div class="card">
       <h2>Exercise library</h2>
       <p class="hint">Browse <b id="exCount">5000</b> exercises and variations (load, tempo, stance,
@@ -435,7 +447,7 @@
       </div>
       <div class="results" id="exResults"></div>
     </div>
-    <div class="rowbtns no-print"><button class="btn ghost" data-goto="3">← Back to program</button><span></span></div>
+    <div class="rowbtns no-print"><button class="btn ghost" data-goto="4">← Back to program</button><span></span></div>
   </section>
 
   <footer>

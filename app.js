@@ -278,8 +278,8 @@ const state = {
   surgeryType:"auto", surgeryDate:"", fitness:"mod", goal:"", returnActivities:[], returnSports:[], program:null,
   vitals:{restHR:"",sbp:"",dbp:"",spo2:"",rr:"",height:"",weight:""},
   vitalsLog:[], labs:{}, labHist:{},
-  screen:{}, falls:"", aid:"", smoking:"", alcohol:"", sleep:"", stress:"",
-  medIds:[], medFilter:false, homeMode:false, customPrecautions:[], clinicianProtocols:[],
+  screen:{}, falls:"", aid:"", smoking:"", alcohol:"", sleep:"", stress:"", waterConfidence:"",
+  medIds:[], medFilter:false, homeMode:false, customPrecautions:[], clinicianProtocols:[], clinPrecautionProtocol:"",
   medDoses:{}, weightBearing:{status:"",pct:"",lbs:"",side:"",limb:"le"}, devices:[],
   cardiacDevice:{type:"",icdRate:""}, specialPrecautions:[],
   log:[], apiKey:"", apiModel:"claude-opus-4-8"
@@ -358,6 +358,8 @@ function gatherFlags(){
   if(sc.cauda) f.add("red_flags_urgent");
   if(state.falls==="2" || (state.aid && state.aid!=="none")) f.add("balance_risk");
   if(state.smoking==="current") f.add("smoker");
+  // Pool/aquatic: nervous-in-water or older/less-steady users skip deep-water (out-of-depth) drills.
+  if(["none","low"].includes(state.waterConfidence) || Number(state.age) >= 70 || f.has("balance_risk")) f.add("low_water_confidence");
   return Array.from(f);
 }
 /* Medication-derived engine flags — applied at RENDER time only (so toggling is
@@ -1527,7 +1529,7 @@ const TAG_LABEL = {
   hip_add_ir:"crossing the midline / inward rotation", balance:"high balance demand", high_intensity:"high intensity",
   supine_flat:"lying flat on the back", prone:"lying face-down", inversion:"head-down positions",
   end_range_neck:"end-range neck movement", weight_bearing:"full weight-bearing", grip_isometric:"sustained grip/isometric holds",
-  breath_hold:"breath-holding", aerobic:"sustained aerobic effort"
+  breath_hold:"breath-holding", aerobic:"sustained aerobic effort", deep_water:"deep-water (out-of-depth) work"
 };
 
 /* =====================================================================
@@ -1686,6 +1688,7 @@ const PATTERN_INFO = {
   supine:{what:"A supine (lying on your back) therapeutic exercise — a gentle, low-load movement done on a mat, floor or bed.",how:"Lie on your back and move the target leg or muscle slowly through a comfortable range, or build a steady hold, keeping your core gently braced.",why:"Rebuilds early strength, control and range with almost no joint loading — ideal after surgery, when weight-bearing is limited, or when standing is painful."},
   seated:{what:"A seated therapeutic exercise — a gentle, controlled movement done sitting in a sturdy chair.",how:"Sit tall with your feet supported (or the working leg free to move) and take the joint slowly through range, or hold, staying pain-free.",why:"Builds strength and range safely, with support and no standing-balance demand — good early in recovery or when standing is limited."},
   standing:{what:"A standing therapeutic exercise — a supported, weight-bearing movement done holding a counter or rail.",how:"Stand tall beside a sturdy support and move the working leg (or your whole body) slowly and controlled through a pain-free range, or hold — keeping your hips level.",why:"Rebuilds standing strength, hip control and balance in a functional upright position — the bridge from table-based exercises to walking and daily life."},
+  pool:{what:"A pool / aquatic therapeutic exercise — done standing or moving in chest-deep water, where buoyancy carries much of your body weight.",how:"In chest-deep water, move slowly against the water's resistance, holding the pool wall or edge for support when you need it; deeper-water drills use a flotation belt.",why:"Buoyancy offloads sore or healing joints while the water gives gentle all-around resistance and warmth — so you can move, strengthen and build fitness with far less impact than on land."},
   general:{what:"A general conditioning exercise for the area.",how:"Perform with control through a pain-free range, exhaling on effort.",why:"Helps restore strength, movement and function."}
 };
 /* Step-by-step technique detail per movement pattern — feeds the "How to do it" block. */
@@ -1789,7 +1792,11 @@ const PATTERN_HOWTO = {
   standing:{setup:"Stand tall facing or beside a sturdy, stable surface (a kitchen counter, heavy table or rail) you can rest a hand on for balance. Feet hip-width, weight even, knees soft.",
     steps:["Set your posture — stand tall, core gently braced, shoulders relaxed; rest one or both hands lightly on the support.","Move the working leg (or lower and raise your body) slowly and deliberately through the prescribed range — or hold the position steady.","Keep your standing leg strong and your hips level — don't let the pelvis drop or your trunk lean to cheat the movement.","Return under control to the start, staying tall throughout."],
     tempo:"Move for about 2–3 seconds each way, or hold for the prescribed time; breathe normally throughout.",
-    avoid:"Don't grip the support for dear life or twist/lean to compensate — use just enough support to stay steady, and reduce the range if your form breaks down."}
+    avoid:"Don't grip the support for dear life or twist/lean to compensate — use just enough support to stay steady, and reduce the range if your form breaks down."},
+  pool:{setup:"Use a warm pool. Stand where the water is about chest-deep so buoyancy takes weight off your legs, within easy reach of the wall or a rail. Enter and exit using the steps or ramp, and never swim or exercise in a pool alone.",
+    steps:["Find your balance in the water with a hand on the wall if you need it; stand tall with your core gently braced.","Move slowly and deliberately — the water gives resistance in every direction, so smooth, controlled effort is what builds strength.","Keep the movement pain-free and use the wall for support whenever your balance is challenged.","For deeper-water drills, wear a flotation belt and stay within your comfort and confidence in the water."],
+    tempo:"Work for the prescribed reps or time; move steadily against the water and breathe normally — don't hold your breath.",
+    avoid:"Don't go deeper than you're confident in, don't exercise alone, and get out if you feel cold, dizzy or unwell. Take care on wet, slippery pool edges."}
 };
 function inferPattern(name){
   const l = name.toLowerCase();
@@ -1927,12 +1934,8 @@ function wireProgram(){
     toast(hm.checked ? "Home mode ON — exercises adapted to household objects (your edits are kept)."
                      : "Home mode OFF — standard equipment shown.");
   };
-  // clinician / physician protocol
-  const clinAdd = $("#programOut #clinAdd"); if(clinAdd) clinAdd.onclick = addClinProtocol;
-  const clinEx = $("#programOut #clinExample"); if(clinEx) clinEx.onclick = fillClinExample;
-  const clinText = $("#programOut #clinText"); if(clinText) clinText.oninput = updateClinPreview;
+  // clinician protocols are ADDED in the Clinician step; here we only wire the delete on the rendered cards
   $$("#programOut .clindel").forEach(b=>b.onclick=()=>removeClinProtocol(+b.dataset.idx));
-  if(clinText) updateClinPreview();
 }
 function openSwap(btn){
   const ci=+btn.dataset.ci, pi=+btn.dataset.pi, ei=+btn.dataset.ei;
@@ -2166,18 +2169,28 @@ function surgicalReminderCard(){
       <div class="sptoggles">${spToggles}</div>
     </div>`;
 
-  // --- rows (weight-bearing order, devices, special precautions, surgical, custom) ---
-  const wbRow = wbInfo ? `<li class="precrow active wbrow"><span class="prec-t">🦵 <b>Weight-bearing:</b> ${esc(wbSummary())}</span><span class="prec-w">order</span></li>` : "";
-  const devRows = devices.map((d,i)=>`<li class="precrow devrow"><span class="prec-t">🦿 <b>${esc(d.name)}</b> — ${esc(d.note||"")}</span><span class="precdel devdel no-print" data-devidx="${i}" title="Remove">✕</span></li>`).join("");
+  // --- rows (each ACTIVE precaution shows a clear plain-language explanation) ---
+  // clinician's own precaution protocol (verbatim), shown first & prominent
+  const clinPrec = (state.clinPrecautionProtocol||"").trim();
+  const clinPrecRow = clinPrec ? `<li class="precrow spwhat clinprecrow"><span class="prec-t">🛡️ <b>Clinician precaution protocol</b> (entered in the Clinician step): ${esc(clinPrec)}</span></li>` : "";
+  // weight-bearing order + what it means
+  const wbRow = wbInfo ? `<li class="precrow active wbrow"><span class="prec-t">🦵 <b>Weight-bearing:</b> ${esc(wbSummary())}</span><span class="prec-w">order</span></li>`
+      + `<li class="precrow spwhat"><span class="prec-t">ⓘ <b>What this means:</b> ${esc(wbInfo.desc)}${wb.status && wb.status!=="fwb" ? " Your plan removes or limits standing / weight-through-the-limb exercises to match." : ""}</span></li>` : "";
+  // devices: wear note + what it changes in the plan
+  const devRows = devices.map((d,i)=>{
+      const r = DEVICE_RESTRICT[d.name];
+      const explain = r && r.note ? `<li class="precrow spwhat"><span class="prec-t">ⓘ <b>What this is:</b> ${esc(r.note)}</span></li>` : "";
+      return `<li class="precrow devrow"><span class="prec-t">🦿 <b>${esc(d.name)}</b> — ${esc(d.note||"")}</span><span class="precdel devdel no-print" data-devidx="${i}" title="Remove">✕</span></li>${explain}`;
+    }).join("");
   const spRows = activeSpecialPrecautions().map(p=>{
       const what = `<li class="precrow spwhat"><span class="prec-t">${p.icon} <b>${esc(p.label)} — what they are:</b> ${esc(p.what)}</span></li>`;
       const rules = p.rules.map(r=>precRowHTML(r, p.weeks, null)).join("");
       return what + rules;
     }).join("");
   const customRows = customs.map((p,i)=>precRowHTML(p.t, p.w, i)).join("");
-  const list = (wbRow || surgRows || devRows || spRows || customRows)
-    ? `<ul class="preclist">${wbRow}${surgRows}${devRows}${spRows}${customRows}</ul>`
-    : `<p class="hint">Set your weight-bearing status, add a brace/splint, or switch on a surgical-site precaution above — or add your own reminder below.</p>`;
+  const list = (clinPrecRow || wbRow || surgRows || devRows || spRows || customRows)
+    ? `<ul class="preclist">${clinPrecRow}${wbRow}${surgRows}${devRows}${spRows}${customRows}</ul>`
+    : `<p class="hint">Set your weight-bearing status, add a brace/splint, or switch on a surgical-site precaution above — or add your own reminder below. Each one you select is explained here.</p>`;
 
   const addCtrl = `<div class="addprec no-print">
       <button class="addprecbtn">＋ Add your own precaution / reminder</button>
@@ -2219,7 +2232,7 @@ function wirePrecautions(){
 /* Regenerate the (hidden) plan after a plan-affecting precaution change, then
    re-render the card. Step 3 re-renders from state.program when navigated to. */
 function afterPrecautionChange(regen){
-  if(regen && state.program){ state.program = generateProgram(); save(); if(state.step===3) renderProgram(state.program); }
+  if(regen && state.program){ state.program = generateProgram(); save(); if(state.step===4) renderProgram(state.program); }
   renderPrecautions();
 }
 function setWeightBearingStatus(){
@@ -2359,9 +2372,55 @@ function clinicianProtocolCards(){
     </div>`;
   }).join("");
 }
+/* ---- Clinician section (step 4): exercise protocol + precaution protocol inputs ---- */
+function initClinician(){
+  const host = $("#clinicianOut"); if(!host) return;
+  host.innerHTML = clinicianIntroCard() + clinicianFormCard() + clinPrecautionCard() + clinicianAddedSummary();
+  wireClinician();
+}
+function clinicianIntroCard(){
+  return `<div class="card clinintro">
+    <h2>🩺 Clinician / physician inputs <span class="clinbadge">optional</span></h2>
+    <p class="hint">For a clinician, surgeon or physiotherapist (or a patient entering what they were given). Anything you add here <b>updates the Program</b>: an exercise protocol becomes its own program section (shown exactly as entered), and a precaution protocol appears in the Precautions area. Everything is saved on this device. Not a clinician? You can skip this step.</p>
+  </div>`;
+}
+function clinPrecautionCard(){
+  const v = state.clinPrecautionProtocol || "";
+  return `<div class="card clinformcard no-print">
+    <h2>🛡️ Clinician precaution protocol</h2>
+    <p class="hint">Add precaution or activity-restriction orders in your own words (e.g. weight-bearing details, ROM limits, brace wear, sternal/spinal precautions, "no resisted knee extension 0–45° for 6 weeks"). This is shown verbatim in the <b>Precautions area</b> alongside the app's precautions.</p>
+    <textarea id="clinPrecText" rows="5" placeholder="e.g. PWB 50% left leg × 6 weeks · ROM 0–90° knee flexion · hinged brace locked 0–30° · no open-chain knee extension 0–40°">${esc(v)}</textarea>
+    <div class="clinbtns"><button class="btn primary" id="clinPrecSave" type="button">Save precaution protocol</button>
+      ${v?`<button class="btn ghost" id="clinPrecClear" type="button">Clear</button>`:""}</div>
+  </div>`;
+}
+function clinicianAddedSummary(){
+  const list = state.clinicianProtocols || [];
+  const prec = (state.clinPrecautionProtocol||"").trim();
+  if(!list.length && !prec) return "";
+  const items = list.map((pr,i)=>`<li class="clinsumrow"><span>🩺 <b>${esc(pr.name)}</b> — ${pr.phases.length} phase${pr.phases.length>1?"s":""}, shown in your Program</span><button class="clindel2 no-print" data-idx="${i}" title="Remove">✕</button></li>`).join("");
+  const precRow = prec ? `<li class="clinsumrow"><span>🛡️ <b>Precaution protocol</b> — shown in your Precautions area</span></li>` : "";
+  return `<div class="card clinsumcard"><h2>✅ Added — reflected in your program</h2>
+    <ul class="clinsumlist">${items}${precRow}</ul></div>`;
+}
+function wireClinician(){
+  const clinAdd = $("#clinicianOut #clinAdd"); if(clinAdd) clinAdd.onclick = addClinProtocol;
+  const clinEx = $("#clinicianOut #clinExample"); if(clinEx) clinEx.onclick = fillClinExample;
+  const clinText = $("#clinicianOut #clinText"); if(clinText){ clinText.oninput = updateClinPreview; updateClinPreview(); }
+  const precSave = $("#clinicianOut #clinPrecSave"); if(precSave) precSave.onclick = saveClinPrecaution;
+  const precClear = $("#clinicianOut #clinPrecClear"); if(precClear) precClear.onclick = ()=>{ state.clinPrecautionProtocol=""; save(); initClinician(); renderPrecautions(); toast("Precaution protocol cleared."); };
+  $$("#clinicianOut .clindel2").forEach(b=>b.onclick=()=>removeClinProtocol(+b.dataset.idx));
+}
+function saveClinPrecaution(){
+  const t = $("#clinicianOut #clinPrecText"); if(!t) return;
+  state.clinPrecautionProtocol = t.value.trim(); save();
+  renderPrecautions();                                  // show it in the Precautions area
+  initClinician();                                      // refresh the summary
+  toast(state.clinPrecautionProtocol ? "Precaution protocol saved — see the Precautions area." : "Precaution protocol cleared.");
+}
 function clinicianFormCard(){
   return `<div class="card clinformcard no-print">
-    <h2>🩺 Add a clinician / physician protocol</h2>
+    <h2>🩺 Add a clinician / physician exercise protocol</h2>
     <p class="hint">Have a protocol from your surgeon, physiotherapist or physician? Add it here and it becomes its own section in your program — with expandable phases and exercises you can tap to Explain. It's saved on this device.</p>
     <div class="clinform">
       <input type="text" id="clinName" placeholder="Protocol name — e.g. Dr. Lee · ACL reconstruction" />
@@ -2377,7 +2436,7 @@ function clinicianFormCard(){
   </div>`;
 }
 function updateClinPreview(){
-  const t = $("#programOut #clinText"), box = $("#programOut #clinPreview");
+  const t = $("#clinicianOut #clinText"), box = $("#clinicianOut #clinPreview");
   if(!t || !box) return;
   const p = parseClinProtocol(t.value);
   if(!p.phases.length){ box.innerHTML = ""; return; }
@@ -2386,23 +2445,28 @@ function updateClinPreview(){
     p.phases.map(ph=>`<div class="clinprevph">• <b>${esc(ph.title)}</b>${ph.weeks?` <span class="clinprevn">· ${esc(ph.weeks)}</span>`:""} <span class="clinprevn">(${ph.ex.length})</span></div>`).join("");
 }
 function fillClinExample(){
-  const t = $("#programOut #clinText"), n = $("#programOut #clinName");
+  const t = $("#clinicianOut #clinText"), n = $("#clinicianOut #clinName");
   if(t){ t.value = CLIN_EXAMPLE; }
   if(n && !n.value.trim()){ n.value = "Example · ACL reconstruction protocol"; }
   updateClinPreview();
 }
 function addClinProtocol(){
-  const name = ($("#programOut #clinName").value||"").trim();
-  const source = ($("#programOut #clinSource").value||"").trim();
-  const parsed = parseClinProtocol($("#programOut #clinText").value);
+  const name = ($("#clinicianOut #clinName").value||"").trim();
+  const source = ($("#clinicianOut #clinSource").value||"").trim();
+  const parsed = parseClinProtocol($("#clinicianOut #clinText").value);
   if(!parsed.phases.length){ toast("Add at least one exercise line first."); return; }
   (state.clinicianProtocols = state.clinicianProtocols || []).push({ name: name || "Clinician protocol", source, phases: parsed.phases });
-  save(); renderProgram(state.program);
-  toast("Clinician protocol added to your program.");
+  save();
+  if(state.program) renderProgram(state.program);   // added protocol shows in the (hidden) program
+  initClinician();                                   // refresh the section (clears the form, updates summary)
+  toast("Clinician protocol added — it now appears in your Program.");
 }
 function removeClinProtocol(idx){
   if(!state.clinicianProtocols) return;
-  state.clinicianProtocols.splice(idx,1); save(); renderProgram(state.program); toast("Clinician protocol removed.");
+  state.clinicianProtocols.splice(idx,1); save();
+  if(state.program) renderProgram(state.program);
+  if(state.step===3) initClinician();                // refresh the Clinician summary if we're on that step
+  toast("Clinician protocol removed.");
 }
 
 /* Consolidated safety notes card (universal guidance; prints with the program). */
@@ -2827,8 +2891,7 @@ function renderProgram(prog){
     html += `<div class="redflags"><b>⚠ When to get it checked:</b> ${esc(item.redflags)}</div></div>`;
   });
 
-  html += clinicianProtocolCards();     // any saved physician protocols, shown verbatim
-  html += clinicianFormCard();          // form to add one
+  html += clinicianProtocolCards();     // any saved physician protocols, shown verbatim (added in the Clinician step)
   html += suggestionsCard(prog);
   out.innerHTML = html;
   wireProgram();
@@ -2947,10 +3010,11 @@ function goStep(n){
   if(act&&act.scrollIntoView) try{ act.scrollIntoView({inline:"center",block:"nearest",behavior:"smooth"}); }catch(e){}
   window.scrollTo({top:0,behavior:"smooth"});
   if(n===2) renderPrecautions();                              // Precautions card lives in Details — keep it current
-  if(n===3 && state.program) renderProgram(state.program);    // reflect precaution/detail changes made in step 2
-  if(n===4){ renderProgress(); renderHealth(); }
-  if(n===5) initCoach();
-  if(n===6) initLibrary();
+  if(n===3) initClinician();                                  // Clinician section (protocols + precaution protocol)
+  if(n===4 && state.program) renderProgram(state.program);    // Program reflects precaution/detail/clinician changes
+  if(n===5){ renderProgress(); renderHealth(); }
+  if(n===6) initCoach();
+  if(n===7) initLibrary();
 }
 
 /* ---------- cardiac device detail (shown when Pacemaker/ICD is ticked) ---------- */
@@ -3021,7 +3085,7 @@ function initHistory(){
     cb.onchange=()=>{ state.screen[k]=cb.checked; save(); updateScreenWarn(); }; });
   updateScreenWarn();
   // lifestyle & daily function
-  const LIFE_IDS = {q_smoking:"smoking",q_alcohol:"alcohol",q_sleep:"sleep",q_stress:"stress",q_falls:"falls",q_aid:"aid"};
+  const LIFE_IDS = {q_smoking:"smoking",q_alcohol:"alcohol",q_sleep:"sleep",q_stress:"stress",q_falls:"falls",q_aid:"aid",q_waterConf:"waterConfidence"};
   Object.entries(LIFE_IDS).forEach(([id,key])=>{ const el=$("#"+id); if(!el) return;
     el.value = state[key]||"";
     el.onchange=e=>{ state[key]=e.target.value; save(); }; });
@@ -3164,9 +3228,9 @@ function initDetails(){
   $("#goal").oninput=e=>{ state.goal=e.target.value; save(); };
   // auto-populate return-to activity & sport pickers
   setupAutocomplete("activitySearch","activityResults","activityChips", window.ACTIVITIES, "returnActivities",
-    { onChange:()=>{ if(state.program && state.step===3) renderProgram(state.program); } });
+    { onChange:()=>{ if(state.program && state.step===4) renderProgram(state.program); } });
   setupAutocomplete("sportSearch","sportResults","sportChips", window.SPORTS, "returnSports",
-    { onChange:()=>{ if(state.program){ state.program=generateProgram(); save(); if(state.step===3) renderProgram(state.program); } } });
+    { onChange:()=>{ if(state.program){ state.program=generateProgram(); save(); if(state.step===4) renderProgram(state.program); } } });
   renderPrecautions();   // Precautions & reminders card (weight-bearing, braces, sternal/abdominal, custom)
 }
 /* ---- reusable auto-populate (typeahead + multi-add chips) ---- */
@@ -3260,7 +3324,7 @@ function doGenerate(){
   if(!state.condIds.length){ toast("Pick at least one injury or condition first."); goStep(1); return; }
   if(state.weeks===null){ toast("Enter how many weeks ago it started."); return; }
   state.program=generateProgram(); save();
-  renderProgram(state.program); goStep(3);
+  renderProgram(state.program); goStep(4);
 }
 function doReset(){
   if(!confirm("Clear everything and start over?")) return;
@@ -4619,12 +4683,16 @@ document.addEventListener("DOMContentLoaded",()=>{
   initHistory(); initMeds(); initSearch(); initDetails(); initProgress(); initCoachSettings();
   $$("[data-goto]").forEach(b=>b.onclick=()=>{
     const n=+b.dataset.goto;
-    if([2,3,4].includes(n) && !state.condIds.length){ toast("Pick at least one condition first."); goStep(1); return; }
+    if([2,3,4,5].includes(n) && !state.condIds.length){ toast("Pick at least one condition first."); goStep(1); return; }
     goStep(n);
   });
   $$(".step").forEach(s=>s.onclick=()=>{ const n=+s.dataset.step;
-    if([2,3,4].includes(n) && !state.condIds.length){ toast("Pick a condition first."); goStep(1); return; }
+    if([2,3,4,5].includes(n) && !state.condIds.length){ toast("Pick a condition first."); goStep(1); return; }
     goStep(n); });
+  const clinNext = $("#clinToProgram"); if(clinNext) clinNext.onclick=()=>{
+    if(state.program){ state.program=generateProgram(); save(); }   // fold any clinician inputs into the plan
+    goStep(4);
+  };
   $("#generateBtn").onclick=doGenerate;
   $("#printBtn").onclick=()=>window.print();
   $("#resetBtn").onclick=doReset;
@@ -4636,7 +4704,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   });
   if(state.program) renderProgram(state.program);
   // PWA app-shortcut routing (?go=coach|library|build|progress)
-  const goMap={ build:1, details:2, program:3, progress:4, coach:5, library:6 };
+  const goMap={ build:1, details:2, clinician:3, program:4, progress:5, coach:6, library:7 };
   const go=new URLSearchParams(location.search).get("go");
   goStep(go && goMap[go]!=null ? goMap[go] : (state.step||0));
 });
