@@ -279,7 +279,7 @@ const state = {
   vitals:{restHR:"",sbp:"",dbp:"",spo2:"",rr:"",height:"",weight:""},
   vitalsLog:[], labs:{}, labHist:{},
   screen:{}, falls:"", aid:"", smoking:"", alcohol:"", sleep:"", stress:"", waterConfidence:"",
-  medIds:[], medFilter:false, homeMode:false, customPrecautions:[], clinicianProtocols:[], clinPrecautionProtocol:"",
+  medIds:[], medFilter:false, homeMode:false, customPrecautions:[], clinicianProtocols:[], clinPrecautionProtocol:"", clinicianGuided:false,
   medDoses:{}, weightBearing:{status:"",pct:"",lbs:"",side:"",limb:"le"}, devices:[],
   cardiacDevice:{type:"",icdRate:""}, specialPrecautions:[],
   log:[], apiKey:"", apiModel:"claude-opus-4-8"
@@ -2347,6 +2347,18 @@ Phase 2: Early strength (weeks 3-6) — goal: normalise gait, build quad strengt
 Phase 3: Return to function (weeks 7-12)
 - Step-downs — 3×10 each — control, no knee collapse
 - Single-leg balance + reach — 3×8 each`;
+/* Editable starter auto-loaded into the clinician form for a clinician-guided session. */
+const CLIN_STARTER = `Phase 1: Protection (weeks 0-2) — goal: protect, control swelling, restore motion
+- Quad sets — 3×10 — hold 5s
+- Ankle pumps — 3×20
+- Heel slides — 3×15
+Phase 2: Early strength (weeks 3-6) — goal: normalise gait, build strength
+- Mini squats — 3×12 — pain-free range
+- Standing hip abduction — 3×12 each
+- Stationary bike — 10 min
+Phase 3: Return to function (weeks 7-12) — goal: full strength & control
+- Step-ups — 3×10 each
+- Single-leg balance — 3×30s each`;
 function clinicianProtocolCards(){
   const list = state.clinicianProtocols || [];
   return list.map((pr,i)=>{
@@ -2377,6 +2389,21 @@ function initClinician(){
   const host = $("#clinicianOut"); if(!host) return;
   host.innerHTML = clinicianIntroCard() + clinicianFormCard() + clinPrecautionCard() + clinicianAddedSummary();
   wireClinician();
+  // clinician-guided session → auto-populate an editable starter protocol whenever the form is empty
+  // and nothing's been added yet (so it survives navigating away and back before adding).
+  if(state.clinicianGuided && !(state.clinicianProtocols||[]).length){
+    const t=$("#clinicianOut #clinText"), n=$("#clinicianOut #clinName");
+    if(t && !t.value.trim()){ t.value = CLIN_STARTER; if(n && !n.value.trim()) n.value = "Clinician protocol (adjust as needed)"; updateClinPreview(); }
+  }
+}
+/* Reflect the History "Clinician-guided" checkbox in the card styling + Next button. */
+function syncClinGuide(){
+  const on = !!state.clinicianGuided;
+  const card = $("#clinGuideCard"); if(card) card.classList.toggle("on", on);
+  const btn = $("#historyNext"); if(btn) btn.textContent = on ? "Next: clinician setup →" : "Next: choose your injury →";
+  const sub = $("#clinGuideSub"); if(sub) sub.innerHTML = on
+    ? `<b>On.</b> <b>Next</b> takes you to the <b>Clinician step</b> — pre-filled with a protocol to adjust. (Uncheck to continue as a patient.)`
+    : `Tick this if a <b>clinician</b> is setting up this program. <b>Next</b> will take you straight to the <b>Clinician step</b>, pre-filled with a protocol to adjust. Leave it unticked to continue as a patient — Next goes to <b>choosing your injury</b>.`;
 }
 function clinicianIntroCard(){
   return `<div class="card clinintro">
@@ -4681,16 +4708,21 @@ function renderExResults(){
 document.addEventListener("DOMContentLoaded",()=>{
   load();
   initHistory(); initMeds(); initSearch(); initDetails(); initProgress(); initCoachSettings();
+  // Details/Program/Health need a condition; the Clinician step (3) is reachable without one (it's a setup form).
   $$("[data-goto]").forEach(b=>b.onclick=()=>{
     const n=+b.dataset.goto;
-    if([2,3,4,5].includes(n) && !state.condIds.length){ toast("Pick at least one condition first."); goStep(1); return; }
+    if([2,4,5].includes(n) && !state.condIds.length){ toast("Pick at least one condition first."); goStep(1); return; }
     goStep(n);
   });
   $$(".step").forEach(s=>s.onclick=()=>{ const n=+s.dataset.step;
-    if([2,3,4,5].includes(n) && !state.condIds.length){ toast("Pick a condition first."); goStep(1); return; }
+    if([2,4,5].includes(n) && !state.condIds.length){ toast("Pick a condition first."); goStep(1); return; }
     goStep(n); });
+  // History → next: clinician-guided goes to the Clinician step; otherwise to Injury
+  const histNext = $("#historyNext"); if(histNext) histNext.onclick=()=>goStep(state.clinicianGuided ? 3 : 1);
+  const cg = $("#q_clinicianGuided"); if(cg){ cg.checked = !!state.clinicianGuided; cg.onchange=()=>{ state.clinicianGuided=cg.checked; save(); syncClinGuide(); }; syncClinGuide(); }
   const clinNext = $("#clinToProgram"); if(clinNext) clinNext.onclick=()=>{
-    if(state.program){ state.program=generateProgram(); save(); }   // fold any clinician inputs into the plan
+    if(!state.condIds.length){ toast("Now choose the injury so the program can be built."); goStep(1); return; }
+    state.program=generateProgram(); save();   // fold clinician inputs into the plan
     goStep(4);
   };
   $("#generateBtn").onclick=doGenerate;

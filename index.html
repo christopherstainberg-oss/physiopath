@@ -57,6 +57,14 @@
       <p class="hint">We ask this <b>first</b> so your program respects any medical precautions
         (contraindications). Nothing is uploaded — it stays on your device.</p>
 
+      <label class="clinguide" id="clinGuideCard">
+        <input type="checkbox" id="q_clinicianGuided" />
+        <span class="clinguidemain">
+          <span class="clinguideh">🩺 Clinician-guided session</span>
+          <span class="clinguidesub" id="clinGuideSub">Tick this if a <b>clinician</b> is setting up this program. <b>Next</b> will take you straight to the <b>Clinician step</b>, pre-filled with a protocol to adjust. Leave it unticked to continue as a patient — Next goes to <b>choosing your injury</b>.</span>
+        </span>
+      </label>
+
       <div class="grid2">
         <label class="field"><span class="lab">Age</span>
           <input type="number" id="q_age" min="1" max="120" placeholder="years" /></label>
@@ -168,7 +176,7 @@
 
       <div class="rowbtns">
         <span></span>
-        <button class="btn primary" data-goto="1">Next: choose your injury →</button>
+        <button class="btn primary" id="historyNext">Next: choose your injury →</button>
       </div>
     </div>
   </section>

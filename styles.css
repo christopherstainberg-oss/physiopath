@@ -395,6 +395,15 @@ svg.chart .dot{fill:var(--brand)}
 .clindel2{cursor:pointer;color:var(--muted);border:1px solid var(--line);border-radius:8px;width:26px;height:26px;flex:0 0 auto;background:none;font-family:inherit;font-size:12px}
 .clindel2:hover{border-color:var(--danger);color:var(--danger)}
 .precrow.spwhat.clinprecrow{border-color:rgba(92,225,166,.45);background:rgba(92,225,166,.07)}
+/* History "clinician-guided" toggle — deliberately prominent */
+.clinguide{display:flex;gap:12px;align-items:flex-start;margin:14px 0 18px;padding:14px 16px;border:2px solid var(--brand-2);
+  border-radius:12px;background:rgba(92,225,166,.08);cursor:pointer;transition:background .15s,box-shadow .15s}
+.clinguide:hover{background:rgba(92,225,166,.14)}
+.clinguide.on{background:rgba(92,225,166,.18);box-shadow:0 0 0 3px rgba(92,225,166,.18)}
+.clinguide input[type=checkbox]{margin-top:2px;flex:0 0 auto;width:20px;height:20px;accent-color:var(--brand-2);cursor:pointer}
+.clinguidemain{display:flex;flex-direction:column;gap:3px}
+.clinguideh{font-weight:800;font-size:15px;color:var(--brand-2)}
+.clinguidesub{font-size:12.5px;color:var(--muted);line-height:1.5}
 
 /* program editing controls */
 .exrowtools{display:flex;gap:14px;align-items:center;margin-top:7px;flex-wrap:wrap}
