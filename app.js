@@ -2390,7 +2390,7 @@ function initClinician(){
   host.innerHTML = clinicianIntroCard() + clinicianFormCard() + clinPrecautionCard() + clinicianAddedSummary();
   wireClinician();
   // forward button reflects the linear flow: no injury picked yet → go choose it; otherwise view the program
-  const fwd = $("#clinToProgram"); if(fwd) fwd.textContent = state.condIds.length ? "Save & view program →" : "Next: choose your injury →";
+  const fwd = $("#clinToProgram"); if(fwd) fwd.textContent = state.condIds.length ? "Update my program →" : "Next: choose your injury →";
   // clinician-guided session → auto-populate an editable starter protocol whenever the form is empty
   // and nothing's been added yet (so it survives navigating away and back before adding).
   if(state.clinicianGuided && !(state.clinicianProtocols||[]).length){
