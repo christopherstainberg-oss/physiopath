@@ -1665,6 +1665,8 @@ const PATTERN_INFO = {
   gait:{what:"A gait drill practices the components of walking.",how:"Perform the stepping pattern with even, deliberate steps, looking ahead and near support if needed.",why:"Improves walking quality, coordination and confidence."},
   agility:{what:"An agility / change-of-direction drill trains fast, controlled starts, stops and turns.",how:"Accelerate, decelerate under control, then plant and cut with the knee tracking over the foot.",why:"Rebuilds the ability to move quickly and safely — key for returning to sport and reacting in daily life."},
   rotate:{what:"A rotational exercise trains controlled trunk turning and power.",how:"Rotate through the trunk with control and return smoothly.",why:"Builds rotational strength for sport and daily twisting tasks."},
+  supine:{what:"A supine (lying on your back) therapeutic exercise — a gentle, low-load movement done on a mat, floor or bed.",how:"Lie on your back and move the target leg or muscle slowly through a comfortable range, or build a steady hold, keeping your core gently braced.",why:"Rebuilds early strength, control and range with almost no joint loading — ideal after surgery, when weight-bearing is limited, or when standing is painful."},
+  seated:{what:"A seated therapeutic exercise — a gentle, controlled movement done sitting in a sturdy chair.",how:"Sit tall with your feet supported (or the working leg free to move) and take the joint slowly through range, or hold, staying pain-free.",why:"Builds strength and range safely, with support and no standing-balance demand — good early in recovery or when standing is limited."},
   general:{what:"A general conditioning exercise for the area.",how:"Perform with control through a pain-free range, exhaling on effort.",why:"Helps restore strength, movement and function."}
 };
 /* Step-by-step technique detail per movement pattern — feeds the "How to do it" block. */
@@ -1756,7 +1758,15 @@ const PATTERN_HOWTO = {
   general:{setup:"Set up in a stable, comfortable position with good posture.",
     steps:["Move through a pain-free range with control.","Keep the target area working and the surrounding joints relaxed.","Pause briefly at the hardest point if it feels controlled.","Return slowly to the start."],
     tempo:"Move smoothly at a controlled pace with a slower return. Exhale on the effort.",
-    avoid:"Don't rush, hold your breath, or push into pain — smooth and controlled wins."}
+    avoid:"Don't rush, hold your breath, or push into pain — smooth and controlled wins."},
+  supine:{setup:"Lie on your back on a firm, comfortable surface (mat, bed or floor). Unless told otherwise, keep the non-working leg bent with the foot flat to support your low back.",
+    steps:["Gently draw in / brace your core so your low back stays comfortable.","Move the working leg or muscle slowly and deliberately through the prescribed range — or build a steady, held contraction.","Only go as far as stays pain-free and controlled; quality matters more than range early on.","Lower or release slowly under control, then reset for the next rep."],
+    tempo:"Move for about 2–3 seconds each way, or hold for the prescribed time; breathe normally — never hold your breath.",
+    avoid:"Don't let your low back arch off the floor or hold your breath — shorten the range or add a brief hold if you lose control."},
+  seated:{setup:"Sit tall toward the front of a sturdy, stable chair with your feet flat and hip-width (or the working leg free to move). Sit up straight rather than slumping back.",
+    steps:["Set your posture — tall spine, relaxed shoulders, core gently braced.","Move the working joint slowly through the prescribed range (for example straighten or lift the leg) — or build a steady hold.","Pause briefly at the working end of the range if it feels controlled.","Lower slowly under control and reset for the next rep."],
+    tempo:"Move for about 2–3 seconds each way, or hold for the prescribed time; exhale on the effort and keep breathing.",
+    avoid:"Don't swing with momentum, slump, or push into sharp pain — keep it slow and controlled."}
 };
 function inferPattern(name){
   const l = name.toLowerCase();
@@ -2005,9 +2015,10 @@ function searchLibraryForAdd(q, exclude){
   const exSet = new Set((exclude||[]).map(n=>n.toLowerCase()));
   const matched = [];
   for(let i=0;i<window.EXERCISES.length && matched.length<80;i++){
-    const e = window.EXERCISES[i], l = e.name.toLowerCase();
-    if(exSet.has(l)) continue;
-    if(toks.every(t=>l.includes(t)) && nameAllowed(e.name)) matched.push(e);
+    const e = window.EXERCISES[i];
+    if(exSet.has(e.name.toLowerCase())) continue;
+    const hay = (e.name+" "+e.region.join(" ")+" "+e.pattern).toLowerCase();   // match name, region (e.g. "supine")/pattern too
+    if(toks.every(t=>hay.includes(t)) && nameAllowed(e.name)) matched.push(e);
   }
   let { kept } = window.applyContra(matched, activeFlags());     // drop contraindicated, mark cautioned
   return kept.slice(0,30).map(e=>({ n:e.name, d:e.dose, c:e.cue, warn:e.warn, pattern:e.pattern, region:e.region, tags:e.tags }));

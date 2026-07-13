@@ -128,6 +128,14 @@ const BASES = [
   {b:"", pat:"pump", reg:["Ankle","Calf"], tags:[], eq:["bw"],
    cue:"Point your toes away, then pull them back up toward you — pump slowly and fully to keep blood moving, reduce swelling and lower clot risk. Safe to do lying or seated, even when non-weight-bearing.",
    mods:["ankle pumps","seated ankle pumps","ankle pumps with legs elevated","point-and-flex ankle pumps","ankle circles","ankle alphabet","long-sitting ankle pumps","towel-assisted ankle pumps","hourly ankle pumps (bed or desk)","toe-and-heel rock"]},
+  // ---- Supine therapeutic set (lying on the back; foundational low-load work — ideal early, post-op or when weight-bearing is limited) ----
+  {b:"", pat:"supine", reg:["Knee","Hip","Supine (therapeutic)"], tags:[], eq:["bw"],
+   cue:"Lie on your back and move slowly through a pain-free range (or build a steady hold), keeping your core gently braced and your low back comfortable.",
+   mods:["quad sets","short arc quads (SAQ)","straight leg raise","straight leg raise with 5s hold","supine hip abduction","supine hip adduction squeeze","heel slides","glute sets","glute bridge","bridge with marching","supine marching (hip flexion)","single knee-to-chest","double knee-to-chest","bent-knee fallout (hip external rotation)","terminal knee extension (towel roll)","hamstring sets (heel dig)","posterior pelvic tilt","dead bug","supine ankle pumps","supine abdominal bracing"]},
+  // ---- Seated therapeutic set (sitting in a sturdy chair; supported, no standing-balance demand) ----
+  {b:"", pat:"seated", reg:["Knee","Hip","Seated (therapeutic)"], tags:[], eq:["bw"],
+   cue:"Sit tall in a sturdy chair with your feet supported; move the working leg slowly and controlled through a pain-free range (or build a steady hold).",
+   mods:["long arc quads (LAQ)","long arc quads with 5s hold","long arc quads (slow eccentric lower)","seated knee flexion (active)","seated marching (hip flexion)","seated hip abduction (band)","seated hip adduction squeeze","seated knee extension (isometric hold)","seated hamstring curl (heel drag)","seated heel raises","seated toe raises (dorsiflexion)","seated hip flexion hold","seated terminal knee extension","seated leg extension with ankle weight"]},
 
   // ---- Pediatric / developmental (0–18 yrs; play-based, low-load, parent/therapist supervised) ----
   {b:"(infant)", pat:"general", reg:["Full body"], tags:["pediatric"], eq:["bw"], cue:"Parent-led play — gentle, on the floor, and always supervised.",
@@ -185,7 +193,7 @@ function deriveTags(name, base, extra){
 }
 function difficulty(name, base){
   const l = name.toLowerCase();
-  if(base.pat==="pump") return 1;   // ankle pumps / circulation drills are beginner-level
+  if(base.pat==="pump"||base.pat==="supine"||base.pat==="seated") return 1;   // circulation & supine/seated therapeutic sets are beginner-level
   if(/pro-agility|5-10-5|t-drill|cutting|zig-zag|reactive|mirror drill|bound-and-stick|cut-and-stick|depth-drop|shuttle run/.test(l)) return 4;
   if(/agility|ladder|carioca|shuffle|dot drill|line hops|backpedal|box drill|figure-8|a-skip|deceleration|drop-and-stick|hop-and-stick|hop-to-balance/.test(l)) return 3;
   if(/plyo|jump|hop|bound|pogo|depth|sprint|explosive|nordic|pistol|single-leg romanian|clap|advanced/.test(l)) return 4;
@@ -199,6 +207,7 @@ const DOSE = {
   strength:["3×8–12","3×10","4×8","3×12"], carry:["3×20–40 m","4×30 s","3×2 lengths"],
   cardio:["15–25 min","10–20 min (intervals)","20–30 min"], vestibular:["3×1 min","2–3× day, 1 min","3×30–60s"],
   pump:["3×20 slow","2×20 each","hourly ×15–20","10–15 each, several × day"],
+  supine:["3×10","3×12","2×15","3×10 (5s hold)"], seated:["3×10","3×12","2×15","3×10 each"],
   breathing:["3×1 min","5×6 breaths","2–3 min"], anti:["3×10 each","3×8 slow","3×12"],
   push:["3×8–12","3×10","3×12"], pull:["3×10–15","3×12","3×10 each"], hinge:["3×8–10","3×10","4×8"],
   squat:["3×8–12","3×10","4×8"], lunge:["3×8–10 each","3×10 each"], calf:["3×12–15","4×12","3×15"],
@@ -213,7 +222,8 @@ const CUE = {
   mobility:"Slow and pain-free through range.", balance:"Steady near support; progress difficulty gradually.",
   plyo:"Soft, quiet landings; quality over quantity.", carry:"Tall posture, braced, even steps.",
   cardio:"Conversational pace unless intervals prescribed.", vestibular:"Provoke mild symptoms, then let them settle.",
-  breathing:"Slow, relaxed; never hold your breath.", pump:"Slow, full point-and-flex; keep it easy and pain-free.", "anti-ext":"Keep the low back flat; move the limbs, not the spine.",
+  breathing:"Slow, relaxed; never hold your breath.", pump:"Slow, full point-and-flex; keep it easy and pain-free.",
+  supine:"Lie on your back; move slowly, brace gently, stay pain-free.", seated:"Sit tall in a sturdy chair; slow and controlled, pain-free.", "anti-ext":"Keep the low back flat; move the limbs, not the spine.",
   "anti-rot":"Resist the twist; keep hips and shoulders square.", extension:"Small controlled range; avoid pinching.",
   flexion:"Curl through the upper spine; avoid straining the neck.", gait:"Even, deliberate steps; look ahead.",
   rotate:"Rotate through the trunk, control the return.",
