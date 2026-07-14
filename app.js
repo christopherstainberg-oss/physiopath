@@ -278,7 +278,7 @@ const state = {
   surgeryType:"auto", surgeryDate:"", fitness:"mod", goal:"", returnActivities:[], returnSports:[], program:null,
   vitals:{restHR:"",sbp:"",dbp:"",spo2:"",rr:"",height:"",weight:""},
   vitalsLog:[], labs:{}, labHist:{},
-  screen:{}, falls:"", aid:"", smoking:"", alcohol:"", sleep:"", stress:"", waterConfidence:"",
+  screen:{}, falls:"", aid:"", smoking:"", alcohol:"", sleep:"", stress:"", waterConfidence:"", adls:[],
   medIds:[], medFilter:false, homeMode:false, customPrecautions:[], clinicianProtocols:[], clinPrecautionProtocol:"", clinicianGuided:false,
   medDoses:{}, weightBearing:{status:"",pct:"",lbs:"",side:"",limb:"le"}, devices:[],
   cardiacDevice:{type:"",icdRate:""}, specialPrecautions:[],
@@ -3183,6 +3183,76 @@ function initCardiacDevice(){
 }
 
 /* ---------- history UI ---------- */
+/* ---------- Occupational-therapy Activities of Daily Living (ADLs) ----------
+   A searchable check of everyday tasks, each rated by how hard it is to do right
+   now. Captured in the History step; feeds the coach context (functional goals). */
+const ADL_GROUPS = {
+  "Self-care": ["Bathing / showering","Washing your hair","Drying off after a wash","Getting dressed (upper body)","Getting dressed (lower body)","Putting on socks & shoes","Doing up buttons, zips & fasteners","Grooming (hair, shaving, make-up)","Brushing teeth / mouth care","Using the toilet","Managing bladder / bowel control","Feeding yourself / eating","Cutting up food","Nail care","Applying lotion / deodorant"],
+  "Moving around": ["Getting in & out of bed","Rolling over in bed","Getting up from a chair","Getting on & off the toilet","Getting in & out of the bath / shower","Getting in & out of a car","Walking indoors","Walking outdoors","Going up stairs","Going down stairs","Getting up from the floor","Bending down to pick something up","Reaching up into a cupboard","Carrying things while walking","Using a wheelchair"],
+  "Home & meals": ["Preparing a simple meal / snack","Cooking a full meal","Washing up / dishes","General cleaning & tidying","Vacuuming","Making the bed","Changing the bed sheets","Doing the laundry","Hanging out / folding washing","Ironing","Taking out the rubbish","Gardening / yard work","Home maintenance / DIY"],
+  "Out & about": ["Grocery shopping","Carrying shopping bags","Driving","Using public transport","Managing money & bills","Managing your medications","Using the telephone","Using a computer / tablet","Handwriting / signing your name","Attending appointments"],
+  "Hands & fine motor": ["Opening jars & bottles","Gripping / holding objects","Picking up small items (coins, pins)","Turning keys & door handles","Opening packaging","Fastening jewellery","Using cutlery (knife & fork)","Typing / using a keyboard"],
+  "Work, family & leisure": ["Return-to-work tasks","Lifting at work","Sitting at a desk for long periods","Standing for long periods","Caring for children","Caring for a pet","Caring for another person","Hobbies & crafts","Sport / exercise","Social activities / going out","Sexual activity","Getting a good night's sleep"]
+};
+const ADL_CATALOG = Object.entries(ADL_GROUPS).flatMap(([cat,arr])=>arr.map(name=>({name,cat})));
+const ADL_NAMES = ADL_CATALOG.map(a=>a.name);
+const ADL_CAT = new Map(ADL_CATALOG.map(a=>[a.name.toLowerCase(), a.cat]));
+// difficulty rating (0 = independent → 4 = unable). Colour goes green → red.
+const ADL_SCALE = [
+  { v:0, short:"None",     label:"No difficulty — fully independent",   cls:"a0" },
+  { v:1, short:"A little", label:"A little difficulty",                 cls:"a1" },
+  { v:2, short:"Moderate", label:"Moderate difficulty",                 cls:"a2" },
+  { v:3, short:"A lot",    label:"A lot of difficulty",                 cls:"a3" },
+  { v:4, short:"Unable",   label:"Unable / need help from someone",     cls:"a4" }
+];
+function adlList(){ return (state.adls = state.adls || []); }
+function adlCatOf(name){ return ADL_CAT.get((name||"").toLowerCase()) || "Other"; }
+function adlLevelInfo(v){ return ADL_SCALE.find(s=>s.v===v) || ADL_SCALE[2]; }
+function adlSegHTML(name, level){
+  return ADL_SCALE.map(s=>`<button type="button" class="adlseg ${s.cls}${s.v===level?" on":""}" data-adl="${esc(name)}" data-lvl="${s.v}" aria-pressed="${s.v===level}" title="${esc(s.label)}">${esc(s.short)}</button>`).join("");
+}
+function renderADLList(){
+  const el=$("#adlList"); if(!el) return;
+  const arr=adlList();
+  el.innerHTML = arr.map(a=>`<div class="adlrow">
+      <div class="adltop"><span class="adlname">${esc(a.name)} <em class="adlcat">${esc(adlCatOf(a.name))}</em></span>
+        <span class="adldel no-print" data-adl="${esc(a.name)}" title="Remove">✕</span></div>
+      <div class="adlseg-row" role="group" aria-label="Difficulty rating for ${esc(a.name)}">${adlSegHTML(a.name, a.level)}</div>
+    </div>`).join("");
+  el.querySelectorAll(".adlseg").forEach(b=>b.onclick=()=>adlSetLevel(b.dataset.adl, +b.dataset.lvl));
+  el.querySelectorAll(".adldel").forEach(x=>x.onclick=()=>adlRemove(x.dataset.adl));
+}
+function adlAdd(name){
+  name=(name||"").replace(/\s+/g," ").trim(); if(!name) return;
+  const arr=adlList();
+  if(!arr.some(a=>a.name.toLowerCase()===name.toLowerCase())){ arr.push({ name, level:2 }); save(); }  // default: moderate
+  const inp=$("#adlSearch"); if(inp) inp.value="";
+  const res=$("#adlResults"); if(res){ res.innerHTML=""; res.classList.add("hide"); }
+  renderADLList();
+}
+function adlRemove(name){ state.adls = adlList().filter(a=>a.name.toLowerCase()!==(name||"").toLowerCase()); save(); renderADLList(); }
+function adlSetLevel(name, level){
+  const a = adlList().find(a=>a.name.toLowerCase()===(name||"").toLowerCase()); if(!a) return;
+  a.level = Math.max(0, Math.min(4, level|0)); save(); renderADLList();
+}
+function initADLs(){
+  const input=$("#adlSearch"), results=$("#adlResults"); if(!input || !results) return;
+  let t;
+  input.oninput = () => { clearTimeout(t); t=setTimeout(()=>{
+    const q=input.value.trim();
+    if(!q){ results.innerHTML=""; results.classList.add("hide"); return; }
+    const have = new Set(adlList().map(a=>a.name.toLowerCase()));
+    const matches = acFilter(ADL_NAMES, q, 24).filter(n=>!have.has(n.toLowerCase()));
+    const rows = matches.map(n=>`<div class="result acrow" data-v="${esc(n)}"><span class="rn">${esc(n)} <em class="adlcat">${esc(adlCatOf(n))}</em></span><span class="add">+</span></div>`).join("");
+    const custom = `<div class="result acrow acadd" data-v="${esc(q)}"><span class="rn">＋ Add “${esc(q)}”</span><span class="add">+</span></div>`;
+    results.innerHTML = rows + custom;
+    results.classList.remove("hide");
+    results.querySelectorAll(".acrow").forEach(r=>r.onclick=()=>adlAdd(r.dataset.v));
+  }, 110); };
+  input.onkeydown = (e)=>{ if(e.key==="Enter"){ e.preventDefault(); adlAdd(input.value); } };
+  input.onblur = ()=> setTimeout(()=>results.classList.add("hide"), 180);
+  renderADLList();
+}
 function initHistory(){
   const wrap=$("#historyChecks");
   wrap.classList.remove("checks");                       // grouped sub-grids replace the flat grid
@@ -3229,6 +3299,7 @@ function initHistory(){
   Object.entries(LIFE_IDS).forEach(([id,key])=>{ const el=$("#"+id); if(!el) return;
     el.value = state[key]||"";
     el.onchange=e=>{ state[key]=e.target.value; save(); }; });
+  initADLs();   // occupational-therapy activities-of-daily-living check
 }
 /* Urgent / clearance note shown live under the red-flag screen. */
 function updateScreenWarn(){
@@ -4938,6 +5009,7 @@ function buildCoachSystem(){
   const hrLine = hz ? `max HR ≈ ${hz.hrmax} bpm (Tanaka), moderate zone ${fmtRange(hz.zones.moderate)} bpm; recommended effort ${borgTarget().label}${onBetaBlocker()?"; on a beta-blocker, so HR targets are unreliable — advise RPE/talk-test":""}` : `age not set — advise Borg RPE ${borgTarget().label}`;
   const deviceLineHR = hasCardiacDevice() ? `${cardiacDeviceLabel()}${deviceHRCeiling()?` — keep HR under ~${deviceHRCeiling()} bpm (below ICD threshold ${vnum((state.cardiacDevice||{}).icdRate)} bpm)`:""}${hasLVAD()?" — HR unreliable, RPE only":""}; cap intensity, avoid maximal effort` : "none";
   const lifestyle = [state.smoking&&`smoking ${state.smoking}`, state.alcohol&&`alcohol ${state.alcohol}`, state.sleep&&`sleep ${state.sleep}`, state.stress&&`stress ${state.stress}`, state.falls&&`falls/yr ${state.falls}`, (state.aid&&state.aid!=="none")&&`walking aid ${state.aid}`].filter(Boolean).join(", ") || "not specified";
+  const adlLine = (state.adls||[]).filter(a=>a.level>=1).map(a=>`${a.name} (${adlLevelInfo(a.level).short})`).join(", ") || "none reported";
   const redflags = Object.entries(state.screen||{}).filter(([,val])=>val).map(([k])=>k).join(", ") || "none";
   const goals = [ (state.returnActivities||[]).length && `activities: ${state.returnActivities.join(", ")}`, (state.returnSports||[]).length && `sport: ${state.returnSports.join(", ")}` ].filter(Boolean).join("; ") || "none specified";
   const wbLine = wbSummary() || "not specified";
@@ -4955,6 +5027,7 @@ USER CONTEXT
 - Heart-rate & exertion: ${hrLine}
 - Cardiac device: ${deviceLineHR}
 - Lifestyle & function: ${lifestyle}
+- Daily-living (ADL) difficulties reported: ${adlLine}
 - Red-flag screen positives: ${redflags}
 - Return-to goals: ${goals}
 - Weight-bearing order: ${wbLine}; braces/orthoses/prostheses: ${deviceLine}

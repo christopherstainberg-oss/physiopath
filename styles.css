@@ -506,6 +506,24 @@ footer b{color:var(--text)}
 .acresults{max-height:34vh;max-height:34dvh}
 .acrow .rn{font-weight:500}
 .acadd .rn{color:var(--brand);font-weight:600}
+/* Occupational-therapy ADL difficulty check */
+.adllist{display:flex;flex-direction:column;gap:9px;margin-top:10px}
+.adllist:empty{display:none}
+.adlrow{border:1px solid var(--line);border-radius:12px;background:var(--panel-2);padding:10px 12px}
+.adltop{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.adlname{font-size:13.5px;font-weight:600}
+.adlcat{font-style:normal;font-size:10px;font-weight:800;letter-spacing:.2px;text-transform:uppercase;color:var(--muted);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:1px 7px;margin-left:4px;white-space:nowrap}
+.adldel{cursor:pointer;color:var(--muted);font-size:13px;line-height:1;padding:2px 3px;flex:0 0 auto}
+.adldel:hover{color:var(--danger)}
+.adlseg-row{display:flex;gap:5px;flex-wrap:wrap}
+.adlseg{flex:1;min-width:56px;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:8px;padding:7px 5px;font-size:11.5px;font-weight:700;text-align:center;transition:background .12s,border-color .12s,color .12s}
+.adlseg:hover{border-color:var(--brand-2)}
+.adlseg.on{color:#04121f}
+.adlseg.a0.on{background:#37c98b;border-color:#37c98b}
+.adlseg.a1.on{background:#9ccc4e;border-color:#9ccc4e}
+.adlseg.a2.on{background:#ffc857;border-color:#ffc857}
+.adlseg.a3.on{background:#ff9f45;border-color:#ff9f45}
+.adlseg.a4.on{background:#ff6b6b;border-color:#ff6b6b;color:#fff}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .chips:empty{display:none}
 .sportpill{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.3px;color:#04121f;background:var(--warn);border-radius:999px;padding:1px 7px;vertical-align:1px}
