@@ -1539,7 +1539,7 @@ function generateProgram(){
       const len = phaseWeeks[p], wkStart=cursor, wkEnd=cursor+len-1; cursor=wkEnd+1;
       // prepend injury-specific signature + return-to-sport balance/agility + chosen-sport
       // exercises (sport on the primary condition only; dedupe against pool)
-      const sigRaw = [...signatureFor(focus, p+1), ...rtsFor(c, p), ...(ci===0 ? sportFor(p) : [])];
+      const sigRaw = [...signatureFor(focus, p+1), ...rtsFor(c, p), ...(ci===0 ? sportFor(p) : []), ...(ci===0 ? adlFocusForPhase(p, flags) : [])];
       const sig = []; const sigSeen = new Set();
       sigRaw.forEach(s=>{ const k=s.n.toLowerCase(); if(!sigSeen.has(k)){ sigSeen.add(k); sig.push(s); } });
       const seen = new Set(sig.map(s=>s.n.toLowerCase()));
@@ -1923,8 +1923,9 @@ function exItemHTML(e, regionArr, ctx, medHidden){
   const remove = ctx ? `<button class="removeexbtn" ${dc} title="Remove this exercise from the phase">🗑 Remove</button>` : "";
   const swapbox = ctx ? `<div class="swapbox hide"></div>` : "";
   return `<li class="exitem${medHidden?" medhidden":""}">
-    <div class="top"><span class="en">${e.custom?`<span class="custompill">✎ yours</span> `:""}${e.home?`<span class="homepill">🏠 home</span> `:""}${e.sport?`<span class="sportpill">🏅 sport</span> `:""}${e.sig?`<span class="sigpill">🎯 key</span> `:""}${esc(e.n)}</span><span class="ed">${esc(e.d)}</span></div>
+    <div class="top"><span class="en">${e.custom?`<span class="custompill">✎ yours</span> `:""}${e.home?`<span class="homepill">🏠 home</span> `:""}${e.adl?`<span class="adlpill">🧩 daily-living</span> `:""}${e.sport?`<span class="sportpill">🏅 sport</span> `:""}${e.sig?`<span class="sigpill">🎯 key</span> `:""}${esc(e.n)}</span><span class="ed">${esc(e.d)}</span></div>
     <div class="ec">${esc(e.c)}</div>
+    ${e.adl&&e.adlFor?`<div class="adlbuild">🧩 <b>Builds toward:</b> ${esc(e.adlFor)}</div>`:""}
     ${exertionLine(e)}
     ${e.home?`<div class="homenote">🏠 <b>Home swap:</b> ${esc(e.homeNote)}</div>`:""}
     ${e.warn?`<span class="warnpill">⚠ Modify — involves ${esc(TAG_LABEL[e.warn]||e.warn)}; keep it symptom-free.</span>`:""}
@@ -2941,6 +2942,7 @@ function renderProgram(prog){
   })));
 
   html += returnGoalsCard();
+  html += adlSuggestionsCard();
   html += homeCard(homeAdapted);
   html += safetyNotesCard(prog);
   html += riskAwarenessCard(prog);
@@ -3194,9 +3196,57 @@ const ADL_GROUPS = {
   "Hands & fine motor": ["Opening jars & bottles","Gripping / holding objects","Picking up small items (coins, pins)","Turning keys & door handles","Opening packaging","Fastening jewellery","Using cutlery (knife & fork)","Typing / using a keyboard"],
   "Work, family & leisure": ["Return-to-work tasks","Lifting at work","Sitting at a desk for long periods","Standing for long periods","Caring for children","Caring for a pet","Caring for another person","Hobbies & crafts","Sport / exercise","Social activities / going out","Sexual activity","Getting a good night's sleep"]
 };
-const ADL_CATALOG = Object.entries(ADL_GROUPS).flatMap(([cat,arr])=>arr.map(name=>({name,cat})));
-const ADL_NAMES = ADL_CATALOG.map(a=>a.name);
-const ADL_CAT = new Map(ADL_CATALOG.map(a=>[a.name.toLowerCase(), a.cat]));
+// built-in fallback catalogue ({n,c,a}); the generated data/adls.js (window.ADLS,
+// ~1,000 OT tasks) is preferred when loaded.
+const ADL_CATALOG = Object.entries(ADL_GROUPS).flatMap(([cat,arr])=>arr.map(name=>({ n:name, c:cat, a:inferAdlAreas(name) })));
+function adlCatalog(){ return (window.ADLS && window.ADLS.length) ? window.ADLS : ADL_CATALOG; }
+let _adlIdx = null;
+function adlIndex(){
+  const src = adlCatalog();
+  if(_adlIdx && _adlIdx.src === src) return _adlIdx;
+  _adlIdx = { src, names:src.map(x=>x.n),
+    cat:new Map(src.map(x=>[x.n.toLowerCase(), x.c])),
+    area:new Map(src.map(x=>[x.n.toLowerCase(), x.a||[]])) };
+  return _adlIdx;
+}
+/* Infer functional areas from an ADL name (for custom/free-text tasks, and the
+   built-in fallback). Areas link the ADL to matched functional-practice
+   exercises and to the improvement tips. */
+function inferAdlAreas(name){
+  const s = " " + (name||"").toLowerCase() + " ";
+  const areas = [];
+  const M = (re, a) => { if(re.test(s)) areas.push(a); };
+  M(/stair|\bstep\b|steps|kerb|curb|flight/, "stairs");
+  M(/sit-to-stand|chair|sofa|toilet|\bbed\b|transfer|get(ting)? up|stand up|stool|pew|couch|bench/, "transfers");
+  M(/car\b|driv|steering|handbrake|gear|seatbelt|blind spot|reverse|park/, "driving");
+  M(/overhead|cupboard|shelf|hang|reach up|reaching up|high\b|loft|attic|top of|ceiling|wardrobe/, "reach_high");
+  M(/floor|sock|shoe|lace|bend|kneel|low(er)? cupboard|pick .*up|drop|feet|ankle|shin|under the/, "reach_low");
+  M(/button|zip|fasten|jewel|coin|thread|sew|knit|crochet|bead|clasp|buckle|press-stud|dexter|small (item|button)|pinch|pick up|puzzle|card|stud|nail|tweez/, "hand_fine");
+  M(/jar|bottle|lid|open|grip|hold|turn(ing)? (a|the)? ?(key|tap|knob|handle|dial)|wring|squeeze|carry a|cap|can\b/, "grip");
+  M(/dress.*(upper|top)|t-shirt|shirt|jumper|sweat|coat|jacket|bra|blouse|cardigan|tie\b|scarf|collar|cuff|over your head|sleeve/, "dress_upper");
+  M(/dress.*(lower)|trouser|sock|shoe|lace|boot|tights|stocking|skirt|underwear|belt/, "dress_lower");
+  M(/walk|stroll|distance|community|pavement|corridor|around the|to the (shop|bus|end)/, "walking");
+  M(/carry|carrying|bag|basket|load|lift(ing)?|tray|box|shopping bag|suitcase|pram|trolley|bucket/, "carrying");
+  M(/balanc|steady|steadi|one leg|uneven|wobbl|dizz|fall|turn(ing)? (around|round)/, "balance");
+  M(/bath|shower|wash your (back|feet|hair|leg)|rinse|dry (yourself|off|between)/, "bathing");
+  M(/toilet|continence|catheter|stoma|commode|wiping/, "toileting");
+  M(/groom|hair|teeth|shav|nail|make-up|makeup|comb|brush your|deodorant|moistur|glasses|earring|lip/, "grooming");
+  M(/eat|feed|cutlery|knife|fork|spoon|chopstick|cup|drink|straw|butter|peel|chew|swallow|plate of/, "eating");
+  M(/cook|meal|kitchen|kettle|stove|oven|hob|chop|slic|grate|whisk|knead|pan|microwav|recipe|prepar/, "cooking");
+  M(/clean|vacuum|dust|tidy|mop|sweep|hoover|scrub|wipe|bin|rubbish|window|housework|garden|lawn|weed|rake|dig|dust/, "housework");
+  M(/laundry|washing (machine|line|up)?|iron|fold(ing)?|hang(ing)? (out|the wash)|tumble dryer|peg/, "laundry");
+  M(/shop|grocer|trolley|checkout|market|supermarket|queue/, "shopping");
+  M(/money|bill|budget|bank|cash|change|medication|dosette|prescription|phone|call|text|email|computer|internet|appointment|remember|plan|concentrat|attention|recipe|manage|organis|schedul/, "cognition");
+  M(/sit(ting)?|desk|seated|meeting/, "sitting");
+  M(/stand(ing)?|queue|on your feet/, "standing");
+  M(/writ|hand-?writ|sign|type|typing|keyboard|pen\b|form\b/, "writing");
+  return [...new Set(areas)];
+}
+function adlAreasOf(name){
+  const idx = adlIndex().area.get((name||"").toLowerCase());
+  const a = (idx && idx.length) ? idx : inferAdlAreas(name);
+  return a && a.length ? a : ["transfers"];   // sensible default so there's always some focus
+}
 // difficulty rating (0 = independent → 4 = unable). Colour goes green → red.
 const ADL_SCALE = [
   { v:0, short:"None",     label:"No difficulty — fully independent",   cls:"a0" },
@@ -3206,7 +3256,7 @@ const ADL_SCALE = [
   { v:4, short:"Unable",   label:"Unable / need help from someone",     cls:"a4" }
 ];
 function adlList(){ return (state.adls = state.adls || []); }
-function adlCatOf(name){ return ADL_CAT.get((name||"").toLowerCase()) || "Other"; }
+function adlCatOf(name){ return adlIndex().cat.get((name||"").toLowerCase()) || "Other"; }
 function adlLevelInfo(v){ return ADL_SCALE.find(s=>s.v===v) || ADL_SCALE[2]; }
 function adlSegHTML(name, level){
   return ADL_SCALE.map(s=>`<button type="button" class="adlseg ${s.cls}${s.v===level?" on":""}" data-adl="${esc(name)}" data-lvl="${s.v}" aria-pressed="${s.v===level}" title="${esc(s.label)}">${esc(s.short)}</button>`).join("");
@@ -3242,7 +3292,7 @@ function initADLs(){
     const q=input.value.trim();
     if(!q){ results.innerHTML=""; results.classList.add("hide"); return; }
     const have = new Set(adlList().map(a=>a.name.toLowerCase()));
-    const matches = acFilter(ADL_NAMES, q, 24).filter(n=>!have.has(n.toLowerCase()));
+    const matches = acFilter(adlIndex().names, q, 24).filter(n=>!have.has(n.toLowerCase()));
     const rows = matches.map(n=>`<div class="result acrow" data-v="${esc(n)}"><span class="rn">${esc(n)} <em class="adlcat">${esc(adlCatOf(n))}</em></span><span class="add">+</span></div>`).join("");
     const custom = `<div class="result acrow acadd" data-v="${esc(q)}"><span class="rn">＋ Add “${esc(q)}”</span><span class="add">+</span></div>`;
     results.innerHTML = rows + custom;
@@ -3252,6 +3302,99 @@ function initADLs(){
   input.onkeydown = (e)=>{ if(e.key==="Enter"){ e.preventDefault(); adlAdd(input.value); } };
   input.onblur = ()=> setTimeout(()=>results.classList.add("hide"), 180);
   renderADLList();
+}
+/* Per-area improvement tips: how to build CAPABILITY, ADAPT the task (equipment /
+   technique), and build CONFIDENCE & pacing. Shown in the program's ADL card. */
+const AREA_META = {
+  transfers:{icon:"🪑",label:"Getting up & transfers",cap:"Practise sit-to-stands from progressively lower seats; strengthen your legs with squats and step-ups, and lead 'nose over toes'.",adapt:"Raise the seat (cushion, chair raisers, a raised toilet seat), use armrests or a grab-rail, and bring your feet back under you before you rise.",conf:"Start from a high, firm chair using your hands, then lower the seat and reduce hand use as you get stronger."},
+  stairs:{icon:"🪜",label:"Stairs & steps",cap:"Build single-leg strength (step-ups, sit-to-stands, calf raises) and practise one step at a time.",adapt:"Use the handrail, go 'up with the good leg, down with the bad', and add a second rail or a stair-lift if needed.",conf:"Rehearse on a single step first, always near the rail, before tackling a full flight."},
+  reach_high:{icon:"🙆",label:"Reaching up",cap:"Improve shoulder range and control (wall slides, band work) and practise steady overhead reaches.",adapt:"Use a reacher/grabber, keep everyday items between waist and shoulder height, and use a stable step-stool with a rail.",conf:"Reach to lower shelves first, then higher, keeping a hand on support."},
+  reach_low:{icon:"🧎",label:"Bending & reaching low",cap:"Practise hip-hinging and squatting to the floor and strengthen your hips and legs.",adapt:"Use a long-handled reacher, sock aid and long shoehorn; sit to reach your feet, and raise objects off the floor.",conf:"Hold a chair or counter while bending, then progress to unsupported as balance improves."},
+  hand_fine:{icon:"✋",label:"Fine motor & dexterity",cap:"Practise dexterity daily — picking up small objects, buttoning, and in-hand manipulation, with putty/band work.",adapt:"Use built-up handles, a button hook, Velcro fastenings, and a non-slip mat.",conf:"Warm the hands first; start with larger objects and slow reps, then smaller and faster."},
+  grip:{icon:"🤛",label:"Grip & opening things",cap:"Build grip and forearm strength (putty, towel wrings, grippers) and practise opening and turning.",adapt:"Use a jar/bottle opener, rubber grips, key and tap turners, and brace the item against your body.",conf:"Start with looser lids and lighter loads, using two hands before one."},
+  dress_upper:{icon:"👕",label:"Upper-body dressing",cap:"Improve shoulder reach and practise the over-the-head and hand-behind-back patterns.",adapt:"Dress the stiffer/weaker arm first, choose front-fastening or loose tops, and use a dressing stick.",conf:"Practise seated and unhurried; build up from loose garments to fitted ones."},
+  dress_lower:{icon:"🧦",label:"Lower-body dressing",cap:"Work on reaching your feet (hip and knee flexibility) and single-leg balance for standing to dress.",adapt:"Use a sock aid, long shoehorn, elastic laces and a reacher; sit to dress and prop your foot on a step.",conf:"Sit to dress at first; add standing balance near support as you improve."},
+  walking:{icon:"🚶",label:"Walking & endurance",cap:"Build walking endurance with intervals — a little further each week — and strengthen your legs.",adapt:"Use the right walking aid and supportive footwear, and plan routes with rests and seats.",conf:"Walk a known safe loop, increasing distance ~10% a week, and carry a phone."},
+  carrying:{icon:"🛍️",label:"Carrying & lifting",cap:"Strengthen grip, core and legs; practise carrying gradually heavier loads over short distances.",adapt:"Use a trolley, backpack or wheeled bag, split loads, and keep them close to your body.",conf:"Carry light and short first, then heavier and further as it feels controlled."},
+  balance:{icon:"⚖️",label:"Balance & steadiness",cap:"Do daily balance work — feet-together, then tandem, then single-leg near support.",adapt:"Keep a hand near a counter or rail, remove trip hazards, and use good lighting and footwear.",conf:"Always practise beside something solid to hold; reduce the support only when steady."},
+  bathing:{icon:"🛁",label:"Bathing & showering",cap:"Practise the transfers and standing tolerance the task needs, and strengthen your legs.",adapt:"Use a shower chair/bath board, non-slip mat, grab-rails, a long-handled sponge and a hand-held shower head.",conf:"Sit to wash at first and have someone nearby until you feel safe."},
+  toileting:{icon:"🚽",label:"Toileting",cap:"Build sit-to-stand strength and practise managing lower-body clothing.",adapt:"Use a raised toilet seat, grab-rails or a toilet frame, and keep aids within reach.",conf:"Use the rails every time and rehearse the transfer before you need it in a hurry."},
+  grooming:{icon:"🪥",label:"Grooming & hygiene",cap:"Improve standing tolerance and arm endurance for tasks at the sink.",adapt:"Sit at the sink, use long-handled or electric brushes/razors, and lightweight tools.",conf:"Break it into short bouts and rest as needed."},
+  eating:{icon:"🍽️",label:"Eating & drinking",cap:"Practise cutlery use, cutting and cup control, with hand and forearm strengthening.",adapt:"Use built-up cutlery, a plate guard, a non-slip mat, and a two-handled or lightweight cup.",conf:"Start with softer foods and larger utensils, and take your time."},
+  cooking:{icon:"🍳",label:"Cooking & kitchen",cap:"Build standing tolerance and safe reaching/carrying; practise prep steps seated.",adapt:"Sit to prep, slide pans rather than lift, use a kettle tipper and a one-handed chopping board, and a trolley to move things.",conf:"Cook simple meals first and prepare ingredients in stages with rests."},
+  housework:{icon:"🧹",label:"Housework",cap:"Strengthen and pace yourself; practise the bending, reaching and pushing chores need.",adapt:"Use long-handled tools and a lightweight vacuum, and split chores across the week.",conf:"Do one room or task at a time, and sit for the parts you can."},
+  laundry:{icon:"🧺",label:"Laundry",cap:"Practise loading/unloading with a hip-hinge and build carrying tolerance.",adapt:"Use a raised basket or trolley, smaller loads, a reacher for the machine, and hang at waist height.",conf:"Carry half-loads with rests, and use a wheeled basket."},
+  shopping:{icon:"🛒",label:"Shopping & community",cap:"Build walking endurance and carrying, and plan the route.",adapt:"Use a trolley or wheeled bag, order heavy items online, and shop at quieter times.",conf:"Start with short trips and a list, adding distance gradually."},
+  driving:{icon:"🚗",label:"Driving & getting in the car",cap:"Work on neck rotation, trunk mobility and quick foot control — check with your clinician and licensing rules first.",adapt:"Use extra mirrors, a swivel cushion for getting in and out, and steering aids if advised.",conf:"Restart with short, familiar, quiet routes once you're cleared."},
+  cognition:{icon:"🧠",label:"Thinking & organising",cap:"Use routines and practice — planning, sequencing and memory tasks, little and often.",adapt:"Use a pill organiser and alarms, a diary or phone reminders, checklists and automatic payments.",conf:"Do one step at a time in a quiet space, building up complexity gradually."},
+  sitting:{icon:"💺",label:"Sitting tolerance",cap:"Build sitting tolerance in graded blocks; strengthen your core and improve posture.",adapt:"Use a supportive chair, a lumbar roll and a footrest, and take regular sit-stand micro-breaks.",conf:"Increase sitting time by a few minutes at a time, standing to reset."},
+  standing:{icon:"🧍",label:"Standing tolerance",cap:"Build standing tolerance gradually, strengthen your legs and practise weight-shifting.",adapt:"Use a perch stool, an anti-fatigue mat, and something to hold; rest a foot on a low step.",conf:"Add a minute or two at a time, resting before symptoms build."},
+  writing:{icon:"✍️",label:"Handwriting & typing",cap:"Practise handwriting and typing in short bouts, with hand and grip strengthening.",adapt:"Use a built-up or weighted pen, a slant board, voice-to-text and a larger keyboard.",conf:"Warm up the hand, write short passages, and rest to avoid cramping."},
+  _default:{icon:"🧩",label:"Daily activities",cap:"Break the task into steps and practise the hardest part; strengthen the muscles it needs.",adapt:"Use assistive equipment and easier techniques, and set things up to reduce effort.",conf:"Start supported and reduce help as you improve; pace yourself and celebrate small wins."}
+};
+/* Pick one functional-practice exercise for an area at ~the target tier, filtered
+   by the user's precautions. Deterministic (stable across re-renders). */
+function pickAdlExercise(area, tier, flags, exclude){
+  const lib = window.ADL_EXERCISES; if(!lib || !lib.length) return null;
+  const exSet = new Set((exclude||[]).map(n=>n.toLowerCase()));
+  let cands = lib.filter(e=>e.area===area && Math.abs(e.tier-tier)<=1 && !exSet.has(e.n.toLowerCase()));
+  if(!cands.length) cands = lib.filter(e=>e.area===area && !exSet.has(e.n.toLowerCase()));
+  if(!cands.length) return null;
+  let { kept } = window.applyContra(cands, flags);
+  kept = kept.filter(e=>nameAllowed(e.n));
+  if(!kept.length) return null;
+  kept.sort((a,b)=> (Math.abs(a.tier-tier)-Math.abs(b.tier-tier)) || (hashStr(a.n+"|"+area) - hashStr(b.n+"|"+area)));
+  const e = kept[0];
+  return { n:e.n, d:e.d, c:e.c, tags:e.tags||[], pattern:"adl", region:["Daily living (functional)"], adl:true };
+}
+/* Functional-task practice matched to the user's HARD ADLs, placed in the right
+   phase: the harder an activity is rated, the earlier its practice starts, and
+   the tier steps up phase by phase. Injected on the primary condition. */
+function adlFocusForPhase(phaseIdx, flags){
+  const diffs = (state.adls||[]).filter(a=>a.level>=1);
+  if(!diffs.length || !window.ADL_EXERCISES) return [];
+  const out=[]; const usedNames=[]; const usedArea=new Set();
+  const sorted = diffs.slice().sort((a,b)=>b.level-a.level);   // hardest first
+  for(const adl of sorted){
+    if(out.length>=4) break;                                    // keep the phase manageable
+    const start = Math.max(0, Math.min(3, 4-adl.level));        // level 4→phase0 … level 1→phase3
+    if(phaseIdx < start) continue;
+    const tier = Math.max(1, Math.min(4, phaseIdx-start+1));
+    // one practice exercise per hard ADL (first of its areas that yields a safe pick)
+    for(const area of adlAreasOf(adl.name)){
+      if(usedArea.has(area)) continue;
+      const pick = pickAdlExercise(area, tier, flags, usedNames);
+      if(pick){ pick.adlFor = adl.name; out.push(pick); usedNames.push(pick.n); usedArea.add(area); break; }
+    }
+  }
+  return out;
+}
+/* Program card: capability & confidence suggestions for each hard ADL area. */
+function adlSuggestionsCard(){
+  const diffs=(state.adls||[]).filter(a=>a.level>=1);
+  if(!diffs.length) return "";
+  const byArea=new Map();
+  diffs.forEach(a=>adlAreasOf(a.name).forEach(area=>{
+    if(!byArea.has(area)) byArea.set(area,{tasks:new Set(),max:0});
+    const g=byArea.get(area); g.tasks.add(a.name); g.max=Math.max(g.max,a.level);
+  }));
+  const areas=[...byArea.entries()].sort((x,y)=>y[1].max-x[1].max).slice(0,8);
+  const blocks=areas.map(([area,g])=>{
+    const m=AREA_META[area]||AREA_META._default;
+    const tasks=[...g.tasks].slice(0,6).map(esc).join(", ");
+    return `<div class="adlsugg">
+      <div class="adlsugg-h">${m.icon} <b>${esc(m.label)}</b>${tasks?` <span class="adlsugg-tasks">${tasks}</span>`:""}</div>
+      <ul class="adlsugg-tips">
+        <li><b>Build capability:</b> ${esc(m.cap)}</li>
+        <li><b>Make it easier:</b> ${esc(m.adapt)}</li>
+        <li><b>Confidence &amp; pacing:</b> ${esc(m.conf)}</li>
+      </ul></div>`;
+  }).join("");
+  return `<div class="card adlcard"><h2>🧩 Improving your daily activities</h2>
+    <p class="hint">From the activities you found hard, here's how to build capability and confidence. Matching <b>🧩 daily-living</b> practice is woven into the phases below — harder tasks start earlier.</p>
+    ${blocks}
+    <p class="hint adlfoot">Break a hard task into steps, rehearse the tricky part, and reduce help as you improve. An occupational therapist can tailor equipment and techniques to you.</p>
+  </div>`;
 }
 function initHistory(){
   const wrap=$("#historyChecks");
