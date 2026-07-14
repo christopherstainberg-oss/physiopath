@@ -630,7 +630,24 @@ const SPECIAL_PRECAUTIONS = {
     note:"Spinal precautions (after spine surgery): protect the healing spine with the “BLT” rule — no Bending, Lifting (>~5–10 lb) or Twisting. Loaded trunk bending/arching/rotation and heavy lifting/carrying were removed; hinge at the hips with a straight back, log-roll, and turn as one unit. Keep walking, and wear your brace if prescribed. Follow your surgeon's timeline."
   }
 };
-function activeSpecialPrecautions(){ return (state.specialPrecautions||[]).map(k=>SPECIAL_PRECAUTIONS[k]).filter(Boolean); }
+/* Special precautions IMPLIED by the chosen diagnosis or surgery (via their
+   autoFlags) — e.g. a post-CABG condition implies sternal precautions, a
+   post-abdominal-surgery condition implies abdominal precautions. These switch on
+   automatically so the precaution's explanation + name-based exercise limits apply
+   without the user having to tick the box. */
+function impliedSpecialPrecautionKeys(){
+  const flags = new Set();
+  selectedConditions().forEach(c => (c.autoFlags||[]).forEach(x=>flags.add(x)));
+  const surg = (typeof detectSurgery === "function") ? detectSurgery() : null;
+  if(surg && surg.autoFlags) surg.autoFlags.forEach(x=>flags.add(x));
+  const keys = new Set();
+  for(const k in SPECIAL_PRECAUTIONS){ if(flags.has(SPECIAL_PRECAUTIONS[k].flag)) keys.add(k); }
+  return keys;
+}
+function activeSpecialPrecautions(){
+  const keys = new Set([...(state.specialPrecautions||[]), ...impliedSpecialPrecautionKeys()]);
+  return [...keys].map(k=>SPECIAL_PRECAUTIONS[k]).filter(Boolean);
+}
 /* Engine flags so the exercise SELECTION also adjusts for the precaution set. */
 function specialPrecautionFlags(){ return activeSpecialPrecautions().map(p=>p.flag); }
 
@@ -766,10 +783,37 @@ const LIB_REGION = {
   neuropathy:["Balance","Foot","Ankle"], vestibular:["Vestibular","Balance"], bells_palsy:["Neck"],
   cardiac_rehab:["Cardio","Full body"], heart_failure:["Cardio","Full body"], hypertension:["Cardio","Full body"],
   pad:["Cardio","Knee","Hip"], valve:["Cardio","Breathing"], arrhythmia:["Cardio","Full body"],
+  cardiac_surgery:["Cardio","Breathing","Full body"],
   pulmonary_rehab:["Cardio","Breathing","Core"], asthma:["Cardio","Breathing"], post_covid:["Cardio","Breathing","Balance"],
-  ild:["Cardio","Breathing"], thoracic_surgery:["Breathing","Scapula/Upper back","Cardio"], pulm_hypertension:["Cardio","Breathing"]
+  ild:["Cardio","Breathing"], thoracic_surgery:["Breathing","Scapula/Upper back","Cardio"], pulm_hypertension:["Cardio","Breathing"],
+  abdominal_surgery:["Breathing","Core","Hip","Full body"]
 };
 function hashStr(s){ let h=0; for(let i=0;i<s.length;i++){ h=(h*31+s.charCodeAt(i))|0; } return h; }
+/* Pool / aquatic exercises are only SUGGESTED once the user has told us their
+   confidence in water (History → "Confidence in water"). Without that answer we
+   don't know it's safe/appropriate to put someone in a pool, so they're withheld
+   from the generated program and the add-exercise suggestions/search. */
+function aquaticAllowed(){ return !!state.waterConfidence; }
+// swimming / aqua-jogging / hydrotherapy / pool work — matches the therapeutic Pool
+// set AND swimming-cardio moves. Uses aqua/aquatic/swim/hydro/pool only (never the
+// word "water"), so household loads like "Water-bottle curl" / "Water-jug row" don't match.
+const AQUATIC_NAME_RE = /\baqua|aquatic|\bswim|hydrotherap|\bpool\b/i;
+function isAquaticEx(e){
+  if(!e) return false;
+  if(e.pattern === "pool") return true;
+  if(Array.isArray(e.region) && e.region.includes("Pool / aquatic (therapeutic)")) return true;
+  return AQUATIC_NAME_RE.test(e.name || e.n || "");
+}
+// Child-only play/developmental moves (tagged "pediatric"; some equipment variants
+// carry an age suffix like "(teen)"/"(infant)"/"(kids …)"). Kept out of adult plans.
+const PED_NAME_RE = /\((?:infant|toddler|pre-?school|child|kids?|teen|adolescent|baby|newborn)\b[^)]*\)/i;
+function isPediatricEx(e){
+  if(!e) return false;
+  if(Array.isArray(e.tags) && e.tags.includes("pediatric")) return true;
+  return PED_NAME_RE.test(e.name || e.n || "");
+}
+// blank/invalid age must read as ADULT — Number("") is 0, so parse explicitly.
+function isAdultUser(){ const a = parseFloat(state.age); return !(Number.isFinite(a) && a < 18); }
 /* Contraindication-filtered library options for a condition's region & phase.
    seed changes the ordering (used by "reroll"); count sets how many to return. */
 function libraryOptions(protocol, phaseIdx, flags, exclude, count, seed){
@@ -780,8 +824,12 @@ function libraryOptions(protocol, phaseIdx, flags, exclude, count, seed){
   const bucket = phaseIdx+1;                      // 1..4
   const allowed = new Set([bucket]); if(bucket>1) allowed.add(bucket-1);
   const exSet = new Set((exclude||[]).map(n=>n.toLowerCase()));
+  const allowAqua = aquaticAllowed();
+  const adult = isAdultUser();                     // keep child-only "(infant)/(teen)" moves out of adult plans
   const pool = window.EXERCISES.filter(e =>
-    e.region.some(r=>rset.has(r)) && allowed.has(e.difficulty) && !exSet.has(e.name.toLowerCase()));
+    e.region.some(r=>rset.has(r)) && allowed.has(e.difficulty) && !exSet.has(e.name.toLowerCase()) &&
+    (allowAqua || !isAquaticEx(e)) &&              // no aquatic suggestions until water-confidence is set
+    (!adult || !isPediatricEx(e)));
   let { kept } = window.applyContra(pool, flags);
   kept = kept.filter(e=>nameAllowed(e.name));      // respect device / weight-bearing restrictions
   kept.sort((a,b)=> hashStr(a.name+"|"+seed) - hashStr(b.name+"|"+seed));
@@ -1514,7 +1562,7 @@ function generateProgram(){
 
   return {
     track, totalWeeks:tmpl.total, sessions:sessionsText(track), load:loadGuidance(),
-    flags, notes:window.notesForFlags(flags).concat(R.notes), clearance:clearanceNeeded(flags),
+    flags, notes:[...new Set(window.notesForFlags(flags).concat(R.notes))], clearance:clearanceNeeded(flags),
     supervision:displaySupervision(flags, clearanceNeeded(flags)), items,
     removed:Array.from(removedAll, ([n,tag])=>({n,tag}))
   };
@@ -1581,13 +1629,15 @@ const PROTOCOL_APPROACH = {
   hypertension:"regular moderate aerobic exercise (the cornerstone) plus controlled resistance work",
   pad:"structured walking to improve circulation and pain-free walking distance",
   valve:"graded aerobic and light strength work while respecting sternal/surgical precautions",
+  cardiac_surgery:"protecting the healing breastbone (sternal precautions) with legs-and-walking-led reconditioning early, then adding upper-body strength once the sternum has knit and you're cleared",
   arrhythmia:"aerobic and resistance exercise kept within safe heart-rate limits",
   pulmonary_rehab:"paced aerobic and strength work combined with breathing techniques",
   post_covid:"energy-paced, gradually progressed reconditioning to avoid setbacks",
   ild:"paced, oxygen-monitored aerobic work and breathing techniques",
   thoracic_surgery:"breathing and airway work plus graded reconditioning, respecting incision precautions",
   pulm_hypertension:"very conservative, low-to-moderate exercise strictly within prescribed limits",
-  asthma:"well-warmed-up aerobic and strength work, using your action plan to prevent symptoms"
+  asthma:"well-warmed-up aerobic and strength work, using your action plan to prevent symptoms",
+  abdominal_surgery:"protecting the healing abdominal wall (abdominal precautions) with walking, breathing and gentle deep-core/pelvic-floor reactivation early, then graded core and loading once cleared"
 };
 
 const PATHOLOGY_INFO = [
@@ -2040,9 +2090,13 @@ function searchLibraryForAdd(q, exclude){
   const toks = q.toLowerCase().split(/\s+/).filter(Boolean); if(!toks.length) return [];
   const exSet = new Set((exclude||[]).map(n=>n.toLowerCase()));
   const matched = [];
+  const allowAqua = aquaticAllowed();
+  const adult = isAdultUser();
   for(let i=0;i<window.EXERCISES.length && matched.length<80;i++){
     const e = window.EXERCISES[i];
     if(exSet.has(e.name.toLowerCase())) continue;
+    if(!allowAqua && isAquaticEx(e)) continue;    // withhold aquatic until water-confidence is set
+    if(adult && isPediatricEx(e)) continue;       // no child-only moves in adult suggestions/search
     const hay = (e.name+" "+e.region.join(" ")+" "+e.pattern).toLowerCase();   // match name, region (e.g. "supine")/pattern too
     if(toks.every(t=>hay.includes(t)) && nameAllowed(e.name)) matched.push(e);
   }
@@ -2054,9 +2108,9 @@ function wireAddExercise(box, ci, pi){
   const resultsEl = box.querySelector(".addexresults");
   const suggest = () => libraryOptions(item.protocol, pi, activeFlags(), ph.ex.map(x=>x.n), 12, ph._addseed||0);
   let curOpts = [];
-  const draw = (opts) => {
+  const draw = (opts, prefix) => {
     curOpts = opts;
-    resultsEl.innerHTML = addExOptsHTML(opts);
+    resultsEl.innerHTML = (prefix||"") + addExOptsHTML(opts);
     resultsEl.querySelectorAll(".addexopt").forEach(op=>op.onclick=()=>addExerciseToPhase(ci, pi, curOpts[+op.dataset.oi]));
   };
   draw(suggest());
@@ -2064,7 +2118,10 @@ function wireAddExercise(box, ci, pi){
   let t;
   search.oninput = () => { clearTimeout(t); t=setTimeout(()=>{
     const q = search.value.trim();
-    draw(q ? searchLibraryForAdd(q, ph.ex.map(x=>x.n)) : suggest());
+    // hint if someone looks for pool work before telling us their water confidence
+    const aquaHint = (q && !aquaticAllowed() && /pool|aqua|water|hydro|swim/i.test(q))
+      ? `<div class="addexhint">💧 Pool / aquatic exercises stay hidden until you set <b>Confidence in water</b> in the History step — add it there and they'll appear here and in your program.</div>` : "";
+    draw(q ? searchLibraryForAdd(q, ph.ex.map(x=>x.n)) : suggest(), aquaHint);
   }, 140); };
   const saveBtn = box.querySelector(".addex-save");
   saveBtn.onclick = () => {
@@ -2159,10 +2216,13 @@ function surgicalReminderCard(){
 
   // --- special surgical-site precautions (sternal / abdominal) control ---
   const spActive = new Set(state.specialPrecautions||[]);
+  const spImplied = impliedSpecialPrecautionKeys();
   const spToggles = Object.values(SPECIAL_PRECAUTIONS).map(p=>{
-      const on = spActive.has(p.key);
-      return `<label class="sptoggle${on?" on":""}"><input type="checkbox" class="spcheck" data-sp="${esc(p.key)}"${on?" checked":""} />
-        <span class="sptop">${p.icon} ${esc(p.label)}</span><small>${esc(p.sub)}</small></label>`;
+      const implied = spImplied.has(p.key);
+      const on = implied || spActive.has(p.key);
+      const auto = implied ? ` <em class="spauto">· auto from your diagnosis / surgery</em>` : "";
+      return `<label class="sptoggle${on?" on":""}"><input type="checkbox" class="spcheck" data-sp="${esc(p.key)}"${on?" checked":""}${implied?" disabled":""} />
+        <span class="sptop">${p.icon} ${esc(p.label)}${auto}</span><small>${esc(p.sub)}</small></label>`;
     }).join("");
   const spControl = `<div class="spctrl no-print">
       <label class="preclab">🫀 Surgical-site precautions <span class="sub">(this adjusts your exercises)</span></label>
@@ -3002,7 +3062,7 @@ const KB = [
   { kw:["hrv","heart rate variability","recovery score","readiness","how recovered","rmssd"], a:()=>"Heart-rate variability (**HRV**) reflects nervous-system recovery — generally **your-normal-or-above = well recovered**; a notable dip can mean fatigue, stress, poor sleep or coming illness. Track **your own trend**, not others'. Low today? Favour lighter/mobility work. You can read live HRV from a Bluetooth monitor in the **Health** tab." },
   { kw:["spo2","oxygen saturation","oxygen level","desaturate","low oxygen","pulse ox","sats"], a:()=>`Resting **SpO₂ is normally ~95–100%**. A small dip during hard effort can be normal, but dropping **below ~90%**, or feeling very breathless, dizzy or blue-lipped, means stop and rest — and get reviewed if it persists (especially with a heart/lung condition). ${(state.vitals||{}).spo2?`You logged SpO₂ ${state.vitals.spo2}%. `:""}You can track SpO₂ from a Bluetooth pulse oximeter in the **Health** tab.` },
   { kw:["steps","how many steps","walking goal","10000 steps","daily steps","walk more","step count"], a:()=>"Walking is superb all-round recovery — it pumps swelling away, keeps joints moving and builds aerobic base. There's nothing magic about 10,000: **beating your current average is the win**, with benefits climbing from ~4–8k. Build up ~10%/week, split into short walks if needed, and log steps in the **Health** tab to watch the trend." },
-  { kw:["pool","water exercise","aquatic","swimming rehab","hydrotherapy","water therapy","aqua"], a:()=>"Water is excellent early rehab: **buoyancy offloads sore or healing joints** (chest-deep water takes ~50–70% of your leg weight off) while giving gentle all-round resistance and warmth. There's a **Pool / aquatic** set in the exercise library. Stay where you can stand if you're not a confident swimmer, and never swim alone." },
+  { kw:["pool","water exercise","aquatic","swimming rehab","hydrotherapy","water therapy","aqua"], a:()=>`Water is excellent early rehab: **buoyancy offloads sore or healing joints** (chest-deep water takes ~50–70% of your leg weight off) while giving gentle all-round resistance and warmth. There's a **Pool / aquatic** set in the exercise library.${aquaticAllowed()?"" : " To have pool exercises suggested in your program, set **Confidence in water** in the History step first — that lets the plan tailor water work (and shallow-only if you're less confident)."} Stay where you can stand if you're not a confident swimmer, and never swim alone.` },
   { kw:["no equipment","at home","home workout","no gym","without weights","household","home exercise"], a:()=>"You don't need a gym — **bodyweight, household objects and bands** cover most rehab: soup cans/water bottles for light weight, a loaded backpack for more, a towel for resistance, a sturdy chair for support. Flip on **Home mode** in the Program tab and PhysioPath swaps your exercises to everyday-object versions with how-to notes." },
   { kw:["how many reps","sets and reps","how many sets","rep range","how many exercises","reps"], a:()=>"General guide: **strength** ~2–4 sets of 6–12 reps at a challenging-but-controlled effort (last 1–2 reps hard); **endurance/early rehab** 2–3 sets of 12–20; **isometric holds** ~5 × 30–45s. Leave 1–2 reps 'in the tank' early. Your program lists sets×reps per exercise — full range and quality beat chasing numbers." },
   { kw:["progressive overload","how to progress","progress an exercise","how do i progress","progress my","make it harder","progression","increase weight","level up exercise"], a:()=>"You get stronger by **gradually asking a bit more** — add reps, then sets, then load/difficulty, about **~10% a week**. When an exercise feels easy (you could do several more good reps), progress it. Your later phases do this automatically; use **⟳ Rotate / ⇄ Swap** on any exercise to step it up or down, or **＋ Add exercise** to a phase." },

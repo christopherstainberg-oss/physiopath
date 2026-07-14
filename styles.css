@@ -339,7 +339,10 @@ svg.chart .dot{fill:var(--brand)}
 .sptoggle.on{border-color:rgba(255,107,107,.55);background:rgba(255,107,107,.08)}
 .sptoggle input{margin:0;flex:0 0 auto;accent-color:var(--danger)}
 .sptoggle .sptop{font-weight:700;font-size:13px}
+.sptoggle .spauto{font-style:normal;font-weight:600;font-size:10.5px;color:var(--danger);background:rgba(255,107,107,.12);border-radius:6px;padding:1px 6px;margin-left:2px}
+.sptoggle input:disabled{opacity:.6;cursor:not-allowed}
 .sptoggle small{flex-basis:100%;color:var(--muted);font-size:11.5px;padding-left:25px}
+.addexhint{font-size:12px;line-height:1.5;color:var(--muted);background:var(--panel);border:1px dashed var(--brand-2);border-radius:8px;padding:8px 10px;margin-bottom:8px}
 .precrow.spwhat{border:1px solid rgba(255,107,107,.3);background:rgba(255,107,107,.06);border-radius:10px;padding:11px 12px;margin:9px 0 3px}
 .precrow.spwhat .prec-t{font-size:12.8px;line-height:1.55;color:var(--muted)}
 .precrow.spwhat .prec-t b{color:var(--text)}

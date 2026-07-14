@@ -49,7 +49,9 @@ function autoFlagsFor(protocol, name) {
   if (protocol === "hip_replacement") f.push("hip_replacement");
   if (protocol === "knee_replacement") f.push("knee_replacement");
   if (protocol.startsWith("fracture")) f.push("recent_fracture");
-  if (["cardiac_rehab","heart_failure","valve","arrhythmia","pad"].includes(protocol)) f.push("cardiac");
+  if (["cardiac_rehab","heart_failure","valve","arrhythmia","pad","cardiac_surgery"].includes(protocol)) f.push("cardiac");
+  if (protocol === "cardiac_surgery") f.push("sternal_precautions");        // post-sternotomy (CABG / open-heart)
+  if (protocol === "abdominal_surgery") f.push("abdominal_precautions");    // post-abdominal-wall surgery
   if (protocol === "hypertension") f.push("hypertension");
   if (["pulmonary_rehab","asthma","post_covid","ild","thoracic_surgery","pulm_hypertension"].includes(protocol)) f.push("pulmonary");
   if (["stroke","tbi","sci","ms","parkinsons","vestibular","balance_neuro","guillain_barre"].includes(protocol)) f.push("balance_risk");
@@ -313,9 +315,14 @@ for (const lv of SCI_LEVELS) {
 /* ==================== CARDIAC ==================== */
 ["Post-myocardial infarction (heart attack) recovery","Post-STEMI recovery","Post-NSTEMI recovery",
  "Stable coronary artery disease","Post-angioplasty (PCI) recovery","Post-stent (single-vessel) recovery",
- "Post-stent (multi-vessel) recovery","Post-CABG (bypass) recovery","Stable angina (reconditioning)",
+ "Post-stent (multi-vessel) recovery","Stable angina (reconditioning)",
  "Cardiac deconditioning (general)"]
   .forEach(dx => add(dx, "cardiac", "Heart", "cardiac_rehab", { supervision:"clinical", clearance:true }));
+
+// Post-sternotomy / open-heart surgery — sternal precautions apply (autoFlags add them)
+["Post-CABG (bypass) recovery","Post-CABG (multi-vessel bypass) recovery","Post-coronary-bypass-graft (off-pump) recovery",
+ "Post-open-heart-surgery recovery","Post-median-sternotomy recovery","Post-cardiac-surgery reconditioning"]
+  .forEach(dx => add(dx, "cardiac", "Heart", "cardiac_surgery", { supervision:"clinical", clearance:true }));
 
 ["Heart failure (reduced ejection fraction, HFrEF)","Heart failure (preserved ejection fraction, HFpEF)",
  "Heart failure NYHA class I","Heart failure NYHA class II","Heart failure NYHA class III (supervised)",
@@ -323,8 +330,12 @@ for (const lv of SCI_LEVELS) {
  "Post-heart-transplant reconditioning"]
   .forEach(dx => add(dx, "cardiac", "Heart", "heart_failure", { supervision:"clinical", clearance:true, chronic:true }));
 
+// Open (surgical) valve procedures — sternotomy/thoracotomy → sternal precautions
 ["Post-aortic-valve replacement recovery","Post-mitral-valve repair recovery","Post-mitral-valve replacement recovery",
- "Post-tricuspid-valve surgery recovery","Post-TAVR recovery","Valvular heart disease (stable)",
+ "Post-tricuspid-valve surgery recovery"]
+  .forEach(dx => add(dx, "cardiac", "Heart", "valve", { supervision:"clinical", clearance:true, autoFlags:["cardiac","sternal_precautions"] }));
+// Transcatheter / non-surgical valve — no sternotomy, so no sternal precautions
+["Post-TAVR recovery","Post-TMVr (transcatheter mitral repair) recovery","Valvular heart disease (stable)",
  "Aortic stenosis (post-intervention)"]
   .forEach(dx => add(dx, "cardiac", "Heart", "valve", { supervision:"clinical", clearance:true }));
 
@@ -362,6 +373,16 @@ for (const lv of SCI_LEVELS) {
 
 ["Pulmonary hypertension (WHO-cleared exercise)","Pulmonary arterial hypertension (supervised)"]
   .forEach(dx => add(dx, "pulmonary", "Lungs", "pulm_hypertension", { supervision:"clinical", clearance:true, chronic:true }));
+
+/* ==================== ABDOMINAL / CORE — post-surgery ==================== */
+/* Post-abdominal-wall surgery core reconditioning. Maps to the abdominal_surgery
+   protocol; autoFlagsFor adds abdominal_precautions so the precautions are in place. */
+["Post-abdominal-surgery core recovery","Post-laparotomy recovery","Post-laparoscopy core recovery",
+ "Post-hernia-repair (inguinal) recovery","Post-hernia-repair (umbilical) recovery","Post-hernia-repair (incisional / ventral) recovery",
+ "Post-C-section (Caesarean) recovery","Post-hysterectomy core recovery","Post-appendectomy recovery",
+ "Post-colectomy / bowel-resection recovery","Post-cholecystectomy recovery","Post-abdominoplasty core recovery",
+ "Post-prostatectomy core & pelvic recovery","Diastasis recti rehabilitation"]
+  .forEach(dx => add(dx, "msk", "Abdomen / core", "abdominal_surgery", { supervision:"supervised", clearance:true }));
 
 /* ==================== Pad out toward 2000 with graded/side variants ==================== */
 /* Add functional-goal variants for the most common MSK protocols to reach breadth

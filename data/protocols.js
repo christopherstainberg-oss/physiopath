@@ -364,22 +364,26 @@
 
   /* ================= NEURO PROTOCOLS ================= */
   P.stroke = [
-    [E("Positioning & gentle ROM","several × day","Prevent stiffness & contracture"),
-     E("Assisted active movements","3×10","Use the stronger side to help"),
-     E("Seated weight shifts","3×10","Rebuild trunk control",T.balance),
-     E("Breathing & relaxation","3×1 min","Reduce tone")],
-    [E("Sit-to-stand practice","3×8","With support as needed",T.wb,T.balance),
-     E("Supported standing balance","3×30s","Hold a rail",T.balance),
-     E("Task-specific arm reaching","3×10","Functional targets"),
-     E("Gentle strengthening (bands)","3×12","Both sides")],
-    [E("Gait training (assisted)","per team","Even, safe stepping",T.wb,T.balance),
-     E("Step-ups / stairs practice","3×8","Near a rail",T.wb,T.balance),
-     E("Dual-task balance","3×30s","Add a cognitive task",T.balance),
-     E("Functional strengthening","3×12","Real-life movements")],
-    [E("Community mobility","progressive","Uneven ground, distance",T.wb,T.balance),
-     E("Endurance conditioning","15–25 min","Rebuild stamina",T.aerobic),
+    [E("Repositioning & gentle ROM of the affected limbs","several × day","Prevent stiffness/contracture; support a subluxed shoulder — no pulling on the weak arm"),
+     E("Assisted active movements (stronger side helps the weaker)","3×10, high reps","Repetition drives recovery"),
+     E("Seated weight shifts & trunk control","3×10","Rebuild sitting balance",T.balance),
+     E("Affected hand/arm task practice (grasp & release)","3×10","Reach, grip and let go of objects with support"),
+     E("Diaphragmatic breathing & relaxation","3×1 min","Reduce tone; no breath-holding or straining (esp. after a bleed)")],
+    [E("Sit-to-stand practice (even weight both legs)","3×8","Load the affected leg; support as needed",T.wb,T.balance),
+     E("Supported standing & weight-shift onto the affected leg","3×30s","Hold a rail",T.balance),
+     E("Task-specific arm reaching to targets","3×10","Repeated functional reaches"),
+     E("Wrist/finger extension & grasp-release drills","3×10","Rebuild hand function"),
+     E("Progressive strengthening of the affected side (bands)","3×12","Both sides, gradually")],
+    [E("Gait training — heel-strike & even step length","per team","Quality steps near a rail",T.wb,T.balance),
+     E("Step-ups / stairs practice","3×8","Lead with each leg, near a rail",T.wb,T.balance),
+     E("Sustained stretch of tight (spastic) muscles","3×30s","Calf, wrist and elbow flexors — hold long"),
+     E("Dual-task balance (move + think)","3×30s","Add a cognitive task",T.balance),
+     E("Affected-limb strengthening (sit-to-stand, calf raises)","3×12","Real-life movements",T.wb)],
+    [E("Community mobility (curbs, uneven ground, distance)","progressive","Real environments, near support",T.wb,T.balance),
+     E("Aerobic endurance (treadmill / cycle / ergometer)","15–25 min","Rebuild stamina & fitness",T.aerobic),
      E("Advanced balance & coordination","as tolerated","Near support",T.balance),
-     E("Return to meaningful activity","as tolerated","Team-guided")]
+     E("Fine-motor & two-handed task practice","3×10","Buttons, cups, tools — dexterity"),
+     E("Return to meaningful activity / work","as tolerated","Team-guided, graded")]
   ];
 
   P.sci = [
@@ -784,6 +788,59 @@
      E("Resistance 2–3×/week","2×12–15","Progressive",T.valsalva),
      E("Sport participation","as tolerated","Well-controlled asthma → full activity",T.impact),
      E("Action-plan review","ongoing","Keep your asthma plan up to date")]
+  ];
+
+  /* ================= CARDIAC — post-sternotomy (CABG / open-heart) =================
+     Early phases respect STERNAL precautions: legs, walking and breathing lead;
+     no push/pull/press/overhead or lifting >~5–10 lb with the arms until the
+     breastbone has knit (~6–8 wks) and the surgeon clears you. */
+  P.cardiac_surgery = [
+    [E("Frequent short walks","5–10 min, several ×/day","RPE 9–11; build the total, not the pace",T.aerobic),
+     E("Diaphragmatic breathing / incentive spirometry","hourly while awake","Re-expand the lungs; never hold your breath"),
+     E("Ankle pumps & seated leg marching","3×15","Circulation & clot prevention — no straining"),
+     E("Elbows-to-side shoulder & neck ROM","3×10","Gentle, within sternal precautions — no reaching both arms overhead/back"),
+     E("Splint-supported cough","as needed","Hug a firm pillow to your chest when you cough/sneeze")],
+    [E("Walking intervals","10–15 min","RPE 11–12, still able to talk",T.aerobic),
+     E("Sit-to-stand from a chair","3×8","Push up with your LEGS, not your arms",T.wb),
+     E("Mini-squats / heel & calf raises (support)","3×10","Leg strength — sternum-safe",T.wb,T.balance),
+     E("Standing balance near a rail","3×30s","Steady, near support",T.balance),
+     E("Symptom monitoring","every session","Stop for chest pain, palpitations, dizziness or sternal clicking")],
+    [E("Continuous aerobic (walk / stationary bike)","15–25 min","Within your target RPE/HR — moderate, conversational",T.aerobic),
+     E("Light band resistance — small muscles (once cleared ~6–8 wks)","1–2×12–15","Only after the sternum has healed & you're cleared; exhale on effort, never hold your breath"),
+     E("Functional endurance (stairs / gentle hills)","10 min","As cleared, paced",T.wb,T.aerobic),
+     E("Full shoulder & thoracic mobility","3×10","Restore range once precautions lift")],
+    [E("Progressive aerobic conditioning","30–40 min","Build duration first, then intensity — stay within target HR/RPE",T.aerobic),
+     E("Whole-body resistance (light–moderate)","2–3×12–15","Controlled breathing, exhale on effort, avoid maximal/heavy holds"),
+     E("Return to activity / hobbies / work","as cleared","Gradual, monitored"),
+     E("Long-term heart-healthy routine","ongoing","150 min/week aerobic goal",T.aerobic)]
+  ];
+
+  /* ================= ABDOMINAL / CORE — post-surgery =================
+     After abdominal-wall surgery (laparotomy/laparoscopy, hernia repair, C-section,
+     hysterectomy, bowel/appendix, etc.). ABDOMINAL precautions lead: gentle deep-core
+     & pelvic-floor reactivation, NO sit-ups/crunches/planks/leg-lowers, no lifting
+     >~5–10 lb and no breath-holding/bearing-down until the wall heals (~4–6 wks) and
+     you're cleared. Later-phase core is reintroduced gently (draw-in → bird-dog →
+     dead-bug → anti-rotation), never straight abdominal flexion loading. */
+  P.abdominal_surgery = [
+    [E("Frequent short walks","5–10 min, several ×/day","The #1 early exercise — aids recovery & prevents clots",T.aerobic),
+     E("Diaphragmatic breathing","3×1 min","Slow belly breaths; never hold your breath"),
+     E("Gentle pelvic-floor & deep-core (TA) draw-in","3×5 (breathe out gently)","Draw the belly in a little on the exhale — no bulging or bracing-down"),
+     E("Ankle pumps & seated leg movements","3×15","Circulation without stressing the belly"),
+     E("Incision-splinted cough & log-roll","as needed","Support the incision; roll to your side to get up")],
+    [E("Progressive walking","10–20 min","Build distance as it feels comfortable",T.aerobic),
+     E("Heel slides & supported marching","3×10","Add gentle limb load with a stable core"),
+     E("Sit-to-stand & mini-squats","3×8","Legs, breathing out on effort — no lifting >~5–10 lb",T.wb),
+     E("Pelvic tilts & gentle back mobility","3×10","Soothe the low back — no loaded bending/twisting"),
+     E("Glute bridges (pain-free)","3×10","Rebuild the posterior core gently")],
+    [E("Graded core: bird-dog & dead-bug (small range)","3×8","Only once cleared (~6 wks) — keep the belly flat, breathe steadily"),
+     E("Anti-rotation press (Pallof, light band)","3×10 each","Resist rotation — no twisting under load",T.grip),
+     E("Progressive whole-body resistance","2×12","Exhale on effort; add load gradually — never bear down"),
+     E("Aerobic build (walk / bike)","15–25 min","Rebuild stamina",T.aerobic)],
+    [E("Advanced functional core (anti-rotation & dead-bug progressions)","3×10","Once fully cleared — build strength without straight sit-ups/crunches"),
+     E("Safe lifting mechanics","practice","Hip-hinge, hold loads close, breathe out — protects against hernia"),
+     E("Progressive strength training","2–3×10","Whole body, controlled breathing",T.wb),
+     E("Return to activity / sport","graded","Build back on your surgeon's timeline",T.impact)]
   ];
 
   /* ================= DEDICATED PROTOCOLS (were generic aliases) ================= */
