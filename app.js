@@ -1531,6 +1531,7 @@ function generateProgram(){
   const removedAll = new Map();
 
   const R = activeRestrictions();   // device / upper-limb weight-bearing name-based restrictions
+  const adlPlan = adlFocusPlan(flags);   // task-specific ADL practice per phase (primary condition only)
   const items = conds.map((c,ci)=>{
     const proto = window.getProtocol(c.protocol);
     const focus = detectFocus(c.name);
@@ -1539,7 +1540,7 @@ function generateProgram(){
       const len = phaseWeeks[p], wkStart=cursor, wkEnd=cursor+len-1; cursor=wkEnd+1;
       // prepend injury-specific signature + return-to-sport balance/agility + chosen-sport
       // exercises (sport on the primary condition only; dedupe against pool)
-      const sigRaw = [...signatureFor(focus, p+1), ...rtsFor(c, p), ...(ci===0 ? sportFor(p) : []), ...(ci===0 ? adlFocusForPhase(p, flags) : [])];
+      const sigRaw = [...signatureFor(focus, p+1), ...rtsFor(c, p), ...(ci===0 ? sportFor(p) : []), ...(ci===0 ? (adlPlan[p]||[]) : [])];
       const sig = []; const sigSeen = new Set();
       sigRaw.forEach(s=>{ const k=s.n.toLowerCase(); if(!sigSeen.has(k)){ sigSeen.add(k); sig.push(s); } });
       const seen = new Set(sig.map(s=>s.n.toLowerCase()));
@@ -3332,42 +3333,112 @@ const AREA_META = {
   writing:{icon:"✍️",label:"Handwriting & typing",cap:"Practise handwriting and typing in short bouts, with hand and grip strengthening.",adapt:"Use a built-up or weighted pen, a slant board, voice-to-text and a larger keyboard.",conf:"Warm up the hand, write short passages, and rest to avoid cramping."},
   _default:{icon:"🧩",label:"Daily activities",cap:"Break the task into steps and practise the hardest part; strengthen the muscles it needs.",adapt:"Use assistive equipment and easier techniques, and set things up to reduce effort.",conf:"Start supported and reduce help as you improve; pace yourself and celebrate small wins."}
 };
-/* Pick one functional-practice exercise for an area at ~the target tier, filtered
-   by the user's precautions. Deterministic (stable across re-renders). */
-function pickAdlExercise(area, tier, flags, exclude){
+/* significant words from an ADL name, used to pick TASK-SPECIFIC practice. */
+const ADL_STOP = new Set(["the","a","an","your","you","to","and","of","in","on","with","up","down","from","for","off","out","into","at","or","then","while","that","this","some","one","two","onto","over","under","across","around","yourself","its","get","getting","doing","do","using","use","put","putting","take","taking","make","making","keep"]);
+function taskKeywords(name){
+  const words = (name||"").toLowerCase().replace(/[^a-z0-9\s-]/g," ").split(/[\s-]+/).filter(Boolean);
+  const set = new Set();
+  for(const w of words){
+    if(ADL_STOP.has(w) || w.length<3) continue;
+    set.add(w);
+    const stem = w.replace(/(ings?|ies|ed|es|s)$/,"");   // opening→open, bottles→bottle, stairs→stair
+    if(stem.length>=3) set.add(stem);
+  }
+  return [...set];
+}
+/* How well an exercise NAME rehearses a specific task (keyword overlap). */
+function adlTaskScore(exName, kws){
+  const n = (exName||"").toLowerCase();
+  let s = 0;
+  for(const k of kws){ if(n.includes(k)) s += (k.length>=5 ? 2 : 1); }
+  return s;
+}
+/* Pick the most TASK-SPECIFIC functional-practice exercise for an area at ~the
+   target tier, filtered by the user's precautions. taskName drives the match so a
+   hard "Opening a jar" gets jar-opening practice, not generic dexterity work.
+   Deterministic (stable across re-renders). */
+function pickAdlExercise(area, tier, flags, exclude, taskName){
   const lib = window.ADL_EXERCISES; if(!lib || !lib.length) return null;
   const exSet = new Set((exclude||[]).map(n=>n.toLowerCase()));
-  let cands = lib.filter(e=>e.area===area && Math.abs(e.tier-tier)<=1 && !exSet.has(e.n.toLowerCase()));
-  if(!cands.length) cands = lib.filter(e=>e.area===area && !exSet.has(e.n.toLowerCase()));
+  let cands = lib.filter(e=>e.area===area && !exSet.has(e.n.toLowerCase()));
   if(!cands.length) return null;
   let { kept } = window.applyContra(cands, flags);
   kept = kept.filter(e=>nameAllowed(e.n));
   if(!kept.length) return null;
-  kept.sort((a,b)=> (Math.abs(a.tier-tier)-Math.abs(b.tier-tier)) || (hashStr(a.n+"|"+area) - hashStr(b.n+"|"+area)));
+  const kws = taskKeywords(taskName);
+  // task-specificity first, then closeness to the phase tier, then a stable order
+  kept.sort((a,b)=>
+    (adlTaskScore(b.n,kws) - adlTaskScore(a.n,kws)) ||
+    (Math.abs(a.tier-tier) - Math.abs(b.tier-tier)) ||
+    (hashStr(a.n+"|"+area) - hashStr(b.n+"|"+area)));
   const e = kept[0];
-  return { n:e.n, d:e.d, c:e.c, tags:e.tags||[], pattern:"adl", region:["Daily living (functional)"], adl:true };
+  return { n:e.n, d:e.d, c:e.c, tags:e.tags||[], pattern:"adl", region:["Daily living (functional)"], adl:true, taskScore:adlTaskScore(e.n,kws) };
 }
-/* Functional-task practice matched to the user's HARD ADLs, placed in the right
-   phase: the harder an activity is rated, the earlier its practice starts, and
-   the tier steps up phase by phase. Injected on the primary condition. */
-function adlFocusForPhase(phaseIdx, flags){
+/* Engine tags for a functional area (sampled from the library) so a synthesised
+   task line is still filtered by precautions. */
+let _adlAreaTagCache = null;
+function adlAreaTags(area){
+  if(!_adlAreaTagCache){
+    _adlAreaTagCache = new Map();
+    (window.ADL_EXERCISES||[]).forEach(e=>{ if(!_adlAreaTagCache.has(e.area)) _adlAreaTagCache.set(e.area, e.tags||[]); });
+  }
+  return _adlAreaTagCache.get(area) || [];
+}
+/* Synthesise a graded rehearsal of the ACTUAL task, for hard ADLs with no close
+   library match — guarantees the practice is specific to that activity. */
+function synthAdlPractice(taskName, tier, area){
+  const t = (taskName||"").replace(/^./,c=>c.toLowerCase());
+  const stage = tier<=1 ? "with support / the easier parts"
+    : tier===2 ? "the harder parts, with less help"
+    : tier===3 ? "most of the task, little help"
+    : "the whole task, unaided";
+  const cue = tier<=1 ? `Break ${t} into steps and rehearse the easiest part — use support or the equipment in the tips above; little and often.`
+    : tier===2 ? `Practise the harder parts of ${t}, reducing help as it feels controlled.`
+    : tier===3 ? `Do most of ${t} with only a little help; add a bit more each time.`
+    : `Practise the whole of ${t} unaided — steady progress is the goal.`;
+  const dose = tier<=1 ? "3×3–5" : tier===2 ? "3×5" : "daily practice";
+  return { n:`Practise: ${taskName} — ${stage}`, d:dose, c:cue, tags:adlAreaTags(area),
+    pattern:"adl", region:["Daily living (functional)"], adl:true, synth:true };
+}
+/* Whole-program plan of TASK-SPECIFIC practice for the user's HARD ADLs: each
+   hard activity gets ONE exercise per phase it's active in — a library exercise
+   that rehearses that task when one matches, otherwise a synthesised graded
+   rehearsal of the task itself. The harder it's rated the earlier it starts
+   (level 4→phase 1 … level 1→phase 4), the tier steps up phase by phase, and
+   each practice line is used only once (so successive phases show a progression). */
+function adlFocusPlan(flags){
+  const plan = [[],[],[],[]];
   const diffs = (state.adls||[]).filter(a=>a.level>=1);
-  if(!diffs.length || !window.ADL_EXERCISES) return [];
-  const out=[]; const usedNames=[]; const usedArea=new Set();
+  if(!diffs.length || !window.ADL_EXERCISES) return plan;
   const sorted = diffs.slice().sort((a,b)=>b.level-a.level);   // hardest first
-  for(const adl of sorted){
-    if(out.length>=4) break;                                    // keep the phase manageable
-    const start = Math.max(0, Math.min(3, 4-adl.level));        // level 4→phase0 … level 1→phase3
-    if(phaseIdx < start) continue;
-    const tier = Math.max(1, Math.min(4, phaseIdx-start+1));
-    // one practice exercise per hard ADL (first of its areas that yields a safe pick)
-    for(const area of adlAreasOf(adl.name)){
-      if(usedArea.has(area)) continue;
-      const pick = pickAdlExercise(area, tier, flags, usedNames);
-      if(pick){ pick.adlFor = adl.name; out.push(pick); usedNames.push(pick.n); usedArea.add(area); break; }
+  const usedGlobal = new Set();                                 // no repeated practice line across phases
+  for(let p=0;p<4;p++){
+    const usedArea = new Set();
+    for(const adl of sorted){
+      if(plan[p].length>=4) break;                              // keep each phase manageable
+      const start = Math.max(0, Math.min(3, 4-adl.level));
+      if(p < start) continue;
+      const tier = Math.max(1, Math.min(4, p-start+1));
+      const areas = adlAreasOf(adl.name);
+      let placed=false, fallback=null, fallbackArea=null;
+      for(const area of areas){
+        if(usedArea.has(area)) continue;
+        const pick = pickAdlExercise(area, tier, flags, [...usedGlobal], adl.name);
+        if(pick && pick.taskScore>=1){                          // a real exercise that rehearses this task
+          pick.adlFor=adl.name; plan[p].push(pick); usedGlobal.add(pick.n.toLowerCase()); usedArea.add(area); placed=true; break;
+        }
+        if(pick && !fallback){ fallback=pick; fallbackArea=area; }
+      }
+      if(placed) continue;
+      // no keyword match → rehearse the actual task (contra-filtered by area tags)
+      const area = areas.find(a=>!usedArea.has(a)) || areas[0];
+      const synth = synthAdlPractice(adl.name, tier, area);
+      const synthOk = window.applyContra([synth], flags).kept.length>0 && nameAllowed(synth.n) && !usedGlobal.has(synth.n.toLowerCase());
+      if(synthOk){ synth.adlFor=adl.name; plan[p].push(synth); usedGlobal.add(synth.n.toLowerCase()); usedArea.add(area); }
+      else if(fallback){ fallback.adlFor=adl.name; plan[p].push(fallback); usedGlobal.add(fallback.n.toLowerCase()); usedArea.add(fallbackArea); }
     }
   }
-  return out;
+  return plan;
 }
 /* Program card: capability & confidence suggestions for each hard ADL area. */
 function adlSuggestionsCard(){
