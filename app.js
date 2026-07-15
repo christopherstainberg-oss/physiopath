@@ -359,6 +359,12 @@ function gatherFlags(){
   if(sc.cauda) f.add("red_flags_urgent");
   if(state.falls==="2" || (state.aid && state.aid!=="none")) f.add("balance_risk");
   if(state.smoking==="current") f.add("smoker");
+  // Sleep, stress and alcohol change how much load you tolerate and how fast you
+  // heal — they were collected but only ever produced a tip. Now they reach the
+  // engine like every other history answer.
+  if(state.sleep==="lt6") f.add("poor_sleep");
+  if(state.stress==="high") f.add("high_stress");
+  if(state.alcohol==="heavy"){ f.add("heavy_alcohol"); f.add("balance_risk"); }
   // Pool/aquatic: nervous-in-water or older/less-steady users skip deep-water (out-of-depth) drills.
   if(["none","low"].includes(state.waterConfidence) || Number(state.age) >= 70 || f.has("balance_risk")) f.add("low_water_confidence");
   // Pregnancy STAGE, not just the yes/no box: lying flat compresses the vena cava
@@ -2245,6 +2251,8 @@ function historyVariantKeys(cond){
   if((state.returnSports||[]).length) keys.push("athlete");
   // newly asked answers, each driving a pathway that already existed
   if(state.priorEpisodes==="recurrent") keys.unshift("recurrent");
+  if(state.alcohol==="heavy") keys.push("slowheal");
+  if(state.sleep==="lt6" || state.stress==="high") keys.push("irritable");
   if(state.moveConfidence==="fearful") keys.push("irritable");
   if(["manual","heavy"].includes(state.workDemand)) keys.push("work");
   if(state.equipment==="gym") keys.push("gym");

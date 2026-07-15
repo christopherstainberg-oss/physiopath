@@ -1154,6 +1154,12 @@
       note:"You flagged a possible warning sign (e.g. unexplained weight loss, constant or night pain, fever with your symptoms, a cancer history, spreading numbness/weakness, or a major injury). These can occasionally point to something beyond a routine musculoskeletal problem — please get assessed by a clinician before starting so anything serious is ruled out first." },
     red_flags_urgent: { avoid:[], caution:[], clearance:true,
       note:"⛔ Loss of bladder or bowel control, or numbness around the groin/inner thighs, can signal a medical emergency (cauda equina syndrome). Do not exercise — seek urgent medical care now." },
+    poor_sleep: { avoid:[], caution:[T.highInt],
+      note:"Running on under 6 hours' sleep: sleep is when tissue actually repairs, and short sleep measurably raises pain sensitivity, blunts strength gains and slows motor learning — so the same session costs you more and gives you less. Your plan keeps the hard sessions lighter for now. Prioritise sleep as part of the rehab, not as an extra, and put the demanding work on your better-slept days." },
+    high_stress: { avoid:[], caution:[T.highInt],
+      note:"High stress genuinely turns up pain sensitivity and slows healing — it isn't 'in your head'. Expect symptoms to track your stress as well as your loading, so judge progress over weeks rather than day to day. Steady, moderate sessions beat heroic ones here, and the exercise itself is one of the better stress treatments." },
+    heavy_alcohol: { avoid:[], caution:[T.balance, T.impact, T.highInt],
+      note:"Heavy alcohol use blunts muscle repair and protein synthesis after exercise, weakens bone over time, and raises fall risk — so balance and impact work are flagged to do sober and near support. Never exercise while intoxicated, and keep alcohol away from the hours after a hard session, when the repair is happening." },
     smoker: { avoid:[], caution:[],
       note:"Smoking slows tendon, bone, and wound healing and lowers exercise capacity — even cutting down helps your recovery. Ask your clinician about support to quit; keep well hydrated and warm up thoroughly." },
     // ---- objective vital-sign-derived rules (from the resting HR, blood pressure & SpO₂ you entered) ----
