@@ -433,6 +433,19 @@
       <div id="riskBody"></div>
     </div>
 
+    <div class="card" id="dataCard">
+      <h2>💾 Back up your data</h2>
+      <p class="hint">Everything you've entered lives <b>only in this browser</b> — nothing is uploaded.
+        That protects your privacy, but it also means clearing your browsing data, or switching phone,
+        erases your whole history. Download a backup now and again; your API key is never included.</p>
+      <div class="datarow">
+        <button class="btn" id="exportBtn">⬇ Download a backup</button>
+        <button class="btn ghost" id="importBtn">⬆ Restore from a backup</button>
+        <input type="file" id="importFile" accept="application/json,.json" hidden />
+      </div>
+      <div class="datawarn" id="dataWarn"></div>
+    </div>
+
     <div class="card">
       <h2>🔎 Other Health Risks to Be Aware Of</h2>
       <p class="hint">A clinical read of your labs and vitals grouped into risk areas — 🫀 Metabolic, 🔴 Hematology, 🧁 Nutrition, 🦋 Thyroid, 🦴 Bone, 🩹 Thrombosis, 🔥 Inflammation &amp; Infection, 🌸 Reproductive &amp; Hormonal, and 🎗️ Oncology-marker awareness. Each appears once you enter relevant values. Educational only — not a diagnosis.</p>

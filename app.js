@@ -381,8 +381,34 @@ const PED_RE = /paediatric|pediatric|juvenile|adolescent|congenital|developmenta
 function isPediatric(c){ return /^paediatric/i.test(c.region||"") || PED_RE.test((c.name||"")+" "+(c.region||"")); }
 
 /* ---------- persistence ---------- */
-function save(){ try{ localStorage.setItem("physiopath", JSON.stringify(state)); }catch(e){} }
-function load(){ try{ const s=JSON.parse(localStorage.getItem("physiopath")); if(s) Object.assign(state,s); }catch(e){} }
+const DEFAULT_STATE = JSON.parse(JSON.stringify(state));   // snapshot before load() mutates it
+/* Fixed-shape nested objects. A plain Object.assign replaces these WHOLESALE, so a save
+   written before a field existed came back missing it -- and String(undefined) is the
+   string "undefined", which sails through the `!==""` guard in wbSummary() and renders
+   "Partial weight-bearing (PWB) - 50% - ~undefined lbs" on a loading instruction. */
+const NESTED_KEYS = ["parq","vitals","weightBearing","cardiacDevice"];
+let _saveFailed = false, _loadCorrupt = false;
+function save(){
+  try{ localStorage.setItem("physiopath", JSON.stringify(state)); return true; }
+  catch(e){ console.warn("save failed:", e); _saveFailed = true; return false; }   // quota, or Safari private mode
+}
+function load(){
+  const raw = localStorage.getItem("physiopath");
+  if(!raw) return;
+  let s;
+  try{ s = JSON.parse(raw); }
+  catch(e){
+    /* Never let the next save() overwrite the only copy of their history. Park it. */
+    _loadCorrupt = true;
+    try{ localStorage.setItem("physiopath.corrupt." + Date.now(), raw); }catch(_){}
+    console.warn("saved data was unreadable; parked a copy under physiopath.corrupt.*", e);
+    return;
+  }
+  if(!s) return;
+  for(const k of NESTED_KEYS)
+    if(s[k] && typeof s[k]==="object" && !Array.isArray(s[k])) s[k] = Object.assign({}, DEFAULT_STATE[k], s[k]);
+  Object.assign(state, s);
+}
 
 /* ---------- helpers ---------- */
 const classify = w => (w===null||isNaN(w)) ? null : (w<=6 ? "acute" : "chronic");
@@ -4469,6 +4495,47 @@ function coachAnswer(qRaw){
   return `I'm not sure I caught that${coachOnline()?"":" (I'm answering offline — add a Claude API key below and I can tackle anything in your own words)"}. I can help most with: **ice vs heat · how much pain is okay · sets & reps · progressing exercises · target heart rate & HRV · SpO₂ · steps · pool/aquatic work · tendons · arthritis & bone health · your precautions & weight-bearing · flare-ups & pacing · nutrition · sleep · returning to sport · when to see a doctor**.\n\nTry *"How do I progress an exercise?"*, *"What should I avoid with my condition?"*, or *"How do I read my HRV?"* — and for anything serious or not improving, see a clinician in person.`;
 }
 
+/* ---------------------------------------------------------------------
+   Backup & restore. The entire rehab history lives in one localStorage key,
+   which a browser "clear data" wipes and which Safari evicts after 7 days of
+   non-use for a non-installed PWA. There was no copy of it anywhere and no
+   warning. The API key is excluded on purpose - a backup file is something
+   people email to themselves or hand to a physio.
+   --------------------------------------------------------------------- */
+function exportData(){
+  const { apiKey, ...safe } = state;
+  const payload = { _app:"physiopath", _version:1, _exported:new Date().toISOString(), state:safe };
+  const url = URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)], {type:"application/json"}));
+  const a = document.createElement("a");
+  a.href = url; a.download = `physiopath-backup-${todayISO()}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  toast("Backup downloaded" + (apiKey ? " - your API key was left out on purpose" : ""));
+}
+function importData(file){
+  const rd = new FileReader();
+  rd.onload = () => {
+    let p;
+    try{ p = JSON.parse(rd.result); }
+    catch(e){ toast("⚠ That file isn't valid JSON."); return; }
+    const incoming = (p && p._app === "physiopath" && p.state) ? p.state : p;
+    if(!incoming || typeof incoming !== "object" || (!("condIds" in incoming) && !("log" in incoming))){
+      toast("⚠ That doesn't look like a PhysioPath backup."); return;
+    }
+    const when = (p && p._exported) ? new Date(p._exported).toLocaleDateString() : "an unknown date";
+    const n = (incoming.log||[]).length;
+    if(!confirm(`Restore this backup from ${when}?\n\nIt contains ${n} logged session${n===1?"":"s"}.\n\nThis REPLACES everything currently in the app. Export first if you are not sure.`)) return;
+    const key = state.apiKey;                        // never clobber the live key from a file
+    Object.keys(state).forEach(k=>{ delete state[k]; });
+    Object.assign(state, JSON.parse(JSON.stringify(DEFAULT_STATE)), incoming);
+    if(key) state.apiKey = key;
+    if(!save()){ toast("⚠ Restored, but couldn't save - storage is full or blocked."); return; }
+    location.reload();
+  };
+  rd.onerror = () => toast("⚠ Couldn't read that file.");
+  rd.readAsText(file);
+}
+
 /* ---------- chat UI ---------- */
 function addMsg(text, who){
   const div=document.createElement("div"); div.className="msg "+who;
@@ -4520,7 +4587,7 @@ function goStep(n){
   if(n===3) ensureDetailsData();      // sports/activities only matter from Details on
   if(n===3) renderPrecautions();                              // Precautions card lives in Details — keep it current
   if(n===4 && state.program) renderProgram(state.program);    // Program reflects precaution/detail/clinician changes
-  if(n===5){ renderProgress(); renderHealth(); }
+  if(n===5){ renderProgress(); renderHealth(); renderDataWarn(); }
   if(n===6) initCoach();
   if(n===7) initLibrary();
 }
@@ -5252,7 +5319,16 @@ function doGenerate(){
   renderProgram(state.program); goStep(4);
 }
 function doReset(){
-  if(!confirm("Clear everything and start over?")) return;
+  /* This is the only copy of their history and there is no undo. Point at the backup. */
+  const n = (state.log||[]).length;
+  const has = n || (state.condIds||[]).length || (state.vitalsLog||[]).length;
+  if(!confirm(has
+    ? `Clear everything and start over?
+
+This permanently deletes your history${n?` — including ${n} logged session${n===1?"":"s"}`:""}, and it CANNOT be undone.
+
+If you might want any of it later, press Cancel and use "Download a backup" on the Progress step first.`
+    : "Clear everything and start over?")) return;
   localStorage.removeItem("physiopath");
   location.reload();
 }
@@ -5290,10 +5366,36 @@ if("serviceWorker" in navigator){
 /* =====================================================================
    PROGRESS TRACKING
 ===================================================================== */
-function todayISO(){ return new Date().toISOString().slice(0,10); }
+/* LOCAL calendar date, deliberately not toISOString(). The log is keyed by this and
+   saveLogEntry overwrites by date, so a UTC date meant a 20:30 session in New York was
+   stamped tomorrow and then silently destroyed by the next morning's entry, and every
+   morning session in Sydney was filed under yesterday. */
+const isoOf = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+function todayISO(){ return isoOf(new Date()); }
 function fmtDate(iso){
   const d=new Date(iso+"T00:00:00");
   return d.toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"});
+}
+/* Surfaces the two states that used to fail silently: unreadable saved data, and a
+   save that didn't land (quota / private mode). Both previously left the user believing
+   their history was fine. */
+function renderDataWarn(){
+  const el = $("#dataWarn"); if(!el) return;
+  let h = "";
+  if(_loadCorrupt) h += `<div class="dwrow bad">⚠ <b>Some saved data couldn't be read</b> and has been set aside rather than overwritten.
+    If you have a backup file, restoring it above is the safest next step.</div>`;
+  if(_saveFailed) h += `<div class="dwrow bad">⚠ <b>A recent change couldn't be saved</b> — your browser storage may be full or blocked
+    (private browsing does this). Download a backup before closing this tab.</div>`;
+  el.innerHTML = h;
+}
+function initDataCard(){
+  const ex = $("#exportBtn"), im = $("#importBtn"), fi = $("#importFile");
+  if(ex) ex.onclick = exportData;
+  if(im && fi){
+    im.onclick = () => fi.click();
+    fi.onchange = () => { if(fi.files && fi.files[0]) importData(fi.files[0]); fi.value=""; };
+  }
+  renderDataWarn();
 }
 function initProgress(){
   $("#logToday").textContent = "Entry for " + fmtDate(todayISO());
@@ -5311,9 +5413,10 @@ function saveLogEntry(){
   const i = state.log.findIndex(e=>e.date===entry.date);
   if(i>=0) state.log[i]=entry; else state.log.push(entry);
   state.log.sort((a,b)=>a.date<b.date?-1:1);
-  save(); $("#logNote").value="";
+  const wrote = save(); $("#logNote").value="";
   renderProgress();
-  toast(i>=0 ? "Updated today's entry." : "Saved. Keep it up! 💪");
+  if(!wrote) toast("⚠ Couldn't save - your browser storage is full or blocked.");
+  else toast(i>=0 ? "Updated today's entry." : "Saved. Keep it up! 💪");
 }
 function deleteLog(date){ state.log=state.log.filter(e=>e.date!==date); save(); renderProgress(); }
 
@@ -5356,7 +5459,7 @@ function computeStreak(log){
   const set=new Set(log.map(e=>e.date));
   let streak=0, d=new Date(todayISO()+"T00:00:00");
   if(!set.has(todayISO())) d.setDate(d.getDate()-1); // allow streak to count up to yesterday
-  for(;;){ const key=d.toISOString().slice(0,10); if(set.has(key)){ streak++; d.setDate(d.getDate()-1);} else break; }
+  for(;;){ const key=isoOf(d); if(set.has(key)){ streak++; d.setDate(d.getDate()-1);} else break; }   // isoOf, not toISOString: d is local midnight
   return streak;
 }
 function painChartSVG(log){
@@ -6879,7 +6982,7 @@ function renderExResults(){
 /* ---------- boot ---------- */
 document.addEventListener("DOMContentLoaded",()=>{
   load();
-  initHistory(); initOptSecs(); initMeds(); initSearch(); initDetails(); initProgress(); initCoachSettings();
+  initHistory(); initOptSecs(); initMeds(); initSearch(); initDetails(); initProgress(); initDataCard(); initCoachSettings();
   // Details(3)/Program(4)/Health(5) need a condition; Injury(2) is where you pick it; Clinician(1) is a setup form (no condition needed).
   $$("[data-goto]").forEach(b=>b.onclick=()=>{
     const n=+b.dataset.goto;

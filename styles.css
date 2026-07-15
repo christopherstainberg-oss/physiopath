@@ -190,6 +190,11 @@ input[type=range]{flex:1;accent-color:var(--brand);height:30px}
 .planrestrict{background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.32);border-radius:9px;
   padding:8px 11px;margin:0 0 10px;font-size:12.5px;line-height:1.5}
 .planrestrict b{color:var(--danger)}
+.datarow{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.datawarn:empty{display:none}
+.dwrow{margin-top:10px;padding:10px 12px;border-radius:10px;font-size:12.5px;line-height:1.5;
+  border:1px solid var(--warn,#e0a800);background:color-mix(in srgb, var(--warn,#e0a800) 10%, transparent)}
+.dwrow.bad{border-color:#ff6b6b;background:color-mix(in srgb,#ff6b6b 10%, transparent)}
 /* optional-depth zone on the history step */
 .optzone{margin-top:22px;border-top:2px dashed var(--line);padding-top:18px}
 .optzonehead h3{margin:0 0 4px;font-size:15px;display:flex;align-items:center;gap:8px}
