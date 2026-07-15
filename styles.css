@@ -214,6 +214,8 @@ input[type=range]{flex:1;accent-color:var(--brand);height:30px}
 .driftcard{border-color:var(--brand)}
 .driftlist{margin:6px 0 10px;padding-left:18px;font-size:13px;line-height:1.6}
 .driftlist li{margin-bottom:3px}
+.coachbtns{display:flex;align-items:center;gap:8px}
+.btn.small{padding:6px 10px;font-size:12px}
 /* optional-depth zone on the history step */
 .optzone{margin-top:22px;border-top:2px dashed var(--line);padding-top:18px}
 .optzonehead h3{margin:0 0 4px;font-size:15px;display:flex;align-items:center;gap:8px}

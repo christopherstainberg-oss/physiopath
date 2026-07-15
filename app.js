@@ -296,7 +296,7 @@ const state = {
   medIds:[], medFilter:false, homeMode:false, customPrecautions:[], clinicianProtocols:[], clinPrecautionProtocol:"", clinicianGuided:false,
   medDoses:{}, weightBearing:{status:"",pct:"",lbs:"",side:"",limb:"le"}, devices:[],
   cardiacDevice:{type:"",icdRate:""}, specialPrecautions:[], planVariant:{}, progress:{},
-  log:[], apiKey:"", apiModel:"claude-opus-4-8"
+  log:[], chatHistory:[], apiKey:"", apiModel:"claude-opus-4-8"
 };
 const MED_FILTERABLE = ["fluoroquinolone","anticoagulant","antiplatelet","opioid","sedative","muscle_relaxant","gabapentinoid","antipsychotic"];
 /* ---------- on-demand data loading ----------
@@ -372,7 +372,32 @@ const MED_EFFECT = {
   lithium:"Lithium levels can rise with heavy sweating and dehydration — hydrate well (especially in heat) and don't drastically change fluid/salt intake around long sessions.",
   oncology_endocrine:"Some hormone-based cancer therapies (e.g., aromatase inhibitors) can cause joint and muscle aches — exercise genuinely helps; progress gradually and report severe or persistent pain."
 };
-let chatHistory = [];
+/* The conversation is the one place the user says, in their own words, what actually hurts —
+   and it was the only thing the app didn't keep. It lived in a bare module var and initCoach()
+   cleared it on EVERY entry to the Coach step, so tabbing to Program and back lost the thread
+   mid-sentence. It now lives in state (and therefore in backups). Capped: it shares the single
+   localStorage key with everything else. */
+const CHAT_MAX = 100;
+function pushTurn(role, content){
+  state.chatHistory = state.chatHistory || [];
+  state.chatHistory.push({ role, content });
+  if(state.chatHistory.length > CHAT_MAX) state.chatHistory = state.chatHistory.slice(-CHAT_MAX);
+  save();
+}
+/* The API requires messages[0] to be a user turn. slice(-N) alone lands on an ASSISTANT turn
+   as soon as the history is long enough, because the current question is pushed before the
+   call and makes the length odd -- from the 6th question on, every request 400'd and the catch
+   silently served the offline answer instead. Trim forward to the first user turn. */
+function chatWindow(n){
+  let w = (state.chatHistory||[]).slice(-n);
+  while(w.length && w[0].role !== "user") w = w.slice(1);
+  return w;
+}
+/* The question before the current one, for resolving bare follow-ups offline. */
+function prevUserQuestion(){
+  const u = (state.chatHistory||[]).filter(t=>t.role==="user");
+  return u.length >= 2 ? u[u.length-2].content : null;
+}
 const CONMAP = new Map();
 let domainFilter = "all";
 /* Paediatric (0–18 yr) is a cross-cutting view, not a domain — detect it from
@@ -4549,7 +4574,17 @@ function kbDF(){
 const kbNorm = s => " " + String(s||"").toLowerCase().replace(/[^a-z0-9']+/g," ").trim().split(" ").map(_stem).join(" ") + " ";
 
 function coachAnswer(qRaw){
-  const q = qRaw.toLowerCase();
+  const q = String(qRaw||"").toLowerCase();
+  /* Offline had no memory at all: coachAnswer only ever saw the current string, so "what about
+     the other leg?" was meaningless — follow-ups worked online and silently stopped working
+     without a key, or whenever the API fell back to here. A short or conjunction-led question
+     carries no topic of its own, so fold the previous one in FOR SCORING ONLY (qFold).
+     Deliberately not `q` itself: the branches below test for the words "about"/"what is", and
+     a folded-in question drags those in and fires the wrong branch. */
+  const _prev = prevUserQuestion();
+  const _bare = _prev && (q.split(/\s+/).filter(Boolean).length <= 6
+    || /^(and|but|so|ok|okay|what about|how about|why|really|then|that)\b/i.test(q));
+  const qFold = _bare ? (_prev.toLowerCase() + " " + q) : q;
   const conds = selectedConditions();
   for(const c of conds){
     const first = c.name.toLowerCase().split(/[ (]/)[0];
@@ -4557,7 +4592,7 @@ function coachAnswer(qRaw){
       return `**${c.name}** — ${aboutText(c, state.program?state.program.track:classify(state.weeks)||"acute")}\n\n${DOMAIN_REDFLAGS[c.domain]}`;
   }
   let best=null, score=0;
-  const qn = kbNorm(q);
+  const qn = kbNorm(qFold);        // folded follow-up context lands here and nowhere else
   /* The user's own diagnosis makes a condition-specific entry ELIGIBLE without adding to
      its score — so "should I ice?" resolves to THEIR condition's answer, while an unrelated
      question ("how do I read my HRV?") can't be hijacked by their condition. */
@@ -4654,14 +4689,40 @@ function suggestedQuestions(){
 function initCoach(){
   if((state.medIds||[]).length) ensureMedData();   // MEDMAP drives the prompt's medication lines
   loadData("coach-kb.js");   // 11.5MB — only the Coach step needs it
-  $("#chatlog").innerHTML=""; chatHistory=[]; updateCoachMode();
+  updateCoachMode();
+  renderChatlog();            // rehydrate the thread — this used to wipe it on every visit
+  renderSuggests();
+  const nb = $("#newChatBtn");
+  if(nb) nb.onclick = () => startNewChat(true);
+}
+/* Greeting is rendered, never recorded: an assistant turn at index 0 would make the very
+   first API request invalid. */
+function coachIntro(){
   const conds=selectedConditions();
   const intro = conds.length ? `I can see you're working on: **${conds.map(c=>c.name).join(", ")}**. ` : "";
   const mode = coachOnline() ? " (Claude API connected)" : " (offline — add a Claude API key below for richer, tailored answers)";
-  addMsg(`Hi, I'm Jeffery, your AI rehabilitation specialist${mode}. ${intro}Ask me anything about your recovery, program, exercises, vitals, or medical precautions — or tap a suggestion below.`, "bot");
-  const sug=$("#suggests"); sug.innerHTML="";
+  return `Hi, I'm Jeffery, your AI rehabilitation specialist${mode}. ${intro}Ask me anything about your recovery, program, exercises, vitals, or medical precautions — or tap a suggestion below.`;
+}
+function renderChatlog(){
+  const box = $("#chatlog"); if(!box) return;
+  box.innerHTML = "";
+  addMsg(coachIntro(), "bot");
+  (state.chatHistory||[]).forEach(t => addMsg(t.content, t.role==="user" ? "user" : "bot"));
+  box.scrollTop = box.scrollHeight;
+  const nb = $("#newChatBtn");
+  if(nb) nb.classList.toggle("hide", !(state.chatHistory||[]).length);
+}
+function renderSuggests(){
+  const sug=$("#suggests"); if(!sug) return;
+  sug.innerHTML="";
   suggestedQuestions().forEach(s=>{ const c=document.createElement("div"); c.className="s"; c.textContent=s;
     c.onclick=()=>{ $("#chatInput").value=s; $("#chatform").requestSubmit(); }; sug.appendChild(c); });
+}
+function startNewChat(ask){
+  if(ask && (state.chatHistory||[]).length &&
+     !confirm("Start a new chat?\n\nThis clears the conversation on this device. Jeffery keeps your conditions, program and log either way.")) return;
+  state.chatHistory = []; save();
+  renderChatlog(); renderSuggests();
 }
 
 /* =====================================================================
@@ -7100,7 +7161,7 @@ function addTyping(){
   $("#chatlog").appendChild(div); $("#chatlog").scrollTop=$("#chatlog").scrollHeight; return div;
 }
 async function askClaude(q){
-  chatHistory.push({ role:"user", content:q });
+  /* The user turn is pushed by the submit handler — pushing again here would duplicate it. */
   const typing=addTyping();
   try{
     const res = await fetch("https://api.anthropic.com/v1/messages",{
@@ -7115,7 +7176,7 @@ async function askClaude(q){
         model: state.apiModel || "claude-opus-4-8",
         max_tokens: 4000,          // 1100 truncated mid-answer on anything with sets/reps detail
         system: buildCoachSystem(),
-        messages: chatHistory.slice(-10)
+        messages: chatWindow(10)          // must begin on a user turn or the API 400s
       })
     });
     typing.remove();
@@ -7133,12 +7194,16 @@ async function askClaude(q){
     if(!text) text = data.stop_reason==="refusal"
       ? "I wasn't able to answer that one. Try rephrasing it — or if it's about your specific case, ask your clinician."
       : "(no reply)";
-    chatHistory.push({ role:"assistant", content:text });
+    pushTurn("assistant", text);
     addMsg(text,"bot");
   }catch(err){
     typing.remove();
-    chatHistory.pop();  // drop the unanswered user turn to keep history valid
-    addMsg("⚠ Couldn't reach the Claude API ("+err.message+"). Here's Jeffery's offline answer instead:\n\n"+coachAnswer(q),"bot");
+    /* Keep the user's turn: it is rendered, so dropping it would desync the transcript from
+       the history and lose it on reload. Record the fallback as the assistant turn so the
+       pairing stays valid for the next request. */
+    const fb = "⚠ Couldn't reach the Claude API ("+err.message+"). Here's Jeffery's offline answer instead:\n\n"+coachAnswer(q);
+    pushTurn("assistant", fb);
+    addMsg(fb,"bot");
   }
 }
 
@@ -7231,11 +7296,12 @@ document.addEventListener("DOMContentLoaded",()=>{
   $("#resetBtn").onclick=doReset;
   $("#chatform").addEventListener("submit",e=>{ e.preventDefault();
     const v=$("#chatInput").value.trim(); if(!v) return;
-    addMsg(v,"user"); $("#chatInput").value="";
+    addMsg(v,"user"); pushTurn("user", v); $("#chatInput").value="";
+    const nb = $("#newChatBtn"); if(nb) nb.classList.remove("hide");   // there's a thread to clear now
     const rf = redFlagFor(v);          // a possible emergency never reaches the API or the KB
-    if(rf){ setTimeout(()=>addMsg(rf,"bot"),220); return; }
+    if(rf){ setTimeout(()=>{ addMsg(rf,"bot"); pushTurn("assistant", rf); },220); return; }
     if(coachOnline()) askClaude(v);
-    else setTimeout(()=>addMsg(coachAnswer(v),"bot"),220);
+    else setTimeout(()=>{ const a=coachAnswer(v); addMsg(a,"bot"); pushTurn("assistant", a); },220);
   });
   if(state.program) renderProgram(state.program);
   // PWA app-shortcut routing (?go=coach|library|build|progress)
