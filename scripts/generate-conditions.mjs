@@ -633,7 +633,8 @@ latList(["Boutonnière deformity","Swan-neck deformity","Mallet finger (chronic)
  "Dupuytren's contracture (early)","Dupuytren's contracture (advanced)","Thumb CMC arthritis (early)","Thumb CMC arthritis (advanced)",
  "Boxer's knuckle (chronic)","Intrinsic-plus contracture"],"msk","Hand","wrist_hand",{chronic:true});
 latList(["Cavus foot reconditioning","Flexible flatfoot","Rigid flatfoot","Hammer toe","Claw toe","Mallet toe","Os trigonum syndrome",
- "Tarsal coalition (reconditioning)","Peroneal tendon subluxation (chronic)","Haglund's deformity","Plantar fibromatosis","Charcot foot (offloaded reconditioning)"],"msk","Foot / ankle","foot",{chronic:true});
+ "Tarsal coalition (reconditioning)","Peroneal tendon subluxation (chronic)","Haglund's deformity","Plantar fibromatosis"],"msk","Foot / ankle","foot",{chronic:true});
+latList(["Charcot foot (offloaded reconditioning)","Charcot neuroarthropathy of the foot"],"msk","Foot / ankle","charcot",{chronic:true});
 latList(["Internal shoulder impingement","External (subacromial) impingement","Coracoid impingement","Os acromiale (symptomatic)",
  "SICK scapula syndrome","Muscular scapular winging","Posterior labral tear","Bennett lesion","Quadrilateral space syndrome"],"msk","Shoulder","shoulder",{chronic:true});
 

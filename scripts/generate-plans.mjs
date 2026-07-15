@@ -1059,7 +1059,11 @@ const EPONYM_TENDON = [
 /* Charcot foot must NOT use the tendinopathy archetype — "reduce, don't stop
    loading" is exactly the wrong advice for an active Charcot process, where
    walking on the foot destroys the joints. It gets an offloading-first plan. */
-add({ r:"charcot (foot|arthropath|neuroarthropath)|charcot", label:"Charcot foot (neuroarthropathy)", total:52,
+/* Regex must NOT be a bare "charcot": that also catches Charcot-MARIE-TOOTH
+   disease, a hereditary neuropathy where people walk and need strengthening —
+   telling them "DO NOT WALK ON IT" would be actively harmful. Requiring a
+   following space + noun excludes the hyphenated "Charcot-Marie-Tooth". */
+add({ r:"charcot (foot|joint|arthropath|neuroarthropath)", label:"Charcot foot (neuroarthropathy)", total:52,
   freq:"Offloading is the treatment — exercise the rest of you while the foot is protected",
   note:"Charcot neuroarthropathy: in a person with neuropathy the bones of the foot fracture and collapse WITHOUT pain to warn them. The active phase (hot, red, swollen foot) is a medical emergency — total-contact casting and complete offloading are the treatment, and every step taken on it causes more destruction. This runs 6–12+ months until the foot is 'quiescent'.",
   variants:[

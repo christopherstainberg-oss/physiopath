@@ -777,7 +777,7 @@ const LIB_REGION = {
   lumbar:["Core","Hip","Spine"], radiculopathy_lumbar:["Core","Hip","Spine"], sacroiliac:["Core","Hip","Spine"],
   fracture_ue:["Shoulder","Elbow","Wrist / Hand","Forearm"], amputation_ue:["Shoulder","Elbow","Wrist / Hand","Forearm"],
   fracture_le:["Hip","Knee","Ankle","Foot","Calf"], amputation_le:["Hip","Knee","Ankle","Balance"],
-  tmj:["Neck"], general_msk:["Full body","Core","Hip"], rhabdo:["Cardio","Full body"],
+  tmj:["Neck"], general_msk:["Full body","Core","Hip"], rhabdo:["Cardio","Full body"], charcot:["Core","Full body"],
   stroke:["Balance","Gait","Core"], tbi:["Balance","Gait","Core"], sci:["Core","Balance","Full body"],
   ms:["Balance","Core","Cardio"], parkinsons:["Balance","Gait","Full body"], balance_neuro:["Balance","Gait","Core"], guillain_barre:["Balance","Core","Full body"],
   neuropathy:["Balance","Foot","Ankle"], vestibular:["Vestibular","Balance"], bells_palsy:["Neck"],
@@ -955,6 +955,17 @@ const INJURY_FOCUS = [
         {p:3,n:"Progressive strengthening of what works",d:"3×10",c:"Build the muscle that survived; work around what didn't"},
         {p:3,n:"Gait retraining, with an orthosis if needed",d:"daily",c:"A brace can substitute very effectively for a muscle that didn't recover"},
         {p:4,n:"Functional & endurance training",d:"as tolerated",c:"Adapt to any permanent deficit — that's a normal part of this recovery"}]},
+  {re:/charcot (foot|joint|arthropath|neuroarthropath)/,   // NOT bare /charcot/ — that also matches Charcot-Marie-Tooth
+   focus:"An active Charcot foot must be completely offloaded — the bones are fracturing without pain to warn you, so every step causes more damage. Exercise everything EXCEPT that foot until your specialist confirms it has cooled.",
+   add:[{p:1,n:"Strict offloading — no weight through that foot",d:"until cleared",c:"Total-contact cast/boot and non-weight-bearing exactly as directed. Because you can't feel it, pain will not warn you"},
+        {p:1,n:"Daily skin & foot-temperature check",d:"daily",c:"Compare with the other foot — the temperature difference is what guides your specialist's progression"},
+        {p:1,n:"Seated upper-body & core conditioning",d:"3×10",c:"Keep your fitness and strength while the foot is protected"},
+        {p:1,n:"Other-leg strengthening",d:"3×12",c:"Protect the good leg — it's carrying you now, and it's at the same long-term risk"},
+        {p:2,n:"Wheelchair/transfer technique practice",d:"daily",c:"Move about without loading the foot"},
+        {p:2,n:"Seated arm-ergometer or upper-body cardio",d:"10–20 min",c:"Cardiovascular fitness without touching the foot",tags:["aerobic"]},
+        {p:3,n:"Graded protected weight-bearing in the prescribed device",d:"as directed",c:"ONLY on your specialist's say-so, in the prescribed footwear — never by feel"},
+        {p:3,n:"Balance & gait retraining in protective footwear",d:"3×30s",c:"Once cleared to load, rebuild steadiness in the device",tags:["balance"]},
+        {p:4,n:"Walking tolerance in bespoke footwear",d:"build gradually",c:"Any new warmth, swelling or redness = stop and be seen the same day"}]},
   {re:/rhabdomyolys|exertional rhabdo/,
    focus:"Rhabdomyolysis recovery is about NOT training until you're cleared, then rebuilding far more slowly than feels necessary — a second episode usually comes from going back too hard, too soon.",
    add:[{p:1,n:"Rest & hydration — no training this phase",d:"until cleared",c:"This phase is medical recovery, not exercise. Dark urine or severe muscle pain: emergency department"},
@@ -1516,10 +1527,16 @@ const RTS_SPORT = /acl|pcl|mcl|lcl|ligament|sprain|instab|meniscus|hamstring|cal
 /* protocols that already carry specific, staged agility drills — skip the
    ladder's agility for these so we don't double up (balance is still added). */
 const AGILITY_RICH = new Set(["knee_ligament","ankle"]);
+/* Lower-limb conditions that must be OFFLOADED, not balanced on. The balance
+   ladder is weight-bearing by definition, so injecting it here contradicts the
+   plan's own restriction (an active Charcot foot is told "DO NOT WALK ON IT",
+   yet was still being prescribed double-leg balance). */
+const RTS_NO_WB = /charcot (foot|joint|arthropath|neuroarthropath)|neuroarthropath|acute compartment|fasciotomy|avascular necrosis|osteonecrosis|\bavn\b|non-?weight-?bearing|limb lengthening|external fixation|ilizarov|bone transport|osteomyelitis|unstable fracture|stress fracture (of the )?(femoral neck|navicular)/i;
 function rtsFor(cond, phaseIdx){
   const p = phaseIdx+1;
   const hay = `${cond.name||""} ${cond.region||""}`;
   if(!RTS_LOWER.test(hay)) return [];
+  if(RTS_NO_WB.test(hay)) return [];        // offloaded conditions: no weight-bearing balance/agility drills
   const degen = RTS_DEGEN.test(cond.name||"");
   const sporty = !degen && RTS_SPORT.test(cond.name||"");
   const out = [];
@@ -2465,6 +2482,7 @@ const P_ALIAS = window.PROTOCOL_ALIAS || {};
 function resolveProto(p){ return (window.PROTOCOLS && window.PROTOCOLS[p]) ? p : (P_ALIAS[p] || "general_msk"); }
 
 const PROTOCOL_APPROACH = {
+  charcot:"completely offloading the foot until your specialist confirms it has cooled — training everything except that foot — then rebuilding protected walking in bespoke footwear",
   rhabdo:"recovering medically first — no training until you're cleared — then rebuilding aerobic capacity and strength far more gradually than usual, with hydration and heat managed",
   shoulder:"restoring pain-free shoulder range, then progressively strengthening the rotator cuff and shoulder-blade muscles",
   elbow:"settling the irritated tendon and progressively loading the forearm and elbow (isometrics early for pain relief)",

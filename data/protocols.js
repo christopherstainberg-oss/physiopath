@@ -366,6 +366,31 @@
      E("Progressive strength training","3×10","Return to normal loading",T.wb),
      E("Ongoing hydration & recovery plan","daily","Recurrence means stop and investigate, not push harder")]
   ];
+  /* Charcot neuroarthropathy — phase 1 must load NOTHING through the foot. It gets
+     its own protocol because the foot protocol offers "Seated heel raises" and
+     "Supported balance", both of which load a foot that is actively fracturing
+     without pain to warn the person. Four items per phase so enrichPhase can't
+     top it up with weight-bearing library work. */
+  P.charcot = [
+    [E("Seated arm-ergometer / upper-body cardio","10–20 min","Cardiovascular fitness without touching the foot",T.aerobic),
+     E("Non-weight-bearing hip & knee strengthening (affected leg)","3×12","Keep the leg strong above the protected foot"),
+     E("Transfer & crutch/wheelchair technique","daily","Move about without putting weight through the foot"),
+     E("Footwear, glucose & foot-protection education","ongoing","Tight glucose control and bespoke footwear protect both feet"),
+     E("Seated core & postural work","3×10","Maintain trunk strength while offloaded"),
+     E("Upper-limb resistance training","3×12","Keep whole-body strength during a long protected phase")],
+    [E("Continued offloading in the prescribed device","as directed","Progress only on your specialist's say-so, never by feel"),
+     E("Transfer & wheelchair technique","daily","Move about without loading the foot"),
+     E("Seated arm-ergometer / upper-body cardio","10–20 min","Cardiovascular fitness without touching the foot",T.aerobic),
+     E("Hip & knee strengthening of the affected leg (non-weight-bearing)","3×12","Keep the leg strong above the protected foot")],
+    [E("Graded protected weight-bearing in the device","as directed","Only once your specialist confirms the foot has cooled"),
+     E("Balance retraining in protective footwear","3×30s","Rebuild steadiness in the prescribed device",T.balance),
+     E("Gentle ankle/foot range within the device","3×10","As permitted — never forced"),
+     E("Continued daily skin checks","daily","New warmth, swelling or redness = stop and be seen the same day")],
+    [E("Walking tolerance in bespoke footwear","build gradually","Increase slowly; bespoke footwear is permanent, not optional",T.wb),
+     E("Ongoing balance & falls prevention","3×30s","Protect both feet",T.balance),
+     E("General conditioning","15–20 min","Low-impact only — never running or jumping",T.aerobic),
+     E("Lifelong foot-protection routine","daily","Daily checks, podiatry review and tight glucose control")]
+  ];
   P.general_msk = [
     [E("Gentle pain-free ROM","3×10","Keep the area moving"),
      E("Isometric holds","3×10s","Activate muscle without strain",T.grip),
