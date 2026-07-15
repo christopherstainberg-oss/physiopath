@@ -343,6 +343,29 @@
      E("Relapse-prevention habits","ongoing","Manage clenching/stress")]
   ];
 
+  /* Exertional rhabdomyolysis — phase 1 is deliberately NOT a training phase.
+     It gets its own protocol because the generic MSK phase 1 offers "Light
+     aerobic (walk/bike)", which directly contradicts the "do not train until
+     cleared" rule this condition depends on. Four items per phase keeps
+     enrichPhase from topping the phase up with library aerobic work. */
+  P.rhabdo = [
+    [E("Rest — no structured exercise until cleared","this phase","Medical recovery, not training. Dark urine or severe muscle pain: emergency department"),
+     E("Hydration through the day","ongoing","Track urine colour — it should be pale, not cola-coloured"),
+     E("Gentle daily mobility (short easy walk only if your doctor allows)","5–10 min","Nothing that raises your effort"),
+     E("Sleep & recovery routine","daily","Recovery is the work right now")],
+    [E("Easy walking, well below your old level","15–20 min","Start far lighter than feels necessary",T.aerobic),
+     E("Gentle range of motion","3×10","Ease the muscle stiffness"),
+     E("Hydration & heat awareness","daily","Avoid heat and dehydration while you rebuild"),
+     E("Symptom check after each session","daily","Dark urine or unusual muscle pain means stop and be reviewed")],
+    [E("Graded light resistance, low volume","2×10 light","Avoid high-volume eccentric work — the classic trigger"),
+     E("Steady aerobic base building","20–30 min","Build gradually; don't train when unwell or sleep-deprived",T.aerobic),
+     E("Mobility & recovery work","3×10","Support the rebuild"),
+     E("Progressive walking/cycling volume","20–30 min","Increase by ~10% a week",T.aerobic)],
+    [E("Graded return to full training","progressive","Rebuild volume before intensity",T.aerobic),
+     E("Heat acclimatisation, built deliberately","2–3×/week","Rebuild heat tolerance rather than assuming it"),
+     E("Progressive strength training","3×10","Return to normal loading",T.wb),
+     E("Ongoing hydration & recovery plan","daily","Recurrence means stop and investigate, not push harder")]
+  ];
   P.general_msk = [
     [E("Gentle pain-free ROM","3×10","Keep the area moving"),
      E("Isometric holds","3×10s","Activate muscle without strain",T.grip),
