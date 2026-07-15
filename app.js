@@ -1514,6 +1514,310 @@ const PHASE_CRITERIA = {
     "you've restored strength, power and the full capacity your activities demand"
   ]
 };
+/* ---------- condition-specific rehab timelines ----------
+   Real protocols aren't one-size-fits-all: an ACL reconstruction is a 9–12 month
+   criteria-driven rehab, a meniscectomy is ~6 weeks, a frozen shoulder runs a
+   year through freezing/frozen/thawing. Each plan supplies REAL phase names,
+   ABSOLUTE week windows (from injury/surgery), goals, progression criteria and
+   the stage's restrictions — so the plan reads like a clinician's protocol
+   instead of a generic template. Exercise CONTENT still comes from the protocol +
+   injury focus; this layer is the scaffolding around it.
+   ph: [title, weekStart, weekEnd, goal, advance-criteria, restriction]
+   `postop:true/false` limits a plan to (non-)surgical cases; `generic:true`
+   entries lose to any specific match. Education only — a treating surgeon's or
+   therapist's protocol always overrides. */
+const REHAB_PLANS = [
+  { re:/\bacl\b.*(reconstruct|repair|graft)|anterior cruciate.*(reconstruct|repair|graft)|\baclr\b/, label:"ACL reconstruction", total:39,
+    freq:"Daily home work + 2–3 supervised sessions/week early on, tapering later",
+    note:"ACL reconstruction is a 9–12 month rehab. The graft is at its weakest around 6–12 weeks while it re-vascularises, so progression is driven by criteria, not the calendar.",
+    ph:[
+      ["Protection & quadriceps activation",0,2,"Settle swelling, get the knee fully straight, and switch the quads back on.","full passive extension equal to the other knee, a strong quad set and a straight-leg raise with no lag, swelling settling","Brace and crutches as your surgeon directs. No pivoting or twisting; avoid open-chain knee extension in the 0–45° range."],
+      ["Range of motion, gait & early strength",2,6,"Restore full range, walk normally without aids, and rebuild base strength.","full extension, flexion ≥120°, walking without crutches or a limp, minimal swelling","No running, cutting or pivoting. Closed-chain strengthening only."],
+      ["Progressive strengthening & neuromuscular control",6,12,"Build quadriceps and hamstring strength with good single-leg control.","quadriceps strength ≥70–80% of the other leg, controlled single-leg squat, no swelling after loading","Running only once quad strength is ≥80% and the knee stays pain- and swelling-free — usually 12+ weeks."],
+      ["Return to running, agility & sport",12,39,"Restore full strength and power, then running, cutting and sport-specific work.","quadriceps and hamstring strength ≥90% of the other side, hop-test battery ≥90%, confident cutting, plus surgeon/clinician clearance","Return to pivoting sport is typically 9–12 months. Going back before 9 months markedly raises re-rupture risk."]] },
+  { re:/\bacl\b|anterior cruciate/, label:"ACL injury (non-surgical)", postop:false, total:20,
+    freq:"Daily home work + 2 supervised sessions/week",
+    note:"Many ACL tears are managed without surgery, especially for non-pivoting activities. Strong quads/hamstrings and good neuromuscular control are what stabilise the knee.",
+    ph:[
+      ["Settle symptoms & restore extension",0,2,"Calm swelling and pain, regain full knee extension, activate the quads.","swelling settling, full extension, quad set with a straight-leg raise and no lag","Avoid pivoting, cutting and deep squatting. Use crutches while your walking is poor."],
+      ["Full range & base strength",2,6,"Restore full motion and normal gait, build base leg strength.","full range, walking without a limp, no giving-way in daily activity","Still no pivoting or cutting sports."],
+      ["Strength & neuromuscular control",6,12,"Build strength and single-leg control so the knee feels stable.","quadriceps and hamstring strength ≥80% of the other side, controlled single-leg work, no episodes of giving way","Introduce straight-line running only when strength and control allow."],
+      ["Return to activity & stability testing",12,20,"Restore power and confident change-of-direction, or decide about surgery.","hop tests ≥90%, no giving-way with agility, confident on the leg","Repeated giving-way despite good rehab is a reason to discuss reconstruction."]] },
+  { re:/meniscus repair|meniscal repair|meniscus.*(suture|root repair)/, label:"Meniscus repair", total:26,
+    freq:"Daily home work + 1–2 supervised sessions/week",
+    note:"A repaired meniscus has a poor blood supply and needs real protection — this is much slower than a meniscectomy. Deep loaded flexion is the main thing to avoid early.",
+    ph:[
+      ["Protect the repair",0,4,"Protect the suture, control swelling, keep the quads active.","swelling settling, full extension, good quad set, weight-bearing as your surgeon allows","Weight-bearing and flexion limits per your surgeon (often partial WB and flexion capped ~90°). No deep squatting or twisting."],
+      ["Restore motion & gait",4,8,"Regain full range and normal walking as the limits are lifted.","full extension, flexion ≥120°, walking without aids or a limp","Still no deep squats, kneeling or pivoting."],
+      ["Progressive strengthening",8,16,"Build strength through increasing range with good control.","strength ≥80% of the other leg, no joint-line pain with loading, no swelling","Deep loaded flexion (full squats, lunges past 90°) usually not before ~4 months."],
+      ["Return to sport",16,26,"Restore power, impact tolerance and sport-specific work.","strength and hop tests ≥90%, no joint-line pain, clinician clearance","Return to pivoting sport is typically 5–6 months after a repair."]] },
+  { re:/meniscectom|partial meniscect|meniscus trim|meniscus debrid/, label:"Partial meniscectomy", total:12,
+    freq:"Daily home work + 1–2 supervised sessions/week early",
+    note:"Because the torn piece is removed rather than repaired, this rehab is fast — most people are back to normal activity in 4–8 weeks. Swelling is the main guide.",
+    ph:[
+      ["Settle & restore motion",0,1,"Control swelling, regain extension, walk normally.","swelling and pain settling, full extension, walking with little or no limp","Full weight-bearing as comfortable unless told otherwise. Avoid deep squats early."],
+      ["Full range & base strength",1,3,"Full range and normal gait, rebuild quad strength.","full range, no limp, minimal swelling after activity","Ease into loading — swelling that lasts overnight means you've done too much."],
+      ["Progressive loading",3,6,"Build strength and start impact.","strength ≥80% of the other leg, no swelling after loading, comfortable jogging","Introduce running once loading is comfortable and swelling-free."],
+      ["Return to sport",6,12,"Restore power and sport-specific demands.","strength ≥90%, confident agility, no swelling","Most return to sport around 6–8 weeks; joint-line pain or swelling means back off."]] },
+  { re:/meniscus|meniscal/, label:"Meniscus tear (non-surgical)", postop:false, total:14, generic:true,
+    freq:"Daily home work + 1–2 supervised sessions/week",
+    note:"Most degenerative meniscal tears do as well with exercise as with surgery — strength and load tolerance are the treatment.",
+    ph:[
+      ["Settle symptoms",0,2,"Calm pain and swelling, restore extension.","swelling settling, full extension, comfortable walking","Avoid deep squatting and twisting while it's irritable."],
+      ["Restore range & activate",2,5,"Full range and normal gait, wake the quads up.","full range, no limp, only mild symptoms with daily activity","Ease off deep flexion under load."],
+      ["Progressive strengthening",5,10,"Build strength and load tolerance around the knee.","strength ≥80% of the other side, joint-line pain settling","Some discomfort with loading is fine if it settles overnight."],
+      ["Return to full activity",10,14,"Restore full capacity and impact tolerance.","strength near-symmetrical, confident with your activities","Locking or the knee giving way should be reviewed — that may need surgery."]] },
+  { re:/\bmcl\b|medial collateral/, label:"MCL sprain", total:10,
+    freq:"Daily home work + 1–2 supervised sessions/week",
+    note:"The MCL has a good blood supply and heals well without surgery — even higher-grade tears. Timeline depends on grade (I ~2–3 wks, II ~4–6 wks, III ~8–12 wks).",
+    ph:[
+      ["Protect & settle",0,1,"Control pain and swelling, protect the healing ligament.","swelling settling, comfortable weight-bearing, extension restored","Brace as advised. Avoid any sideways (valgus) stress on the knee."],
+      ["Restore range & gait",1,3,"Regain full motion and normal walking.","full range, walking without a limp, no pain on gentle valgus stress","Still avoid side-to-side stress and pivoting."],
+      ["Strengthening",3,6,"Rebuild strength and control through full range.","strength ≥80% of the other leg, no MCL tenderness with loading","Introduce controlled change-of-direction only when pain-free."],
+      ["Return to sport",6,10,"Restore power and cutting/pivoting demands.","strength ≥90%, stable on valgus testing, confident cutting","Higher-grade (III) sprains commonly need 8–12 weeks before contact sport."]] },
+  { re:/knee replacement|knee arthroplasty|\btkr\b|\btka\b|unicompartmental knee/, label:"Total knee replacement", total:26,
+    freq:"Short sessions several times daily early, then 4–5 sessions/week",
+    note:"Range of motion in the first 6 weeks is the priority — it's much harder to regain later. Swelling and discomfort for several months is normal; most improvement is in the first 3 months, with gains continuing to a year.",
+    ph:[
+      ["Early motion, swelling & walking",0,2,"Get the knee straight, bend it, and walk safely.","full extension (0°), flexion ≥90°, walking with a frame/crutches, wound healing","Follow your weight-bearing status. Do NOT put a pillow under the knee — that causes a flexion contracture."],
+      ["Range, gait & early strength",2,6,"Push toward full flexion, walk without aids, rebuild quads.","extension 0°, flexion ≥110–120°, walking without aids, stairs one at a time","Range work is the priority in these weeks — flexion gained now is much harder to get later."],
+      ["Strength & function",6,12,"Build strength and normal function — stairs, sit-to-stand, walking distance.","flexion ≥120°, reciprocal stair climbing, sit-to-stand without hands, walking 20+ min","Kneeling is often uncomfortable for a long time — it's not harmful."],
+      ["Endurance & return to activity",12,26,"Restore endurance and return to low-impact activity.","near-normal walking and stairs, good strength, comfortable daily activity","Low-impact activity (walking, cycling, swimming, golf) is encouraged; running and jumping are generally not."]] },
+  { re:/hip replacement|hip arthroplasty|\bthr\b|\btha\b|hip resurfacing|hemiarthroplasty/, label:"Total hip replacement", total:24,
+    freq:"Short sessions several times daily early, then 4–5 sessions/week",
+    note:"Recovery is usually quicker than a knee replacement. Follow your surgeon's precautions — they depend on the surgical approach (posterior approach has the most restrictions).",
+    ph:[
+      ["Early mobility & precautions",0,2,"Walk safely, control swelling, protect the new joint.","walking with aids, getting in/out of bed and a chair independently, wound healing","Hip precautions per your approach — typically no bending past 90°, no crossing the midline, no twisting inwards."],
+      ["Gait & base strength",2,6,"Walk without aids, rebuild hip strength.","walking without aids or a limp, good glute activation, stairs with a rail","Keep observing your precautions until your surgeon lifts them (often ~6–12 weeks)."],
+      ["Strength & function",6,12,"Build strength and normal function.","normal gait, sit-to-stand without hands, stairs reciprocally, good single-leg stance","Most precautions lift around now — check with your surgeon before deep bending."],
+      ["Endurance & return to activity",12,24,"Restore endurance and return to low-impact activity.","near-normal strength and gait, comfortable with daily activity and walking distance","Low-impact activity encouraged; avoid running and impact sport unless your surgeon clears it."]] },
+  { re:/rotator cuff (repair|reconstruct)|cuff repair|supraspinatus repair|subscapularis repair/, label:"Rotator cuff repair", total:26,
+    freq:"Little and often — 3–5 short sessions daily early, then 4–5 sessions/week",
+    note:"The repaired tendon needs to heal to bone before it can be loaded — that's why active movement is delayed. Pushing early risks re-tear, which is the main complication.",
+    ph:[
+      ["Sling & protected passive motion",0,6,"Protect the repair, prevent stiffness with passive movement only.","passive range progressing per protocol, pain settling, sling used as directed","Sling ~4–6 weeks. PASSIVE movement only — no active lifting of the arm, no reaching behind, no weight-bearing through the arm."],
+      ["Active-assisted to active motion",6,12,"Regain active range as the repair consolidates.","near-full passive range, active elevation without a shrug, pain settling","Active movement without resistance. Still no lifting or loaded reaching."],
+      ["Progressive strengthening",12,16,"Start and build rotator-cuff and scapular strength.","full active range, good scapular control, strength returning without pain","Begin light resisted work only — build gradually; the tendon is still maturing."],
+      ["Strength, endurance & return",16,26,"Restore strength, overhead function and return to activity.","strength approaching the other side, comfortable overhead function, clinician clearance","Return to heavy lifting or overhead sport is usually 4–6 months+."]] },
+  { re:/frozen shoulder|adhesive capsulitis/, label:"Frozen shoulder (adhesive capsulitis)", total:52,
+    freq:"Short, frequent, gentle sessions daily — 3–5 times/day",
+    note:"This is a long condition that runs through three stages — freezing (painful), frozen (stiff), thawing (recovering) — typically 1–3 years but often shorter with good management. Aggressive stretching during the painful stage makes it worse.",
+    ph:[
+      ["Freezing — pain-dominant",0,12,"Control pain and keep the range you have. Don't force it.","night pain settling, pain no longer the dominant problem","Do NOT stretch aggressively — pain is the guide. This stage is about pain relief and gentle movement; a steroid injection can help a lot here."],
+      ["Frozen — stiffness-dominant",12,30,"Now work on range — this is the stage where stretching earns its keep.","measurable gains in range, especially external rotation, with less pain","Stretching should be firm but tolerable and settle within 30 minutes. Progress is slow — that's normal."],
+      ["Thawing — regaining motion",30,44,"Keep regaining range and rebuild the strength lost to disuse.","range approaching the other side, strength rebuilding","Keep going — the shoulder is genuinely recovering now."],
+      ["Restore full function",44,52,"Restore full range, strength and overhead function.","near-full range and strength, comfortable with overhead and behind-the-back tasks","Some people keep a small permanent loss of end-range rotation — usually not functionally limiting."]] },
+  { re:/rotator cuff|supraspinatus|subacromial|shoulder impingement|infraspinatus|cuff tendin/, label:"Rotator cuff / subacromial pain", postop:false, total:16,
+    freq:"Daily home exercises + 1 supervised session/week",
+    note:"Exercise is as effective as surgery for most rotator-cuff pain — but it takes ~12 weeks to work. Loading the cuff progressively is the treatment, not rest.",
+    ph:[
+      ["Settle & activate",0,2,"Calm the irritable tendon and re-establish scapular control.","night pain settling, comfortable with light daily reaching","Avoid repeated overhead work and heavy loads while it's very irritable — but keep moving."],
+      ["Range & isometric loading",2,6,"Restore full range and start loading the cuff.","full range, comfortable isometrics, pain ≤3/10 with daily tasks","Some discomfort with exercise is fine if it settles within 24 hours."],
+      ["Progressive strengthening",6,12,"Build cuff and scapular strength through range.","strength improving, comfortable with light overhead work","Add overhead loading gradually once mid-range is comfortable."],
+      ["Strength & return to full use",12,16,"Restore full strength and overhead/sport capacity.","strength near the other side, comfortable overhead and with your activities","If there's been no progress after 12 weeks of genuine loading, get re-reviewed."]] },
+  { re:/shoulder (dislocat|instab|subluxat)|bankart|labral (tear|repair)|\bslap\b|glenohumeral instab/, label:"Shoulder instability / dislocation", total:24,
+    freq:"Daily home work + 1–2 supervised sessions/week",
+    note:"Re-dislocation risk is highest in young athletes — good cuff and scapular strength plus a staged return is what protects the joint. Recurrent dislocations may need stabilisation surgery.",
+    ph:[
+      ["Protect & settle",0,3,"Protect the joint and settle pain while tissue heals.","pain settling, comfortable in a sling/at rest, gentle range within safe limits","Avoid the position of instability — usually abduction with external rotation (the 'throwing' position)."],
+      ["Restore range & cuff activation",3,6,"Regain range within safe limits and wake up the cuff.","near-full range, good cuff isometrics, no apprehension in mid-range","Still avoid end-range abduction/external rotation and any apprehension positions."],
+      ["Strength & control",6,12,"Build cuff, scapular and proprioceptive control.","good strength and control, no apprehension through range","Introduce end-range work gradually as confidence and control build."],
+      ["Return to sport",12,24,"Restore power and contact/overhead demands.","full strength, no apprehension, confident with sport-specific loading","Return to contact/overhead sport is usually 3–6 months; recurrent dislocation warrants a surgical opinion."]] },
+  { re:/achilles (rupture|tear)|achilles (repair|reconstruct)|tendo.?achilles rupture/, label:"Achilles rupture", total:39,
+    freq:"Daily home work + 1–2 supervised sessions/week",
+    note:"Whether repaired or managed in a boot, the tendon needs graded protection then graded loading. Return to sport is typically 6–12 months, and calf strength often lags for a year or more.",
+    ph:[
+      ["Protected healing in a boot",0,4,"Protect the healing tendon; keep the rest of the leg working.","wound healed (if operated), comfortable in the boot, following your weight-bearing status","Boot with heel wedges per protocol. NO stretching of the tendon and no dorsiflexion past neutral."],
+      ["Progressive weight-bearing & range",4,10,"Wean the boot and wedges, restore range and normal walking.","full weight-bearing out of the boot, ankle range to neutral and beyond, walking without a limp","Wean wedges gradually as directed. Still no forced stretching or explosive push-off."],
+      ["Calf strengthening",10,20,"Rebuild calf strength — the key long-term outcome.","double-leg heel raise, progressing to single-leg heel raises","Build heel-raise capacity methodically; a single-leg heel raise is a key milestone."],
+      ["Return to running & sport",20,39,"Restore power, hopping and sport-specific loading.","single-leg heel-raise height/endurance ≥90% of the other side, comfortable hopping and running","Return to sport is typically 6–12 months. Re-rupture risk is highest if you return before calf strength is restored."]] },
+  { re:/achilles tendinop|achilles tendin|insertional achilles|mid.?portion achilles/, label:"Achilles tendinopathy", postop:false, total:24,
+    freq:"Daily loading — this tendon responds to consistent, progressive load",
+    note:"Tendons need load, not rest. Progressive calf loading (isometric → heavy-slow → energy-storage) works but takes 3–6 months. Pain up to ~5/10 during exercise that settles within 24 hours is acceptable and not harmful.",
+    ph:[
+      ["Settle & isometric loading",0,4,"Reduce pain and start loading with isometrics.","morning stiffness reducing, comfortable isometric holds","Reduce (don't stop) aggravating activity. For insertional pain, avoid stretching into dorsiflexion and hill/speed work."],
+      ["Heavy-slow resistance loading",4,10,"Load the tendon progressively — the main driver of recovery.","comfortable with progressive heel-raise loading, pain settling within 24 hours","Load 3×/week with heavy, slow calf raises. Some pain during loading is fine if it settles."],
+      ["Energy storage & power",10,16,"Add spring/plyometric loading to prepare for running.","good single-leg heel-raise capacity, tolerating hopping","Progress hopping and skipping gradually; watch for next-morning pain."],
+      ["Return to running & sport",16,24,"Return to running and sport with a graded loading plan.","calf strength near-symmetrical, tolerating running without a next-day flare","Build running volume ~10%/week; tendons dislike sudden spikes in load."]] },
+  { re:/ankle sprain|lateral ligament.*ankle|\batfl\b|inversion injury|sprained ankle|ankle instab/, label:"Lateral ankle sprain", total:12,
+    freq:"Several short sessions daily early, then 4–5 sessions/week",
+    note:"Ankle sprains are under-rehabbed — up to a third become chronically unstable. Balance/proprioception training is what prevents recurrence, so don't stop when the pain goes.",
+    ph:[
+      ["Protect & settle",0,1,"Control swelling and pain, restore comfortable walking.","swelling settling, weight-bearing comfortably, able to walk with little limp","Compression and elevation, keep moving within comfort. Protective taping/brace as needed."],
+      ["Range, gait & early balance",1,3,"Restore full range and normal walking; start balance work.","full range, walking without a limp, able to stand on the leg","Start balance work early — this is the part that prevents re-injury."],
+      ["Strength & proprioception",3,6,"Build peroneal strength and single-leg balance.","good single-leg balance (incl. eyes closed), strong resisted eversion, comfortable calf raises","Progress balance onto unstable surfaces and add hopping when comfortable."],
+      ["Return to sport & agility",6,12,"Restore hopping, cutting and sport-specific agility.","confident hopping and cutting, balance and strength symmetrical","Keep doing balance work for months — and consider a brace/tape for high-risk sport for ~6–12 months."]] },
+  { re:/plantar fasci|plantar heel|heel pain|fasciopathy/, label:"Plantar fasciitis (plantar heel pain)", total:26,
+    freq:"Daily — stretching/loading most days plus footwear changes",
+    note:"Typically takes 6–12 months to fully settle, but most improve much sooner with loading, calf stretching and footwear/orthotic support. First-step morning pain is the classic marker to track.",
+    ph:[
+      ["Settle & offload",0,4,"Reduce first-step pain and offload the fascia.","morning first-step pain reducing, comfortable walking short distances","Cushioned supportive shoes, avoid barefoot on hard floors, reduce (don't stop) walking/running volume."],
+      ["Loading & calf flexibility",4,10,"Load the fascia and lengthen a tight calf.","morning pain notably reduced, tolerating heel raises","High-load plantar-fascia strengthening (heel raises with toes extended) 3×/week; stretch the calf daily."],
+      ["Progressive strengthening",10,18,"Build foot and calf capacity to tolerate more.","comfortable on your feet most of the day, minimal morning pain","Increase standing/walking volume gradually — spikes cause flares."],
+      ["Return to running & full activity",18,26,"Return to running/impact with a graded plan.","little or no morning pain, tolerating impact without a next-day flare","Build impact volume slowly. Persistent pain after 6+ months warrants review (imaging, injection, or a night splint)."]] },
+  { re:/hamstring (strain|tear|pull|injury)|biceps femoris|pulled hamstring/, label:"Hamstring strain", total:8,
+    freq:"Daily — hamstring work most days",
+    note:"Re-injury rates are high (up to a third) — usually from returning too early. Eccentric strengthening (Nordics) and running progression are what protect you. Timeline depends on grade (I ~2–3 wks, II ~4–8 wks, III 3+ months).",
+    ph:[
+      ["Protect & gentle activation",0,1,"Settle bleeding and pain; gentle pain-free activation.","walking normally, pain-free gentle isometrics","Avoid stretching into pain and any sprinting. Compression early."],
+      ["Range & progressive isometrics",1,2,"Restore length and start loading without pain.","full pain-free range, comfortable isometrics at increasing length","No explosive or high-speed work yet."],
+      ["Eccentric strengthening & running",2,4,"Build eccentric strength and reintroduce running.","strong eccentric work (e.g. Nordics), pain-free jogging building to strides","Progress running speed gradually — most re-injuries happen at high speed."],
+      ["Return to sprinting & sport",4,8,"Restore sprint speed and sport-specific loading.","pain-free maximal sprinting, eccentric strength near-symmetrical, confident at speed","Do not return to sport until you can sprint at full speed pain-free. Keep doing Nordics — they roughly halve re-injury risk."]] },
+  { re:/calf (strain|tear)|gastrocnemius (strain|tear)|soleus strain|torn calf/, label:"Calf strain", total:8,
+    freq:"Daily calf loading",
+    note:"Calf strains re-injure easily if you return before the calf has real strength endurance. Heel-raise capacity is the key milestone.",
+    ph:[
+      ["Protect & settle",0,1,"Settle pain and swelling; walk comfortably.","walking without a limp, pain-free gentle isometrics","Avoid stretching into pain and explosive push-off. Compression and gentle movement."],
+      ["Range & progressive loading",1,3,"Restore range and start progressive heel raises.","full range, comfortable double-leg heel raises","Build calf raises gradually; avoid speed work."],
+      ["Strength endurance & jogging",3,5,"Build heel-raise capacity and reintroduce jogging.","single-leg heel raises approaching the other side, pain-free jogging","Single-leg heel-raise capacity is the gate to running."],
+      ["Return to running & sport",5,8,"Restore speed, hopping and sport demands.","heel-raise endurance ≥90%, pain-free sprinting and hopping","Build speed and volume progressively — the calf is a common re-injury site."]] },
+  { re:/groin (strain|pain)|adductor (strain|tendinop|injury)|athletic pubalgia|sports hernia|osteitis pubis/, label:"Groin / adductor injury", total:12,
+    freq:"Daily adductor loading (Copenhagen-style progression)",
+    note:"Adductor strengthening (the Copenhagen protocol) both treats and prevents groin injury. Long-standing groin pain is often multi-factorial and slow — 3+ months is common.",
+    ph:[
+      ["Settle & isometric loading",0,2,"Calm the irritable tissue, start pain-free isometrics.","comfortable walking, pain-free adductor squeeze","Avoid kicking, sprinting and cutting while it's irritable."],
+      ["Progressive adductor strengthening",2,5,"Build adductor and trunk strength progressively.","strong pain-free adductor squeeze, tolerating side-lying adduction work","Introduce Copenhagen adduction gradually — it's demanding; start with short lever."],
+      ["Strength, running & control",5,8,"Add running and multi-directional control.","pain-free jogging and change of direction, good adductor strength","Progress cutting and kicking gradually."],
+      ["Return to sport",8,12,"Restore sprinting, cutting and kicking.","pain-free maximal sprinting, cutting and kicking; symmetrical adductor strength","Keep Copenhagen adduction in your programme — it substantially reduces recurrence."]] },
+  { re:/tennis elbow|lateral epicondyl|common extensor|extensor tendinop/, label:"Tennis elbow (lateral epicondylalgia)", total:26,
+    freq:"Daily loading — little and often",
+    note:"This settles with progressive loading but is slow: 6–12 months is typical, and most recover regardless of treatment. Injections give short-term relief but WORSE long-term outcomes, so loading is the mainstay.",
+    ph:[
+      ["Settle & isometric loading",0,4,"Reduce pain and start pain-free isometric grip/wrist work.","grip pain reducing, comfortable isometric holds","Reduce (don't stop) aggravating gripping. Check technique/equipment and use a counterforce brace if it helps."],
+      ["Progressive eccentric/heavy-slow loading",4,10,"Load the tendon progressively — the main driver.","tolerating progressive wrist extensor loading, pain settling within 24 hours","Load 3×/week; pain up to ~4/10 during exercise that settles is acceptable."],
+      ["Strength & grip capacity",10,18,"Build grip strength and forearm capacity.","grip strength improving toward the other side, comfortable with daily gripping","Address the kinetic chain — shoulder and scapular strength matter."],
+      ["Return to full loading & sport",18,26,"Restore full grip/loading and racquet or work demands.","grip strength near-symmetrical, comfortable with your sport/work loads","Gradual return; fix the technique or workload that caused it or it will recur."]] },
+  { re:/golfer'?s elbow|medial epicondyl|common flexor/, label:"Golfer's elbow (medial epicondylalgia)", total:26,
+    freq:"Daily loading — little and often",
+    note:"Same principles as tennis elbow — progressive loading over months. Slower than people expect, but reliable.",
+    ph:[
+      ["Settle & isometric loading",0,4,"Reduce pain, start pain-free isometrics.","pain with gripping reducing, comfortable isometrics","Reduce aggravating gripping/twisting; check technique and grip size."],
+      ["Progressive loading",4,10,"Load the flexor tendon progressively.","tolerating progressive wrist flexor/pronator loading","Load 3×/week; mild pain that settles within 24 hours is fine."],
+      ["Strength & capacity",10,18,"Build grip and forearm strength.","grip strength improving, comfortable with daily tasks","Include shoulder/scapular strengthening."],
+      ["Return to sport & full loading",18,26,"Restore full loading and sport demands.","grip near-symmetrical, comfortable with your sport/work","Address technique and load spikes to prevent recurrence."]] },
+  { re:/patellofemoral|runner'?s knee|anterior knee pain|chondromalacia|patellar malalign/, label:"Patellofemoral pain", total:16,
+    freq:"Daily home exercises + 1 supervised session/week",
+    note:"Hip and quadriceps strengthening is the best-evidenced treatment; expect 6–12 weeks for meaningful change. Load management (reducing the aggravating volume, not stopping) matters as much as the exercises.",
+    ph:[
+      ["Settle & load management",0,2,"Calm the pain by adjusting load; start pain-free strengthening.","pain with stairs/sitting reducing, comfortable with daily walking","Reduce (don't stop) squatting, stairs and running volume to a tolerable level."],
+      ["Hip & quadriceps strengthening",2,6,"Build hip abductor/external-rotator and quadriceps strength.","good hip and quad strength gains, less pain with stairs","Keep exercises in a pain-free or low-pain range; deep knee flexion under load may need limiting."],
+      ["Progressive loading & control",6,12,"Load through more range with good movement control.","comfortable squatting and stairs, good single-leg control","Progress range and load as symptoms allow."],
+      ["Return to running & sport",12,16,"Return to running/impact with a graded plan.","pain-free running build-up, strength near-symmetrical","Build volume ~10%/week; recurrence usually means load spiked again."]] },
+  { re:/patellar tendinop|jumper'?s knee|patellar tendin|quadriceps tendinop/, label:"Patellar tendinopathy (jumper's knee)", total:24,
+    freq:"Loading 3–4×/week, consistently",
+    note:"A load-driven tendon problem — 3–6 months of progressive loading is typical. Complete rest makes it worse; the classic pattern is pain that warms up with activity and hurts most the next day.",
+    ph:[
+      ["Isometric loading & pain control",0,4,"Reduce pain with isometrics; manage jumping load.","pain settling, comfortable isometric holds (e.g. Spanish squat)","Cut jumping/change-of-direction volume; isometrics can give real short-term pain relief."],
+      ["Heavy-slow resistance",4,10,"Load the tendon heavily and slowly — the main driver.","tolerating heavy-slow squats/leg press, pain settling within 24 hours","Load 3×/week with slow tempo; pain ≤4/10 that settles is acceptable."],
+      ["Energy storage & plyometrics",10,16,"Reintroduce spring loading to prepare for sport.","tolerating jumping and landing without a next-day flare","Progress plyometrics gradually — monitor next-morning pain."],
+      ["Return to sport",16,24,"Restore full jumping/cutting demands.","full jumping and landing tolerance, symmetrical strength","Keep a maintenance loading programme — this recurs when loading stops."]] },
+  { re:/gluteal tendinop|greater trochanteric|trochanteric bursitis|\bgtps\b|lateral hip pain/, label:"Gluteal tendinopathy (lateral hip pain)", total:24,
+    freq:"Daily — most days of the week",
+    note:"Education plus progressive abductor loading beats injection at 12 months. The biggest win is removing compression — avoid sitting cross-legged, standing hanging on one hip, and side-lying on the painful side.",
+    ph:[
+      ["Reduce compression & isometrics",0,4,"Take compression off the tendon; start isometric abduction.","night pain reducing, comfortable isometric abduction","Avoid crossing your legs, 'hanging' on one hip when standing, and lying on the sore side (use a pillow between the knees)."],
+      ["Progressive abductor loading",4,10,"Build glute medius/minimus strength progressively.","tolerating progressive abduction loading, less pain lying and walking","Keep the hip out of adduction (don't cross the midline) while loading."],
+      ["Functional strengthening",10,16,"Load in standing and functional positions.","comfortable single-leg stance and walking, good abductor strength","Progress single-leg loading gradually."],
+      ["Return to full activity",16,24,"Restore walking/stair/running capacity.","pain-free walking and stairs, symmetrical abductor strength","Slow and steady — this tendon flares with sudden load increases."]] },
+  { re:/lumbar (disc|radiculopathy|herniat|prolapse)|sciatica|slipped disc|disc (herniat|prolapse|bulge)|nerve root/, label:"Lumbar disc / sciatica", total:26,
+    freq:"Little and often — several short sessions daily",
+    note:"Most disc-related leg pain resolves without surgery: ~50% improve by 6 weeks and most by 3 months. Leg pain moving OUT of the leg and toward the back ('centralisation') is a good sign. Progressive weakness or bladder/bowel changes need urgent review.",
+    ph:[
+      ["Settle & find your directional preference",0,2,"Reduce leg pain; find positions/movements that centralise it.","leg pain centralising (moving out of the leg toward the back), able to walk short distances","Avoid prolonged sitting and loaded bending early. Keep moving — bed rest makes it worse."],
+      ["Restore movement & nerve mobility",2,6,"Restore comfortable movement and nerve glide.","leg pain mostly gone or centralised, walking comfortably, sitting tolerance improving","Progress gently; brief symptom increases that settle are OK, worsening leg pain is not."],
+      ["Progressive strengthening",6,12,"Build trunk, hip and leg strength and load tolerance.","minimal leg symptoms, tolerating bending and lifting practice","Reintroduce loaded bending/lifting gradually — the back is robust and needs loading."],
+      ["Return to full activity & prevention",12,26,"Restore full capacity for work, lifting and sport.","confident with lifting and your activities, symptoms settled","Ongoing exercise is the best prevention. Persistent or progressive weakness warrants a surgical opinion."]] },
+  { re:/low back pain|lumbago|lumbar strain|mechanical back|back strain|facet/, label:"Low back pain", generic:true, total:12,
+    freq:"Daily movement + strengthening 3×/week",
+    note:"Most episodes settle substantially within 6 weeks. Staying active and returning to normal activity early gives the best outcome — imaging rarely changes management in the absence of red flags.",
+    ph:[
+      ["Settle & keep moving",0,2,"Reduce pain while staying as active as you can.","pain settling, able to do most daily activities, sleeping better","Avoid bed rest. Keep walking and moving little and often; brief pain with movement is not damage."],
+      ["Restore movement & confidence",2,5,"Restore comfortable movement in all directions.","comfortable bending and moving, back to most normal activity","Gradually reintroduce the movements you've been avoiding."],
+      ["Strengthening & load tolerance",5,9,"Build trunk, hip and general strength.","tolerating lifting and loading, minimal daily symptoms","Progressive loading builds a more robust back — some discomfort is fine."],
+      ["Return to full activity & prevention",9,12,"Restore full work/sport capacity and keep it.","confident with your full activities","Recurrence is common — ongoing exercise and load management are the best protection."]] },
+  { re:/cervical radiculopathy|neck pain|whiplash|cervical (strain|spondyl|disc)|wry neck/, label:"Neck pain / cervical radiculopathy", total:12,
+    freq:"Little and often — several short sessions daily",
+    note:"Most neck pain and cervical radiculopathy improve without surgery — arm pain from a nerve root usually settles over 6–12 weeks. Staying active and deep neck flexor training beat collars and rest.",
+    ph:[
+      ["Settle symptoms",0,2,"Reduce neck/arm pain and restore comfortable movement.","pain settling, arm symptoms reducing, sleeping better","Avoid collars and prolonged rest. Keep gentle movement going; avoid sustained end-range positions."],
+      ["Restore range & deep neck flexors",2,5,"Regain range and activate the deep neck flexors.","near-full range, comfortable with daily activity, arm symptoms centralising","Progress gently — brief symptom increases that settle are OK."],
+      ["Strengthening & posture endurance",5,9,"Build neck/scapular strength and endurance.","tolerating desk work and daily loads, minimal symptoms","Address workstation setup and take regular movement breaks."],
+      ["Return to full activity",9,12,"Restore full capacity for work and sport.","confident with your activities, symptoms settled","Progressive weakness or worsening arm symptoms should be reviewed."]] },
+  { re:/distal radius|colles|wrist fracture|smith'?s fracture/, label:"Distal radius (wrist) fracture", total:24,
+    freq:"Short sessions several times daily",
+    note:"Bone union takes ~6 weeks, but stiffness and grip strength take much longer — full recovery is often 6–12 months. Finger, elbow and shoulder movement during immobilisation prevents a lot of trouble.",
+    ph:[
+      ["Immobilisation — protect the fracture",0,6,"Protect the bone while keeping everything else moving.","fracture healing on review, full finger/elbow/shoulder movement maintained","Cast/splint as directed. Move your fingers, elbow and shoulder daily — stiffness here is a common avoidable problem. No weight-bearing through the wrist."],
+      ["Restore wrist range",6,9,"Regain wrist and forearm motion once out of the cast.","improving wrist flexion/extension and rotation, swelling settling","Gentle active range first; the bone is united but not yet at full strength."],
+      ["Strengthening",9,16,"Rebuild grip and wrist strength.","grip strength improving toward the other side, functional daily use","Progressive loading; expect stiffness to be slow to resolve."],
+      ["Return to full function",16,24,"Restore full strength, loading and activity.","grip and range approaching the other side, comfortable with your activities","Full recovery commonly takes 6–12 months; some end-range stiffness may persist."]] },
+  { re:/carpal tunnel/, label:"Carpal tunnel syndrome", total:12,
+    freq:"Daily nerve-glides + night splinting",
+    note:"Night splinting and nerve gliding help mild-to-moderate cases; persistent numbness, weakness or thenar wasting is a reason for a surgical opinion, since prolonged compression can cause lasting nerve damage.",
+    ph:[
+      ["Settle night symptoms",0,3,"Reduce night waking and numbness.","fewer night wakings, less numbness on waking","Night splint in neutral; avoid sustained gripping/vibration and wrist-flexed sleeping."],
+      ["Nerve gliding & ergonomics",3,6,"Restore nerve mobility and reduce provocation.","numbness reducing during the day, comfortable with daily tasks","Nerve glides should not increase symptoms — gentle is the rule."],
+      ["Strength & function",6,9,"Rebuild grip and pinch strength.","grip/pinch improving, minimal daytime symptoms","Progress loading as symptoms allow."],
+      ["Return to full use",9,12,"Restore full hand function.","symptoms settled, strength near-normal","Constant numbness, weakness or muscle wasting warrants a surgical opinion — decompression is very effective."]] },
+  { re:/stroke|\bcva\b|cerebrovascular accident|hemipleg|hemipar/, label:"Stroke rehabilitation", total:52,
+    freq:"Little and often, every day — repetition drives recovery",
+    note:"Recovery is fastest in the first 3 months but continues for years — the brain stays plastic. Intensity and repetition are what drive change: high-repetition, task-specific practice beats passive treatment.",
+    ph:[
+      ["Early rehabilitation",0,4,"Safe mobility and transfers; start task practice early.","safe transfers and sitting balance, beginning task-specific practice","Falls risk is high — work with your team. Protect a weak/subluxed shoulder; support it and avoid pulling on the arm."],
+      ["Intensive task-specific practice",4,12,"High-repetition practice of the tasks you need.","improving sitting/standing balance, walking with the least support you safely can, using the affected arm in tasks","Repetition matters — aim for many quality repetitions. Avoid over-using the good side only ('learned non-use')."],
+      ["Strength, walking & arm function",12,26,"Build strength, walking capacity and hand/arm function.","walking further and more independently, improving arm/hand use in daily tasks","Keep pushing task-specific practice; spasticity and fatigue need managing alongside."],
+      ["Community reintegration & maintenance",26,52,"Restore community mobility, endurance and daily roles.","independent or assisted community mobility, meaningful daily activity","Recovery continues well past a year — keep training. Manage stroke risk factors (BP, lipids, AF, diabetes) as a priority."]] },
+  { re:/myocardial infarction|heart attack|\bcabg\b|coronary artery bypass|\bpci\b|coronary stent|angioplasty|acute coronary|angina|cardiac rehab/, label:"Cardiac rehabilitation", total:26,
+    freq:"Aerobic exercise most days (aim ≥150 min/week) + resistance 2–3×/week",
+    note:"Cardiac rehab reduces cardiovascular mortality and re-hospitalisation — it's one of the most effective things you can do. Programmes are supervised and progress by symptoms and perceived exertion, not just heart rate (especially on beta-blockers).",
+    ph:[
+      ["Early mobilisation (inpatient)",0,1,"Safe early activity and education.","walking short distances comfortably, understanding your warning symptoms","Very light activity only. STOP for chest pain, unusual breathlessness, dizziness or palpitations and seek help."],
+      ["Early outpatient recovery",1,6,"Rebuild everyday activity safely; start structured aerobic work.","comfortable walking 10–20 min, no angina with light activity, wound healed if operated","Stay at RPE 11–13 ('light to somewhat hard'). Sternal precautions apply for ~8 weeks after bypass surgery."],
+      ["Supervised aerobic & resistance training",6,14,"Build aerobic capacity and strength in a supervised programme.","30+ min of continuous moderate aerobic exercise, resistance training tolerated, no symptoms","Progress gradually under supervision; report any new chest symptoms immediately."],
+      ["Long-term maintenance",14,26,"Make it a lifelong habit and manage risk factors.","≥150 min/week of moderate activity sustained, risk factors being managed","The benefit only lasts while the exercise does — maintenance is the whole point."]] },
+  { re:/\bcopd\b|emphysema|chronic bronchitis|pulmonary rehab|pulmonary fibrosis|interstitial lung|bronchiectasis|\bild\b/, label:"Pulmonary rehabilitation", total:12,
+    freq:"Supervised sessions 2–3×/week + home walking on other days",
+    note:"Pulmonary rehab is one of the most effective treatments in respiratory medicine — it improves breathlessness, exercise capacity and quality of life more than most drugs. Breathlessness during exercise is expected and not dangerous.",
+    ph:[
+      ["Assessment & gentle start",0,2,"Establish a safe baseline and learn breathing control.","comfortable with a baseline walking distance, using pursed-lip breathing","Being breathless is expected and safe — aim for a breathlessness score of 3–4/10. Use your reliever inhaler before exercise if prescribed."],
+      ["Building aerobic capacity",2,6,"Increase walking/cycling endurance with interval work.","walking further before stopping, recovering more quickly","Interval training (walk/rest) is a good option if continuous work is too breathless."],
+      ["Strength & endurance",6,10,"Add resistance work and build endurance.","improved walking distance, tolerating resistance training","Include arm work — it helps daily tasks but can be more breathless."],
+      ["Maintenance & self-management",10,12,"Lock in gains and build a self-management plan.","sustained improvement in walking distance, confident with your action plan","Gains fade within 6–12 months if you stop — an ongoing programme is essential."]] },
+  { re:/fracture|broken (bone|arm|leg|wrist|ankle)/, label:"Fracture recovery", generic:true, total:20,
+    freq:"Short sessions several times daily while immobilised, then 4–5/week",
+    note:"Bone union typically takes ~6–8 weeks (longer in the lower limb, in smokers, and with diabetes), but restoring strength and function takes considerably longer. Follow your weight-bearing status exactly.",
+    ph:[
+      ["Protected healing",0,6,"Protect the bone; keep neighbouring joints and the rest of you moving.","fracture healing on review/X-ray, neighbouring joints staying mobile","Follow your cast/brace and weight-bearing status exactly. Move the joints above and below to prevent stiffness."],
+      ["Restore range",6,9,"Regain motion once the fracture is united.","union confirmed, range improving, swelling settling","Gentle progressive range work — the bone is united but still remodelling."],
+      ["Progressive strengthening",9,14,"Rebuild strength and load tolerance.","strength improving, normal daily function returning","Load progressively; bone gets stronger with graded loading."],
+      ["Return to full activity",14,20,"Restore full strength and return to your activities.","strength approaching the other side, confident with your activities","Impact and sport only once cleared — the bone remodels for months after union."]] }
+];
+/* Pick the most specific realistic timeline for a condition (longest, most
+   specific match wins; post-op-only plans need a surgical context). */
+function detectPlan(cond){
+  if(!cond) return null;
+  const name = (cond.name||"").toLowerCase();
+  const isPostop = state.surgery==="yes" || !!detectSurgery();
+  let best=null, bestSpec=-1, bestLen=0;
+  for(const p of REHAB_PLANS){
+    if(p.postop===true && !isPostop) continue;
+    if(p.postop===false && isPostop) continue;
+    const m = name.match(p.re); if(!m) continue;
+    const spec = p.generic ? 0 : 1;
+    const len = m[0].length;
+    if(spec>bestSpec || (spec===bestSpec && len>bestLen)){ best=p; bestSpec=spec; bestLen=len; }
+  }
+  return best;
+}
+/* Which plan phase the user is in right now, from weeks since injury/surgery. */
+function currentPlanPhase(plan){
+  if(!plan) return -1;
+  const w = weeksPostOp();
+  const wk = Number(w!=null ? w : state.weeks);
+  if(!isFinite(wk)) return -1;
+  for(let i=0;i<plan.ph.length;i++){ if(wk >= plan.ph[i][1] && wk < plan.ph[i][2]) return i; }
+  return wk >= plan.ph[plan.ph.length-1][2] ? plan.ph.length-1 : 0;
+}
 function enrichPhase(kept, protocol, p, flags){
   const target = PHASE_TARGET[p] || 6;
   if(kept.length < target){
@@ -1535,6 +1839,8 @@ function generateProgram(){
   const items = conds.map((c,ci)=>{
     const proto = window.getProtocol(c.protocol);
     const focus = detectFocus(c.name);
+    const plan = detectPlan(c);                 // realistic condition-specific timeline (may be null)
+    const curPhase = currentPlanPhase(plan);
     let cursor=1;
     const phases = proto.map((pool,p)=>{
       const len = phaseWeeks[p], wkStart=cursor, wkEnd=cursor+len-1; cursor=wkEnd+1;
@@ -1552,17 +1858,30 @@ function generateProgram(){
       let ex = R.avoid.length ? kept.filter(e=>!R.avoid.some(re=>re.test(e.n))) : kept;  // final gate (ensureMinimum/enrich)
       if(R.caution.length) ex.forEach(e=>{ if(!e.warn && !e.cautionMsg && R.caution.some(re=>re.test(e.n))) e.cautionMsg = true; });
       removed.forEach(r=>removedAll.set(r.n, r.tag));
-      return { title:tmpl.phases[p].title, goal:tmpl.phases[p].goal, weekStart:wkStart, weekEnd:wkEnd,
-        criteria:(PHASE_CRITERIA[track]||PHASE_CRITERIA.acute)[p], ex };
+      const pl = plan && plan.ph[p];            // condition-specific phase, when we have a real timeline
+      return { title: pl ? pl[0] : tmpl.phases[p].title,
+        goal: pl ? pl[3] : tmpl.phases[p].goal,
+        weekStart: pl ? pl[1] : wkStart,        // plan weeks are absolute (from injury/surgery)
+        weekEnd:   pl ? pl[2] : wkEnd,
+        criteria:  pl ? pl[4] : (PHASE_CRITERIA[track]||PHASE_CRITERIA.acute)[p],
+        restrict:  pl ? pl[5] : "",
+        current:   !!pl && p===curPhase,
+        ex };
     });
     return { name:c.name, domain:c.domain, region:c.region, supervision:c.supervision, phases,
       protocol:c.protocol, clearance:c.clearance, chronicByNature:c.chronicByNature,
       focus: focus ? focus.focus : "",
+      plan: plan ? { label:plan.label, total:plan.total, note:plan.note, freq:plan.freq } : null,
+      planPhase: curPhase,
       about:aboutText(c, track), redflags:DOMAIN_REDFLAGS[c.domain] };
   });
 
+  // the primary condition's real timeline drives the headline length & frequency
+  const primaryPlan = items.length ? items[0].plan : null;
   return {
-    track, totalWeeks:tmpl.total, sessions:sessionsText(track), load:loadGuidance(),
+    track, totalWeeks: primaryPlan ? primaryPlan.total : tmpl.total,
+    sessions: (primaryPlan && primaryPlan.freq) ? primaryPlan.freq : sessionsText(track),
+    load:loadGuidance(),
     flags, notes:[...new Set(window.notesForFlags(flags).concat(R.notes))], clearance:clearanceNeeded(flags),
     supervision:displaySupervision(flags, clearanceNeeded(flags)), items,
     removed:Array.from(removedAll, ([n,tag])=>({n,tag}))
@@ -2953,23 +3272,27 @@ function renderProgram(prog){
   prog.items.forEach((item, ci)=>{
     html += `<div class="card"><h2>${esc(item.name)}</h2>
       <p class="hint">${esc(conditionExplain(item, prog.track))}</p>
-      ${item.focus?`<div class="focusline"><b>🎯 Injury-specific focus:</b> ${esc(item.focus)}</div>`:""}`;
+      ${item.focus?`<div class="focusline"><b>🎯 Injury-specific focus:</b> ${esc(item.focus)}</div>`:""}
+      ${planLineHTML(item)}`;
+    const hasCurrent = item.phases.some(x=>x.current);
     item.phases.forEach((ph,i)=>{
       const key = ci+"-"+i;
-      const open = (i===0 || openPhases.has(key)) ? "open" : "";
+      const open = (ph.current || (i===0 && !hasCurrent) || openPhases.has(key)) ? "open" : "";
       const hiddenNames = mflags.length ? new Set(window.applyContra(ph.ex, mflags).removed.map(r=>r.n)) : null;
       const rows = ph.ex.map((e,ei)=>{
         const disp = state.homeMode ? homeSwap(e) : e;      // display copy only — real exercise unchanged
         return exItemHTML(disp, [item.region], {ci, pi:i, ei}, hiddenNames && hiddenNames.has(e.n));
       }).join("");
-      html += `<div class="phase ${open}">
+      html += `<div class="phase ${open}${ph.current?" nowphase":""}">
         <div class="head" onclick="togglePhase(this,'${key}')">
           <div class="pnum">${i+1}</div>
-          <div><div class="ptitle">${esc(ph.title)} <span class="pweeks">· Weeks ${ph.weekStart}–${ph.weekEnd}</span></div>
+          <div><div class="ptitle">${ph.current?`<span class="nowpill">📍 you are here</span> `:""}${esc(ph.title)} <span class="pweeks">· Weeks ${ph.weekStart}–${ph.weekEnd}</span></div>
           <div class="goal">${esc(ph.goal)}</div></div>
           <div class="caret">▾</div>
         </div>
-        <div class="body"><ul class="exlist">${rows}</ul>
+        <div class="body">
+          ${ph.restrict?`<div class="planrestrict"><b>⚠ At this stage:</b> ${esc(ph.restrict)}</div>`:""}
+          <ul class="exlist">${rows}</ul>
           <div class="phasetools no-print">
             <span class="phasetoolslbl">Whole phase:</span>
             <button class="addexbtn" data-ci="${ci}" data-pi="${i}">＋ Add exercise</button>
@@ -3439,6 +3762,22 @@ function adlFocusPlan(flags){
     }
   }
   return plan;
+}
+/* Condition card header: the real rehab timeline this plan follows, and where
+   the user currently sits on it. */
+function planLineHTML(item){
+  const p = item && item.plan; if(!p) return "";
+  const w = weeksPostOp();
+  const cur = Number(w!=null ? w : state.weeks);
+  const months = p.total>=39 ? ` (~${Math.round(p.total/4.35)} months)` : "";
+  const at = isFinite(cur)
+    ? ` You're around <b>week ${cur}</b>, which puts you in <b>Phase ${item.planPhase+1} of ${item.phases.length}</b>.`
+    : "";
+  return `<div class="planline">
+    <div class="planhead">📋 <b>Following the ${esc(p.label)} timeline — about ${p.total} weeks${months}</b></div>
+    <div class="plannote">${esc(p.note)}${at}</div>
+    <div class="planfoot">Phases below use the real week windows for this injury. Progress on the <b>criteria</b>, not the dates — and your surgeon's or therapist's own protocol always comes first.</div>
+  </div>`;
 }
 /* Program card: capability & confidence suggestions for each hard ADL area. */
 function adlSuggestionsCard(){

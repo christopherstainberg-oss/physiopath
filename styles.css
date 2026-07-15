@@ -170,6 +170,18 @@ input[type=range]{flex:1;accent-color:var(--brand);height:30px}
 .focusline b{color:var(--brand)}
 .sigpill{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.3px;color:#04121f;
   background:var(--brand);border-radius:999px;padding:1px 7px;vertical-align:1px}
+/* condition-specific rehab timeline (REHAB_PLANS) */
+.planline{background:rgba(62,166,255,.07);border:1px solid rgba(62,166,255,.28);border-radius:10px;
+  padding:10px 12px;margin:0 0 12px;font-size:13px;line-height:1.55}
+.planhead{color:var(--brand);margin-bottom:4px}
+.plannote{color:var(--text)}
+.planfoot{color:var(--muted);font-size:12px;margin-top:6px}
+.nowpill{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.3px;color:#04121f;
+  background:var(--ok,#37c98b);border-radius:999px;padding:1px 7px;vertical-align:1px}
+.phase.nowphase{border-color:var(--ok,#37c98b)}
+.planrestrict{background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.32);border-radius:9px;
+  padding:8px 11px;margin:0 0 10px;font-size:12.5px;line-height:1.5}
+.planrestrict b{color:var(--danger)}
 /* ADL / occupational-therapy daily-living practice */
 .adlpill{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.3px;color:#04121f;
   background:#a78bfa;border-radius:999px;padding:1px 7px;vertical-align:1px}
