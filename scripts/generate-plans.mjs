@@ -26,6 +26,12 @@ const add = (plan) => {
   const key = plan.r.toLowerCase();
   if (seen.has(key)) return;
   seen.add(key);
+  /* "(general)" entries are catch-alls for their family and must never outrank a
+     specific named plan. detectPlan ranks by LONGEST match, so an unflagged
+     catch-all can hijack: "Dupuytren's contracture" was matching the
+     "Joint contracture (general)" plan on "contracture" (11 chars) instead of its
+     own plan on "dupuytren" (9). Flagging them generic makes specificity win. */
+  if (/\(general\)\s*$/.test(plan.label)) plan.generic = true;
   out.push(plan);
 };
 
@@ -1076,7 +1082,9 @@ const POSTOP = [
   ["Quadriceps tendon graft recovery", "quadriceps (tendon )?(auto)?graft", "knee", 39, ""],
   ["Tendon transfer recovery", "tendon transfer", "limb", 26,
    "A transferred tendon has to be re-learned as well as healed — protect it early, then retrain the new movement pattern deliberately."],
-  ["Joint fusion (arthrodesis) recovery", "arthrodesis|joint fusion|fusion recovery", "joint", 26,
+  // NB: no bare "fusion recovery" here — that suffix matches ANY fusion and was
+  // stealing lumbar fusions from the spinal plan (which carries the no-BLT rule).
+  ["Joint fusion (arthrodesis) recovery", "arthrodesis|joint fusion", "joint", 26,
    "The fused joint will not move again — rehab targets the joints around it and adapting technique. Protect the fusion until union is confirmed."],
   ["Osteotomy recovery", "osteotomy", "limb", 39,
    "The bone has been deliberately cut and realigned — weight-bearing limits are strict until union (often 6–12 weeks). Follow the surgeon's protocol precisely."],

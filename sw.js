@@ -1,6 +1,6 @@
 /* PhysioPath service worker — offline-first caching + safe update flow.
    Bump CACHE version whenever app assets change so clients update. */
-const CACHE = "physiopath-v84";
+const CACHE = "physiopath-v85";
 const ASSETS = [
   "./",
   "./index.html",
