@@ -31,6 +31,12 @@ const SURG_VARIANTS = (extra = []) => ([
     note:"An open approach means more soft-tissue healing and a slower early recovery, even when the internal repair is identical." },
   { k:"revision", label:"Revision / complex", sub:"Repeat surgery or a complex case", pick:"revision|complex|redo", scale:1.4,
     note:"Revision surgery is slower and less predictable — tissue quality is poorer, and your surgeon's restrictions are usually stricter and longer." },
+  { k:"athlete", label:"Return-to-sport focus", sub:"Competitive sport is the goal", pick:"athlet|return-to-sport", scale:1.15,
+    note:"Returning to sport needs more than a healed wound: strength within ~10% of the other side and passing sport-specific testing. The extra weeks are the return-to-sport phase, not extra healing." },
+  { k:"older", label:"Older adult", sub:"Slower healing; bone & falls matter too", pick:"older adult|elderly", scale:1.25,
+    note:"Healing is slower with age and strength is lost faster during the protected phase — balance and bone-loading work get ADDED here, not dropped." },
+  { k:"decond", label:"Deconditioned / low fitness", sub:"Low baseline fitness", pick:"deconditioned|low fitness", scale:1.3,
+    note:"From a low base, build general capacity alongside the operated area — being fitter before and after surgery measurably improves outcomes." },
   ...extra
 ]);
 const SLOWHEAL = { k:"slowheal", label:"Slower healing expected", sub:"Diabetes, smoking, steroids or poor tissue", pick:"diabet|smoker", scale:1.3,

@@ -36,18 +36,47 @@ const add = (plan) => {
 };
 
 /* shared variant sets ---------------------------------------------------- */
+/* Cross-cutting variations appended to every archetype's list. Their `pick`
+   patterns deliberately mirror the CONTEXT stratifications the condition
+   catalogue already generates ("— older adult (bone & fall aware)",
+   "— return-to-sport focus", "— hypermobility-aware", …), so the right variation
+   is auto-selected for those conditions instead of defaulting to Standard. */
+const XCUT = [
+  { k:"athlete", label:"Return-to-sport focus", sub:"Competitive sport is the goal", pick:"return-to-sport|athlet", scale:1.15,
+    note:"Returning to sport needs more than being pain-free: strength within ~10% of the other side and passing sport-specific testing. The extra weeks are the return-to-sport phase, not extra healing." },
+  { k:"work", label:"Return-to-work focus", sub:"Getting back to job demands", pick:"return-to-work|ergonomic", scale:1.05,
+    note:"Match the plan to your actual job demands — lifting, sustained postures or repetition — and fix the ergonomics, or it returns with the work." },
+  { k:"older", label:"Older adult", sub:"Slower healing; bone & falls matter too", pick:"older adult|bone & fall|elderly", scale:1.25,
+    note:"Tissue heals more slowly with age and strength is lost faster during rest — so this runs longer, and balance and bone-loading work get ADDED rather than dropped." },
+  { k:"decond", label:"Deconditioned / low fitness", sub:"Starting from a low base", pick:"deconditioned|low fitness", scale:1.3,
+    note:"From a low base, build general capacity alongside the injured area, and expect the first few weeks to feel disproportionately hard — that settles." },
+  { k:"irritable", label:"Highly irritable / pain-dominant", sub:"Flares very easily", pick:"high-irritability|pain-dominant", scale:1.3,
+    note:"When symptoms flare easily, start lower and progress in smaller steps — boom-and-bust sets you back further than a slow, steady start." },
+  { k:"postimmob", label:"Post-immobilisation reconditioning", sub:"Just out of a cast, boot or sling", pick:"post-immobili", scale:1.2,
+    note:"After immobilisation expect marked stiffness and muscle loss: range first, then load. The tissue is deconditioned, so progress in small increments." },
+  { k:"hypermobile", label:"Hypermobility-aware", sub:"Very flexible joints", pick:"hypermobil", scale:1.25,
+    note:"With hypermobile joints do NOT chase more range — you already have plenty. Strength, mid-range control and proprioception are the targets, and progress is usually slower." },
+  { k:"home", label:"Home-based (minimal equipment)", sub:"No gym access", pick:"home-based|minimal equipment", scale:1.05,
+    note:"Bodyweight, bands and household objects can load tissue perfectly well — progress by adding reps, slowing the tempo, or moving to single-limb versions instead of adding weight." },
+  { k:"gym", label:"Gym-based progression", sub:"Full equipment available", pick:"gym-based", scale:0.95,
+    note:"With machines and free weights you can load and measure precisely — use that to progress by measurable increments rather than by feel." },
+  { k:"slowheal", label:"Slower healing expected", sub:"Diabetes, smoking or steroids", pick:"diabet|smoker", scale:1.4,
+    note:"Diabetes, smoking, corticosteroids and poor nutrition measurably slow healing. Stopping smoking is the single biggest thing you can change here." }
+];
 const PACE = [
   { k:"standard", label:"Standard", sub:"The usual criteria-based pathway", scale:1 },
   { k:"accelerated", label:"Accelerated", sub:"Progressing excellently, well supervised", scale:0.75,
     note:"Accelerated: only if you're progressing excellently with good control and no swelling — the criteria still decide, not the dates." },
   { k:"conservative", label:"Conservative", sub:"Slower healer, complications, or extra caution", scale:1.35,
-    note:"Conservative: suits complications, other injuries alongside, older age, smoking or diabetes — all of which genuinely slow healing." }
+    note:"Conservative: suits complications, other injuries alongside, older age, smoking or diabetes — all of which genuinely slow healing." },
+  ...XCUT
 ];
 const GRADES = (mild, mod, sev) => ([
   { k:"g1", label:"Grade I (mild)", sub:mild, pick:"grade (i|1)\\b", scale:0.45 },
   { k:"g2", label:"Grade II (moderate)", sub:mod, pick:"grade (ii|2)\\b", scale:1 },
   { k:"g3", label:"Grade III (severe)", sub:sev, pick:"grade (iii|3)\\b", scale:1.9,
-    note:"Grade III (complete) tears take substantially longer and warrant assessment — some need a surgical opinion." }
+    note:"Grade III (complete) tears take substantially longer and warrant assessment — some need a surgical opinion." },
+  ...XCUT
 ]);
 const TENDON_VARIANTS = [
   { k:"reactive", label:"Reactive (recent)", sub:"Came on in the last few weeks after a load spike", pick:"acute|early|reactive", scale:0.7,
@@ -56,7 +85,8 @@ const TENDON_VARIANTS = [
   { k:"degenerative", label:"Long-standing / degenerative", sub:"A year or more, thickened tendon", pick:"chronic|degenerat|long-?standing", scale:1.5,
     note:"Long-standing degenerative tendons are slower and need consistent heavy-slow loading for 6+ months; expect a good but gradual response." },
   { k:"postinj", label:"After a steroid injection", sub:"Injected recently", pick:"injection", scale:1.2,
-    note:"After a corticosteroid injection the tendon is temporarily weaker — pain relief is short-term and long-term outcomes are WORSE than loading alone, so avoid heavy loading for ~2 weeks then rebuild carefully." }
+    note:"After a corticosteroid injection the tendon is temporarily weaker — pain relief is short-term and long-term outcomes are WORSE than loading alone, so avoid heavy loading for ~2 weeks then rebuild carefully." },
+  ...XCUT
 ];
 
 /* ---------------- archetype builders ---------------- */
@@ -877,7 +907,7 @@ add({ r:"multi-?ligament knee|knee dislocation", label:"Multi-ligament knee inju
     b.total = 52; b.ph[2][2] = 24; b.ph[3][1] = 24; b.ph[3][2] = 52;
     b.note = "A multi-ligament knee injury is a major injury — usually surgical and always slow (9–12 months). Nerve and vascular injury must be excluded early, and stiffness is the main complication, so early protected motion matters.";
     return b; })() });
-add({ r:"pectoralis major (tear|rupture)|pec major (tear|rupture)", label:"Pectoralis major tear",
+add({ r:"pectoralis major (tear|rupture|repair)|pec major (tear|rupture|repair)", label:"Pectoralis major tear / repair",
   ...(() => { const b = A.strain({ label:"Pectoralis major tear", part:"chest", extra:"" });
     b.total = 24; b.ph = b.ph.map((f,i)=>[f[0], [0,2,6,14][i], [2,6,14,24][i], f[3], f[4], f[5]]);
     b.ph[0][5] = "A complete tear (a pop while bench-pressing, with bruising and a changed chest contour) needs an URGENT surgical opinion — repair within a few weeks gives far better results.";
@@ -1100,6 +1130,151 @@ POSTOP.forEach(([label, r, part, total, extra]) => {
   b.variants = PACE;
   add({ r, label, ...b });
 });
+
+/* ---------------- newly added procedures & conditions ---------------- */
+
+/* UCL reconstruction — the throwing athlete's operation */
+add({ r:"tommy john|\\bucl\\b reconstruction|ulnar collateral ligament reconstruction|elbow \\bucl\\b (reconstruction|repair)|ucl (repair|internal brace)", label:"UCL reconstruction (Tommy John)", total:52,
+  freq:"Daily home work; the interval throwing programme is the backbone from ~4 months",
+  note:"A tendon graft replaces the torn ulnar collateral ligament on the inner elbow. The graft has to ligamentise over months, and the thing that actually returns you to sport is the INTERVAL THROWING PROGRAMME — a structured, measured build of distance then intensity. Rushing it is the classic cause of failure. Return to competitive pitching is typically 12–18 months.",
+  variants:[
+    { k:"standard", label:"Standard reconstruction", sub:"Graft reconstruction (Jobe/docking)", scale:1 },
+    { k:"brace", label:"UCL repair + internal brace", sub:"Repair augmented with tape — younger, acute tears", pick:"internal brace|repair", scale:0.65,
+      note:"An internal-brace repair suits a young athlete with a good-quality acute avulsion — return is roughly 6–9 months rather than 12–18, but only if the tissue quality justified the repair." },
+    { k:"revision", label:"Revision", sub:"Repeat reconstruction", pick:"revision", scale:1.3,
+      note:"Revision UCL surgery has markedly lower return-to-same-level rates — the throwing programme must be even more conservative." },
+    { k:"nonthrower", label:"Non-throwing athlete", sub:"Elbow stability for daily life/other sport", pick:"non-throw", scale:0.7,
+      note:"Without throwing demands the timeline is much shorter — the long tail exists only to rebuild throwing." },
+    ...XCUT ],
+  ph:[
+    ["Protect the graft & early motion",0,6,"Protect the reconstruction while preventing elbow stiffness.","full elbow extension regained, pain settling, brace progressing per protocol","Brace as directed. The elbow stiffens faster than almost any joint, so getting extension back early matters — but NO valgus (inward) stress on the elbow and no throwing of any kind."],
+    ["Range, shoulder & scapular base",6,16,"Full elbow motion, and build the shoulder/scapular base throwing depends on.","full pain-free elbow range, good shoulder and scapular strength, no medial elbow pain","Still no throwing. Most throwing problems start at the shoulder, hips and trunk — this is the window to fix them."],
+    ["Strength, kinetic chain & pre-throwing",16,24,"Build whole-body strength and start plyometric/pre-throwing drills.","full strength, pain-free plyometric drills, clean mechanics on assessment","No throwing until your surgeon clears it — usually ~4 months. Pain on the inner elbow at any point means stop and be reviewed."],
+    ["Interval throwing & return to competition",24,52,"Progress the interval throwing programme to full competitive pitching.","completing the interval throwing programme pain-free at each stage, then mound work, then velocity","Follow the interval programme exactly — build DISTANCE first, then intensity, never both at once. Return to competitive pitching is typically 12–18 months; pitch counts and rest days protect the graft afterwards."]] });
+
+/* Broström — ankle lateral ligament reconstruction */
+add({ r:"brostr|lateral ankle ligament (reconstruction|repair)|ankle ligament (reconstruction|repair)|\\batfl\\b (repair|reconstruction)", label:"Ankle lateral ligament reconstruction (Broström)", total:26,
+  freq:"Short frequent sessions early, then balance work daily",
+  note:"The stretched lateral ankle ligaments are tightened and repaired, usually reinforced with local tissue. The repair is protected in a boot while it heals, and then BALANCE and peroneal strength are what stop it stretching out again — this operation fails when the rehab stops at 'pain-free'.",
+  variants:[
+    { k:"standard", label:"Standard Broström", sub:"Repair with local reinforcement", scale:1 },
+    { k:"augmented", label:"Augmented / internal brace", sub:"Repair reinforced with tape or graft", pick:"internal brace|augment|graft", scale:0.85,
+      note:"An augmented repair is more robust early and often allows faster weight-bearing — but the balance work is identical and just as essential." },
+    { k:"revision", label:"Revision / hyperlax", sub:"Failed repair, or very lax tissue", pick:"revision|hyperlax|hypermobil", scale:1.3,
+      note:"Poor-quality tissue or a failed repair usually needs a graft reconstruction and a longer protected phase." },
+    ...XCUT ],
+  ph:[
+    ["Protect the repair",0,6,"Protect the repair in a boot and control swelling.","wound healed, swelling settling, weight-bearing progressing per your surgeon","Boot/cast and weight-bearing exactly as directed. NO inversion (rolling the foot inwards) — that is the movement the repair was made to resist."],
+    ["Out of the boot: range & gait",6,10,"Restore range and normal walking.","full weight-bearing out of the boot, walking without a limp, range returning","Regain dorsiflexion and plantarflexion first; inversion range is deliberately regained LAST and never forced."],
+    ["Peroneal strength & balance",10,16,"Build peroneal strength and single-leg balance — the real protection.","good single-leg balance including eyes closed, strong resisted eversion, comfortable calf raises","Balance training is the part that prevents recurrence. Don't stop when it stops hurting."],
+    ["Return to sport",16,26,"Restore hopping, cutting and sport-specific agility.","confident hopping and cutting, balance and strength symmetrical","Return to cutting sport around 4–6 months. Consider a brace or taping for high-risk sport for the first season, and keep the balance work going."]] });
+
+/* Trapeziectomy — thumb base arthritis surgery */
+add({ r:"trapeziectomy|thumb \\bcmc\\b arthroplasty|basal thumb (surgery|arthroplasty)|thumb base (surgery|arthroplasty)", label:"Trapeziectomy (thumb base surgery)", total:26,
+  freq:"Little and often — short hand sessions several times daily",
+  note:"The arthritic trapezium bone at the base of the thumb is removed (sometimes with a tendon interposition). Pain relief is usually very good, but grip and pinch strength take a long time to return — often 6–12 months — and can lag even when pain has gone. Scar and thumb stiffness are the things rehab prevents.",
+  variants:[
+    { k:"standard", label:"Trapeziectomy", sub:"Bone removed, with or without interposition", scale:1 },
+    { k:"lrti", label:"With ligament reconstruction (LRTI)", sub:"A tendon is used to fill and stabilise the gap", pick:"lrti|ligament reconstruction|interposition", scale:1.15,
+      note:"With an LRTI the borrowed tendon needs protecting, so splinting is longer and pinch loading is delayed further." },
+    { k:"implant", label:"Joint replacement / implant", sub:"An implant instead of removal", pick:"implant|replacement|arthroplasty", scale:0.85,
+      note:"Implant options often restore strength faster, but carry a risk of loosening — follow your surgeon's loading limits." },
+    { k:"fusion", label:"Thumb CMC fusion", sub:"The joint is fused instead", pick:"fusion|arthrodesis", scale:1.2,
+      note:"A fusion trades movement for strength and durability — the thumb will not move at that joint again, and loading waits for bony union." },
+    ...XCUT ],
+  ph:[
+    ["Splint & protect",0,4,"Protect the reconstruction and keep the other joints moving.","wound healed, splint tolerated, fingers and shoulder moving fully","Splint/cast exactly as directed. NO pinching or gripping. Move your fingers, elbow and shoulder daily — stiffness there is an avoidable complication."],
+    ["Out of the splint: motion & scar",4,8,"Restore thumb motion and settle the scar.","thumb able to reach the base of the little finger, scar softening, swelling controlled","Gentle motion only — still no strong pinch. Scar and pillar tenderness at the thumb base is normal and can last months."],
+    ["Progressive strengthening",8,16,"Rebuild pinch and grip.","pinch and grip improving, using the hand for daily tasks","Build pinch loading very gradually; it's the last thing to return and pushing early causes pain rather than progress."],
+    ["Return to full function",16,26,"Restore strength for your work and hobbies.","grip and pinch approaching the other side, comfortable with your usual tasks","Grip and pinch commonly take 6–12 months to plateau. Pain relief usually arrives long before strength does — that's expected, not a failure."]] });
+
+/* Proximal hamstring repair */
+add({ r:"proximal hamstring (repair|reattach|reconstruction)|hamstring avulsion repair|hamstring reattachment|ischial (avulsion|tuberosity) repair", label:"Proximal hamstring repair", total:39,
+  freq:"Daily; brace and loading strictly per your surgeon",
+  note:"The hamstring tendons are reattached to the sitting bone (ischial tuberosity) with anchors. The whole early plan exists to stop the repair pulling off: any position that stretches the hamstring — hip bent with the knee straight — is the danger, and that includes ordinary things like sitting on a low seat or bending to pick something up.",
+  variants:[
+    { k:"acute", label:"Acute repair", sub:"Repaired soon after the injury", scale:1 },
+    { k:"chronic", label:"Chronic / delayed repair", sub:"Repaired months after the tear", pick:"chronic|delayed|retract", scale:1.25,
+      note:"A retracted, chronic tear often needs the tendon mobilised or grafted, and the sciatic nerve freed — the protected phase is longer and nerve symptoms are more common." },
+    { k:"partial", label:"Partial / endoscopic repair", sub:"A partial tear or keyhole repair", pick:"partial|endoscop", scale:0.8 },
+    ...XCUT ],
+  ph:[
+    ["Protect the repair",0,6,"Protect the reattachment; avoid any hamstring stretch.","wound healed, following brace and weight-bearing limits, no stretch felt at the sitting bone","Brace and weight-bearing exactly as directed. NO hip flexion with the knee straight — that stretches the repair off the bone. Avoid low seats, bending forward, and long sitting. Do not stretch the hamstring at all."],
+    ["Wean the brace & restore range",6,12,"Come out of the brace and restore range gradually.","walking without aids or a limp, hip and knee range returning without a pulling sensation at the sitting bone","Range comes back gradually and never by forcing. Still no loaded hamstring lengthening."],
+    ["Progressive strengthening",12,24,"Rebuild hamstring strength from short to long lengths.","good hamstring strength through mid-range, no pain at the sitting bone with loading","Load short-range first, then lengthen. Eccentric and long-length work comes LAST and only once pain-free."],
+    ["Return to running & sport",24,39,"Restore speed and sport-specific loading.","pain-free sprinting, hamstring strength near-symmetrical, confident at speed","Return to sport is typically 6–9 months. Sitting tolerance can stay uncomfortable for a long time; persistent nerve symptoms down the leg should be reviewed."]] });
+
+/* Nerve graft / transfer */
+add({ r:"nerve (graft|transfer|repair)|neurorrhaphy|brachial plexus (reconstruction|repair|surgery)", label:"Nerve graft / transfer", total:52,
+  freq:"Daily — short, frequent, motor-relearning sessions",
+  note:"A repaired or re-routed nerve regrows at roughly 1 mm a day — about an inch a month — so recovery is measured in months to years, not weeks, and the muscle has to survive long enough to be re-innervated. With a nerve TRANSFER you also have to re-learn the movement, because a nerve that used to do one job is now doing another.",
+  variants:[
+    { k:"repair", label:"Direct repair", sub:"Nerve ends stitched together", pick:"repair|neurorrhaphy", scale:0.85 },
+    { k:"graft", label:"Nerve graft", sub:"A gap bridged with donor nerve", pick:"graft", scale:1 },
+    { k:"transfer", label:"Nerve transfer", sub:"A working nerve re-routed to the dead one", pick:"transfer", scale:1.05,
+      note:"After a transfer the brain must relearn the movement: you initially trigger the new muscle by doing the DONOR nerve's old action, then gradually uncouple it. That motor re-education is the whole rehab." },
+    { k:"plexus", label:"Brachial plexus reconstruction", sub:"Major plexus surgery", pick:"plexus", scale:1.3,
+      note:"Plexus reconstruction is the longest of these — meaningful recovery takes 1–3 years, and preventing contracture and shoulder pain in the meantime is essential." },
+    ...XCUT ],
+  ph:[
+    ["Protect the repair",0,6,"Protect the nerve repair while keeping joints mobile.","wound healed, following any positioning restrictions, full passive joint range maintained","Follow the positioning limits exactly — tension on a fresh nerve repair pulls it apart. Move every joint passively DAILY: a contracture will waste the recovery even if the nerve regrows."],
+    ["Maintain the target: range & skin care",6,16,"Keep the joints supple and the skin safe while the nerve grows.","full passive range maintained, no contracture, no skin damage in the numb area","The area is numb — check the skin daily for burns, pressure and cuts, because you will not feel them. Splint as directed to hold a functional position."],
+    ["Re-innervation & motor re-education",16,36,"Retrain the muscle as the nerve reaches it — this is the active phase.","a flicker of voluntary contraction appearing, then progressing to movement against gravity","Recovery follows the nerve's growth, not your effort — but the relearning does depend on you. For a transfer, start by using the donor's old action, then wean off it."],
+    ["Strength & function",36,52,"Build strength and put the movement back into real tasks.","functional strength returning, using the limb in daily tasks","Recovery keeps improving for 1–2 years or more. If no contraction appears in the expected window, get reviewed — a tendon transfer may be the better option."]] });
+
+/* Limb lengthening / external fixation */
+add({ r:"limb lengthening|external fixation|ilizarov|bone transport|circular frame|hexapod", label:"Limb lengthening / external fixation", total:52,
+  freq:"Daily — range work several times a day is non-negotiable",
+  note:"Bone is cut and then slowly pulled apart (about 1 mm a day) so new bone forms in the gap — distraction, then a much longer consolidation phase while that new bone hardens. The muscles and nerves are being stretched the whole time, so JOINT CONTRACTURE is the main thing that ruins the result, and pin-site infection is the main complication.",
+  variants:[
+    { k:"lengthening", label:"Limb lengthening", sub:"Bone lengthened over a frame or nail", scale:1 },
+    { k:"internal", label:"Internal lengthening nail", sub:"A magnetic nail instead of a frame", pick:"nail|internal|precice", scale:0.85,
+      note:"An internal nail avoids pin sites and is far more comfortable, but the bone biology is identical — consolidation still takes roughly twice as long as the lengthening did." },
+    { k:"deformity", label:"Deformity correction", sub:"Angulation corrected rather than lengthened", pick:"deformity|correction|hexapod", scale:0.9 },
+    { k:"transport", label:"Bone transport (defect/infection)", sub:"A segment moved to fill a gap", pick:"transport|defect|infect|non-?union", scale:1.4,
+      note:"Bone transport for a defect or infection is the longest and most demanding of these — frame time is often a year or more." },
+    ...XCUT ],
+  ph:[
+    ["Latency & starting distraction",0,4,"Let the cut settle, start the lengthening, and protect range from day one.","distraction started as scheduled, pin sites clean, joint range maintained","Pin-site care exactly as taught — infection is the commonest complication. Start range work NOW: the muscles are about to be stretched daily and they will contract if you let them."],
+    ["Distraction phase",4,16,"Lengthen at the prescribed rate while fighting to keep range.","lengthening on schedule, full joint range preserved, walking with your allowed weight-bearing","This is the hard part. Range work several times daily is non-negotiable — an equinus (tight calf) or knee contracture developing here can undo the whole operation. Report new numbness or severe pain: the nerves are being stretched too."],
+    ["Consolidation",16,36,"Let the new bone harden while rebuilding strength.","X-rays showing the new bone consolidating, frame removed when your surgeon confirms it","Consolidation takes roughly twice as long as the lengthening did — this is the phase people underestimate. Weight-bearing progresses only on your surgeon's say-so."],
+    ["Rebuild & return to activity",36,52,"Rebuild strength and normal function once the bone is solid.","full weight-bearing without the frame, strength and gait normalising","The new bone keeps maturing for months after the frame comes off — build impact slowly and expect refracture risk to be real early on."]] });
+
+/* Acute compartment syndrome — post-fasciotomy rehab (the acute event is an emergency) */
+add({ r:"acute compartment syndrome|fasciotomy|post-?fasciotomy", label:"Acute compartment syndrome (post-fasciotomy)", total:26,
+  freq:"Daily; range work from the start, strength once wounds are closed",
+  note:"⛔ Acute compartment syndrome itself is a SURGICAL EMERGENCY, not a rehab problem: pain far out of proportion to the injury, pain on passive stretch of the muscles, and a tight swollen limb mean you need emergency assessment IMMEDIATELY — muscle dies within hours. This plan is for recovery AFTER the fasciotomy that released it. How much function returns depends mostly on how quickly it was released.",
+  variants:[
+    { k:"standard", label:"Released early, good recovery", sub:"Decompressed promptly", scale:1 },
+    { k:"delayed", label:"Delayed release / muscle damage", sub:"Some muscle was lost", pick:"delayed|late|contracture|volkmann", scale:1.6,
+      note:"When release was delayed, dead muscle scars and shortens (a Volkmann-type contracture) and nerves may not fully recover — the plan becomes contracture prevention, splinting and adapting, and tendon transfers are sometimes needed later." },
+    { k:"graft", label:"With skin grafting", sub:"Wounds closed with a graft", pick:"graft|skin", scale:1.2,
+      note:"Grafted fasciotomy wounds need the graft protected and then scar managed for months — the scar contracts and can limit the joint by itself." },
+    ...XCUT ],
+  ph:[
+    ["Wound care & protect range",0,4,"Protect the open/closing wounds while preserving joint range.","wounds closing or grafted and healing, full passive range maintained, no new nerve symptoms","Wound care leads here. Move every joint through range daily even while wounds are open — this is when contracture sets in. Splint in a functional position; report new numbness, weakness or worsening pain urgently."],
+    ["Range, scar & early activation",4,10,"Restore range as wounds heal and start gentle activation.","wounds healed, scar softening, active movement returning in the surviving muscle","Scar over a fasciotomy is broad and adherent — massage and sustained stretch once healed. Numb areas need daily skin checks."],
+    ["Progressive strengthening",10,18,"Rebuild what the muscle can do and work around what it can't.","strength improving in the surviving muscle, walking/using the limb functionally","Progress by function. Some muscle may not recover — an orthosis or a later tendon transfer can substitute, and that's a normal part of this recovery."],
+    ["Return to activity & adaptation",18,26,"Restore function, adapting to any permanent deficit.","independent with your daily activities, a realistic long-term plan agreed","Outcome tracks how fast it was released. Persistent foot drop or a fixed contracture warrants a surgical opinion — braces and tendon transfers restore a lot of function."]] });
+
+/* Exertional rhabdomyolysis */
+add({ r:"rhabdomyolys|exertional rhabdo", label:"Exertional rhabdomyolysis", total:16,
+  freq:"Nothing until cleared; then a slow, supervised graded return",
+  note:"⛔ Rhabdomyolysis is a MEDICAL EMERGENCY when active: severe muscle pain and swelling with dark, cola-coloured urine after intense exercise means go to an emergency department NOW — muscle breakdown products can cause kidney failure. This plan is the graded return AFTER you have been assessed, treated and cleared. Returning too fast is the classic cause of a second episode.",
+  variants:[
+    { k:"standard", label:"Single episode, recovered", sub:"Cleared to return", scale:1 },
+    { k:"severe", label:"Severe (kidney involvement)", sub:"Needed hospital treatment for the kidneys", pick:"severe|renal|kidney|dialysis|\\baki\\b", scale:1.6,
+      note:"With kidney involvement, return is slower and must be supervised medically — bloodwork guides progression, not how you feel." },
+    { k:"recurrent", label:"Recurrent episodes", sub:"More than once", pick:"recurrent|repeat|second", scale:1.8,
+      note:"Recurrent rhabdomyolysis needs investigation for an underlying cause — a metabolic or muscle disorder, sickle-cell trait, or a drug/supplement contribution. Do not simply retrain harder." },
+    { k:"sickle", label:"Sickle-cell trait", sub:"Known sickle-cell trait", pick:"sickle", scale:1.5,
+      note:"With sickle-cell trait, exertional collapse and rhabdomyolysis risk is genuinely higher: avoid all-out efforts when unacclimatised, dehydrated, at altitude or unwell, and build heat acclimatisation deliberately." },
+    ...XCUT ],
+  ph:[
+    ["Medical recovery — no training",0,2,"Recover medically. This phase is not a training phase.","cleared by your doctor, blood markers (CK) returning toward normal, urine normal colour","DO NOT train. Rest and hydration; return only when your doctor says the bloodwork allows. Dark urine, severe muscle pain or reduced urine output = emergency department."],
+    ["Light aerobic reintroduction",2,6,"Reintroduce light activity well below your previous level.","tolerating light activity with normal next-day soreness and normal urine colour","Start MUCH lighter than feels necessary — walking and easy cycling. Avoid heat, dehydration and any all-out effort. Any dark urine or unusual muscle pain: stop and be reviewed."],
+    ["Graded strength & load",6,12,"Rebuild strength gradually, watching how you recover.","tolerating progressive resistance work with normal recovery, no dark urine","Avoid high-volume eccentric work (the classic trigger), avoid training when unwell or sleep-deprived, and be cautious with supplements and stimulants."],
+    ["Return to full training",12,16,"Return to full training with the risk factors managed.","back to full training with normal recovery, hydration and heat plan in place","Rebuild heat acclimatisation deliberately. Most single episodes return fully; recurrence means stop and investigate rather than push."]] });
 
 /* ---------------- generic archetype catch-alls ----------------
    Marked generic:true, so ANY specific plan above (or a curated plan in app.js)

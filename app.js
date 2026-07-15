@@ -1975,14 +1975,50 @@ const REHAB_PLANS = [
    progressing. Every plan therefore offers several variations. Plans without
    their own `variants` fall back to these pace options. `scale` stretches the
    phase week-boundaries (so the phases stay contiguous and the total follows). */
+/* Cross-cutting options, appended to EVERY plan's variation list by
+   planVariants() — including curated plans that already define their own — so a
+   plan's clinical axis (grade, approach, graft) and the person's context both
+   stay selectable. The `pick` patterns mirror the context stratifications the
+   condition catalogue generates ("— older adult (bone & fall aware)",
+   "— return-to-sport focus", "— hypermobility-aware", …), so those conditions
+   auto-select the right variation instead of defaulting to Standard. */
+const XCUT_VARIANTS = [
+  { k:"athlete", label:"Return-to-sport focus", sub:"Competitive sport is the goal", pick:/return-to-sport|athlet/i, scale:1.15,
+    note:"Returning to sport needs more than being pain-free: strength within ~10% of the other side and passing sport-specific testing. The extra weeks are the return-to-sport phase, not extra healing." },
+  { k:"work", label:"Return-to-work focus", sub:"Getting back to job demands", pick:/return-to-work|ergonomic/i, scale:1.05,
+    note:"Match the plan to your actual job demands — lifting, sustained postures or repetition — and fix the ergonomics, or it returns with the work." },
+  { k:"older", label:"Older adult", sub:"Slower healing; bone & falls matter too", pick:/older adult|bone & fall|elderly/i, scale:1.25,
+    note:"Tissue heals more slowly with age and strength is lost faster during rest — so this runs longer, and balance and bone-loading work get ADDED rather than dropped." },
+  { k:"decond", label:"Deconditioned / low fitness", sub:"Starting from a low base", pick:/deconditioned|low fitness/i, scale:1.3,
+    note:"From a low base, build general capacity alongside the injured area, and expect the first few weeks to feel disproportionately hard — that settles." },
+  { k:"irritable", label:"Highly irritable / pain-dominant", sub:"Flares very easily", pick:/high-irritability|pain-dominant/i, scale:1.3,
+    note:"When symptoms flare easily, start lower and progress in smaller steps — boom-and-bust sets you back further than a slow, steady start." },
+  { k:"postimmob", label:"Post-immobilisation reconditioning", sub:"Just out of a cast, boot or sling", pick:/post-immobili/i, scale:1.2,
+    note:"After immobilisation expect marked stiffness and muscle loss: range first, then load. The tissue is deconditioned, so progress in small increments." },
+  { k:"hypermobile", label:"Hypermobility-aware", sub:"Very flexible joints", pick:/hypermobil/i, scale:1.25,
+    note:"With hypermobile joints do NOT chase more range — you already have plenty. Strength, mid-range control and proprioception are the targets, and progress is usually slower." },
+  { k:"home", label:"Home-based (minimal equipment)", sub:"No gym access", pick:/home-based|minimal equipment/i, scale:1.05,
+    note:"Bodyweight, bands and household objects load tissue perfectly well — progress by adding reps, slowing the tempo or moving to single-limb versions instead of adding weight." },
+  { k:"slowheal", label:"Slower healing expected", sub:"Diabetes, smoking or steroids", pick:/diabet|smoker/i, scale:1.4,
+    note:"Diabetes, smoking, corticosteroids and poor nutrition measurably slow healing. Stopping smoking is the single biggest thing you can change here." }
+];
 const PACE_VARIANTS = [
   { k:"standard", label:"Standard", sub:"The usual criteria-based pathway", scale:1 },
   { k:"accelerated", label:"Accelerated", sub:"Younger/fitter, progressing excellently, well supervised", scale:0.75,
     note:"Accelerated: only appropriate if you're progressing excellently with good control and no swelling — tissue biology doesn't speed up, so the criteria still decide, not the dates." },
   { k:"conservative", label:"Conservative", sub:"Slower healer, complications, or extra caution", scale:1.35,
-    note:"Conservative: a slower pathway suits complications, other injuries alongside, older age, smoking or diabetes — all of which genuinely slow tissue healing." }
+    note:"Conservative: a slower pathway suits complications, other injuries alongside, older age, smoking or diabetes — all of which genuinely slow tissue healing." },
+  ...XCUT_VARIANTS
 ];
-function planVariants(plan){ return (plan && plan.variants) || PACE_VARIANTS; }
+/* A plan's own list (its clinical axis — grade, approach, graft type) PLUS the
+   cross-cutting context options, so both stay selectable. Deduped by key, since
+   the generated plans already carry the cross-cutting set in their data. */
+function planVariants(plan){
+  const own = plan && plan.variants;
+  if(!own || !own.length) return PACE_VARIANTS;
+  const have = new Set(own.map(v=>v.k));
+  return own.concat(XCUT_VARIANTS.filter(v=>!have.has(v.k)));
+}
 /* The user's explicit choice wins; otherwise infer the variation from the
    diagnosis itself (e.g. "Hamstring strain (grade II)" → Grade II, "Revision
    knee replacement" → revision), falling back to the first option. */

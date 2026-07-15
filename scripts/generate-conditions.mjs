@@ -227,6 +227,7 @@ const EXTRA_JOINT = [
     "Tibial tubercle transfer with MPFL reconstruction recovery",
     "Trochleoplasty recovery","Sulcus-deepening trochleoplasty (Dejour) recovery",
     "Trochleoplasty with MPFL reconstruction recovery","Trochlear dysplasia (patellar instability)"]],
+  ["general_msk","Systemic",["Exertional rhabdomyolysis recovery","Acute compartment syndrome (post-fasciotomy) recovery"]],
   ["ankle","Ankle",["Deltoid ligament sprain","Anterior ankle impingement","Posterior ankle impingement",
     "Ankle arthroscopy recovery","Lateral ligament reconstruction recovery","Sinus tarsi syndrome"]],
   ["foot","Foot",["Plantar plate injury","Lisfranc injury recovery","Extensor tendinopathy of the foot",
