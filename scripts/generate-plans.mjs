@@ -1071,7 +1071,7 @@ const POSTOP = [
    "A bone-block stabilisation — the graft must heal to bone before loading. Follow your surgeon's sling and range limits; return to contact sport is usually ~6 months."],
   ["Patellar tendon (BPTB) graft recovery", "patellar tendon graft|\\bbptb\\b|bone-?patellar", "knee", 39,
    "A BPTB graft means anterior knee pain and kneeling discomfort are common early — the graft itself is strong, but expect the donor site to grumble. Quad recovery is slower than with a hamstring graft."],
-  ["Hamstring graft recovery", "hamstring (autograft|graft)", "knee", 39,
+  ["Hamstring graft ACL recovery", "hamstring (auto)?graft.*\\bacl\\b|\\bacl\\b.*hamstring (auto)?graft|hamstring (auto)?graft.*cruciate", "knee", 39,
    "With a hamstring graft, hamstring strength lags for months — deep-knee-flexion hamstring strength especially. Don't rush eccentric hamstring loading in the first 12 weeks."],
   ["Quadriceps tendon graft recovery", "quadriceps (tendon )?(auto)?graft", "knee", 39, ""],
   ["Tendon transfer recovery", "tendon transfer", "limb", 26,
