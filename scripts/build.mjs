@@ -13,6 +13,7 @@ await import("./generate-medications.mjs");
 await import("./generate-surgeries.mjs");
 await import("./generate-sports.mjs");
 await import("./generate-activities.mjs");
+await import("./generate-plans.mjs");
 await import("./generate-adls.mjs");
 await import("./generate-adl-exercises.mjs");
 await import("./generate-coach-kb.mjs");

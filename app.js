@@ -1972,6 +1972,19 @@ function setPlanVariant(label, k){
   state.program = generateProgram(); save();
   renderProgram(state.program);
 }
+/* The generated long-tail timelines (data/plans.js) — archetype × body site,
+   same shape as REHAB_PLANS. `r`/`pick` arrive as regex SOURCE strings and are
+   compiled once here. Curated plans are listed first so they win ties. */
+let _genPlans = null;
+function generatedPlans(){
+  if(_genPlans) return _genPlans;
+  _genPlans = (window.PLAN_DEFS||[]).map(d=>({
+    ...d, re:new RegExp(d.r, "i"),
+    variants: d.variants ? d.variants.map(v=>({ ...v, pick: v.pick ? new RegExp(v.pick, "i") : undefined })) : undefined
+  }));
+  return _genPlans;
+}
+function allPlans(){ return REHAB_PLANS.concat(generatedPlans()); }
 /* Pick the most specific realistic timeline for a condition (longest, most
    specific match wins; post-op-only plans need a surgical context). */
 function detectPlan(cond){
@@ -1979,7 +1992,7 @@ function detectPlan(cond){
   const name = (cond.name||"").toLowerCase();
   const isPostop = state.surgery==="yes" || !!detectSurgery();
   let best=null, bestSpec=-1, bestLen=0;
-  for(const p of REHAB_PLANS){
+  for(const p of allPlans()){
     if(p.postop===true && !isPostop) continue;
     if(p.postop===false && isPostop) continue;
     const m = name.match(p.re); if(!m) continue;
