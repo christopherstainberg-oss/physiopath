@@ -251,7 +251,16 @@ const SURGERIES = CURATED_SURGERIES.concat(
   (window.SURGERY_DB||[]).filter(s=>!CURATED_SURGERIES.some(c=>c.id===s.id))
 );
 
+let _dsCache = { key:null, val:null };
 function detectSurgery(){
+  // memoised: keyed on the only inputs that can change the answer
+  const _k = (state.surgeryType||"") + "|" + (state.condIds||[]).join(",");
+  if(_dsCache.key === _k) return _dsCache.val;
+  const _v = _detectSurgeryUncached();
+  _dsCache = { key:_k, val:_v };
+  return _v;
+}
+function _detectSurgeryUncached(){
   if(state.surgeryType && state.surgeryType!=="auto"){
     if(state.surgeryType==="other") return OTHER_SURGERY;
     const s = SURGERIES.find(x=>x.id===state.surgeryType); if(s) return s;
@@ -286,7 +295,40 @@ const state = {
   log:[], apiKey:"", apiModel:"claude-opus-4-8"
 };
 const MED_FILTERABLE = ["fluoroquinolone","anticoagulant","antiplatelet","opioid","sedative","muscle_relaxant","gabapentinoid","antipsychotic"];
+/* ---------- on-demand data loading ----------
+   The app shipped 33.5MB of JS at boot while the first screen needs ~78KB of it.
+   These four datasets (medications 3.5MB, sports, activities, coach-kb 11.5MB —
+   ~15.8MB, 47% of the payload) aren't touched until much later steps, so they're
+   fetched when the step that needs them opens. Everything that reads them was
+   already guarded on `window.X` being absent, which is what makes this safe. */
+const _dataP = {};
+function loadData(file){
+  if(_dataP[file]) return _dataP[file];
+  return _dataP[file] = new Promise(res=>{
+    const el = document.createElement("script");
+    el.src = "data/" + file; el.async = false;
+    el.onload = () => res(true);
+    el.onerror = () => { console.warn("data load failed:", file); res(false); };
+    document.head.appendChild(el);
+  });
+}
 const MEDMAP = new Map();
+/* Pull a lazy dataset in and re-wire whatever depends on it. Safe to call often. */
+function ensureMedData(){
+  return loadData("medications.js").then(()=>{
+    if(window.MEDICATIONS) window.MEDICATIONS.forEach(m=>MEDMAP.set(m.id,m));
+    if(typeof renderSelectedMeds==="function") renderSelectedMeds();
+  });
+}
+function ensureDetailsData(){
+  return Promise.all([loadData("activities.js"), loadData("sports.js")]).then(()=>{
+    if(typeof setupAutocomplete!=="function") return;
+    setupAutocomplete("activitySearch","activityResults","activityChips", window.ACTIVITIES, "returnActivities",
+      { onChange:()=>{ if(state.program) state.program = generateProgram(); save(); } });
+    setupAutocomplete("sportSearch","sportResults","sportChips", window.SPORTS, "returnSports",
+      { onChange:()=>{ if(state.program){ state.program = generateProgram(); save(); } } });
+  });
+}
 function selectedMeds(){ return (state.medIds||[]).map(id=>MEDMAP.get(id)).filter(Boolean); }
 
 /* medication class → exercise consideration (education, not prescribing advice) */
@@ -4354,6 +4396,7 @@ function suggestedQuestions(){
   return [...front, ...s];
 }
 function initCoach(){
+  loadData("coach-kb.js");   // 11.5MB — only the Coach step needs it
   $("#chatlog").innerHTML=""; chatHistory=[]; updateCoachMode();
   const conds=selectedConditions();
   const intro = conds.length ? `I can see you're working on: **${conds.map(c=>c.name).join(", ")}**. ` : "";
@@ -4375,6 +4418,7 @@ function goStep(n){
   if(act&&act.scrollIntoView) try{ act.scrollIntoView({inline:"center",block:"nearest",behavior:"smooth"}); }catch(e){}
   window.scrollTo({top:0,behavior:"smooth"});
   if(n===1) initClinician();                                  // Clinician section (now right after History)
+  if(n===3) ensureDetailsData();      // sports/activities only matter from Details on
   if(n===3) renderPrecautions();                              // Precautions card lives in Details — keep it current
   if(n===4 && state.program) renderProgram(state.program);    // Program reflects precaution/detail/clinician changes
   if(n===5){ renderProgress(); renderHealth(); }
@@ -4907,6 +4951,11 @@ function runMedSearch(){
 }
 function initMeds(){
   if(window.MEDICATIONS) window.MEDICATIONS.forEach(m=>MEDMAP.set(m.id,m));
+  // 3.5MB — fetched on first contact with the medication search, or on load if the
+  // user already has meds saved (their chips can't resolve without the map).
+  const _ms = $("#medSearch");
+  if(_ms) _ms.addEventListener("focus", ensureMedData, { once:true });
+  if((state.medIds||[]).length) ensureMedData();
   const inp=$("#medSearch"); if(!inp) return;
   let t; inp.oninput=()=>{ clearTimeout(t); t=setTimeout(runMedSearch,120); };
   renderSelectedMeds();

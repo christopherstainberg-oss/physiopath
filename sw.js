@@ -1,23 +1,17 @@
 /* PhysioPath service worker — offline-first caching + safe update flow.
    Bump CACHE version whenever app assets change so clients update. */
-const CACHE = "physiopath-v97";
+const CACHE = "physiopath-v99";
+/* Precache the SHELL only. The data files total ~33MB and the install used to
+   block on all of them, so a first visit downloaded everything before the app was
+   usable offline. The fetch handler below is cache-first and caches same-origin
+   successes, so each dataset is cached the first time it's actually used. */
 const ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
-  "./data/conditions.js",
   "./data/protocols.js",
-  "./data/exercises.js",
-  "./data/medications.js",
-  "./data/surgeries.js",
-  "./data/sports.js",
-  "./data/activities.js",
-  "./data/plans.js",
-  "./data/surgery-plans.js",
   "./data/adls.js",
-  "./data/adl-exercises.js",
-  "./data/coach-kb.js",
   "./manifest.webmanifest",
   "./icons/icon.svg",
   "./icons/icon-180.png",
