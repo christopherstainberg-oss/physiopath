@@ -520,7 +520,10 @@ function hrZones(){
 
 // Objective-data-derived engine flags (baked into the program through gatherFlags).
 function vitalFlags(){
-  const v = state.vitals||{}; const out=[];
+  /* latestVitals(), NOT state.vitals. hrZones() was migrated to the logged reading and this,
+     the actual SAFETY gate, was left behind — so logging 185/115 lit up the Health Risk card
+     while the program carried on being built from the 120/80 typed at intake. */
+  const v = latestVitals(); const out=[];
   const sbp=vnum(v.sbp), dbp=vnum(v.dbp), hr=vnum(v.restHR), spo2=vnum(v.spo2);
   if((sbp!=null&&sbp>=180)||(dbp!=null&&dbp>=110)) out.push("vital_bp_crisis");
   else if((sbp!=null&&sbp>=160)||(dbp!=null&&dbp>=100)) out.push("vital_bp_high");
@@ -865,10 +868,96 @@ function sessionsText(track){
   if(state.fitness==="high") return "4–5 sessions/week";
   return "4–6 sessions/week";
 }
+/* =====================================================================
+   READING THE LOG BACK
+   state.log was write-only: nothing in the app read it. Pain was asked twice
+   and heard once — the intake number drove phase splits, load guidance and the
+   "irritable" pathway, while three weeks of logged 8/10 changed a coloured tag.
+   ===================================================================== */
+function recentLog(days, n){
+  const cut = new Date(); cut.setDate(cut.getDate() - (days||21));
+  const key = isoOf(cut);
+  return (state.log||[]).filter(e => e.date >= key).slice(-(n||7));
+}
+/* Mean of the last few logged days. null until there are two — one bad day is not a trend. */
+function recentPain(){
+  const vals = recentLog().map(e => Number(e.pain)).filter(v => isFinite(v));
+  if(vals.length < 2) return null;
+  return { mean: Math.round(vals.reduce((a,b)=>a+b,0)/vals.length * 10)/10, n: vals.length };
+}
+/* What the plan actually asks for per week, parsed out of the prose it is stored as. */
+function weeklyTarget(){
+  /* Frequency is stored as prose, and plenty of plans are qualitative ("Exercise most days",
+     "Daily home work + 2-3 supervised sessions/week"). The log counts what the user did each
+     DAY, so a daily/most-days instruction is the target to measure against -- checked BEFORE
+     the numeric match, which would otherwise read the *supervised* count as the whole goal. */
+  const parse = t => {
+    if(!t) return null;
+    if(/\bdaily\b|every day/i.test(t)) return { min:6, max:7 };
+    if(/most days/i.test(t)) return { min:5, max:7 };
+    const m = t.match(/(\d+)\s*[\u2013-]\s*(\d+)\s*(?:short\s*)?sessions?\s*\/?\s*week/i);
+    if(m) return { min:+m[1], max:+m[2] };
+    const one = t.match(/(\d+)\s*(?:short\s*)?sessions?\s*\/?\s*week/i);
+    if(one) return { min:+one[1], max:+one[1] };
+    return null;
+  };
+  /* The plan's prose is truthy even with no number in it, so it must fall THROUGH to the
+     track default rather than short-circuit an `||`. */
+  return parse(String((state.program && state.program.sessions) || ""))
+      || parse(String(sessionsText(classify(state.weeks)||"acute")));
+}
+function weeklySessions(){
+  const cut = new Date(); cut.setDate(cut.getDate()-6);
+  const key = isoOf(cut);
+  return (state.log||[]).filter(e => e.date >= key).reduce((a,e)=>a + (Number(e.sessions)||0), 0);
+}
+function adherence(){
+  const t = weeklyTarget(); if(!t) return null;
+  const done = weeklySessions();
+  return { done, min:t.min, max:t.max,
+    status: done >= t.min ? "on-track" : (done >= Math.max(1, t.min-2) ? "slightly-behind" : "behind") };
+}
+/* Pain the engine should actually believe: what they are logging now, else intake. */
+function effectivePain(){
+  const rp = recentPain();
+  return rp ? { v: rp.mean, from: `your last ${rp.n} logged days` } : { v: Number(state.painMove)||0, from: "your intake answer" };
+}
+/* Fair trend: last week's mean vs the week before. The old code compared today to the FIRST
+   entry EVER, forever — so 9/10 -> 2/10 -> a 7/10 flare today read "pain down 2 pts, improving". */
+function painTrend(log){
+  const mean = a => a.reduce((x,y)=>x+y,0)/a.length;
+  const recent = log.slice(-7).map(e=>Number(e.pain)).filter(isFinite);
+  const prior  = log.slice(-14,-7).map(e=>Number(e.pain)).filter(isFinite);
+  if(!recent.length) return { cls:"trend-flat", txt:"holding steady" };
+  const rm = mean(recent);
+  if(prior.length < 2) return { cls:"trend-flat", txt:`averaging ${rm.toFixed(1)}/10 — keep logging to see a trend` };
+  const d = Math.round((rm - mean(prior)) * 10) / 10;
+  if(d <= -1) return { cls:"trend-down", txt:`pain down ${Math.abs(d)} pts on last week ↓ improving` };
+  if(d >=  1) return { cls:"trend-up",   txt:`pain up ${d} pts on last week ↑ — ease off & review` };
+  return { cls:"trend-flat", txt:`holding steady around ${rm.toFixed(1)}/10` };
+}
+/* Has the picture changed since the program was built? Used to OFFER a rebuild rather than
+   force one: generateProgram() discards the user's rotate/swap/remove edits, and silently
+   wiping a customised plan because they logged one sore day would be its own bug. */
+function planDrift(){
+  const p = state.program; if(!p || !p.builtFrom) return null;
+  const out = [];
+  const ep = effectivePain();
+  const dp = Math.round((ep.v - p.builtFrom.pain) * 10) / 10;
+  if(dp >= 2) out.push(`you're logging ${ep.v}/10 now — up ${dp} on the ${p.builtFrom.pain}/10 this plan was built for`);
+  else if(dp <= -2) out.push(`you're logging ${ep.v}/10 now — down ${Math.abs(dp)} on the ${p.builtFrom.pain}/10 this plan was built for`);
+  const now = gatherFlags(), had = new Set((p.builtFrom.flags||"").split(",").filter(Boolean));
+  const added = now.filter(f => !had.has(f));
+  if(added.length) out.push(`new precautions apply from what you've logged (${added.slice(0,3).join(", ")})`);
+  return out.length ? out : null;
+}
+
 function loadGuidance(){
-  if(state.painMove>=7) return "Keep effort very light. Pain during exercise should stay at/below 3/10 and settle within an hour.";
-  if(state.painMove>=4) return "Mild discomfort (up to ~4/10) during loading is acceptable if it settles by the next morning. Sharp pain means back off.";
-  return "You can load with confidence. Progress ~10% per week while pain stays low and settles overnight.";
+  const ep = effectivePain();                  // what they're reporting NOW, not at intake
+  const src = ` (based on ${ep.from})`;
+  if(ep.v>=7) return "Keep effort very light. Pain during exercise should stay at/below 3/10 and settle within an hour." + src;
+  if(ep.v>=4) return "Mild discomfort (up to ~4/10) during loading is acceptable if it settles by the next morning. Sharp pain means back off." + src;
+  return "You can load with confidence. Progress ~10% per week while pain stays low and settles overnight." + src;
 }
 
 /* ---------- exercise library integration ---------- */
@@ -2338,8 +2427,9 @@ function historyVariantKeys(cond){
   // baseline fitness
   if(state.fitness==="low") keys.push("decond");
   if(state.fitness==="high" && Number(state.age)<40 && state.painMove<=3) keys.push("accelerated");
-  // irritability
-  if(Number(state.painMove)>=7 || Number(state.painRest)>=6) keys.push("irritable");
+  // irritability — from what they're logging if they are, else intake
+  const _ep = effectivePain();
+  if(_ep.v>=7 || Number(state.painRest)>=6) keys.push("irritable");
   if(flags.has("hypermobility")) keys.push("hypermobile");
   if((state.returnSports||[]).length) keys.push("athlete");
   // newly asked answers, each driving a pathway that already existed
@@ -2668,6 +2758,7 @@ function generateProgram(){
     track, totalWeeks: primaryPlan ? primaryPlan.total : tmpl.total,
     sessions: (primaryPlan && primaryPlan.freq) ? primaryPlan.freq : sessionsText(track),
     load:loadGuidance(),
+    builtFrom: { pain: effectivePain().v, flags: flags.slice().sort().join(",") },   // so planDrift() can tell when it goes stale
     flags, notes:[...new Set(window.notesForFlags(flags).concat(R.notes))], clearance:clearanceNeeded(flags),
     supervision:displaySupervision(flags, clearanceNeeded(flags)), items,
     removed:Array.from(removedAll, ([n,tag])=>({n,tag}))
@@ -4587,7 +4678,7 @@ function goStep(n){
   if(n===1) initClinician();                                  // Clinician section (now right after History)
   if(n===3) ensureDetailsData();      // sports/activities only matter from Details on
   if(n===3) renderPrecautions();                              // Precautions card lives in Details — keep it current
-  if(n===4 && state.program) renderProgram(state.program);    // Program reflects precaution/detail/clinician changes
+  if(n===4 && state.program){ renderProgram(state.program); renderDriftNote(); }   // Program reflects precaution/detail/clinician + log changes
   if(n===5){ renderProgress(); renderHealth(); renderDataWarn(); }
   if(n===6) initCoach();
   if(n===7) initLibrary();
@@ -5446,27 +5537,68 @@ function saveLogEntry(){
   state.log.sort((a,b)=>a.date<b.date?-1:1);
   const wrote = save(); $("#logNote").value="";
   renderProgress();
+  syncPlanFromLog();
   if(!wrote) toast("⚠ Couldn't save - your browser storage is full or blocked.");
   else toast(i>=0 ? "Updated today's entry." : "Saved. Keep it up! 💪");
 }
+/* A new precaution (e.g. a logged hypertensive crisis) is a SAFETY change and applies at once.
+   A pain shift only offers a rebuild, because rebuilding throws away the user's own edits. */
+function syncPlanFromLog(){
+  if(!state.program) return;
+  const before = new Set((state.program.builtFrom||{}).flags ? state.program.builtFrom.flags.split(",") : []);
+  const added = gatherFlags().filter(f=>!before.has(f));
+  if(added.length){
+    state.program = generateProgram(); save();
+    if(state.step===4) renderProgram(state.program);
+    toast("⚠ What you logged changed your precautions — your plan has been updated.");
+  }
+  renderDriftNote();
+}
+/* Shown on the Program step when the log and the plan have drifted apart. */
+function driftNoteHTML(){
+  const d = planDrift(); if(!d) return "";
+  return `<div class="card driftcard no-print"><h2>📊 Your log says something different</h2>
+    <ul class="driftlist">${d.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>
+    <p class="hint">Rebuilding re-picks your exercises from the protocol — any you've rotated, swapped, added or removed will go back to the recommended set.</p>
+    <button class="btn primary" id="driftRebuild">Update my plan to match</button></div>`;
+}
+function renderDriftNote(){
+  const host = $("#driftNote"); if(!host) return;
+  host.innerHTML = driftNoteHTML();
+  const b = $("#driftRebuild");
+  if(b) b.onclick = () => { state.program = generateProgram(); save(); renderProgram(state.program); renderDriftNote();
+    toast("Plan updated from your log."); };
+}
 function deleteLog(date){ state.log=state.log.filter(e=>e.date!==date); save(); renderProgress(); }
 
+/* The plan asks for N sessions/week and nothing ever checked. sessionsText() returns prose,
+   so there was no number to compare the log against — weeklyTarget() parses one out. */
+function adherenceHTML(){
+  const a = adherence(); if(!a) return "";
+  const label = a.status==="on-track" ? "on track" : (a.status==="slightly-behind" ? "just under" : "behind");
+  const msg = a.status==="on-track"
+    ? "That's your prescribed dose — this is what makes the plan work."
+    : (a.status==="slightly-behind"
+        ? "Close. Short and frequent beats long and occasional."
+        : "Rehab only works at the dose it's prescribed at. If the plan doesn't fit your week, shorten the sessions rather than skipping them — or tell Jeffery and he'll help you trim it.");
+  return `<div class="adhrow ${a.status}">
+    <div class="adhtop"><b>${a.done}</b> session${a.done===1?"":"s"} logged in the last 7 days · target <b>${a.min}${a.max!==a.min?`–${a.max}`:""}</b> — <span class="adhtag">${label}</span></div>
+    <div class="adhmsg">${msg}</div></div>`;
+}
 function renderProgress(){
   const body=$("#progressBody"); const log=state.log;
   if(!log.length){
     body.innerHTML=`<div class="empty"><div class="big">📈</div><div>No entries yet — log your first session above.</div></div>`;
     return;
   }
-  const pains=log.map(e=>e.pain);
-  const first=pains[0], last=pains[pains.length-1];
   const totalSessions=log.reduce((a,e)=>a+e.sessions,0);
-  const delta=last-first;
-  let trendCls="trend-flat", trendTxt="holding steady";
-  if(log.length>1 && delta<=-1){ trendCls="trend-down"; trendTxt=`pain down ${Math.abs(delta)} pts ↓ improving`; }
-  else if(log.length>1 && delta>=1){ trendCls="trend-up"; trendTxt=`pain up ${delta} pts ↑ — ease off & review`; }
+  const last = log[log.length-1].pain;              // still shown as the "Current pain" stat
+  const _t = painTrend(log);
+  const trendCls=_t.cls, trendTxt=_t.txt;
   const streak=computeStreak(log);
 
   body.innerHTML = `
+    ${adherenceHTML()}
     <div class="progstats">
       <div class="stat"><div class="k">Entries</div><div class="v">${log.length}</div></div>
       <div class="stat"><div class="k">Sessions logged</div><div class="v">${totalSessions}</div></div>
@@ -5554,6 +5686,7 @@ function saveVitalsEntry(){
   state.vitalsLog.sort((a,b)=>a.date<b.date?-1:1);
   save(); ["#vlHR","#vlSBP","#vlDBP","#vlSpo2","#vlWeight","#vlGlucose","#vlTemp","#vlSteps"].forEach(id=>{ const el=$(id); if(el) el.value=""; });
   renderVitalsLog(); renderRisks();
+  syncPlanFromLog();          // a logged BP crisis must reach the program, not just the risk card
   toast(i>=0 ? "Updated vitals for that date." : "Vitals saved — keep logging to see the trend.");
 }
 function deleteVitals(date){ state.vitalsLog=(state.vitalsLog||[]).filter(e=>e.date!==date); save(); renderVitalsLog(); renderRisks(); }
@@ -6900,6 +7033,17 @@ function buildCoachSystem(){
     confident:"confident moving", cautious:"a bit cautious", fearful:"quite fearful of hurting it",
     first:"first episode", few:"once or twice before", recurrent:"keeps coming back" };
   const lbl = k => SETUP_LABEL[k] || k;
+  /* The log was invisible to Jeffery, so he answered from an intake number that could be
+     months stale while the user logged something quite different every day. */
+  const _rp = recentPain(), _adh = adherence(), _tr = (state.log||[]).length ? painTrend(state.log) : null;
+  const logLine = (state.log||[]).length
+    ? [ `${state.log.length} entries`,
+        _rp ? `pain averaging ${_rp.mean}/10 over the last ${_rp.n} logged days` : `latest pain ${state.log[state.log.length-1].pain}/10`,
+        _tr && `trend: ${_tr.txt.replace(/[↓↑]/g,"").trim()}`,
+        _adh && `${_adh.done} sessions in the last 7 days vs a target of ${_adh.min}${_adh.max!==_adh.min?`-${_adh.max}`:""} (${_adh.status})`,
+        computeStreak(state.log) > 1 && `${computeStreak(state.log)}-day streak`
+      ].filter(Boolean).join("; ")
+    : "nothing logged yet";
   const setupLine = [ state.equipment && `equipment: ${lbl(state.equipment)}`, state.timePerDay && lbl(state.timePerDay),
     state.workDemand && `work: ${lbl(state.workDemand)}`, state.moveConfidence && lbl(state.moveConfidence),
     state.priorEpisodes && lbl(state.priorEpisodes), state.homeMode && "Home mode is ON (household objects)" ]
@@ -6917,6 +7061,7 @@ USER CONTEXT
 - Medications: ${medLine}
 - Medication considerations for exercise: ${medNoteLine}
 - Setup & capacity: ${setupLine}
+- What they are LOGGING (trust this over the intake pain figure): ${logLine}
 - Vitals entered: ${enteredVitals}
 - Heart-rate & exertion: ${hrLine}
 - Cardiac device: ${deviceLineHR}

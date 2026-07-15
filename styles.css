@@ -203,6 +203,17 @@ input[type=range]{flex:1;accent-color:var(--brand);height:30px}
 .check:focus-visible{background:var(--chip)}
 .result:focus-visible{background:var(--chip)}
 .result .info{background:none;border:0;padding:0;font:inherit;color:inherit;cursor:pointer}
+/* adherence + plan-drift */
+.adhrow{border:1px solid var(--line);border-left-width:4px;border-radius:10px;padding:10px 12px;margin-bottom:12px}
+.adhrow.on-track{border-left-color:var(--ok,#5ce1a6)}
+.adhrow.slightly-behind{border-left-color:var(--warn,#e0a800)}
+.adhrow.behind{border-left-color:#ff6b6b}
+.adhtop{font-size:13px}
+.adhtag{font-weight:700}
+.adhmsg{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5}
+.driftcard{border-color:var(--brand)}
+.driftlist{margin:6px 0 10px;padding-left:18px;font-size:13px;line-height:1.6}
+.driftlist li{margin-bottom:3px}
 /* optional-depth zone on the history step */
 .optzone{margin-top:22px;border-top:2px dashed var(--line);padding-top:18px}
 .optzonehead h3{margin:0 0 4px;font-size:15px;display:flex;align-items:center;gap:8px}
