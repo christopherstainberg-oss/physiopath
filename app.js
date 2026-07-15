@@ -279,6 +279,7 @@ const state = {
   vitals:{restHR:"",sbp:"",dbp:"",spo2:"",rr:"",height:"",weight:""},
   vitalsLog:[], labs:{}, labHist:{},
   screen:{}, falls:"", aid:"", smoking:"", alcohol:"", sleep:"", stress:"", waterConfidence:"", adls:[],
+  equipment:"", timePerDay:"", workDemand:"", priorEpisodes:"", moveConfidence:"", pregStage:"", footSensation:"",
   medIds:[], medFilter:false, homeMode:false, customPrecautions:[], clinicianProtocols:[], clinPrecautionProtocol:"", clinicianGuided:false,
   medDoses:{}, weightBearing:{status:"",pct:"",lbs:"",side:"",limb:"le"}, devices:[],
   cardiacDevice:{type:"",icdRate:""}, specialPrecautions:[], planVariant:{}, progress:{},
@@ -360,6 +361,12 @@ function gatherFlags(){
   if(state.smoking==="current") f.add("smoker");
   // Pool/aquatic: nervous-in-water or older/less-steady users skip deep-water (out-of-depth) drills.
   if(["none","low"].includes(state.waterConfidence) || Number(state.age) >= 70 || f.has("balance_risk")) f.add("low_water_confidence");
+  // Pregnancy STAGE, not just the yes/no box: lying flat compresses the vena cava
+  // from ~16 weeks, and relaxin loosens joints into the postpartum year.
+  if(["t2","t3"].includes(state.pregStage)) f.add("pregnancy");
+  if(state.pregStage) f.add("hypermobility");            // relaxin — don't chase end-range
+  // A foot that can't feel damage behaves like a neuropathic foot whatever the label
+  if(["reduced","absent"].includes(state.footSensation)){ f.add("neuropathy"); f.add("balance_risk"); }
   return Array.from(f);
 }
 /* Medication-derived engine flags — applied at RENDER time only (so toggling is
@@ -1657,6 +1664,16 @@ function sportFor(phaseIdx){
 /* ---------- build the program ---------- */
 /* Realistic exercises per phase (protocol + signature + library-matched top-up). */
 const PHASE_TARGET = [6,6,7,7];
+/* How many exercises a phase should hold. A plan you won't finish isn't a plan —
+   so the size follows the time the user says they actually have. */
+function phaseTarget(p){
+  const base = PHASE_TARGET[p] || 6;
+  const t = state.timePerDay;
+  if(t==="lt10")  return Math.max(3, Math.round(base*0.5));
+  if(t==="10to20")return Math.max(4, Math.round(base*0.7));
+  if(t==="gt40")  return base + 2;
+  return base;
+}
 /* Criteria to progress to the next phase — more detail than dates alone. */
 const PHASE_CRITERIA = {
   acute: [
@@ -2157,6 +2174,8 @@ const XCUT_VARIANTS = [
     note:"With hypermobile joints do NOT chase more range — you already have plenty. Strength, mid-range control and proprioception are the targets, and progress is usually slower." },
   { k:"home", label:"Home-based (minimal equipment)", sub:"No gym access", pick:/home-based|minimal equipment/i, scale:1.05,
     note:"Bodyweight, bands and household objects load tissue perfectly well — progress by adding reps, slowing the tempo or moving to single-limb versions instead of adding weight." },
+  { k:"gym", label:"Gym-based progression", sub:"Full equipment available", pick:/gym-based/i, scale:0.95,
+    note:"With machines and free weights you can load and measure precisely — progress by measurable increments rather than by feel." },
   { k:"slowheal", label:"Slower healing expected", sub:"Diabetes, smoking or steroids", pick:/diabet|smoker/i, scale:1.4,
     note:"Diabetes, smoking, corticosteroids and poor nutrition measurably slow healing. Stopping smoking is the single biggest thing you can change here." }
 ];
@@ -2224,6 +2243,12 @@ function historyVariantKeys(cond){
   if(Number(state.painMove)>=7 || Number(state.painRest)>=6) keys.push("irritable");
   if(flags.has("hypermobility")) keys.push("hypermobile");
   if((state.returnSports||[]).length) keys.push("athlete");
+  // newly asked answers, each driving a pathway that already existed
+  if(state.priorEpisodes==="recurrent") keys.unshift("recurrent");
+  if(state.moveConfidence==="fearful") keys.push("irritable");
+  if(["manual","heavy"].includes(state.workDemand)) keys.push("work");
+  if(state.equipment==="gym") keys.push("gym");
+  if(["none","bands"].includes(state.equipment)) keys.push("home");
   return keys;
 }
 /* Stretch/compress the phase boundaries by `scale`, keeping them contiguous and
@@ -2472,7 +2497,7 @@ function currentPlanPhase(plan){
   return wp < 0 ? cp : Math.min(cp, wp);
 }
 function enrichPhase(kept, protocol, p, flags){
-  const target = PHASE_TARGET[p] || 6;
+  const target = phaseTarget(p);
   if(kept.length < target){
     const supp = libraryOptions(protocol, p, flags, kept.map(e=>e.n), target - kept.length, 100 + p);
     kept.push(...supp);
@@ -2510,6 +2535,11 @@ function generateProgram(){
       window.ensureMinimum(kept, flags, 3);
       enrichPhase(kept, c.protocol, p, flags);
       let ex = R.avoid.length ? kept.filter(e=>!R.avoid.some(re=>re.test(e.n))) : kept;  // final gate (ensureMinimum/enrich)
+      // enrichPhase can only grow a phase — trim to the user's real time budget so a
+      // short session isn't an abandoned one. Signature/protocol items come first, so
+      // the tail we drop is library filler.
+      const cap = phaseTarget(p);
+      if(ex.length > cap) ex = ex.slice(0, Math.max(3, cap));
       if(R.caution.length) ex.forEach(e=>{ if(!e.warn && !e.cautionMsg && R.caution.some(re=>re.test(e.n))) e.cautionMsg = true; });
       removed.forEach(r=>removedAll.set(r.n, r.tag));
       const pl = plan && plan.ph[p];            // condition-specific phase, when we have a real timeline
@@ -4708,10 +4738,16 @@ function initHistory(){
     cb.onchange=()=>{ state.screen[k]=cb.checked; save(); updateScreenWarn(); }; });
   updateScreenWarn();
   // lifestyle & daily function
-  const LIFE_IDS = {q_smoking:"smoking",q_alcohol:"alcohol",q_sleep:"sleep",q_stress:"stress",q_falls:"falls",q_aid:"aid",q_waterConf:"waterConfidence"};
+  const LIFE_IDS = {q_smoking:"smoking",q_alcohol:"alcohol",q_sleep:"sleep",q_stress:"stress",q_falls:"falls",q_aid:"aid",q_waterConf:"waterConfidence",
+    q_equipment:"equipment",q_timePerDay:"timePerDay",q_workDemand:"workDemand",q_priorEpisodes:"priorEpisodes",
+    q_moveConfidence:"moveConfidence",q_pregStage:"pregStage",q_footSensation:"footSensation"};
   Object.entries(LIFE_IDS).forEach(([id,key])=>{ const el=$("#"+id); if(!el) return;
     el.value = state[key]||"";
-    el.onchange=e=>{ state[key]=e.target.value; save(); }; });
+    el.onchange=e=>{ state[key]=e.target.value;
+      // no gym → adapt every exercise to household objects (render-time, reversible)
+      if(key==="equipment"){ if(["none","bands"].includes(e.target.value)) state.homeMode = true;
+                             else if(e.target.value==="gym") state.homeMode = false; }
+      save(); }; });
   initADLs();   // occupational-therapy activities-of-daily-living check
 }
 /* Urgent / clearance note shown live under the red-flag screen. */
