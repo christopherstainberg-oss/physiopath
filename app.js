@@ -4356,6 +4356,81 @@ const KB = [
   { kw:["how do i use","how does this app","what can this app","features","how to use physiopath","edit my program","add exercise","swap exercise"], a:()=>"Quick tour: **Clinician** step lets a clinician add a protocol; **Injury → Details** build and personalise your plan; the **Program** tab lets you **⟳ Rotate**, **⇄ Swap**, **🗑 Remove** or **＋ Add** exercises per phase, set weight-bearing/braces/precautions, and toggle **Home mode**; **Health** tracks vitals, labs, risks and **syncs a smartwatch/heart-rate monitor**; and I'm here in the **AI** tab. Ask me about any of it." }
 ];
 
+/* =====================================================================
+   RED-FLAG INTERCEPTION
+   The coach must never answer a possible emergency with a rehab explainer.
+   This runs at the CHAT ENTRY POINT — deliberately OUTSIDE coachAnswer(),
+   because askClaude()'s error path falls back to coachAnswer(), so a check
+   living inside it would be skipped by a rate limit or a dropped connection.
+   Patterns are narrow on purpose: crying wolf teaches people to click past
+   the one that matters. They are tested against the app's own exercise
+   vocabulary ("chest press", "dead bug", "my knee is killing me").
+   ===================================================================== */
+const RED_FLAG_RULES = [
+  { k:"cardiac",
+    re:/\bchest (?:pain|pressure|tightness|tight|discomfort|heaviness|heavy)\b|\b(?:pain|pressure|tight\w*|discomfort|heaviness|heavy|ache|aching|pounding) (?:in|across|through|on) (?:my |the )?chest\b|\bcrushing\b[^.]{0,14}\bchest\b|\bchest\b[^.]{0,18}\b(?:radiat\w*|spread\w*)\b[^.]{0,22}\b(?:arm|jaw|neck|shoulder)\b|\bheart attack\b/i,
+    t:"Chest pain needs checking now — not by me",
+    b:"Chest pain, pressure or tightness — especially with breathlessness, sweating, nausea, or pain spreading to your arm, jaw or neck — can be a heart attack. It is not something to stretch, work through, or wait out.",
+    a:"Stop what you're doing and call your local emergency number (911 / 999 / 112) now. If you've been prescribed a GTN spray, use it as directed. Don't drive yourself." },
+  { k:"cauda",
+    re:/\b(?:lost|losing|loss of|can't control|cannot control|no control over)\b[^.]{0,26}\b(?:bladder|bowel|urine|continence)\b|\b(?:bladder|bowel)\b[^.]{0,18}\b(?:control|incontinen\w*|accident)\b|\bnumb\w*\b[^.]{0,26}\b(?:groin|saddle|genital\w*|perineum|inner thigh|between my legs|buttock)\b|\b(?:saddle|groin)\b[^.]{0,14}\bnumb\w*\b|\bcan't (?:pee|urinate|wee)\b|\bunable to (?:pee|urinate)\b/i,
+    t:"This combination is a surgical emergency",
+    b:"Losing bladder or bowel control, or numbness around the groin or saddle area, alongside back or leg symptoms can mean cauda equina syndrome — compression of the nerve bundle at the base of the spine. The window to prevent permanent damage is measured in hours.",
+    a:"Go to an emergency department now — today, not at your next appointment. Say the words \"I think this might be cauda equina\". Do not wait to see whether it settles." },
+  { k:"stroke",
+    re:/\b(?:face|mouth|smile)\b[^.]{0,18}\b(?:droop\w*|lopsided|uneven|fell)\b|\bsudden\w*\b[^.]{0,22}\b(?:weak\w*|numb\w*)\b[^.]{0,18}\bone side\b|\b(?:slurr\w*|garbl\w*)\b[^.]{0,14}\bspeech\b|\bcan't (?:speak|talk|find my words)\b|\bworst headache\b|\bsudden\w*\b[^.]{0,14}\b(?:severe|worst|thunderclap)\b[^.]{0,14}\bheadache\b/i,
+    t:"These are stroke signs — act immediately",
+    b:"Face drooping, sudden one-sided weakness, slurred speech, or a sudden worst-ever headache are stroke signs. Treatment runs on a clock, and every minute of delay costs brain tissue.",
+    a:"Call your local emergency number (911 / 999 / 112) right now, and note the time the symptoms started — the treating team will need it." },
+  { k:"dvt",
+    re:/\b(?:calf|leg|thigh)\b[^.]{0,26}\b(?:hot|warm|red|swollen|swelling)\b[^.]{0,26}\b(?:pain\w*|sore|tender|ach\w*|swollen|swelling|hot|warm|red)\b|\b(?:hot|warm|red)\b[^.]{0,14}\band\b[^.]{0,14}\bswollen\b[^.]{0,18}\b(?:calf|leg|thigh)\b|\bblood clot\b|\bdvt\b|\bcough\w*\b[^.]{0,14}\bblood\b|\bsudden\w*\b[^.]{0,18}\b(?:breathless\w*|short of breath|can't breathe)\b/i,
+    t:"A hot, swollen, painful calf needs same-day assessment",
+    b:"A calf or leg that is swollen, warm, red and tender — particularly after surgery, a cast, illness or a long journey — can be a deep vein thrombosis. If a clot travels to the lungs it becomes life-threatening, so sudden breathlessness or coughing blood alongside it is an emergency.",
+    a:"Do not massage it, stretch it, or exercise on it — that is exactly the wrong thing. Get seen today (urgent care, your GP, or ED). With breathlessness or coughing blood, call emergency services now." },
+  { k:"infection",
+    re:/\b(?:hot|red|swollen|swelling)\b[^.]{0,30}\b(?:joint|knee|hip|shoulder|elbow|wrist|ankle|foot|hand|finger|toe|back)\b[^.]{0,34}\b(?:fever|temperature|chills|shiver\w*|unwell|sweats)\b|\b(?:joint|knee|hip|shoulder|elbow|wrist|ankle|foot|hand|finger|toe|back)\b[^.]{0,30}\b(?:hot|red|swollen|swelling)\b[^.]{0,34}\b(?:fever|temperature|chills|shiver\w*|unwell|sweats)\b|\b(?:fever|temperature|chills)\b[^.]{0,34}\b(?:hot|red|swollen)\b[^.]{0,18}\b(?:joint|knee|hip|shoulder|elbow|wrist|ankle|foot|hand|finger|toe|back)\b|\b(?:wound|incision|scar)\b[^.]{0,26}\b(?:pus|oozing|discharge|smell\w*|red streak\w*|opening up|splitting)\b|\bseptic\b/i,
+    t:"A hot joint with a fever is an emergency until proven otherwise",
+    b:"A single hot, red, swollen, exquisitely painful joint together with a fever or feeling generally unwell can be septic arthritis, which can destroy a joint within days. After surgery, a wound that is hot, oozing, smelling or opening up can signal a deep infection.",
+    a:"Get assessed today — an emergency department, or your surgical team directly if you're post-op. Don't exercise the joint in the meantime." }
+];
+/* Returns escalation text for a possible emergency, or null. */
+function redFlagFor(qRaw){
+  const q = String(qRaw||"");
+  for(const r of RED_FLAG_RULES){
+    if(r.re.test(q))
+      return `\u{1F6A8} **${r.t}**\n\n${r.b}\n\n**What to do:** ${r.a}\n\nI'm an educational tool and I can't assess this — please don't wait on an app for it. I'll still be here for your rehab questions afterwards.`;
+  }
+  return null;
+}
+
+/* Generic keywords sit on 371-742 generated KB entries each ("what is", "about",
+   "symptoms"...). Alone they carry no signal, and because ties go to the first
+   entry scanned they made COACH_KB[0] (knee OA) the universal answer to any
+   "tell me about..." phrasing. An entry must now match one SPECIFIC keyword to win. */
+const GENERIC_KW = new Set(["what is","what","whats","about","tell me about","tell me","explain","define","definition",
+  "info","information","symptom","symptoms","sign","signs","help","overview","describe","mean","meaning","is it chronic","chronic"]);
+/* Word-boundary + light plural stemming. `q.includes(kw)` was substring matching, so
+   the 2-letter keywords in the generated KB ("ra", "ms", "cp", "md") matched INSIDE
+   ordinary words: "radiates" -> rheumatoid arthritis, "symptoms" -> multiple sclerosis.
+   Normalising both sides to " word word " and testing for " kw " kills the whole class
+   without regenerating the 11.5MB file. Stemming keeps "knees" matching "knee". */
+const _stem = w => (w.length > 3 && w.endsWith("s") && !w.endsWith("ss")) ? w.slice(0, -1) : w;
+/* Document frequency over COACH_KB, computed once. The generated file gives every one
+   of its 371 conditions the same 57 question templates, so a keyword's spread tells you
+   exactly what it is: condition IDENTIFIERS land at DF 57-114 (once per template),
+   while shared topic tags ("ice or heat", "what is") land at 371+. Measured, not guessed.
+   An entry may rank on a topic tag but may never WIN on one — otherwise every "should I
+   ice?" resolves to COACH_KB[0] (knee OA) purely because it is first in the file. */
+const DF_TOPIC = 200;                       // >= this => a shared topic tag, not an identifier
+let _kbDF = null;
+function kbDF(){
+  if(_kbDF) return _kbDF;
+  _kbDF = new Map();
+  for(const e of (window.COACH_KB||[])) for(const k of e.kw) _kbDF.set(k, (_kbDF.get(k)||0)+1);
+  return _kbDF;
+}
+const kbNorm = s => " " + String(s||"").toLowerCase().replace(/[^a-z0-9']+/g," ").trim().split(" ").map(_stem).join(" ") + " ";
+
 function coachAnswer(qRaw){
   const q = qRaw.toLowerCase();
   const conds = selectedConditions();
@@ -4365,9 +4440,27 @@ function coachAnswer(qRaw){
       return `**${c.name}** — ${aboutText(c, state.program?state.program.track:classify(state.weeks)||"acute")}\n\n${DOMAIN_REDFLAGS[c.domain]}`;
   }
   let best=null, score=0;
-  const scan = arr => { for(const item of arr){ let s=0; for(const kw of item.kw) if(q.includes(kw)) s+=kw.split(" ").length; if(s>score){ score=s; best=item; } } };
-  scan(KB);                          // personalized (dynamic) entries — win ties
-  scan(window.COACH_KB || []);       // ~5,000 generated condition/topic answers — win when more specific
+  const qn = kbNorm(q);
+  /* The user's own diagnosis makes a condition-specific entry ELIGIBLE without adding to
+     its score — so "should I ice?" resolves to THEIR condition's answer, while an unrelated
+     question ("how do I read my HRV?") can't be hijacked by their condition. */
+  const ctx = kbNorm(conds.map(c=>c.name).join(" "));
+  const scan = (arr, useDF) => {
+    const df = useDF ? kbDF() : null;
+    for(const item of arr){
+      if(!item._nkw) item._nkw = item.kw.map(k=>({ pad:kbNorm(k), n:k.split(" ").length,
+        topic: GENERIC_KW.has(k) || (df ? (df.get(k)||0) >= DF_TOPIC : false) }));   // cached per entry
+      let s=0, spec=0;
+      for(const k of item._nkw){
+        const inQ = qn.includes(k.pad);
+        if(inQ) s += k.n;                                          // topic tags still drive ranking
+        if(!k.topic && (inQ || ctx.includes(k.pad))) spec += k.n;  // ...but only an identifier makes it eligible
+      }
+      if(spec>0 && s>score){ score=s; best=item; }
+    }
+  };
+  scan(KB, false);                     // 53 hand-authored, personalized — all discriminating; win ties
+  scan(window.COACH_KB || [], true);   // 20,199 generated — win only on a real identifier
   if(best && score>0) return typeof best.a==="function" ? best.a() : best.a;
   if(/program|phase|week|routine|plan/.test(q)){
     if(state.program) return `Your plan is a **${state.program.totalWeeks}-week, 4-phase program** (${state.program.track} track): ${TEMPLATE[state.program.track].phases.map(p=>p.title).join(" → ")}. Advance a phase when the current one feels controlled and symptoms are low. See the **Program** tab for exercises.`;
@@ -6807,6 +6900,8 @@ document.addEventListener("DOMContentLoaded",()=>{
   $("#chatform").addEventListener("submit",e=>{ e.preventDefault();
     const v=$("#chatInput").value.trim(); if(!v) return;
     addMsg(v,"user"); $("#chatInput").value="";
+    const rf = redFlagFor(v);          // a possible emergency never reaches the API or the KB
+    if(rf){ setTimeout(()=>addMsg(rf,"bot"),220); return; }
     if(coachOnline()) askClaude(v);
     else setTimeout(()=>addMsg(coachAnswer(v),"bot"),220);
   });
