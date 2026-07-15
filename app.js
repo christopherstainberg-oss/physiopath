@@ -4561,6 +4561,7 @@ function suggestedQuestions(){
   return [...front, ...s];
 }
 function initCoach(){
+  if((state.medIds||[]).length) ensureMedData();   // MEDMAP drives the prompt's medication lines
   loadData("coach-kb.js");   // 11.5MB — only the Coach step needs it
   $("#chatlog").innerHTML=""; chatHistory=[]; updateCoachMode();
   const conds=selectedConditions();
@@ -6834,12 +6835,58 @@ function buildCoachSystem(){
   const spLine = activeSpecialPrecautions().map(p=>p.label).join(", ") || "none";
   const abnormalLabs = LABS.filter(l=>{ const s=labStatusOf(l); return s==="high"||s==="low"; }).map(l=>`${l.name} ${labStatusOf(l)}`).join(", ") || "none entered/all in range";
   const riskAreas = computeRisks().filter(r=>r.level!=="low").map(r=>`${r.title.replace(/ risk$/i,"")} = ${r.level}`).join("; ") || "none flagged";
+
+  /* The app builds a specific, named timeline and then never told Jeffery about it —
+     so he could not discuss the very plan on the user's screen. */
+  const it0 = p && p.items && p.items[0];
+  const pl  = it0 && it0.plan;
+  const planLine = pl
+    ? `${pl.label} — ${pl.total} weeks${pl.freq?`, ${pl.freq}`:""}${pl.variant?`; variation in effect: ${pl.variant.label}${pl.variant.sub?` (${pl.variant.sub})`:""}`:""}${pl.note?`. Note: ${pl.note}`:""}`
+    : (p ? "no condition-specific timeline matched — using a generic template" : "not generated yet");
+  const phList = (it0 && it0.phases) || [];
+  const curPh  = phList.find(x=>x.current);
+  const phaseLine = curPh
+    ? `phase ${phList.indexOf(curPh)+1} of ${phList.length} — "${curPh.title}", weeks ${curPh.weekStart}–${curPh.weekEnd}. Goal: ${curPh.goal||"n/a"}. Advance only when: ${curPh.criteria||"n/a"}.${curPh.restrict?` RESTRICTION AT THIS STAGE (must respect): ${curPh.restrict}`:""}`
+    : (phList.length ? "no current phase marked (generic template — phases are relative, not dated)" : "not generated yet");
+  /* Their actual prescribed exercises, so "explain my third exercise" is answerable. */
+  const exLine = curPh && (curPh.ex||[]).length
+    ? curPh.ex.map((e,i)=>`${i+1}. ${e.n}${e.d?` — ${e.d}`:""}`).join(" | ")
+    : "none yet";
+  /* weeksPostOp() and state.weeks DIVERGE once a surgery date is set — the prompt used
+     the raw intake number, so Jeffery could be weeks off on a post-op timeline. */
+  const wpo = weeksPostOp();
+  const timeLine = state.surgeryDate
+    ? `${wpo} weeks post-op (surgery dated ${state.surgeryDate}) — use this, not the intake number`
+    : `${state.weeks ?? "unknown"} weeks since injury`;
+  /* 20,000-drug database, and none of it reached the coach. */
+  const meds = selectedMeds();
+  const medLine = meds.map(m=>`${m.name}${(state.medDoses||{})[m.id]?` (${state.medDoses[m.id]})`:""}`).join(", ")
+    || ((state.meds||"").trim() ? `free-text: ${state.meds.trim()}` : "none recorded");
+  const medNoteLine = [...new Set(meds.flatMap(m=>(m.flags||[]).map(f=>MED_EFFECT[f]).filter(Boolean)))].join(" | ") || "none";
+  /* Spell the enums out - "time/day: 10to20" is our storage format, not English. */
+  const SETUP_LABEL = { none:"none / bodyweight only", bands:"bands + a chair", dumbbells:"some dumbbells", gym:"full gym",
+    lt10:"under 10 min/day", "10to20":"10-20 min/day", "20to40":"20-40 min/day", gt40:"40+ min/day",
+    desk:"desk / seated", standing:"standing / walking", manual:"manual / lifting", heavy:"heavy or shift work",
+    confident:"confident moving", cautious:"a bit cautious", fearful:"quite fearful of hurting it",
+    first:"first episode", few:"once or twice before", recurrent:"keeps coming back" };
+  const lbl = k => SETUP_LABEL[k] || k;
+  const setupLine = [ state.equipment && `equipment: ${lbl(state.equipment)}`, state.timePerDay && lbl(state.timePerDay),
+    state.workDemand && `work: ${lbl(state.workDemand)}`, state.moveConfidence && lbl(state.moveConfidence),
+    state.priorEpisodes && lbl(state.priorEpisodes), state.homeMode && "Home mode is ON (household objects)" ]
+    .filter(Boolean).join(", ") || "not specified";
+
   return `You are Jeffery, PhysioPath's AI rehabilitation specialist — an educational assistant giving general, evidence-informed physical-rehabilitation guidance. You are an AI, not a licensed clinician, and must not diagnose or replace in-person care.
 
 USER CONTEXT
 - Conditions: ${conds}
-- Weeks since injury: ${state.weeks ?? "unknown"}; rest pain ${state.painRest}/10, movement pain ${state.painMove}/10; surgery: ${state.surgery}
+- Timeline: ${timeLine}; rest pain ${state.painRest}/10, movement pain ${state.painMove}/10; surgery: ${state.surgery}
 - Program: ${prog}
+- Rehab plan in effect: ${planLine}
+- Where they are RIGHT NOW: ${phaseLine}
+- Their current phase's prescribed exercises (refer to these by number if asked): ${exLine}
+- Medications: ${medLine}
+- Medication considerations for exercise: ${medNoteLine}
+- Setup & capacity: ${setupLine}
 - Vitals entered: ${enteredVitals}
 - Heart-rate & exertion: ${hrLine}
 - Cardiac device: ${deviceLineHR}
@@ -6891,7 +6938,7 @@ async function askClaude(q){
       },
       body:JSON.stringify({
         model: state.apiModel || "claude-opus-4-8",
-        max_tokens: 1100,
+        max_tokens: 4000,          // 1100 truncated mid-answer on anything with sets/reps detail
         system: buildCoachSystem(),
         messages: chatHistory.slice(-10)
       })
@@ -6903,7 +6950,14 @@ async function askClaude(q){
       throw new Error(msg);
     }
     const data=await res.json();
-    const text=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n").trim() || "(no reply)";
+    let text=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n").trim();
+    /* Nothing read stop_reason, so a capped reply stopped mid-sentence and still got the
+       "Educational guidance" footer appended as though it had finished. */
+    if(text && (data.stop_reason==="max_tokens" || data.stop_reason==="max_length"))
+      text += "\n\n*(cut off — that hit the length limit. Ask me to continue, or for a shorter answer.)*";
+    if(!text) text = data.stop_reason==="refusal"
+      ? "I wasn't able to answer that one. Try rephrasing it — or if it's about your specific case, ask your clinician."
+      : "(no reply)";
     chatHistory.push({ role:"assistant", content:text });
     addMsg(text,"bot");
   }catch(err){
