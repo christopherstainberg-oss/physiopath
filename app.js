@@ -1551,6 +1551,24 @@ const REHAB_PLANS = [
       ["Full range & base strength",2,6,"Restore full motion and normal gait, build base leg strength.","full range, walking without a limp, no giving-way in daily activity","Still no pivoting or cutting sports."],
       ["Strength & neuromuscular control",6,12,"Build strength and single-leg control so the knee feels stable.","quadriceps and hamstring strength ≥80% of the other side, controlled single-leg work, no episodes of giving way","Introduce straight-line running only when strength and control allow."],
       ["Return to activity & stability testing",12,20,"Restore power and confident change-of-direction, or decide about surgery.","hop tests ≥90%, no giving-way with agility, confident on the leg","Repeated giving-way despite good rehab is a reason to discuss reconstruction."]] },
+  { re:/tibial tub(ercle|erosity) (transfer|osteotomy|realign)|fulkerson|elmslie-?trillat|anteromedialisation|anteromedialization|\btto\b|\bttt\b/, label:"Tibial tubercle transfer (osteotomy)", total:52,
+    freq:"Short frequent sessions daily early, then 4–5 strengthening sessions/week",
+    note:"The tibial tubercle — where the patellar tendon anchors — is cut off the tibia, moved, and held with screws. It is a BONE-HEALING timeline, and the quadriceps pulls directly on that fragment, so early weight-bearing and resisted knee extension are restricted. Fracture through the osteotomy site is the main early complication and it is almost always caused by loading it too soon.",
+    variants:[
+      { k:"amz", label:"Anteromedialisation (Fulkerson)", sub:"Moved medially AND forward — instability + cartilage", pick:/fulkerson|anteromedialis|anteromedializ/i, scale:1 },
+      { k:"medial", label:"Medialisation (Elmslie-Trillat)", sub:"Moved medially only — instability", pick:/elmslie|trillat|medialisation|medialization/i, scale:0.9,
+        note:"A medialisation-only transfer has a flatter cut and is generally a little quicker than an anteromedialisation, but the same bone-healing rules apply." },
+      { k:"distal", label:"Distalisation", sub:"Moved downward for a high-riding patella (alta)", pick:/distalis|distaliz|patella alta/i, scale:1.2,
+        note:"Distalisation puts the osteotomy under the most tension from the quadriceps and has the highest fracture risk — weight-bearing and extension restrictions are stricter and longer." },
+      { k:"mpfl", label:"With MPFL reconstruction", sub:"Combined with a ligament reconstruction", pick:/mpfl|ligament|combined/i, scale:1.15,
+        note:"When combined with an MPFL reconstruction, the ligament's range limits apply on top of the osteotomy's loading limits — the more restrictive rule always wins." },
+      { k:"revision", label:"Revision / complex", sub:"Repeat or complex realignment", pick:/revision|complex/i, scale:1.35,
+        note:"Revision realignment progresses more slowly, and hardware problems and stiffness are more common." }],
+    ph:[
+      ["Protect the osteotomy",0,6,"Protect the bone fragment, control swelling, and switch the quads on without loading the tubercle.","full passive extension, a straight-leg raise with NO extensor lag, flexion ≥90°, wound healed and swelling settling","Brace locked in extension for walking and partial/toe-touch weight-bearing EXACTLY as your surgeon directs — the tubercle is held only by screws and can fracture if you load it early. NO resisted knee extension, no squatting, no kneeling, and do not let the knee buckle."],
+      ["Union & restoring motion",6,12,"Wean the brace and crutches as the bone unites, and restore full motion.","your surgeon confirms the osteotomy is uniting on X-ray, walking full weight-bearing without the brace or a limp, flexion ≥120°, no extensor lag","Progress weight-bearing ONLY once union is confirmed — not on the calendar. Still no resisted open-chain knee extension and no deep squatting: the quadriceps pulls directly on the healing fragment."],
+      ["Progressive strengthening",12,24,"Rebuild quadriceps strength and single-leg control.","quadriceps strength ≥70–80% of the other leg, controlled single-leg squat, no pain at the tubercle with loading, no swelling","Introduce resisted knee extension gradually and only after ~12 weeks, in a pain-free mid-range arc. Impact only once union is solid. Kneeling directly on the tubercle stays uncomfortable for a long time."],
+      ["Return to running & sport",24,52,"Restore full strength and power, then running, cutting and sport.","quadriceps strength ≥90% of the other side, hop-test battery ≥90%, no tubercle pain with impact, plus surgeon clearance","Return to sport is typically 6–12 months. The screws sit just under the skin and commonly irritate with kneeling — removal is sometimes done later, usually after a year once the bone has fully healed."]] },
   { re:/meniscus repair|meniscal repair|meniscus.*(suture|root repair)/, label:"Meniscus repair", total:26,
     freq:"Daily home work + 1–2 supervised sessions/week",
     note:"A repaired meniscus has a poor blood supply and needs real protection — this is much slower than a meniscectomy. Deep loaded flexion is the main thing to avoid early.",
@@ -2085,12 +2103,54 @@ function generatedPlans(){
   return _genPlans;
 }
 function allPlans(){ return REHAB_PLANS.concat(generatedPlans()); }
+/* Post-operative timelines for the surgical catalogue (data/surgery-plans.js),
+   matched against the SELECTED/DETECTED surgery's name rather than the condition. */
+let _surgPlans = null;
+function surgeryPlans(){
+  if(_surgPlans) return _surgPlans;
+  _surgPlans = (window.SURGERY_PLAN_DEFS||[]).map(d=>({
+    ...d, re:new RegExp(d.r, "i"),
+    variants: d.variants ? d.variants.map(v=>({ ...v, pick: v.pick ? new RegExp(v.pick, "i") : undefined })) : undefined
+  }));
+  return _surgPlans;
+}
+/* Rank a list of plans against an arbitrary name — non-generic wins, then the
+   longest match. Shared by the condition and surgery lookups. */
+function rankPlans(name, plans){
+  const n = (name||"").toLowerCase();
+  let best=null, bestSpec=-1, bestLen=0;
+  for(const p of plans){
+    const m = n.match(p.re); if(!m) continue;
+    const spec = p.generic ? 0 : 1;
+    if(spec>bestSpec || (spec===bestSpec && m[0].length>bestLen)){ best=p; bestSpec=spec; bestLen=m[0].length; }
+  }
+  return best;
+}
+/* The timeline for a given surgery. A specific plan that matches the procedure by
+   NAME (e.g. the curated tibial-tubercle-transfer protocol) beats the broad
+   surgical-family archetype; if nothing matches at all we still return the
+   generic post-op timeline, so every catalogued procedure resolves. */
+function surgeryPlanFor(surg){
+  if(!surg) return null;
+  const named = rankPlans(surg.name, allPlans());
+  if(named && !named.generic) return { ...named, surgeryName:surg.name };
+  const fam = rankPlans(surg.name, surgeryPlans());
+  if(fam && !fam.generic) return { ...fam, surgeryName:surg.name };
+  const generic = surgeryPlans().find(p=>p.generic);
+  return (fam || generic || named) ? { ...(fam || generic || named), surgeryName:surg.name } : null;
+}
 /* Pick the most specific realistic timeline for a condition (longest, most
    specific match wins; post-op-only plans need a surgical context). */
 function detectPlan(cond){
   if(!cond) return null;
   const name = (cond.name||"").toLowerCase();
-  const isPostop = state.surgery==="yes" || !!detectSurgery();
+  const surg = detectSurgery();
+  const isPostop = state.surgery==="yes" || !!surg;
+  // A surgery the user EXPLICITLY picked in Details tells us what was actually
+  // done, so its post-op timeline governs (a tibial tubercle transfer for
+  // patellar instability follows the osteotomy's clock, not the instability's).
+  const explicitSurgery = surg && state.surgeryType && state.surgeryType!=="auto" && state.surgeryType!=="other";
+  if(explicitSurgery){ const sp = surgeryPlanFor(surg); if(sp) return sp; }
   let best=null, bestSpec=-1, bestLen=0;
   for(const p of allPlans()){
     if(p.postop===true && !isPostop) continue;
@@ -2100,9 +2160,11 @@ function detectPlan(cond){
     const len = m[0].length;
     if(spec>bestSpec || (spec===bestSpec && len>bestLen)){ best=p; bestSpec=spec; bestLen=len; }
   }
-  // nothing matched by name — fall back to a real timeline for the condition's domain,
-  // so every condition still gets phases, milestones and restrictions.
-  return best || DOMAIN_FALLBACK[cond.domain] || DOMAIN_FALLBACK.msk;
+  // a specific condition plan wins; otherwise an auto-detected surgery's timeline
+  // beats a merely generic condition plan, and the domain fallback catches the rest.
+  if(best && !best.generic) return best;
+  if(surg){ const sp = surgeryPlanFor(surg); if(sp && !sp.generic) return sp; }
+  return best || (surg && surgeryPlanFor(surg)) || DOMAIN_FALLBACK[cond.domain] || DOMAIN_FALLBACK.msk;
 }
 /* Which plan phase the user is in right now, from weeks since injury/surgery. */
 function currentPlanPhase(plan){

@@ -124,7 +124,7 @@ const FAM = [
   { cat: "osteotomy", region: "bone", autoFlags: ["recent_fracture"],
     ret: "The cut bone heals over weeks — protected loading first, then a staged return, similar to a fracture.",
     prec: [P("Follow your weight-bearing limits while the bone cut heals.", 8), P("Control swelling; keep neighbouring joints moving.", 4), P("Avoid impact and heavy loading until healing is confirmed.", 10)],
-    bases: [{ n: "High tibial osteotomy (knee)", kw: ["high tibial osteotomy", "hto"] }, { n: "Distal femoral osteotomy", kw: ["distal femoral osteotomy"] }, { n: "Periacetabular osteotomy (hip)", kw: ["periacetabular osteotomy", "pao"] }, { n: "Bunion correction (hallux valgus osteotomy)", kw: ["bunion", "hallux valgus", "bunionectomy"] }, { n: "Calcaneal osteotomy", kw: ["calcaneal osteotomy"] }, { n: "Femoral derotation osteotomy", kw: ["femoral osteotomy"] }],
+    bases: [{ n: "High tibial osteotomy (knee)", kw: ["high tibial osteotomy", "hto"] }, { n: "Distal femoral osteotomy", kw: ["distal femoral osteotomy"] }, { n: "Periacetabular osteotomy (hip)", kw: ["periacetabular osteotomy", "pao"] }, { n: "Bunion correction (hallux valgus osteotomy)", kw: ["bunion", "hallux valgus", "bunionectomy"] }, { n: "Calcaneal osteotomy", kw: ["calcaneal osteotomy"] }, { n: "Femoral derotation osteotomy", kw: ["femoral osteotomy"] }, { n: "Tibial tubercle transfer (osteotomy)", kw: ["tibial tubercle transfer", "tibial tubercle osteotomy", "tibial tuberosity transfer", "fulkerson", "elmslie-trillat", "anteromedialisation", "anteromedialization", "\\btto\\b", "\\bttt\\b"] }],
     mods: A_OPEN, sides: S_LIMB },
 
   { cat: "amputation", region: "limb", autoFlags: [],
