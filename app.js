@@ -4202,6 +4202,7 @@ function renderProgram(prog){
     if(homeSwap(e).home) homeAdapted++;
   })));
 
+  html += whyThisPlanCard(prog);
   html += returnGoalsCard();
   html += adlSuggestionsCard();
   html += homeCard(homeAdapted);
@@ -4417,6 +4418,7 @@ function goStep(n){
   const act=document.querySelector(".step.active");        // keep the active step visible in the scrollable nav
   if(act&&act.scrollIntoView) try{ act.scrollIntoView({inline:"center",block:"nearest",behavior:"smooth"}); }catch(e){}
   window.scrollTo({top:0,behavior:"smooth"});
+  if(n===0) syncOptSecs();                                   // reflect anything already answered
   if(n===1) initClinician();                                  // Clinician section (now right after History)
   if(n===3) ensureDetailsData();      // sports/activities only matter from Details on
   if(n===3) renderPrecautions();                              // Precautions card lives in Details — keep it current
@@ -4529,6 +4531,7 @@ function adlSegHTML(name, level){
   return ADL_SCALE.map(s=>`<button type="button" class="adlseg ${s.cls}${s.v===level?" on":""}" data-adl="${esc(name)}" data-lvl="${s.v}" aria-pressed="${s.v===level}" title="${esc(s.label)}">${esc(s.short)}</button>`).join("");
 }
 function renderADLList(){
+  if(typeof syncOptSecs==="function") setTimeout(syncOptSecs,0);
   const el=$("#adlList"); if(!el) return;
   const arr=adlList();
   el.innerHTML = arr.map(a=>`<div class="adlrow">
@@ -4722,9 +4725,16 @@ function planLineHTML(item){
     : "";
   const vs = p.variantList || [];
   const curK = p.variant && p.variant.k;
+  /* 13+ chips was overwhelming and buried the one that matters. Show the active
+     variation; the rest fold away behind a count. */
+  const curV = vs.find(v=>v.k===curK) || vs[0];       // `cur` is already the week number here
+  const rest = vs.filter(v=>v.k!==(curV&&curV.k));
+  const chip = v => `<button type="button" class="planvar${v.k===curK?" on":""}" data-plan="${esc(p.label)}" data-v="${esc(v.k)}" title="${esc(v.sub||"")}">${esc(v.label)}</button>`;
   const chips = vs.length>1 ? `<div class="planvars no-print">
       <span class="planvarlbl">Which fits you?</span>
-      ${vs.map(v=>`<button type="button" class="planvar${v.k===curK?" on":""}" data-plan="${esc(p.label)}" data-v="${esc(v.k)}" title="${esc(v.sub||"")}">${esc(v.label)}</button>`).join("")}
+      ${curV?chip(curV):""}
+      ${rest.length?`<details class="planvarmore"><summary>${rest.length} other option${rest.length===1?"":"s"}</summary>
+        <div class="planvarlist">${rest.map(chip).join("")}</div></details>`:""}
     </div>
     ${p.variant&&p.variant.sub?`<div class="planvarsub"><b>${esc(p.variant.label)}</b> — ${esc(p.variant.sub)}</div>`:""}` : "";
   return `<div class="planline">
@@ -4754,6 +4764,40 @@ function progressReportHTML(item){
     <div class="progfoot">You advance when you meet the criteria <b>and</b> the tissue has had time — whichever is further behind is where you really are.</div>
   </details>`;
 }
+/* "Why your plan looks like this" — the app makes dozens of decisions from the
+   history and never says so, which is exactly what makes a long intake form feel
+   pointless. Every line below is read back from what was actually applied. */
+function whyThisPlanCard(prog){
+  const why = [];
+  const it = prog.items[0];
+  const add = (because, sowhat) => why.push({ because, sowhat });
+  if(it && it.plan){
+    add(`Your diagnosis is ${it.name.replace(/\s*\(.*$/,"")}`, `we're following the ${it.plan.label} timeline (about ${it.plan.total} weeks) rather than a generic template`);
+    if(it.plan.variant) add(`The variation that fits you: ${it.plan.variant.label}`, it.plan.variant.sub||"this adjusts the length and the milestones");
+  }
+  const wb = (state.weightBearing||{}).status;
+  if(wb) add(`Your weight-bearing order is ${(WB_STATUS[wb]||{}).abbr||wb}`, "exercises that load the limb beyond that have been removed");
+  if(state.falls==="2"||(state.aid&&state.aid!=="none")||Number(state.age)>=75)
+    add("You've had falls / use a walking aid", "dedicated fall-prevention work was added to every phase");
+  if((state.adls||[]).filter(a=>a.level>=1).length)
+    add(`${(state.adls||[]).filter(a=>a.level>=1).length} daily activities you find hard`, "task-specific practice for those was woven into the phases");
+  if(state.equipment) add(`Equipment: ${({none:"none / bodyweight",bands:"bands + a chair",dumbbells:"some dumbbells",gym:"full gym"})[state.equipment]||state.equipment}`,
+    ["none","bands"].includes(state.equipment) ? "exercises are shown as household-object versions" : "you can load and measure precisely");
+  if(state.timePerDay) add(`You have ${({lt10:"under 10 min",["10to20"]:"10–20 min",["20to40"]:"20–40 min",gt40:"40+ min"})[state.timePerDay]} a day`, "each phase is sized to fit that, so it's a plan you'll actually finish");
+  if(state.smoking==="current") add("You smoke", "the timeline is longer — smoking measurably slows tendon, bone and wound healing");
+  if(state.sleep==="lt6") add("You sleep under 6 hours", "hard sessions are kept lighter — short sleep raises pain sensitivity and blunts gains");
+  if(state.stress==="high") add("Your stress is high", "we pace rather than push; stress genuinely raises pain sensitivity");
+  if(state.alcohol==="heavy") add("Heavy alcohol use", "balance and impact work is flagged to do sober and near support");
+  const lf = labFlags();
+  if(lf.length) add("Your blood results", "they changed what's safe to prescribe — see the precautions above");
+  if((state.returnSports||[]).length) add(`You want to get back to ${state.returnSports[0]}`, "sport-specific drills were added to the later phases");
+  if((state.devices||[]).length) add(`${state.devices.length} device(s) you're using`, "exercises those restrict have been removed or flagged");
+  if(!why.length) return "";
+  return `<div class="card whycard"><h2>🧭 Why your plan looks like this</h2>
+    <p class="hint">Your answers weren't just filed away — here's what each one actually changed.</p>
+    ${why.map(w=>`<div class="whyrow"><span class="whyb">${esc(w.because)}</span><span class="whyarrow">→</span><span class="whys">${esc(w.sowhat)}</span></div>`).join("")}
+    <p class="hint whyfoot">Change any answer and the plan updates — nothing here is fixed.</p></div>`;
+}
 /* Program card: capability & confidence suggestions for each hard ADL area. */
 function adlSuggestionsCard(){
   const diffs=(state.adls||[]).filter(a=>a.level>=1);
@@ -4780,6 +4824,31 @@ function adlSuggestionsCard(){
     ${blocks}
     <p class="hint adlfoot">Break a hard task into steps, rehearse the tricky part, and reduce help as you improve. An occupational therapist can tailor equipment and techniques to you.</p>
   </div>`;
+}
+/* The optional sections start closed, but a returning user must never think their
+   answers were lost — open anything already filled and show what's in it. */
+function syncOptSecs(){
+  $$(".optsec").forEach(d => {
+    const sum = d.querySelector("summary");
+    const n = Array.from(d.querySelectorAll("input,select,textarea")).filter(el =>
+      el.type === "checkbox" ? el.checked : String(el.value||"").trim() !== "").length
+      + (d.dataset.opt === "adls"  ? (state.adls||[]).length   : 0)
+      + (d.dataset.opt === "meds"  ? (state.medIds||[]).length : 0);
+    let pill = sum.querySelector(".optcount");
+    if(n){
+      if(!pill){ pill = document.createElement("span"); pill.className = "optcount"; sum.appendChild(pill); }
+      pill.textContent = n + " added";
+      if(!d.dataset.touched) d.open = true;
+    } else if(pill) pill.remove();
+  });
+}
+function initOptSecs(){
+  $$(".optsec").forEach(d => {
+    d.addEventListener("toggle", () => { d.dataset.touched = "1"; });
+    d.addEventListener("change", syncOptSecs);
+    d.addEventListener("input",  syncOptSecs);
+  });
+  syncOptSecs();
 }
 function initHistory(){
   const wrap=$("#historyChecks");
@@ -4921,6 +4990,7 @@ function initSearch(){
 
 /* ---------- medication search UI ---------- */
 function renderSelectedMeds(){
+  if(typeof syncOptSecs==="function") setTimeout(syncOptSecs,0);
   const wrap=$("#selectedMeds"); if(!wrap) return;
   const meds=selectedMeds();
   state.medDoses = state.medDoses || {};
@@ -6715,7 +6785,7 @@ function renderExResults(){
 /* ---------- boot ---------- */
 document.addEventListener("DOMContentLoaded",()=>{
   load();
-  initHistory(); initMeds(); initSearch(); initDetails(); initProgress(); initCoachSettings();
+  initHistory(); initOptSecs(); initMeds(); initSearch(); initDetails(); initProgress(); initCoachSettings();
   // Details(3)/Program(4)/Health(5) need a condition; Injury(2) is where you pick it; Clinician(1) is a setup form (no condition needed).
   $$("[data-goto]").forEach(b=>b.onclick=()=>{
     const n=+b.dataset.goto;

@@ -124,6 +124,19 @@
         <div class="screenwarn" id="screenWarn"></div>
       </div>
 
+      <!-- Everything above is the safety core: it decides what is unsafe to prescribe, so it
+           stays required and visible. Everything below only sharpens the plan — a wall of 20+
+           optional inputs was the main reason this step felt like a chore. Folded away, and each
+           one labelled with what it actually buys. -->
+      <div class="optzone">
+        <div class="optzonehead">
+          <h3>⚙️ Improve my plan <span class="optzonetag">optional</span></h3>
+          <p class="hint">That's everything we need to keep you safe — you can press <b>Next</b> right now.
+            Each section below makes the plan sharper, and says what it gets you.</p>
+        </div>
+
+      <details class="optsec" data-opt="vitals">
+        <summary><span class="optsum">Vital signs &amp; measurements</span><span class="optbuy">→ unlocks heart-rate targets</span></summary>
       <div class="field vitals">
         <span class="lab">Vital signs &amp; measurements <span class="sub">(optional — powers your heart-rate targets and tailors exercise intensity)</span></span>
         <div class="grid3">
@@ -143,6 +156,10 @@
         <div class="vitalsreadout" id="vitalsReadout"></div>
       </div>
 
+      </details>
+
+      <details class="optsec" data-opt="lifestyle">
+        <summary><span class="optsum">Lifestyle &amp; daily function</span><span class="optbuy">→ tunes your timeline, pacing &amp; fall-safety</span></summary>
       <div class="field">
         <span class="lab">Lifestyle &amp; daily function <span class="sub">(optional — helps tailor pacing, recovery advice, and fall-safety)</span></span>
         <div class="grid3">
@@ -177,6 +194,10 @@
         </div>
       </div>
 
+      </details>
+
+      <details class="optsec" data-opt="adls">
+        <summary><span class="optsum">Daily activities you find hard</span><span class="optbuy">→ adds practice for those exact tasks</span></summary>
       <div class="field">
         <span class="lab">Daily activities you find hard <span class="sub">(optional — occupational-therapy check: search a task, then rate how hard it is right now)</span></span>
         <input type="text" id="adlSearch" placeholder="Search e.g. ‘bathing’, ‘dressing’, ‘stairs’, ‘cooking’, ‘buttons’, ‘jars’…" autocomplete="off" />
@@ -184,16 +205,28 @@
         <div class="adllist" id="adlList"></div>
       </div>
 
+      </details>
+
+      <details class="optsec" data-opt="meds">
+        <summary><span class="optsum">Medications</span><span class="optbuy">→ flags exercise interactions</span></summary>
       <div class="field">
         <span class="lab">Medications <span class="sub">(optional — search 10,000+; flags exercise considerations)</span></span>
         <input type="text" id="medSearch" placeholder="Search e.g. ‘metoprolol’, ‘Eliquis’, ‘prednisone’, ‘gabapentin’…" autocomplete="off" />
         <div class="selected" id="selectedMeds"></div>
         <div class="results medresults hide" id="medResults"></div>
       </div>
+      </details>
+
+      <details class="optsec" data-opt="extra">
+        <summary><span class="optsum">Anything else we should know</span><span class="optbuy">→ free text</span></summary>
       <label class="field"><span class="lab">Other medications <span class="sub">(free text, optional)</span></span>
         <input type="text" id="q_meds" placeholder="anything not found in the search above" /></label>
       <label class="field"><span class="lab">Anything else we should know? <span class="sub">(optional)</span></span>
         <textarea id="q_notes" placeholder="Other conditions, symptoms, what makes things better or worse…"></textarea></label>
+
+      </details>
+
+      </div>
 
       <div class="rowbtns">
         <span></span>
