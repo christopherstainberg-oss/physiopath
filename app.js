@@ -3312,20 +3312,48 @@ function addExOptsHTML(opts){
 }
 /* Full-library search for the add picker — respects precautions (device/WB name
    restrictions + contraindication flags) so suggestions stay safe. */
+/* ---------------------------------------------------------------------
+   ONE user gate for every exercise surface.
+   The library had drifted from the add-picker: it skipped nameAllowed(), the
+   aquatic gate and the paediatric gate, and scored with gatherFlags() instead
+   of activeFlags() (which is base flags UNION medication flags). So a
+   non-weight-bearing user who ticked "Respect my precautions" was still shown
+   the standing and loaded work the generator had removed by name, aquatic work
+   appeared before the water-confidence question was answered, and opting into
+   medication filtering changed the program but not the library.
+   Both callers now share this, so they cannot drift apart again.
+   --------------------------------------------------------------------- */
+function userGateCtx(){ return { allowAqua: aquaticAllowed(), adult: isAdultUser() }; }
+function exPassesUserGates(e, ctx){
+  if(!ctx.allowAqua && isAquaticEx(e)) return false;     // withhold aquatic until water confidence is set
+  if(ctx.adult && isPediatricEx(e)) return false;        // no child-only moves for adults
+  return nameAllowed(e.name);                            // device / weight-bearing name restrictions
+}
+/* File order is 2,086 squat variants first, so an unfiltered library opened on 80 squats and
+   looked broken. Round-robin across movement patterns instead — same set, visible variety. */
+function diversify(list){
+  const by = new Map();
+  for(const e of list){ const k = e.pattern || "other"; if(!by.has(k)) by.set(k, []); by.get(k).push(e); }
+  const keys = [...by.keys()], out = [];
+  for(let i = 0; ; i++){
+    let added = false;
+    for(const k of keys){ const arr = by.get(k); if(i < arr.length){ out.push(arr[i]); added = true; } }
+    if(!added) break;
+  }
+  return out;
+}
 function searchLibraryForAdd(q, exclude){
   if(!window.EXERCISES) return [];
   const toks = q.toLowerCase().split(/\s+/).filter(Boolean); if(!toks.length) return [];
   const exSet = new Set((exclude||[]).map(n=>n.toLowerCase()));
   const matched = [];
-  const allowAqua = aquaticAllowed();
-  const adult = isAdultUser();
+  const _gate = userGateCtx();
   for(let i=0;i<window.EXERCISES.length && matched.length<80;i++){
     const e = window.EXERCISES[i];
     if(exSet.has(e.name.toLowerCase())) continue;
-    if(!allowAqua && isAquaticEx(e)) continue;    // withhold aquatic until water-confidence is set
-    if(adult && isPediatricEx(e)) continue;       // no child-only moves in adult suggestions/search
-    const hay = (e.name+" "+e.region.join(" ")+" "+e.pattern).toLowerCase();   // match name, region (e.g. "supine")/pattern too
-    if(toks.every(t=>hay.includes(t)) && nameAllowed(e.name)) matched.push(e);
+    if(!exPassesUserGates(e, _gate)) continue;    // shared with the library — see exPassesUserGates
+    const hay = exHay(e);
+    if(toks.every(t=>hay.includes(t))) matched.push(e);
   }
   let { kept } = window.applyContra(matched, activeFlags());     // drop contraindicated, mark cautioned
   return kept.slice(0,30).map(e=>({ n:e.name, d:e.dose, c:e.cue, warn:e.warn, pattern:e.pattern, region:e.region, tags:e.tags }));
@@ -5501,6 +5529,16 @@ function doGenerate(){
   state.program=generateProgram(); save();
   renderProgram(state.program); goStep(4);
 }
+/* Panels only render when they are visited, so printing from the Program step emitted
+   "No entries yet - log your first session above." over a month of real logs, plus an empty
+   vitals log, empty labs and an empty library. Render the record before the dialog opens. */
+function preparePrint(){
+  try{
+    if(state.program){ renderProgram(state.program); renderDriftNote(); }
+    if(typeof renderProgress==="function") renderProgress();
+    if(typeof renderHealth==="function") renderHealth();
+  }catch(e){ console.warn("print prep failed:", e); }
+}
 function doReset(){
   /* This is the only copy of their history and there is no undo. Point at the backup. */
   const n = (state.log||[]).length;
@@ -7222,10 +7260,12 @@ function initLibrary(){
     const regions = [...new Set(window.EXERCISES.flatMap(e=>e.region))].sort();
     const sel = $("#exRegion");
     regions.forEach(r=>{ const o=document.createElement("option"); o.value=r; o.textContent=r; sel.appendChild(o); });
-    let t; $("#exSearch").oninput=()=>{ clearTimeout(t); t=setTimeout(renderExResults,120); };
-    $("#exRegion").onchange=renderExResults;
-    $("#exDiff").onchange=renderExResults;
-    $("#exSafe").onchange=renderExResults;
+    /* Any filter change is a new result set — go back to the first page. */
+    const reRender = () => { exShown = 80; renderExResults(); };
+    let t; $("#exSearch").oninput=()=>{ clearTimeout(t); t=setTimeout(reRender,120); };
+    $("#exRegion").onchange=reRender;
+    $("#exDiff").onchange=reRender;
+    $("#exSafe").onchange=reRender;
     // default: respect precautions if any are active
     if(gatherFlags().length){ $("#exSafe").checked=true; }
   }
@@ -7235,6 +7275,12 @@ function initLibrary(){
     : `No precautions flagged from your history.`;
   renderExResults();
 }
+/* The haystack was rebuilt for all 20,000 exercises on every keystroke; it never changes,
+   so cache it on the record the first time it is needed. */
+function exHay(e){
+  return e._hay || (e._hay = (e.name+" "+e.region.join(" ")+" "+e.equipment+" "+e.pattern).toLowerCase());
+}
+let exShown = 80;                       // "Show more" page size; reset whenever the filters change
 function renderExResults(){
   const q = $("#exSearch").value.trim().toLowerCase();
   const toks = q.split(/\s+/).filter(Boolean);
@@ -7243,16 +7289,17 @@ function renderExResults(){
   let list = window.EXERCISES;
   if(region!=="all") list = list.filter(e=>e.region.includes(region));
   if(diff!=="all") list = list.filter(e=>e.difficulty === +diff);
-  if(toks.length) list = list.filter(e=>{ const hay=(e.name+" "+e.region.join(" ")+" "+e.equipment+" "+e.pattern).toLowerCase();
-    return toks.every(t=>hay.includes(t)); });
+  if(toks.length) list = list.filter(e=>toks.every(t=>exHay(e).includes(t)));
   let annotate = new Map();
   if(safe){
-    const flags = gatherFlags();
-    const { kept } = window.applyContra(list, flags);
+    const ctx = userGateCtx();
+    list = list.filter(e=>exPassesUserGates(e, ctx));            // was missing entirely here
+    const { kept } = window.applyContra(list, activeFlags());    // activeFlags, not gatherFlags: includes med filtering
     kept.forEach(e=>{ if(e.warn) annotate.set(e.id, e.warn); });
     list = kept;
   }
-  const total = list.length; list = list.slice(0,80);
+  if(!toks.length) list = diversify(list);        // no query -> show variety, not 80 squats
+  const total = list.length; list = list.slice(0, exShown);
   const res = $("#exResults");
   if(!list.length){ res.innerHTML=`<div class="moreinfo">No matches. Try a simpler term or clear the filters.</div>`; return; }
   res.innerHTML = list.map(e=>{ const w=annotate.get(e.id);
@@ -7266,7 +7313,12 @@ function renderExResults(){
       </div>
       <div class="exexp hide"></div>
     </div>`; }).join("") +
-    (total>80?`<div class="moreinfo">Showing 80 of ${total} matches — refine to narrow it down.</div>`:"");
+    (total>list.length
+      ? `<div class="moreinfo">Showing ${list.length} of ${total} matches.
+           <button type="button" class="btn ghost small" id="exMore">Show ${Math.min(80, total-list.length)} more</button></div>`
+      : (total>80?`<div class="moreinfo">Showing all ${total} matches.</div>`:""));
+  const more = $("#exMore");
+  if(more) more.onclick = () => { exShown += 80; renderExResults(); };
   $$("#exResults .exitemw").forEach(w=>{ w.querySelector(".exrow").onclick=()=>{
     const exp=w.querySelector(".exexp");
     if(!exp.dataset.filled){ const e=EXMAP.get(w.dataset.i); exp.innerHTML=movementExplain(e.name,e.pattern,e.region); exp.dataset.filled="1"; }
@@ -7292,7 +7344,8 @@ document.addEventListener("DOMContentLoaded",()=>{
   const cg = $("#q_clinicianGuided"); if(cg){ cg.checked = !!state.clinicianGuided; cg.onchange=()=>{ state.clinicianGuided=cg.checked; save(); syncClinGuide(); }; syncClinGuide(); }
   const clinNext = $("#clinToProgram"); if(clinNext) clinNext.onclick=()=>goStep(2);   // Clinician → Injury (consecutive)
   $("#generateBtn").onclick=doGenerate;
-  $("#printBtn").onclick=()=>window.print();
+  $("#printBtn").onclick=()=>{ preparePrint(); window.print(); };
+  window.addEventListener("beforeprint", preparePrint);      // Ctrl+P / browser menu
   $("#resetBtn").onclick=doReset;
   $("#chatform").addEventListener("submit",e=>{ e.preventDefault();
     const v=$("#chatInput").value.trim(); if(!v) return;

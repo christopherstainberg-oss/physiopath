@@ -5,15 +5,23 @@
   --radius:14px;--shadow:0 8px 30px rgba(0,0,0,.35);
   --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
 }
+/* --brand / --brand-2 are dual-purpose: they colour TEXT and they fill BACKGROUNDS that
+   carry dark text (.btn.primary, .planvar.on). Darkening them for light mode would fix the
+   text and break the buttons, so text usages get their own ink tokens. In dark mode the ink
+   IS the accent; light mode overrides only the ink. */
+:root{ --brand-ink:var(--brand); --accent-ink:var(--brand-2); }
 @media (prefers-color-scheme: light){
-  :root{--bg:#eef3f8;--panel:#fff;--panel-2:#f2f6fb;--line:#d7e2ee;--text:#132030;--muted:#5b6c80;--shadow:0 8px 30px rgba(20,40,70,.10)}
+  :root{--bg:#eef3f8;--panel:#fff;--panel-2:#f2f6fb;--line:#d7e2ee;--text:#132030;--muted:#5b6c80;--shadow:0 8px 30px rgba(20,40,70,.10);
+    /* the dark-mode accents measured 2.59:1 and 1.64:1 on white -- both fail WCAG AA (4.5:1),
+       and --brand-2 was the colour of the cardiac-device heart-rate limit text. */
+    --brand-ink:#0b5fa8; --accent-ink:#0a6e4a}
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
 body{font-family:var(--sans);background:var(--bg);color:var(--text);line-height:1.5;-webkit-font-smoothing:antialiased;
   padding-bottom:env(safe-area-inset-bottom);
   overflow-x:clip;-webkit-text-size-adjust:100%;text-size-adjust:100%}
-a{color:var(--brand)}
+a{color:var(--brand-ink)}
 
 /* ---------- mobile / touch polish ---------- */
 button,a,input,select,textarea,.chip,.fchip,.result,.exrow,.step,.selchip .x,.swapopt{-webkit-tap-highlight-color:transparent}
@@ -99,7 +107,7 @@ input[type=range]{flex:1;accent-color:var(--brand);height:30px}
 .histgroup{margin:0 0 14px}
 .histgrouplab{font-size:11.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);margin:2px 0 7px}
 .cardiacdev{border:1px solid rgba(255,107,107,.35);border-radius:12px;padding:13px 14px;background:rgba(255,107,107,.06)}
-.cdhint{font-size:12.5px;color:var(--brand-2);margin-top:9px;line-height:1.5}
+.cdhint{font-size:12.5px;color:var(--accent-ink);margin-top:9px;line-height:1.5}
 .check{display:flex;align-items:center;gap:10px;padding:11px 12px;border:1px solid var(--line);border-radius:10px;
   background:var(--panel-2);cursor:pointer;font-size:14px;user-select:none}
 .check.on{border-color:var(--brand);background:rgba(62,166,255,.12)}
@@ -134,9 +142,9 @@ input[type=range]{flex:1;accent-color:var(--brand);height:30px}
 .result .dot{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
 .result .rn{flex:1;font-size:14px}
 .result .rr{font-size:11.5px;color:var(--muted)}
-.result .add{color:var(--brand);font-weight:800;font-size:18px}
+.result .add{color:var(--brand-ink);font-weight:800;font-size:18px}
 .result.picked{opacity:.55}
-.result.picked .add{color:var(--brand-2)}
+.result.picked .add{color:var(--accent-ink)}
 .moreinfo{text-align:center;color:var(--muted);font-size:12.5px;padding:10px}
 .selected{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 4px}
 .selchip{display:flex;align-items:center;gap:8px;background:var(--panel-2);border:1px solid var(--brand);border-radius:999px;padding:7px 8px 7px 13px;font-size:13.5px}
@@ -144,7 +152,7 @@ input[type=range]{flex:1;accent-color:var(--brand);height:30px}
 .selchip .sup{font-size:10px;font-weight:800;padding:1px 6px;border-radius:999px;text-transform:uppercase}
 .sup.clinical{background:rgba(255,107,107,.2);color:var(--danger)}
 .sup.supervised{background:rgba(255,204,87,.2);color:var(--warn)}
-.sup.self{background:rgba(92,225,166,.2);color:var(--brand-2)}
+.sup.self{background:rgba(92,225,166,.2);color:var(--accent-ink)}
 
 /* acute label */
 .acuteLabel{margin-top:8px;font-size:13px}
@@ -167,13 +175,13 @@ input[type=range]{flex:1;accent-color:var(--brand);height:30px}
 
 .focusline{background:rgba(62,166,255,.09);border:1px solid rgba(62,166,255,.3);border-radius:10px;
   padding:9px 12px;margin:0 0 12px;font-size:13px;line-height:1.5}
-.focusline b{color:var(--brand)}
+.focusline b{color:var(--brand-ink)}
 .sigpill{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.3px;color:#04121f;
   background:var(--brand);border-radius:999px;padding:1px 7px;vertical-align:1px}
 /* condition-specific rehab timeline (REHAB_PLANS) */
 .planline{background:rgba(62,166,255,.07);border:1px solid rgba(62,166,255,.28);border-radius:10px;
   padding:10px 12px;margin:0 0 12px;font-size:13px;line-height:1.55}
-.planhead{color:var(--brand);margin-bottom:4px}
+.planhead{color:var(--brand-ink);margin-bottom:4px}
 .plannote{color:var(--text)}
 .planfoot{color:var(--muted);font-size:12px;margin-top:6px}
 .planvars{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:9px}
@@ -227,11 +235,11 @@ input[type=range]{flex:1;accent-color:var(--brand);height:30px}
 .optsec>summary{cursor:pointer;list-style:none;padding:12px 14px;display:flex;flex-wrap:wrap;
   align-items:baseline;gap:4px 10px;border-radius:12px}
 .optsec>summary::-webkit-details-marker{display:none}
-.optsec>summary::before{content:"＋";font-weight:700;color:var(--brand);margin-right:2px}
+.optsec>summary::before{content:"＋";font-weight:700;color:var(--brand-ink);margin-right:2px}
 .optsec[open]>summary::before{content:"−"}
 .optsec>summary:hover{background:var(--chip)}
 .optsum{font-weight:700;font-size:13.5px;color:var(--text)}
-.optbuy{font-size:12px;color:var(--brand);font-weight:600}
+.optbuy{font-size:12px;color:var(--brand-ink);font-weight:600}
 .optsec>.field,.optsec>label.field{padding:0 14px 14px;margin:0}
 .optcount{font-size:11px;font-weight:700;color:#fff;background:var(--brand);border-radius:999px;
   padding:1px 7px;margin-left:auto}
@@ -240,14 +248,14 @@ input[type=range]{flex:1;accent-color:var(--brand);height:30px}
 .planvarmore summary{cursor:pointer;font-size:11.5px;font-weight:700;color:var(--muted);
   border:1px dashed var(--line);border-radius:999px;padding:4px 10px;list-style:none}
 .planvarmore summary::-webkit-details-marker{display:none}
-.planvarmore summary:hover{color:var(--brand);border-color:var(--brand-2)}
+.planvarmore summary:hover{color:var(--brand-ink);border-color:var(--brand-2)}
 .planvarlist{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 /* "why your plan looks like this" */
 .whycard{border-color:var(--brand)}
 .whyrow{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;padding:7px 0;border-top:1px solid var(--line);font-size:13px;line-height:1.5}
 .whyrow:first-of-type{border-top:0}
 .whyb{font-weight:700;color:var(--text)}
-.whyarrow{color:var(--brand);font-weight:800}
+.whyarrow{color:var(--brand-ink);font-weight:800}
 .whys{color:var(--muted);flex:1;min-width:180px}
 .whyfoot{margin-top:8px}
 /* protocol-suggested weight-bearing + milestone self-report */
@@ -268,14 +276,14 @@ input[type=range]{flex:1;accent-color:var(--brand);height:30px}
 /* suggested assistive devices */
 .devsugg{border:1px solid rgba(62,166,255,.3);background:rgba(62,166,255,.06);border-radius:10px;padding:10px 12px;margin:10px 0}
 .devsugg-h{font-size:13px;margin-bottom:6px}
-.devsugg-h b{color:var(--brand)}
+.devsugg-h b{color:var(--brand-ink)}
 .devsugg-sub{color:var(--muted);font-size:11.5px;font-weight:500}
 .devsugg-row{display:flex;align-items:flex-start;gap:10px;border-top:1px solid var(--line);padding:8px 0}
 .devsugg-row:first-of-type{border-top:0}
 .devsugg-main{flex:1;font-size:12.8px;line-height:1.5}
 .devsugg-why{color:var(--muted)}
 .devsugg-param{margin-top:3px;font-size:12px;color:var(--text);background:var(--panel-2);border-radius:7px;padding:5px 8px}
-.devsugg-param b{color:var(--brand)}
+.devsugg-param b{color:var(--brand-ink)}
 .devsuggadd{flex:0 0 auto;cursor:pointer;border:1px solid var(--brand);background:var(--panel);color:var(--brand);
   border-radius:999px;padding:5px 11px;font-size:12px;font-weight:700}
 .devsuggadd:hover{background:var(--brand);color:#04121f}
@@ -313,14 +321,14 @@ input[type=range]{flex:1;accent-color:var(--brand);height:30px}
 .exitem .ec{color:var(--muted);font-size:12.5px;margin-top:2px}
 .exitem .warnpill{display:inline-block;margin-top:5px;font-size:11.5px;color:var(--warn);background:rgba(255,204,87,.12);
   border:1px solid rgba(255,204,87,.35);border-radius:8px;padding:3px 8px}
-.exitem .subpill{display:inline-block;margin-top:5px;font-size:11px;color:var(--brand-2);background:rgba(92,225,166,.1);border-radius:8px;padding:2px 7px}
+.exitem .subpill{display:inline-block;margin-top:5px;font-size:11px;color:var(--accent-ink);background:rgba(92,225,166,.1);border-radius:8px;padding:2px 7px}
 .homepill{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.3px;color:#04121f;
   background:var(--brand-2);border-radius:999px;padding:1px 7px;vertical-align:1px}
 .exitem .homenote{margin-top:5px;font-size:12px;line-height:1.5;color:var(--muted);
   background:rgba(92,225,166,.08);border:1px solid rgba(92,225,166,.28);border-radius:9px;padding:6px 9px}
-.exitem .homenote b{color:var(--brand-2)}
+.exitem .homenote b{color:var(--accent-ink)}
 .homecard .homegear{margin-top:12px;border:1px solid var(--line);border-radius:10px;padding:2px 12px}
-.homecard .homegear summary{cursor:pointer;font-weight:600;font-size:13px;padding:9px 0;color:var(--brand-2)}
+.homecard .homegear summary{cursor:pointer;font-weight:600;font-size:13px;padding:9px 0;color:var(--accent-ink)}
 .hometbl{width:100%;border-collapse:collapse;font-size:12.5px;margin:4px 0 8px}
 .hometbl th,.hometbl td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
 .hometbl th{color:var(--muted);font-weight:600}
@@ -354,7 +362,7 @@ svg.chart .area{fill:var(--brand);opacity:.12}
 svg.chart .dot{fill:var(--brand)}
 .progstats{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
 .trendtag{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700}
-.trend-down{background:rgba(92,225,166,.16);color:var(--brand-2)}
+.trend-down{background:rgba(92,225,166,.16);color:var(--accent-ink)}
 .trend-up{background:rgba(255,138,92,.16);color:var(--acute)}
 .trend-flat{background:rgba(159,178,198,.16);color:var(--muted)}
 .loglist{list-style:none;margin:10px 0 0;padding:0;max-height:220px;overflow-y:auto}
@@ -371,7 +379,7 @@ svg.chart .dot{fill:var(--brand)}
 .coachhead h2{margin-top:0}
 .modepill{display:inline-block;margin-left:6px;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700;vertical-align:middle}
 .modepill.offline{background:rgba(159,178,198,.16);color:var(--muted)}
-.modepill.online{background:rgba(92,225,166,.16);color:var(--brand-2)}
+.modepill.online{background:rgba(92,225,166,.16);color:var(--accent-ink)}
 .settings{border:1px solid var(--line);border-radius:12px;padding:14px;margin:6px 0 14px;background:var(--panel-2)}
 .msg.typing{color:var(--muted);font-style:italic}
 
@@ -860,5 +868,10 @@ footer b{color:var(--text)}
   .credit{color:#000!important;padding-top:14px;border-top:1px solid #ccc;margin-top:8px}
   .card,.phase{box-shadow:none;border-color:#bbb;break-inside:avoid}
   .phase .body{display:block!important}
-  .panel{display:block!important}
+  /* Print the RECORD, not the whole app. `.panel{display:block!important}` beat `.hide` on
+     source order and emitted all 8 panels: blank intake forms, the search box, the chat.
+     The program and the progress/health log are what a patient takes to their physio. */
+  .panel{display:none!important}
+  #panel-4,#panel-5{display:block!important}
+  .logdel,.precdel,.adldel{display:none!important}
 }
