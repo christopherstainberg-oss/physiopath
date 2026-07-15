@@ -281,7 +281,7 @@ const state = {
   screen:{}, falls:"", aid:"", smoking:"", alcohol:"", sleep:"", stress:"", waterConfidence:"", adls:[],
   medIds:[], medFilter:false, homeMode:false, customPrecautions:[], clinicianProtocols:[], clinPrecautionProtocol:"", clinicianGuided:false,
   medDoses:{}, weightBearing:{status:"",pct:"",lbs:"",side:"",limb:"le"}, devices:[],
-  cardiacDevice:{type:"",icdRate:""}, specialPrecautions:[], planVariant:{},
+  cardiacDevice:{type:"",icdRate:""}, specialPrecautions:[], planVariant:{}, progress:{},
   log:[], apiKey:"", apiModel:"claude-opus-4-8"
 };
 const MED_FILTERABLE = ["fluoroquinolone","anticoagulant","antiplatelet","opioid","sedative","muscle_relaxant","gabapentinoid","antipsychotic"];
@@ -2431,14 +2431,45 @@ function detectPlan(cond){
   if(surg){ const sp = surgeryPlanFor(surg); if(sp && !sp.generic) return sp; }
   return best || (surg && surgeryPlanFor(surg)) || DOMAIN_FALLBACK[cond.domain] || DOMAIN_FALLBACK.msk;
 }
-/* Which plan phase the user is in right now, from weeks since injury/surgery. */
-function currentPlanPhase(plan){
-  if(!plan) return -1;
+/* ---------- functional progress self-report ----------
+   Every plan tells the user "progress on the CRITERIA, not the dates" — so the
+   app shouldn't place them by dates alone. They tick the milestones they've
+   actually met; we then place them where they really are, which for most people
+   is BEHIND the calendar, not ahead of it. */
+function criteriaMet(plan){ return (plan && (state.progress||{})[plan.label]) || []; }
+function criteriaPhase(plan){
+  const m = criteriaMet(plan); let i = 0;
+  while(i < 4 && m[i]) i++;
+  return i;                              // the phase you're working IN
+}
+function setCriteriaMet(label, idx, on){
+  state.progress = state.progress || {};
+  const a = state.progress[label] = state.progress[label] || [];
+  a[idx] = !!on;
+  // meeting a later milestone implies the earlier ones; un-meeting one clears the rest
+  if(on) for(let i=0;i<idx;i++) a[i] = true;
+  else   for(let i=idx+1;i<4;i++) a[i] = false;
+  save();
+  state.program = generateProgram(); save();
+  renderProgram(state.program);
+}
+function weekPhaseOf(plan){
   const w = weeksPostOp();
-  const wk = Number(w!=null ? w : state.weeks);
+  const wk = Number(w != null ? w : state.weeks);
   if(!isFinite(wk)) return -1;
   for(let i=0;i<plan.ph.length;i++){ if(wk >= plan.ph[i][1] && wk < plan.ph[i][2]) return i; }
   return wk >= plan.ph[plan.ph.length-1][2] ? plan.ph.length-1 : 0;
+}
+/* Where the user actually is. You advance only when you've met the criteria AND
+   the tissue has had time — so whichever is further behind wins. Without a
+   self-report we fall back to the calendar. */
+function currentPlanPhase(plan){
+  if(!plan) return -1;
+  const wp = weekPhaseOf(plan);
+  const rep = criteriaMet(plan);
+  if(!rep.some(Boolean)) return wp;
+  const cp = Math.min(criteriaPhase(plan), plan.ph.length-1);
+  return wp < 0 ? cp : Math.min(cp, wp);
 }
 function enrichPhase(kept, protocol, p, flags){
   const target = PHASE_TARGET[p] || 6;
@@ -2908,6 +2939,7 @@ function wireProgram(){
     if(d.open) openCards.add(d.dataset.card); else openCards.delete(d.dataset.card);
   }));
   $$("#programOut .planvar").forEach(b=>b.onclick=()=>setPlanVariant(b.dataset.plan, b.dataset.v));
+  $$("#programOut .progchk").forEach(b=>b.onchange=()=>setCriteriaMet(b.dataset.plan, +b.dataset.i, b.checked));
   $$("#programOut .rotatebtn").forEach(b=>b.onclick=()=>rotateExercise(+b.dataset.ci, +b.dataset.pi, +b.dataset.ei));
   $$("#programOut .swapbtn").forEach(b=>b.onclick=()=>openSwap(b));
   $$("#programOut .rerollbtn").forEach(b=>b.onclick=()=>rerollPhase(+b.dataset.ci, +b.dataset.pi));
@@ -3106,6 +3138,61 @@ function precRowHTML(t, w, idx){
 }
 
 /* Precautions & reminders card: surgical precautions (if any) + user's own reminders. */
+/* ---------- weight-bearing suggested by the real protocol ----------
+   The weight-bearing order was a free choice, disconnected from what the plan
+   already knows about the procedure. These are the standard orders for known
+   procedures, gated by weeks post-op so the suggestion changes as you heal.
+   Suggestion only — the operating surgeon's order always wins. */
+const WB_PROTOCOL = [
+  { re:/charcot (foot|joint|arthropath|neuroarthropath)/, from:0, to:99, status:"nwb",
+    why:"An active Charcot foot must be completely offloaded — neuropathy means pain never warns you, and every step destroys more of the joint." },
+  { re:/femoral neck stress|navicular stress|talus fracture|scaphoid fracture/, from:0, to:8, status:"nwb",
+    why:"This is a high-risk site with a real non-union or displacement risk — these are protected until a specialist confirms healing." },
+  { re:/achilles (tendon )?(rupture|tear|repair)/, from:0, to:2, status:"nwb",
+    why:"The healing tendon is protected in a boot before graded loading starts." },
+  { re:/(ankle|tibial plateau|calcaneus|calcaneal|pilon|lisfranc|midfoot) fracture|fracture fixation|\borif\b/, from:0, to:6, status:"nwb",
+    why:"Metalwork holds the position but does NOT make the bone strong — loading before union can bend or break the fixation." },
+  { re:/meniscus repair|meniscal repair|meniscus root/, from:0, to:4, status:"pwb",
+    why:"A repaired meniscus has a poor blood supply and is protected early — most surgeons restrict weight-bearing and flexion for about 4 weeks." },
+  { re:/tibial tub(ercle|erosity) (transfer|osteotomy)|fulkerson|elmslie|trochleoplast/, from:0, to:6, status:"pwb",
+    why:"The bone fragment is held by screws until it unites — loading early risks fracturing straight through the osteotomy." },
+  { re:/osteotomy|high tibial osteotomy|\bhto\b/, from:0, to:6, status:"pwb",
+    why:"The bone cut has to unite before it takes full load, or the correction is lost." },
+  { re:/limb lengthening|external fixation|ilizarov|bone transport/, from:0, to:99, status:"pwb",
+    why:"Loading follows the new bone forming in the gap, not comfort — your surgeon sets the exact amount." },
+  { re:/fasciotomy|acute compartment/, from:0, to:4, status:"pwb",
+    why:"Weight-bearing follows your surgeon while the fasciotomy wounds close." },
+  { re:/knee replacement|hip replacement|\btkr\b|\btka\b|\bthr\b|\btha\b|hemiarthroplasty/, from:0, to:12, status:"wbat",
+    why:"Modern replacements are designed to be walked on straight away — weight-bearing as tolerated, using your aid until you're steady." },
+  { re:/\bacl\b|mpfl reconstruction|\bmcl\b|patellar (dislocat|instab)/, from:0, to:6, status:"wbat",
+    why:"Weight-bearing as tolerated in the brace is standard here — getting full extension and quad control back matters more than offloading." },
+  { re:/ankle sprain|brostr|lateral ligament/, from:0, to:2, status:"wbat",
+    why:"Early protected weight-bearing beats rest for ankle ligaments — walk within comfort in your brace or boot." }
+];
+function suggestedWeightBearing(){
+  const conds = selectedConditions();
+  const hay = (conds.map(c=>c.name).join(" ") + " " + ((detectSurgery()||{}).name||"")).toLowerCase();
+  if(!hay.trim()) return null;
+  const w = weeksPostOp();
+  const wk = Number(w != null ? w : state.weeks);
+  for(const r of WB_PROTOCOL){
+    if(!r.re.test(hay)) continue;
+    if(isFinite(wk) && (wk < r.from || wk >= r.to)) continue;
+    if((state.weightBearing||{}).status === r.status) return null;   // already matches
+    return { status:r.status, why:r.why, window:`weeks ${r.from}–${r.to===99?"until cleared":r.to}` };
+  }
+  return null;
+}
+function suggestedWbHTML(){
+  const s = suggestedWeightBearing(); if(!s) return "";
+  const label = (WB_STATUS[s.status]||{}).label || s.status;   // WB_STATUS is a map, not an array
+  return `<div class="wbsugg no-print">
+    <div class="wbsugg-h">💡 <b>Typical for your procedure:</b> ${esc(label)} <span class="wbsugg-win">(${esc(s.window)})</span></div>
+    <div class="wbsugg-why">${esc(s.why)}</div>
+    <button type="button" class="wbsuggset" data-wb="${esc(s.status)}">Set this order</button>
+    <span class="wbsugg-note">Your surgeon's actual order always overrides this.</span>
+  </div>`;
+}
 /* ---------- suggested assistive devices ----------
    Reasons from the diagnosis/procedure AND the medical history the user already
    gave us (weight-bearing order, falls, walking aid, age, bone health, foot
@@ -3323,6 +3410,7 @@ function surgicalReminderCard(){
     <h2>${title}</h2>
     ${head}
     <div class="preccontrols no-print">${wbControl}${devControl}${spControl}</div>
+    ${suggestedWbHTML()}
     ${suggestedDevicesCard()}
     ${list}${timeline}${addCtrl}${disclaimer}
   </div>`;
@@ -3340,6 +3428,7 @@ function wirePrecautions(){
   const saveBtn = $("#precautionsOut .addprec-save"); if(saveBtn) saveBtn.onclick = addCustomPrecaution;
   $$("#precautionsOut .precdel").forEach(b=>b.onclick=()=> b.dataset.devidx!=null ? removeDevice(+b.dataset.devidx) : removeCustomPrecaution(+b.dataset.idx));
   $$("#precautionsOut .devsuggadd").forEach(b=>b.onclick=()=>addSuggestedDevice(+b.dataset.i));
+  $$("#precautionsOut .wbsuggset").forEach(b=>b.onclick=()=>setWeightBearingStatus(b.dataset.wb));
   const wbSel=$("#precautionsOut #wbSelect"); if(wbSel) wbSel.onchange=setWeightBearingStatus;
   const wbPct=$("#precautionsOut #wbPct"); if(wbPct) wbPct.oninput=()=>setWbAmount("pct");
   const wbLbs=$("#precautionsOut #wbLbs"); if(wbLbs) wbLbs.oninput=()=>setWbAmount("lbs");
@@ -3355,9 +3444,13 @@ function afterPrecautionChange(regen){
   if(regen && state.program){ state.program = generateProgram(); save(); if(state.step===4) renderProgram(state.program); }
   renderPrecautions();
 }
-function setWeightBearingStatus(){
-  const sel = $("#precautionsOut #wbSelect"); if(!sel) return;
-  const status = sel.value;
+function setWeightBearingStatus(forced){
+  /* `forced` lets the protocol-suggested order set this directly; otherwise we
+     read the picker. Keeps the select in sync either way. */
+  const sel = $("#precautionsOut #wbSelect");
+  const status = forced || (sel ? sel.value : "");
+  if(!status) return;
+  if(sel && forced) sel.value = forced;
   const wb = state.weightBearing = state.weightBearing || {};
   wb.status = status;
   if(status!=="pwb"){ wb.pct=""; wb.lbs=""; }
@@ -4523,8 +4616,28 @@ function planLineHTML(item){
     <div class="planhead">📋 <b>Following the ${esc(p.label)} timeline — about ${p.total} weeks${months}</b></div>
     <div class="plannote">${esc(p.note)}${at}</div>
     ${chips}
+    ${progressReportHTML(item)}
     <div class="planfoot">Phases below use the real week windows for this injury. Progress on the <b>criteria</b>, not the dates — and your surgeon's or therapist's own protocol always comes first.</div>
   </div>`;
+}
+/* The milestone self-report. The plans insist progression is criteria-driven, so
+   let the user say which milestones they've actually met — and tell them plainly
+   when they're behind the calendar, which is the common case and not a failure. */
+function progressReportHTML(item){
+  const p = item && item.plan; if(!p || !item.phases) return "";
+  const met = (state.progress||{})[p.label] || [];
+  const wp = weekPhaseOf({ ph:item.phases.map(x=>[x.title,x.weekStart,x.weekEnd]) });
+  const cp = Math.min(criteriaPhase({ label:p.label }), item.phases.length-1);
+  const behind = met.some(Boolean) && wp >= 0 && cp < wp;
+  const rows = item.phases.map((ph,i)=>`<label class="progrow${met[i]?" on":""}">
+      <input type="checkbox" class="progchk" data-plan="${esc(p.label)}" data-i="${i}"${met[i]?" checked":""} />
+      <span><b>Phase ${i+1} done:</b> ${esc(ph.criteria||"")}</span></label>`).join("");
+  return `<details class="progrep no-print"${met.some(Boolean)?" open":""}>
+    <summary>📝 Where are you actually up to? <span class="progsub">tick what you can already do — this places you honestly</span></summary>
+    ${rows}
+    ${behind?`<div class="progbehind">You're around <b>week ${Number(weeksPostOp()!=null?weeksPostOp():state.weeks)}</b>, which by the calendar would be <b>phase ${wp+1}</b> — but you haven't met <b>phase ${cp+1}</b>'s criteria yet, so your plan is holding you there. That's the common case, not a failure: the criteria are what protect you.</div>`:""}
+    <div class="progfoot">You advance when you meet the criteria <b>and</b> the tissue has had time — whichever is further behind is where you really are.</div>
+  </details>`;
 }
 /* Program card: capability & confidence suggestions for each hard ADL area. */
 function adlSuggestionsCard(){
