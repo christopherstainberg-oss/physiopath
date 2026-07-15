@@ -343,6 +343,23 @@ const classify = w => (w===null||isNaN(w)) ? null : (w<=6 ? "acute" : "chronic")
 function selectedConditions(){ return state.condIds.map(id=>CONMAP.get(id)).filter(Boolean); }
 
 /* Gather every active contraindication flag from history + PAR-Q + conditions + age. */
+/* Lab values reach the exercise engine, exactly like vitals do. 147 labs were
+   collected and only ever drove the read-only risk cards. These are the ones that
+   genuinely change what is safe to prescribe. */
+function labFlags(){
+  const out = [];
+  const num = id => { const e = (state.labs||{})[id]; const v = e && e.v!=="" && e.v!=null ? Number(e.v) : NaN; return isFinite(v) ? v : null; };
+  const hgb = num("hgb");
+  if(hgb!=null && hgb < 8)  out.push("lab_anaemia_severe");
+  else if(hgb!=null && hgb < 11) out.push("lab_anaemia");
+  const plt = num("platelets"), inr = num("inr");
+  if((plt!=null && plt < 50) || (inr!=null && inr > 4)) out.push("lab_bleeding");
+  const k = num("potassium");
+  if(k!=null && (k < 3.0 || k > 5.5)) out.push("lab_electrolyte");
+  const egfr = num("egfr");
+  if(egfr!=null && egfr < 45) out.push("lab_ckd");
+  return out;
+}
 function gatherFlags(){
   const f = new Set(state.flags);
   if(state.parq.pain || state.parq.faint) f.add("cardiac");
@@ -351,6 +368,7 @@ function gatherFlags(){
   selectedConditions().forEach(c => (c.autoFlags||[]).forEach(x=>f.add(x)));
   const surg = detectSurgery(); if(surg && surg.autoFlags) surg.autoFlags.forEach(x=>f.add(x));
   vitalFlags().forEach(x=>f.add(x));
+  labFlags().forEach(x=>f.add(x));   // bloods now shape the plan, not just the risk cards
   wbFlags().forEach(x=>f.add(x));
   deviceFlags().forEach(x=>f.add(x));
   specialPrecautionFlags().forEach(x=>f.add(x));
@@ -411,7 +429,10 @@ function fmtRange(r){ return r ? `${r[0]}–${r[1]}` : "—"; }
 // Target HR zones — Karvonen (heart-rate reserve) when resting HR is known, else % of max HR.
 function hrZones(){
   const hrmax = tanakaMax(state.age); if(!hrmax) return null;
-  const v = state.vitals||{}; const rest = vnum(v.restHR);
+  // use the newest LOGGED reading if there is one - a resting HR that improves over
+  // months should re-tune the zones, not be ignored in favour of the intake baseline
+  const v = (typeof latestVitals==="function" ? latestVitals() : null) || state.vitals || {};
+  const rest = vnum(v.restHR);
   const useHRR = rest!=null && rest>=30 && rest<hrmax-10;
   const band = (lo,hi)=> useHRR
     ? [Math.round(rest+lo*(hrmax-rest)), Math.round(rest+hi*(hrmax-rest))]
@@ -4083,9 +4104,17 @@ function renderProgram(prog){
     out.innerHTML = `<div class="card empty"><div class="big">🗓️</div><div>No program yet — complete the earlier steps and generate.</div></div>`;
     return;
   }
-  const trackBadge = prog.track==="acute"
-    ? `<span class="badge acute">Acute track · 0–6 wks</span>`
-    : `<span class="badge chronic">Chronic track · 6+ wks</span>`;
+  /* When a real condition plan matched, the acute/chronic track is vestigial and
+     actively misleading - a 55-week ACL plan was badged "Acute track 0-6 wks".
+     Show the user's actual position on their own plan instead. */
+  const _pl = prog.items[0] && prog.items[0].plan;
+  const _ph = prog.items[0] && prog.items[0].phases;
+  const _pi = prog.items[0] && prog.items[0].planPhase;
+  const trackBadge = (_pl && _ph && _pi >= 0)
+    ? `<span class="badge chronic">Phase ${_pi+1} of ${_ph.length} · weeks ${_ph[_pi].weekStart}–${_ph[_pi].weekEnd}</span>`
+    : (prog.track==="acute"
+        ? `<span class="badge acute">Acute track · 0–6 wks</span>`
+        : `<span class="badge chronic">Chronic track · 6+ wks</span>`);
   const supMap = {self:["Self-guided OK","self"],supervised:["Clinician-supervised advised","supervised"],clinical:["Medical clearance required","clinical"]};
   const [supTxt,supCls] = supMap[prog.supervision];
 
@@ -4601,7 +4630,11 @@ function synthAdlPractice(taskName, tier, area){
    each practice line is used only once (so successive phases show a progression). */
 function adlFocusPlan(flags){
   const plan = [[],[],[],[]];
-  const diffs = (state.adls||[]).filter(a=>a.level>=1);
+  /* Return-to activities were collected (10k list) but only ever displayed -
+     sports drove drills, activities drove nothing. They are everyday tasks, so run
+     them through the ADL area machinery rather than build a parallel system. */
+  const acts = (state.returnActivities||[]).map(n=>({ name:n, level:2, fromActivity:true }));
+  const diffs = (state.adls||[]).filter(a=>a.level>=1).concat(acts);
   if(!diffs.length || !window.ADL_EXERCISES) return plan;
   const sorted = diffs.slice().sort((a,b)=>b.level-a.level);   // hardest first
   const usedGlobal = new Set();                                 // no repeated practice line across phases
@@ -4749,6 +4782,7 @@ function initHistory(){
   const LIFE_IDS = {q_smoking:"smoking",q_alcohol:"alcohol",q_sleep:"sleep",q_stress:"stress",q_falls:"falls",q_aid:"aid",q_waterConf:"waterConfidence",
     q_equipment:"equipment",q_timePerDay:"timePerDay",q_workDemand:"workDemand",q_priorEpisodes:"priorEpisodes",
     q_moveConfidence:"moveConfidence",q_pregStage:"pregStage",q_footSensation:"footSensation"};
+  syncPregWrap();
   Object.entries(LIFE_IDS).forEach(([id,key])=>{ const el=$("#"+id); if(!el) return;
     el.value = state[key]||"";
     el.onchange=e=>{ state[key]=e.target.value;
@@ -4756,7 +4790,17 @@ function initHistory(){
       if(key==="equipment"){ if(["none","bands"].includes(e.target.value)) state.homeMode = true;
                              else if(e.target.value==="gym") state.homeMode = false; }
       save(); }; });
+  const sexEl = $("#q_sex"); if(sexEl) sexEl.addEventListener("change", syncPregWrap);
   initADLs();   // occupational-therapy activities-of-daily-living check
+}
+/* `sex` is asked "for pregnancy-related guidance" - so it should actually gate
+   that guidance rather than be collected and ignored. */
+function syncPregWrap(){
+  const el = $("#q_pregStage"); if(!el) return;
+  const wrap = el.closest(".subfield") || el;
+  const show = !state.sex || ["Female","Other"].includes(state.sex);
+  wrap.classList.toggle("hide", !show);
+  if(!show && state.pregStage){ state.pregStage = ""; el.value = ""; save(); }
 }
 /* Urgent / clearance note shown live under the red-flag screen. */
 function updateScreenWarn(){
