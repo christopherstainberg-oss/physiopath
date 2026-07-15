@@ -5023,15 +5023,23 @@ function initHistory(){
     if(!items.length) return "";
     return `<div class="histgroup"><div class="histgrouplab">${g.icon} ${esc(g.label)}</div>
       <div class="checks">${items.map(it=>{ const on=state.flags.includes(it.flag);
-        return `<div class="check${on?" on":""}" data-flag="${it.flag}"><span class="box">${on?"✓":""}</span><span>${esc(it.label)}</span></div>`;
+        /* role=checkbox + tabindex + aria-checked: this is the contraindication list,
+           and a keyboard user who cannot tick "Pacemaker or ICD" gets prescribed as if
+           they do not have one. Kept as a div so the existing .check styling holds. */
+        return `<div class="check${on?" on":""}" data-flag="${it.flag}" role="checkbox" tabindex="0" aria-checked="${on}"><span class="box" aria-hidden="true">${on?"✓":""}</span><span>${esc(it.label)}</span></div>`;
       }).join("")}</div></div>`;
   }).join("");
-  wrap.querySelectorAll(".check").forEach(d=>d.onclick=()=>{
-    d.classList.toggle("on"); const active=d.classList.contains("on");
-    d.querySelector(".box").textContent=active?"✓":"";
-    const flag=d.dataset.flag;
-    if(active) state.flags.push(flag); else state.flags=state.flags.filter(f=>f!==flag); save();
-    if(flag==="pacemaker_icd") syncCardiacDevWrap();
+  wrap.querySelectorAll(".check").forEach(d=>{
+    const toggle=()=>{
+      d.classList.toggle("on"); const active=d.classList.contains("on");
+      d.querySelector(".box").textContent=active?"✓":"";
+      d.setAttribute("aria-checked", String(active));
+      const flag=d.dataset.flag;
+      if(active) state.flags.push(flag); else state.flags=state.flags.filter(f=>f!==flag); save();
+      if(flag==="pacemaker_icd") syncCardiacDevWrap();
+    };
+    d.onclick=toggle;
+    d.onkeydown=e=>{ if(e.key===" "||e.key==="Enter"||e.key==="Spacebar"){ e.preventDefault(); toggle(); } };
   });
   initCardiacDevice();
   $("#q_age").value=state.age; $("#q_sex").value=state.sex; $("#q_meds").value=state.meds; $("#q_notes").value=state.notes;
@@ -5125,20 +5133,35 @@ function runSearch(){
   if(!list.length){ res.innerHTML=`<div class="moreinfo">No matches. Try a simpler term, or a different spelling.</div>`; return; }
   res.innerHTML = list.map(c=>{ const picked=state.condIds.includes(c.id);
     return `<div class="resitem">
-      <div class="result ${picked?"picked":""}" data-id="${c.id}">
-        <span class="dot" style="background:${dotColor[c.domain]}"></span>
+      <div class="result ${picked?"picked":""}" data-id="${c.id}" role="option" tabindex="0" aria-selected="${picked}">
+        <span class="dot" style="background:${dotColor[c.domain]}" aria-hidden="true"></span>
         <span class="rn">${esc(c.name)}<div class="rr">${esc(c.region)} · ${DOMAIN_NAME[c.domain]}</div></span>
-        <span class="info" data-info="${c.id}" title="What is this?">ⓘ</span>
-        <span class="add">${picked?"✓":"+"}</span>
+        <button type="button" class="info" data-info="${c.id}" title="What is this?" aria-label="What is ${esc(c.name)}?">ⓘ</button>
+        <span class="add" aria-hidden="true">${picked?"✓":"+"}</span>
       </div>
       <div class="resexp hide" id="exp-${c.id}"></div>
     </div>`; }).join("") +
     (total>60?`<div class="moreinfo">Showing 60 of ${total} matches — refine your search to narrow it down.</div>`:"");
-  $$("#condResults .result").forEach(r=>r.onclick=e=>{ if(e.target.closest(".info")) return;
-    const id=r.dataset.id;
+  const pickCond=id=>{
     if(state.condIds.includes(id)) state.condIds=state.condIds.filter(i=>i!==id);
     else state.condIds.push(id);
-    save(); renderSelected(); runSearch(); });
+    save(); renderSelected();
+    const q=$("#condSearch"); runSearch();
+    if(q) q.focus();                                  // keep the keyboard user where they were
+  };
+  $$("#condResults .result").forEach(r=>{
+    r.onclick=e=>{ if(e.target.closest(".info")) return; pickCond(r.dataset.id); };
+    r.onkeydown=e=>{
+      if(e.key==="Enter"||e.key===" "||e.key==="Spacebar"){ e.preventDefault(); pickCond(r.dataset.id); return; }
+      /* Arrow through the list, and Up from the first row returns to the search box. */
+      if(e.key==="ArrowDown"||e.key==="ArrowUp"){
+        e.preventDefault();
+        const rows=$$("#condResults .result"); const i=rows.indexOf(r);
+        const nxt = e.key==="ArrowDown" ? rows[i+1] : (i===0 ? $("#condSearch") : rows[i-1]);
+        if(nxt) nxt.focus();
+      }
+    };
+  });
   $$("#condResults .info").forEach(ic=>ic.onclick=e=>{ e.stopPropagation();
     const id=ic.dataset.info, exp=document.getElementById("exp-"+id);
     if(!exp.dataset.filled){ exp.textContent=conditionExplain(CONMAP.get(id)); exp.dataset.filled="1"; }
@@ -5147,7 +5170,14 @@ function runSearch(){
 function initSearch(){
   window.CONDITIONS.forEach(c=>CONMAP.set(c.id,c));
   $("#catCount").textContent=window.CONDITIONS.length;
-  let t; $("#condSearch").oninput=()=>{ clearTimeout(t); t=setTimeout(runSearch,120); };
+  let t; const cs=$("#condSearch");
+  cs.oninput=()=>{ clearTimeout(t); t=setTimeout(runSearch,120); };
+  /* Enter picked nothing and ArrowDown went nowhere: the input was a dead end for anyone
+     not using a mouse, and selecting a condition is mandatory to generate a program. */
+  cs.onkeydown=e=>{
+    if(e.key==="Enter"){ e.preventDefault(); const f=$("#condResults .result"); if(f) f.click(); }
+    if(e.key==="ArrowDown"){ e.preventDefault(); const f=$("#condResults .result"); if(f) f.focus(); }
+  };
   $$("#domainFilters .fchip").forEach(f=>f.onclick=()=>{ domainFilter=f.dataset.d;
     $$("#domainFilters .fchip").forEach(x=>x.classList.toggle("on",x===f)); runSearch(); });
   renderSelected(); runSearch();
