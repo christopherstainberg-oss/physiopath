@@ -2331,7 +2331,7 @@ const REHAB_PLANS = [
       ["Early outpatient recovery",1,6,"Rebuild everyday activity safely; start structured aerobic work.","comfortable walking 10–20 min, no angina with light activity, wound healed if operated","Stay at RPE 11–13 ('light to somewhat hard'). Sternal precautions apply for ~8 weeks after bypass surgery."],
       ["Supervised aerobic & resistance training",6,14,"Build aerobic capacity and strength in a supervised programme.","30+ min of continuous moderate aerobic exercise, resistance training tolerated, no symptoms","Progress gradually under supervision; report any new chest symptoms immediately."],
       ["Long-term maintenance",14,26,"Make it a lifelong habit and manage risk factors.","≥150 min/week of moderate activity sustained, risk factors being managed","The benefit only lasts while the exercise does — maintenance is the whole point."]] },
-  { re:/\bcopd\b|emphysema|chronic bronchitis|pulmonary rehab|pulmonary fibrosis|interstitial lung|bronchiectasis|\bild\b/, label:"Pulmonary rehabilitation", total:12,
+  { re:/\bcopd\b|emphysema|chronic bronchitis|pulmonary rehab|pulmonary fibrosis|interstitial lung|bronchiectasis|\bild\b/, generic:true, label:"Pulmonary rehabilitation", total:12,
     freq:"Supervised sessions 2–3×/week + home walking on other days",
     note:"Pulmonary rehab is one of the most effective treatments in respiratory medicine — it improves breathlessness, exercise capacity and quality of life more than most drugs. Breathlessness during exercise is expected and not dangerous.",
     ph:[

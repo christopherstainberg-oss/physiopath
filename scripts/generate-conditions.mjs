@@ -413,7 +413,7 @@ for (const [protocol, region, subs] of SUBPRESENT)
 ["Ataxic gait rehabilitation","Foot drop (central) rehabilitation","Spasticity management (upper limb)",
  "Spasticity management (lower limb)","Post-stroke fine motor rehabilitation","Hemineglect rehabilitation",
  "Post-encephalitis reconditioning","Post-meningitis reconditioning","Transverse myelitis recovery",
- "Chronic fatigue syndrome (graded exercise, cautious)","Functional neurological disorder rehabilitation",
+ "Chronic fatigue syndrome / ME (pacing & energy envelope)","Functional neurological disorder rehabilitation",
  "Diabetic peripheral neuropathy — balance & foot care","Small fiber neuropathy reconditioning",
  "Trigeminal neuralgia (reconditioning)","Complex regional pain syndrome — upper limb",
  "Complex regional pain syndrome — lower limb","Phantom limb reconditioning","Neuropathic gait retraining"]
@@ -869,7 +869,7 @@ latList(["Brachial plexus birth injury (Erb's palsy)","Brachial plexus birth inj
    Clinical presentation stratifications genuinely change program tuning
    (return-to-sport load, work ergonomics, older-adult bone/fall caution).
    Applied only to primary MSK conditions, only until the target is reached. */
-const TARGET = 25000;
+const TARGET = 40000;
 const PRESENTATIONS = [
   ["return-to-sport focus", {}],
   ["return-to-work / ergonomic focus", {}],
