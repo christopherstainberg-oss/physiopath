@@ -1532,6 +1532,25 @@ const AGILITY_RICH = new Set(["knee_ligament","ankle"]);
    plan's own restriction (an active Charcot foot is told "DO NOT WALK ON IT",
    yet was still being prescribed double-leg balance). */
 const RTS_NO_WB = /charcot (foot|joint|arthropath|neuroarthropath)|neuroarthropath|acute compartment|fasciotomy|avascular necrosis|osteonecrosis|\bavn\b|non-?weight-?bearing|limb lengthening|external fixation|ilizarov|bone transport|osteomyelitis|unstable fracture|stress fracture (of the )?(femoral neck|navicular)/i;
+/* Falls history earns its own dedicated work, whatever the injury is: two or more
+   falls in a year is the strongest predictor of the next one, and strength +
+   balance training is the best-evidenced thing that prevents it. Graded so a
+   frail, fallen user starts supported rather than on one leg. */
+const FALLS_LADDER = {
+  1:[{n:"Sit-to-stand from a chair (falls prevention)",d:"3×8",c:"The single most useful strength exercise for staying on your feet — use your hands at first",tags:["weight_bearing"]},
+     {n:"Supported standing balance (hands on a counter)",d:"3×30s",c:"Hold a solid surface; build steadiness before you reduce support",tags:["balance"]}],
+  2:[{n:"Feet-together & semi-tandem stand near support",d:"3×30s",c:"Narrow the base gradually, a hand always ready on the counter",tags:["balance"]},
+     {n:"Heel raises & toe raises at the counter",d:"3×12",c:"Ankle strength is what catches you when you stumble",tags:["weight_bearing"]}],
+  3:[{n:"Tandem stand & weight-shifts near support",d:"3×30s",c:"Heel-to-toe; control the sway rather than avoiding it",tags:["balance"]},
+     {n:"Step-ups onto a low step (hold the rail)",d:"3×8 each",c:"Stairs are where falls do the most damage — practise them safely",tags:["weight_bearing","balance"]}],
+  4:[{n:"Single-leg stance near support",d:"3×20s each",c:"Hand hovering over the counter, not gripping it",tags:["balance"]},
+     {n:"Walking with head turns & direction changes",d:"3×10 m",c:"Real falls happen when you're turning or looking away — train that",tags:["weight_bearing","balance"]}]
+};
+function fallsFor(phaseIdx){
+  const highRisk = state.falls==="2" || (state.aid && state.aid!=="none") || Number(state.age)>=75;
+  if(!highRisk) return [];
+  return (FALLS_LADDER[phaseIdx+1]||[]).map(a=>({ n:a.n, d:a.d, c:a.c, tags:a.tags||[], sig:true }));
+}
 function rtsFor(cond, phaseIdx){
   const p = phaseIdx+1;
   const hay = `${cond.name||""} ${cond.region||""}`;
@@ -2175,7 +2194,37 @@ function selectedVariant(plan, cond){
     const m = name.match(v.pick);
     if(m && m[0].length > bestLen){ best=v; bestLen=m[0].length; }
   }
-  return best || list[0];
+  if(best) return best;
+  // the diagnosis said nothing — infer from the MEDICAL HISTORY they actually gave
+  // us, in order of how strongly each factor changes the timeline.
+  const want = historyVariantKeys(cond);
+  for(const k of want){ const v = list.find(x=>x.k===k); if(v) return v; }
+  return list[0];
+}
+/* Which variation the user's history implies, most-decisive first. Only used when
+   the diagnosis itself doesn't name a variation. */
+function historyVariantKeys(cond){
+  const keys = [];
+  const surg = detectSurgery();
+  const sname = ((surg&&surg.name)||"").toLowerCase();
+  const meds = new Set(selectedMeds().flatMap(m=>m.flags||[]));
+  const flags = new Set(state.flags||[]);
+  // surgical invasiveness — an open procedure genuinely heals slower than keyhole
+  if(/arthroscop|keyhole|laparoscop|percutaneous|robotic|minimally invasive|endoscopic/.test(sname)) keys.push("keyhole");
+  else if(/\bopen\b|mini-?open|sternotom|laparotom|thoracotom/.test(sname)) keys.push("open");
+  if(/revision|complex|redo/.test(sname)) keys.unshift("revision");
+  // things that measurably slow tissue healing
+  if(state.smoking==="current" || flags.has("diabetes") || meds.has("corticosteroid")) keys.push("slowheal");
+  // falls / balance history and age → the older-adult pathway (adds balance & bone work)
+  if(state.falls==="2" || (state.aid && state.aid!=="none") || Number(state.age)>=70) keys.push("older");
+  // baseline fitness
+  if(state.fitness==="low") keys.push("decond");
+  if(state.fitness==="high" && Number(state.age)<40 && state.painMove<=3) keys.push("accelerated");
+  // irritability
+  if(Number(state.painMove)>=7 || Number(state.painRest)>=6) keys.push("irritable");
+  if(flags.has("hypermobility")) keys.push("hypermobile");
+  if((state.returnSports||[]).length) keys.push("athlete");
+  return keys;
 }
 /* Stretch/compress the phase boundaries by `scale`, keeping them contiguous and
    never zero-length. Boundaries are scaled (not each phase separately) so the
@@ -2420,7 +2469,7 @@ function generateProgram(){
       const len = phaseWeeks[p], wkStart=cursor, wkEnd=cursor+len-1; cursor=wkEnd+1;
       // prepend injury-specific signature + return-to-sport balance/agility + chosen-sport
       // exercises (sport on the primary condition only; dedupe against pool)
-      const sigRaw = [...signatureFor(focus, p+1), ...rtsFor(c, p), ...(ci===0 ? sportFor(p) : []), ...(ci===0 ? (adlPlan[p]||[]) : [])];
+      const sigRaw = [...signatureFor(focus, p+1), ...rtsFor(c, p), ...(ci===0 ? sportFor(p) : []), ...(ci===0 ? (adlPlan[p]||[]) : []), ...((ci===0 && !RTS_NO_WB.test(`${c.name||""} ${c.region||""}`)) ? fallsFor(p) : [])];
       const sig = []; const sigSeen = new Set();
       sigRaw.forEach(s=>{ const k=s.n.toLowerCase(); if(!sigSeen.has(k)){ sigSeen.add(k); sig.push(s); } });
       const seen = new Set(sig.map(s=>s.n.toLowerCase()));
@@ -3057,6 +3106,116 @@ function precRowHTML(t, w, idx){
 }
 
 /* Precautions & reminders card: surgical precautions (if any) + user's own reminders. */
+/* ---------- suggested assistive devices ----------
+   Reasons from the diagnosis/procedure AND the medical history the user already
+   gave us (weight-bearing order, falls, walking aid, age, bone health, foot
+   sensation), and gives the PARAMETER that matters for each device — a device
+   set up wrong is worse than none. Suggestions only; one tap adds them to the
+   real device list (state.devices), and anything already added is skipped. */
+function suggestDevices(){
+  const conds = selectedConditions();
+  const hay = (conds.map(c=>`${c.name} ${c.region}`).join(" ") + " " + ((detectSurgery()||{}).name||"")).toLowerCase();
+  const flags = new Set(gatherFlags());
+  const wb = (state.weightBearing||{}).status || "";
+  const age = Number(state.age)||0;
+  const falls = state.falls, aid = state.aid;
+  const out = [];
+  const has = (n) => (state.devices||[]).some(d=>d.name.toLowerCase()===n.toLowerCase());
+  // dedupe against BOTH the already-added devices and this suggestion list —
+  // several rules legitimately suggest the same aid (e.g. non-weight-bearing AND
+  // a falls history both want a rollator).
+  const add = (name, why, param) => {
+    if(has(name) || out.some(o=>o.name.toLowerCase()===name.toLowerCase())) return;
+    out.push({ name, why, param });
+  };
+
+  // --- weight-bearing order drives the mobility aid ---
+  if(wb==="nwb"){
+    add("Crutches (axillary or forearm)","You're non-weight-bearing, so you need to keep all load off that leg.",
+        "Set the height so there's ~2–3 finger-widths between the armpit and the pad and the elbow bends ~15–30° — take the weight through your HANDS, not your armpits (leaning on them can bruise the nerves).");
+    if(age>=70 || falls==="2" || flags.has("balance_risk"))
+      add("Wheeled walker / rollator with a seat","Non-weight-bearing on crutches is very demanding — with your falls/balance history, a frame is usually safer.",
+          "Set the handles at wrist-crease height with the elbows slightly bent. Choose one with a seat so you can rest before you tire.");
+    add("Wheelchair (short-term)","Useful for longer distances while you're non-weight-bearing.","Only for distance — keep using your prescribed aid short-range so you don't decondition.");
+  } else if(wb==="ttwb" || wb==="pwb" || wb==="ffwb"){
+    add("Crutches (forearm preferred)","You have a partial weight-bearing order to respect.",
+        "Elbows bent ~15–30°. Practise the amount of weight on bathroom scales — most people badly overestimate how little they're putting through the leg.");
+  } else if(wb==="wbat" && (age>=70 || falls==="2")){
+    add("Walking stick / cane","Weight-bearing as tolerated, but your history suggests you'd be steadier with support.",
+        "Hold it in the OPPOSITE hand to the sore leg, top of the handle level with your wrist crease when standing.");
+  }
+  // --- falls & balance history (independent of any surgery) ---
+  if(falls==="2" || (aid && aid!=="none") || flags.has("balance_risk")){
+    add("Wheeled walker / rollator with a seat","You've reported two or more falls in the past year — that's the single strongest predictor of another one.",
+        "Handles at wrist-crease height. A seat lets you rest before fatigue, which is when falls happen.");
+    add("Grab rails (bathroom & stairs)","Most falls happen at home, in the bathroom and on the stairs.","Fitted beside the toilet, in the shower and on both sides of the stairs where possible.");
+    add("Non-slip footwear","Slippers and stocking feet are a common, fixable cause of falls.","Supportive, fastened, thin firm sole — not backless slippers.");
+  }
+  if(falls==="1") add("Walking stick / cane","One fall in the past year is worth taking seriously before there's a second.","Opposite hand to the weaker leg; handle at wrist-crease height.");
+  if(age>=70 && (flags.has("osteoporosis") || /osteoporo|osteopeni|fragility|vertebral (compression )?fracture/.test(hay)))
+    add("Hip protectors","Your bone health plus falls risk makes a hip fracture the thing worth preventing.","Worn in the pants; only work if worn — including at night if you get up to the toilet.");
+  // --- region / diagnosis specific ---
+  if(/rotator cuff repair|cuff repair|labral repair|bankart|latarjet|shoulder (stabilis|stabiliz)|pectoralis major (repair|tear|rupture)|proximal biceps|slap repair/.test(hay))
+    add("Shoulder sling (± abduction pillow)","Your repair needs the arm supported while the tendon heals to bone.",
+        "Worn ~4–6 weeks per your surgeon, including in bed. Take it off several times a day for your prescribed elbow/wrist/hand movement — but do NOT lift the arm actively.");
+  if(/\bacl\b|\bpcl\b|\bmcl\b|\blcl\b|mpfl|trochleoplast|tibial tub(ercle|erosity)|patell(a|ar) (dislocat|instab)|knee ligament/.test(hay))
+    add("Hinged / ROM knee brace","Your knee needs its range controlled while the repair or graft heals.",
+        "Set to exactly the range your surgeon prescribed — locked in extension for walking early. Check it hasn't slipped down the leg; a brace in the wrong place does nothing.");
+  if(/ankle sprain|lateral ligament|brostr|syndesmosis|\batfl\b|ankle instab/.test(hay))
+    add("Ankle brace / stirrup","Protects the healing ligaments and cuts the risk of rolling it again.",
+        "Wear for weight-bearing and any higher-risk activity. Worth using for sport for 6–12 months — it's the cheapest re-injury prevention there is.");
+  if(/achilles (rupture|tear|repair)|calcaneal|ankle fracture|lisfranc|midfoot|metatarsal fracture|charcot/.test(hay))
+    add("CAM walker boot","Protects the healing tendon/bone while you're on your feet.",
+        "Wear for ALL standing and walking; heel wedges exactly as prescribed and weaned only on your surgeon's schedule. Use a shoe balancer/levelling sole on the other foot or you'll get back and hip pain.");
+  if(/foot drop|peroneal nerve|common fibular|drop foot|stroke|hemipar|hemipleg/.test(hay))
+    add("Ankle-foot orthosis (AFO)","Foot drop makes the toes catch — it's a trip and fall waiting to happen.",
+        "Worn in a supportive lace-up shoe. Check the skin daily where it presses, especially if sensation is reduced.");
+  if(/trapeziectomy|thumb (cmc|base)|de quervain|skier'?s thumb|gamekeeper|thumb (ucl|sprain)|scaphoid/.test(hay))
+    add("Thumb spica splint","Rests the thumb base/scaphoid, which is what actually settles it.",
+        "Immobilises the thumb but leaves the fingers free — keep every other joint moving. For scaphoid, wear it exactly as long as directed; this bone has a real non-union risk.");
+  if(/mallet finger/.test(hay))
+    add("Mallet finger splint","This splint IS the treatment for a mallet finger.",
+        "Worn CONTINUOUSLY for 6–8 weeks — if the fingertip is allowed to droop even once while changing it, the clock restarts. Support the tip on a flat surface when you swap it.");
+  if(/carpal tunnel|cubital tunnel|ulnar nerve/.test(hay))
+    add("Night resting splint","Night symptoms come from the wrist/elbow bending while you sleep.",
+        "Wrist splint in NEUTRAL (not extended) for carpal tunnel; for cubital tunnel, a towel or splint stopping the elbow bending past ~45°.");
+  if(/lumbar fusion|spinal fusion|\bacdf\b|\btlif\b|\balif\b|vertebral (compression )?fracture|kyphoplast/.test(hay))
+    add("Spinal brace (TLSO / lumbar corset)","Only if your surgeon prescribed one — braces are not routine after all spinal surgery.",
+        "Wear it exactly when told (often for upright activity only). Follow the no bending/lifting/twisting rule with or without it.");
+  if(/cabg|sternotom|open heart|coronary artery bypass|valve (repair|replacement)/.test(hay))
+    add("Sternal support (heart pillow / brace)","Bracing the chest when you cough genuinely reduces pain and protects the breastbone.",
+        "Hug it firmly against the chest whenever you cough, sneeze or get up. Sternal precautions still apply for ~8 weeks.");
+  if(/amputation|disarticulation|residual limb/.test(hay))
+    add("Residual-limb shrinker sock","Shaping the limb early is what decides how well a prosthesis fits later.",
+        "Worn as directed, wrinkle-free. Check the skin every time it comes off; a mark lasting more than ~20 minutes means it isn't fitting.");
+  if(/hip replacement|hip arthroplasty|\bthr\b|\btha\b/.test(hay))
+    add("Long-handled reacher & sock aid","Hip precautions stop you bending past 90° — these let you dress without breaking them.",
+        "Use with a long shoehorn. Also worth raising the seat/toilet so your hip stays above 90°.");
+  if(/knee replacement|\btkr\b|\btka\b/.test(hay))
+    add("Raised toilet seat / chair raisers","Getting up from low seats is the hardest thing early after a knee replacement.",
+        "Aim for hips slightly above knees when seated. Do NOT put a pillow under the knee — that causes a flexion contracture.");
+  if(/limb lengthening|external fixation|ilizarov|frame/.test(hay))
+    add("Shoe balancer / levelling sole","A frame or a lengthening limb changes your leg length and throws off your gait.",
+        "Levels the other side so you don't develop back and hip pain while the frame is on.");
+  return out;
+}
+function suggestedDevicesCard(){
+  const s = suggestDevices();
+  if(!s.length) return "";
+  return `<div class="devsugg no-print">
+    <div class="devsugg-h">🦯 <b>Suggested for you</b> <span class="devsugg-sub">based on your diagnosis and your history — tap to add</span></div>
+    ${s.map((d,i)=>`<div class="devsugg-row">
+      <div class="devsugg-main"><b>${esc(d.name)}</b> <span class="devsugg-why">${esc(d.why)}</span>
+        <div class="devsugg-param"><b>Set-up that matters:</b> ${esc(d.param)}</div></div>
+      <button type="button" class="devsuggadd" data-i="${i}">＋ Add</button>
+    </div>`).join("")}
+  </div>`;
+}
+function addSuggestedDevice(i){
+  const s = suggestDevices(); const d = s[i]; if(!d) return;
+  (state.devices = state.devices||[]).push({ name:d.name, note:d.param });
+  save(); afterPrecautionChange(true); toast(`Added: ${d.name}`);
+}
 function surgicalReminderCard(){
   const surg = detectSurgery();
   const customs = state.customPrecautions || [];
@@ -3164,6 +3323,7 @@ function surgicalReminderCard(){
     <h2>${title}</h2>
     ${head}
     <div class="preccontrols no-print">${wbControl}${devControl}${spControl}</div>
+    ${suggestedDevicesCard()}
     ${list}${timeline}${addCtrl}${disclaimer}
   </div>`;
 }
@@ -3179,6 +3339,7 @@ function wirePrecautions(){
   if(addBtn) addBtn.onclick = ()=>{ const f=$("#precautionsOut .addprecform"); f.classList.toggle("hide"); if(!f.classList.contains("hide")) f.querySelector(".addprec-t").focus(); };
   const saveBtn = $("#precautionsOut .addprec-save"); if(saveBtn) saveBtn.onclick = addCustomPrecaution;
   $$("#precautionsOut .precdel").forEach(b=>b.onclick=()=> b.dataset.devidx!=null ? removeDevice(+b.dataset.devidx) : removeCustomPrecaution(+b.dataset.idx));
+  $$("#precautionsOut .devsuggadd").forEach(b=>b.onclick=()=>addSuggestedDevice(+b.dataset.i));
   const wbSel=$("#precautionsOut #wbSelect"); if(wbSel) wbSel.onchange=setWeightBearingStatus;
   const wbPct=$("#precautionsOut #wbPct"); if(wbPct) wbPct.oninput=()=>setWbAmount("pct");
   const wbLbs=$("#precautionsOut #wbLbs"); if(wbLbs) wbLbs.oninput=()=>setWbAmount("lbs");

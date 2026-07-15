@@ -190,6 +190,20 @@ input[type=range]{flex:1;accent-color:var(--brand);height:30px}
 .planrestrict{background:rgba(255,107,107,.08);border:1px solid rgba(255,107,107,.32);border-radius:9px;
   padding:8px 11px;margin:0 0 10px;font-size:12.5px;line-height:1.5}
 .planrestrict b{color:var(--danger)}
+/* suggested assistive devices */
+.devsugg{border:1px solid rgba(62,166,255,.3);background:rgba(62,166,255,.06);border-radius:10px;padding:10px 12px;margin:10px 0}
+.devsugg-h{font-size:13px;margin-bottom:6px}
+.devsugg-h b{color:var(--brand)}
+.devsugg-sub{color:var(--muted);font-size:11.5px;font-weight:500}
+.devsugg-row{display:flex;align-items:flex-start;gap:10px;border-top:1px solid var(--line);padding:8px 0}
+.devsugg-row:first-of-type{border-top:0}
+.devsugg-main{flex:1;font-size:12.8px;line-height:1.5}
+.devsugg-why{color:var(--muted)}
+.devsugg-param{margin-top:3px;font-size:12px;color:var(--text);background:var(--panel-2);border-radius:7px;padding:5px 8px}
+.devsugg-param b{color:var(--brand)}
+.devsuggadd{flex:0 0 auto;cursor:pointer;border:1px solid var(--brand);background:var(--panel);color:var(--brand);
+  border-radius:999px;padding:5px 11px;font-size:12px;font-weight:700}
+.devsuggadd:hover{background:var(--brand);color:#04121f}
 /* ADL / occupational-therapy daily-living practice */
 .adlpill{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.3px;color:#04121f;
   background:#a78bfa;border-radius:999px;padding:1px 7px;vertical-align:1px}
