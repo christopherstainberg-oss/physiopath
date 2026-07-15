@@ -3096,16 +3096,168 @@ function inferPattern(name){
   if(/press|push-up|raise|fly|scaption|full-can|internal rotation|extension|leg extension/.test(l)) return "push";
   return "general";
 }
+/* Kept for the handful of cues the equipment/variant/modifier layers don't reach.
+   Everything that IS covered there was removed: with both in play, a
+   "Barbell box squat — with 2s pause" explained the pause three separate times. */
 function movementNotes(name){
   const l = name.toLowerCase(); const n = [];
-  if(/isometric|hold|wall sit|plank|set\b/.test(l)) n.push("Held statically — builds tendon tolerance and control without moving the joint, which is handy when motion is painful.");
-  if(/eccentric|nordic|off-step|slow-tempo|3s|slow eccentric/.test(l)) n.push("Emphasizes the slow lowering (lengthening) phase, which is especially effective for tendon and muscle strengthening.");
-  if(/single-leg|pistol|unilateral|1-leg|one-leg/.test(l)) n.push("A single-leg version — more balance and stability demand; progress to it once the two-leg version is easy.");
-  if(/\bband\b|cable|banded|accommodating/.test(l)) n.push("Uses variable resistance that's easy to scale up or down.");
-  if(/paused|1\.5-rep|2s pause/.test(l)) n.push("The pause removes momentum and increases control at the hardest position.");
-  if(/deficit|deep|full-range/.test(l)) n.push("Trains a larger range of motion — introduce it gradually.");
-  if(/foam|bosu|unstable|wobble|perturbation/.test(l)) n.push("An unstable surface increases the balance challenge — keep sturdy support nearby.");
+  if(/perturbation/.test(l)) n.push("Someone gives you small, unpredictable nudges — the point is reacting to what you didn't expect, so don't let them warn you.");
+  if(/eyes-closed|eyes closed/.test(l)) n.push("Closing your eyes removes vision and forces your ankles and inner ear to do the balancing. Stand within arm's reach of support.");
+  if(/dual-task|counting|while talking/.test(l)) n.push("Doing a second task at once is the test — real life never gives you your full attention for balance.");
+  if(/blood ?flow restriction|\bbfr\b/.test(l)) n.push("Blood-flow restriction lets very light loads build strength, but it needs proper cuffs and supervision — not a belt or a band.");
   return n.slice(0,2).join(" ");
+}
+/* =====================================================================
+   EXPLAIN SPECIFICITY LAYERS
+   PATTERN_HOWTO has ONE entry per movement pattern, so every one of the 2,086
+   squat variants got byte-identical instructions: the same words for "Squat",
+   "Goblet squat", "Barbell box squat — with 2s pause" and "Soup-can split
+   squat — unilateral". The implement, the named variant and the modifier are
+   all already in the name; these layers read them and say what each one
+   actually CHANGES about the execution.
+   Measured over the 20,000-exercise library: 16,485 carry an implement and
+   17,516 carry a modifier, so only ~479 bodyweight-with-no-modifier moves fall
+   back to the bare pattern text.
+   ===================================================================== */
+
+/* The implement decides how you hold and set the thing up — which the pattern
+   text cannot know. Keys match the name's leading word (and e.equipment). */
+const EQUIP_HOWTO = {
+  "Dumbbell":     { set:"Hold a dumbbell in each hand (or one, if the movement is single-arm) with a firm grip, wrists straight — not bent back.",
+                    avoid:"If your wrists ache, the grip is usually too loose or the weight too heavy." },
+  "Kettlebell":   { set:"Hold the kettlebell by the handle and let the bell rest against the back of your forearm rather than banging it — grip just tight enough to control it.",
+                    avoid:"Don't let the bell flop onto your wrist at the top." },
+  "Barbell":      { set:"Set the bar at a height you can reach without tiptoeing. Grip evenly, thumbs wrapped around, and take the weight fully before your first rep.",
+                    avoid:"Never grip a loaded bar with thumbs behind it, and don't unrack far from the stands." },
+  "Band":         { set:"Anchor the band at the height the movement asks for and take the slack out before rep one — stand further away for more resistance.",
+                    avoid:"Never let a stretched band snap back — control the return, and check for nicks before you use it." },
+  "Loop-band":    { set:"Set the loop where the movement asks (usually just above the knees or around the ankles) and keep light tension on it the whole set.",
+                    avoid:"Don't let the loop roll or slide — if it does, move it lower or use a wider band." },
+  "Cable":        { set:"Set the pulley height, then step away far enough to pre-load the cable before your first rep so tension never drops.",
+                    avoid:"Don't let the stack touch down between reps — that's where the tension is lost." },
+  "Machine":      { set:"Adjust the seat and pads so the machine's pivot lines up with the joint you're moving. This matters far more than the weight on the stack.",
+                    avoid:"If you have to shift or arch to reach the handles, the machine is set wrong, not you." },
+  "Suspension":   { set:"Check the anchor is solid and take the slack out. Your foot position is the dial: walk your feet in to make it harder, out to make it easier.",
+                    avoid:"Don't let the straps saw against your arms, and keep the anchor point above head height." },
+  "Med-ball":     { set:"Hold the ball close to your chest unless the movement says otherwise; pick a weight you can control at speed, not the heaviest you can lift.",
+                    avoid:"" },
+  "Sandbag":      { set:"Hug the bag or grip its handles and keep it tight to your body — the load shifts, and that's the point.",
+                    avoid:"Don't let it drift away from you; that's where backs get hurt." },
+  "Chair":        { set:"Use a stable, non-rolling chair with its back against a wall.",
+                    avoid:"Never use a chair with wheels or castors for this." },
+  "Towel":        { set:"Roll or fold the towel as the movement asks and keep a light, even pull on it — the towel supplies the resistance, so tension is on you.",
+                    avoid:"" },
+  "Broomstick":   { set:"Hold the stick wide enough that your shoulders are comfortable — it's a guide for position, not a load.",
+                    avoid:"" },
+  "Backpack":     { set:"Load a backpack with books or bottles until it feels like the right effort, and wear or hold it as the movement asks.",
+                    avoid:"Pack it so the load can't shift mid-set." },
+  "Heavy-book":   { set:"Hold the book at its spine with both hands so it can't slip.",
+                    avoid:"" },
+  "Soup-can":     { set:"A can or a small bottle is your weight here — light on purpose. Hold it firmly with a straight wrist.",
+                    avoid:"If it feels too easy, slow the movement down or add reps rather than reaching for something heavier." },
+  "Water-bottle": { set:"Hold a filled bottle in each hand. Part-fill them if it's too heavy — that's the adjustment.",
+                    avoid:"" },
+  "Water-jug":    { set:"Hold the jug by its handle, or hug it to your chest. The water sloshes, so grip a little firmer and move a little slower.",
+                    avoid:"" }
+};
+function explainEquip(name){
+  const n = String(name||"");
+  for(const k of Object.keys(EQUIP_HOWTO))
+    if(new RegExp("^" + reEsc(k) + "\\b", "i").test(n)) return EQUIP_HOWTO[k];
+  return null;
+}
+
+/* Named variants — the base name says the movement has been deliberately
+   changed, and each change has its own point and its own failure mode. */
+const VARIANT_HOWTO = [
+  [/\bgoblet\b/i,           { set:"Hold the weight vertically against your chest, elbows tucked in under it.", step:"The front load acts as a counterweight — it lets most people sit down straighter and deeper than they can unloaded." }],
+  [/\bfront squat\b/i,      { set:"The bar sits on the front of your shoulders, elbows pointed high and forward.", step:"Keep those elbows up. The moment they drop, the bar rolls forward and your back rounds to chase it.", avoid:"If your elbows won't stay up, your wrists or upper back are the limit — not your legs." }],
+  [/\boverhead squat\b/i,   { step:"Keep the weight stacked directly over the middle of your foot throughout — it should never drift in front of you.", avoid:"This exposes every shoulder and ankle restriction you have. Go light." }],
+  [/\bbox squat\b/i,        { set:"Set a box or chair at the depth you're aiming for.", step:"Sit back until you genuinely touch the box, pause for a moment without relaxing, then stand.", avoid:"Don't flop onto the box or rock forward off it." }],
+  [/heel-elevated/i,        { set:"Put a small wedge, plate or book under your heels.", step:"Raising the heels lets your knees travel further forward, so you stay more upright and the thighs work harder — useful if stiff ankles limit your depth." }],
+  [/\bsplit squat\b|\blunge\b.*\brear\b|bulgarian/i, { step:"Almost all the weight goes through the FRONT leg — the back leg is a kickstand for balance, not a second engine." }],
+  [/\bsumo\b|wide[- ]stance/i, { step:"A wider stance with toes turned further out shifts the work toward the inner thigh and glutes and shortens the range." }],
+  [/\bdeficit\b/i,          { step:"Standing on a step or plate adds range below your normal end point — start with a small deficit and add height slowly." }],
+  [/\bwall\b.*\bsit\b|\bwall sit\b/i, { set:"Slide down a wall until your thighs are where you want them.", step:"Hold still and breathe normally — the challenge is time under tension, not depth.", avoid:"Don't hold your breath. If your knees complain, sit less deep." }],
+  [/\bpistol\b|single-leg squat/i, { step:"The free leg stays out in front as a counterweight — hold a rail or door frame until you own the balance.", avoid:"Progress to this only once you can control a two-leg squat to the same depth." }],
+  [/\bnordic\b/i,           { step:"Lower as slowly as you possibly can and catch yourself with your hands — the aim is to resist gravity, not to reach the floor gracefully.", avoid:"Expect real soreness for a few days after the first session. Start with very few reps." }],
+  [/copenhagen/i,           { step:"Support the top leg on a bench and lift your body from your inner thigh — start with the knee supported, not the ankle." }],
+  [/\bromanian\b|\brdl\b/i, { step:"The knees stay softly bent and roughly fixed — the movement is hips travelling backwards, not knees bending." }],
+  [/\bstep-?up\b/i,         { set:"Use a step you can stand on with the whole foot.", step:"Push through the TOP foot to rise — don't push off the bottom foot or bounce up.", avoid:"Lower under control; stepping down is where most people lose the benefit." }],
+  [/\bsit-to-stand\b/i,     { step:"Nose over toes, then drive up through your heels. Reach forward with your arms if it helps you start.", avoid:"Don't drop back into the chair — control the way down; that's half the exercise." }],
+  [/\bplank\b/i,            { step:"Squeeze your glutes and gently tuck your ribs down — a plank is a whole-body brace, not a hover.", avoid:"Don't let your hips sag or pike up, and don't hold your breath." }],
+  [/\bbridge\b/i,           { step:"Push through your heels and squeeze your glutes to lift — stop when your hips, knees and shoulders line up.", avoid:"Don't arch your low back to get higher; the extra height comes from the back, not the glutes." }],
+  [/\bclamshell\b/i,        { step:"Keep your hips stacked and still — if your whole pelvis rolls back, the glute stops working and the movement becomes free." }],
+  [/\bdead ?bug\b|\bbird ?dog\b/i, { step:"Move the limbs slowly while the low back stays exactly where it started — if it lifts or presses, you've gone too far.", avoid:"Speed makes this look easy and do nothing." }],
+  [/quad set|\bvmo\b|straight-leg raise|\bslr\b/i, { step:"Tighten the thigh first and hold that tension throughout — the muscle switching on is the whole point, not the movement." }],
+  [/\bpursed\b|diaphragm|belly breath/i, { step:"Breathe in through the nose for about 2 seconds, then out through pursed lips for about 4 — longer out than in." }],
+  [/^tempo |\btempo (squat|deadlift|press|row|lunge)/i, { step:"Deliberately slow and controlled throughout — usually about 3 seconds down, 1 second up. Slowing it down is the load here, so you need less weight.", avoid:"Rushing the lower defeats the entire purpose of the variation." }],
+  [/\bdeep (squat|lunge|split|knee bend|hinge|dip|sit)\b/i,     { step:"Work into a deeper range than the standard version — go only as deep as you can control with your heels down and back neutral.", avoid:"Depth you can't control isn't depth. Build it over weeks, not in one session." }],
+  [/wall.*(squat|sit)|\bwall\b.*isometric/i, { set:"Stand with your back flat against a wall and walk your feet out.", step:"Slide down until your thighs are where prescribed, and hold — the challenge is time, not depth.", avoid:"Don't hold your breath, and come out of it if your knees start complaining." }],
+  [/1\.5-rep/i,            { step:"Go all the way down, come up HALFWAY, go back down, then come all the way up — that's one rep. It doubles the time spent in the hardest part of the range.", avoid:"Expect to need much less weight than a normal set." }],
+  [/\bpulse\b/i,          { step:"Stay in the bottom position and make small, controlled pulses rather than full reps." }],
+  [/eyes-closed|eyes closed/i, { set:"Stand within arm's reach of a wall or counter before you close your eyes.", step:"Close your eyes and hold. Open them the moment you feel yourself going — don't fight it out." }],
+  [/\bfoam\b|\bbosu\b|\bcushion\b|wobble/i, { set:"Put a cushion, folded towel or foam pad underfoot.", step:"The soft surface makes your ankle work constantly to keep you level — expect small wobbles; that IS the exercise." }],
+  [/tandem|heel-to-toe/i,  { step:"Place one foot directly in front of the other, heel touching toe, as if on a tightrope." }],
+  [/\bY-balance\b|star excursion/i, { step:"Stand on one leg and reach the other foot as far as you can in each direction, tapping lightly without putting weight on it, then return under control." }],
+  [/water walking/i,       { set:"Stand in water around waist to chest depth — deeper takes more weight off, shallower loads more.", step:"Walk with a normal heel-to-toe pattern rather than tiptoeing, and let the water's resistance do the work.", avoid:"Walking backward? Check behind you first, and keep a hand near the rail." }],
+  [/aqua jog|deep-water/i, { set:"Use a buoyancy belt in water deep enough that your feet don't touch.", step:"Run in place with a tall posture — no bicycling motion, and don't let your body tip forward." }],
+  [/\bbolster\b|over a bolster|towel roll/i, { set:"Put a rolled towel or bolster under the knee so it rests bent a little.", step:"Straighten only to where the leg is level with the roll — this trains the last few degrees, which is where most people lose their knee." }],
+  [/\b3s hold\b|\bhold at the top\b|holding a counter/i, { step:"Hold at the end position for the full count, keeping the muscle switched on rather than resting on the joint." }],
+  [/\bhourly\b|every hour/i, { step:"Little and often beats one long session — set an hourly reminder, do the set, move on." }],
+  [/\bankle pump\b|point-and-flex/i, { step:"Point your toes away, then pull them firmly back toward your shin. This drives the calf muscle pump that keeps blood moving.", avoid:"Nothing here should hurt — this one is about circulation, not effort." }]
+];
+function explainVariants(name){
+  const out = { set:[], steps:[], avoid:[] };
+  for(const [re, v] of VARIANT_HOWTO){
+    if(!re.test(name||"")) continue;
+    if(v.set) out.set.push(v.set);
+    if(v.step) out.steps.push(v.step);
+    if(v.avoid) out.avoid.push(v.avoid);
+    if(out.steps.length >= 3) break;          // keep it readable
+  }
+  return out;
+}
+
+/* Modifiers — the generator appends these after " — ", and each one exists to
+   change HOW you execute. They override the pattern's tempo where they conflict. */
+const MOD_HOWTO = [
+  [/slow-tempo \(3s eccentric\)|slow eccentric|3s eccentric/i,
+   { step:"Take a full 3 seconds on the lowering (lengthening) half of every rep — count it out loud; almost everyone rushes this.",
+     tempo:"Lower for a counted 3 seconds, then return at a normal pace. The slow lower is the entire reason this version exists.",
+     avoid:"Don't shorten the lower to squeeze out more reps — fewer, slower reps beat more, faster ones here." }],
+  [/with 2s pause|2s pause|\bpaused\b/i,
+   { step:"Stop dead for 2 full seconds at the hardest point of the rep, staying tight — don't relax into the position.",
+     tempo:"Lower under control, hold 2 seconds, then drive back. Breathe normally through the pause rather than holding your breath.",
+     avoid:"The pause removes the bounce, so expect to need noticeably less weight." }],
+  [/\bpartial-range\b/i,
+   { step:"Work only the part of the range that's comfortable today, and stop short of the painful end.",
+     avoid:"This is a stepping stone, not the destination — add range back as symptoms allow." }],
+  [/\bfull-range\b/i,
+   { step:"Use the largest range you can control with good form — all the way to the end and all the way back.",
+     avoid:"Range you can't control isn't range. Reduce the load before you reduce the range." }],
+  [/on unstable surface/i,
+   { step:"Perform it on a cushion, folded mat or wobble pad. Expect it to feel harder and wobblier for the same load.",
+     avoid:"Have something sturdy within arm's reach, and skip this version entirely if your balance is already a concern." }],
+  [/banded \(accommodating\)/i,
+   { step:"Add a band so resistance rises as you move — easiest where you're weakest, hardest where you're strongest.",
+     tempo:"Control the return especially — the band wants to snap you back." }],
+  [/\bunilateral\b/i,
+   { step:"One side at a time. Do your weaker or injured side FIRST, and let it set the number of reps the other side gets.",
+     avoid:"Don't let your trunk twist or dip toward the working side to help." }],
+  [/with isometric hold/i,
+   { step:"Add a hold at the hardest position — squeeze and keep breathing rather than bracing against a held breath.",
+     tempo:"Hold for the prescribed count, keeping the effort constant rather than letting it fade." }]
+];
+function explainMods(name){
+  const out = { steps:[], avoid:[], tempo:null };
+  for(const [re, m] of MOD_HOWTO){
+    if(!re.test(name||"")) continue;
+    if(m.step) out.steps.push(m.step);
+    if(m.avoid) out.avoid.push(m.avoid);
+    if(m.tempo && !out.tempo) out.tempo = m.tempo;   // first modifier wins the tempo line
+  }
+  return out;
 }
 function movementExplain(name, pattern, regionArr){
   const p = pattern || inferPattern(name);
@@ -3115,11 +3267,19 @@ function movementExplain(name, pattern, regionArr){
   const regs = (regionArr||[]).filter(r=>!skip.has(r));
   const target = regs.length ? ` It mainly works the ${regs.join(", ").toLowerCase()}.` : "";
   const notes = movementNotes(name);
-  const steps = [`<b>Set up —</b> ${ht.setup}`].concat(ht.steps || []);
+  /* Layer the name's own detail over the pattern text: the implement, the named
+     variant, then the modifier — so a "Barbell box squat — with 2s pause" no
+     longer reads exactly like a bare "Squat". */
+  const eq = explainEquip(name), vr = explainVariants(name), md = explainMods(name);
+  const setup = [ht.setup, eq && eq.set, ...vr.set].filter(Boolean).join(" ");
+  const steps = [`<b>Set up —</b> ${setup}`]
+    .concat(ht.steps || [], vr.steps, md.steps);
   const stepHTML = `<ol class="howsteps">${steps.map(s=>`<li>${s}</li>`).join("")}</ol>`;
+  const tempo = md.tempo || ht.tempo;                       // a modifier's tempo overrides the pattern's
+  const avoid = [ht.avoid, eq && eq.avoid, ...vr.avoid, ...md.avoid].filter(Boolean).join(" ");
   const meta = [
-    ht.tempo ? `<div class="howmeta"><b>⏱ Tempo &amp; breathing:</b> ${ht.tempo}</div>` : "",
-    ht.avoid ? `<div class="howmeta howavoid"><b>⚠ Avoid:</b> ${ht.avoid}</div>` : "",
+    tempo ? `<div class="howmeta"><b>⏱ Tempo &amp; breathing:</b> ${tempo}</div>` : "",
+    avoid ? `<div class="howmeta howavoid"><b>⚠ Avoid:</b> ${avoid}</div>` : "",
     notes ? `<div class="howmeta"><b>Note:</b> ${notes}</div>` : ""
   ].join("");
   return `<b>What it is:</b> ${info.what}${target}`
