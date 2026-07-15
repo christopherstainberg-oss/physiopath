@@ -281,7 +281,7 @@ const state = {
   screen:{}, falls:"", aid:"", smoking:"", alcohol:"", sleep:"", stress:"", waterConfidence:"", adls:[],
   medIds:[], medFilter:false, homeMode:false, customPrecautions:[], clinicianProtocols:[], clinPrecautionProtocol:"", clinicianGuided:false,
   medDoses:{}, weightBearing:{status:"",pct:"",lbs:"",side:"",limb:"le"}, devices:[],
-  cardiacDevice:{type:"",icdRate:""}, specialPrecautions:[],
+  cardiacDevice:{type:"",icdRate:""}, specialPrecautions:[], planVariant:{},
   log:[], apiKey:"", apiModel:"claude-opus-4-8"
 };
 const MED_FILTERABLE = ["fluoroquinolone","anticoagulant","antiplatelet","opioid","sedative","muscle_relaxant","gabapentinoid","antipsychotic"];
@@ -1530,6 +1530,14 @@ const REHAB_PLANS = [
   { re:/\bacl\b.*(reconstruct|repair|graft)|anterior cruciate.*(reconstruct|repair|graft)|\baclr\b/, label:"ACL reconstruction", total:39,
     freq:"Daily home work + 2–3 supervised sessions/week early on, tapering later",
     note:"ACL reconstruction is a 9–12 month rehab. The graft is at its weakest around 6–12 weeks while it re-vascularises, so progression is driven by criteria, not the calendar.",
+    variants:[
+      { k:"standard", label:"Standard", sub:"Criteria-based, return to pivoting sport ~9–12 months", scale:1 },
+      { k:"athlete", label:"Accelerated (athlete)", sub:"Excellent early progress, closely supervised", scale:0.78,
+        note:"Accelerated: suits an athlete with full extension, no swelling and strong quads early, under close supervision — but the graft still needs ~9 months before pivoting sport, so late milestones stay criteria-based." },
+      { k:"meniscal", label:"+ Meniscal repair", sub:"ACL done alongside a meniscus repair", pick:/menisc/, scale:1.2,
+        note:"With a concurrent meniscal repair the meniscus sets the early rules: restricted weight-bearing and flexion, and no deep loaded squatting for ~4 months." },
+      { k:"revision", label:"Revision / complex", sub:"Repeat reconstruction or multi-ligament", pick:/revision|multi-?ligament/, scale:1.45,
+        note:"Revision and multi-ligament reconstructions progress more slowly and return to sport is often 12+ months." }],
     ph:[
       ["Protection & quadriceps activation",0,2,"Settle swelling, get the knee fully straight, and switch the quads back on.","full passive extension equal to the other knee, a strong quad set and a straight-leg raise with no lag, swelling settling","Brace and crutches as your surgeon directs. No pivoting or twisting; avoid open-chain knee extension in the 0–45° range."],
       ["Range of motion, gait & early strength",2,6,"Restore full range, walk normally without aids, and rebuild base strength.","full extension, flexion ≥120°, walking without crutches or a limp, minimal swelling","No running, cutting or pivoting. Closed-chain strengthening only."],
@@ -1569,7 +1577,14 @@ const REHAB_PLANS = [
       ["Return to full activity",10,14,"Restore full capacity and impact tolerance.","strength near-symmetrical, confident with your activities","Locking or the knee giving way should be reviewed — that may need surgery."]] },
   { re:/\bmcl\b|medial collateral/, label:"MCL sprain", total:10,
     freq:"Daily home work + 1–2 supervised sessions/week",
-    note:"The MCL has a good blood supply and heals well without surgery — even higher-grade tears. Timeline depends on grade (I ~2–3 wks, II ~4–6 wks, III ~8–12 wks).",
+    note:"The MCL has a good blood supply and heals well without surgery — even higher-grade tears.",
+    variants:[
+      { k:"g1", label:"Grade I (mild)", sub:"Tender, stable on testing", pick:/grade (i|1)\b/, scale:0.35,
+        note:"Grade I: usually 2–3 weeks to return." },
+      { k:"g2", label:"Grade II (moderate)", sub:"Partial tear, some laxity with a firm endpoint", pick:/grade (ii|2)\b/, scale:0.7,
+        note:"Grade II: usually 4–6 weeks, often with a hinged brace." },
+      { k:"g3", label:"Grade III (complete)", sub:"Complete tear, marked laxity", pick:/grade (iii|3)\b/, scale:1.3,
+        note:"Grade III: 8–12 weeks in a hinged brace. Check for associated ACL/meniscal injury — isolated MCL tears still usually heal without surgery." }],
     ph:[
       ["Protect & settle",0,1,"Control pain and swelling, protect the healing ligament.","swelling settling, comfortable weight-bearing, extension restored","Brace as advised. Avoid any sideways (valgus) stress on the knee."],
       ["Restore range & gait",1,3,"Regain full motion and normal walking.","full range, walking without a limp, no pain on gentle valgus stress","Still avoid side-to-side stress and pivoting."],
@@ -1578,6 +1593,16 @@ const REHAB_PLANS = [
   { re:/knee replacement|knee arthroplasty|\btkr\b|\btka\b|unicompartmental knee/, label:"Total knee replacement", total:26,
     freq:"Short sessions several times daily early, then 4–5 sessions/week",
     note:"Range of motion in the first 6 weeks is the priority — it's much harder to regain later. Swelling and discomfort for several months is normal; most improvement is in the first 3 months, with gains continuing to a year.",
+    variants:[
+      { k:"standard", label:"Standard", sub:"Typical primary knee replacement", scale:1 },
+      { k:"rapid", label:"Rapid-recovery", sub:"Enhanced-recovery pathway, progressing well", scale:0.8,
+        note:"Rapid-recovery pathways get people up the same day and home fast — but only push this if your range and swelling are genuinely on track." },
+      { k:"stiff", label:"Slow / stiff knee", sub:"Range lagging behind, or a complex case", pick:/stiff|arthrofibrosis/, scale:1.35,
+        note:"If flexion is stalling below ~90° at 6 weeks, tell your surgeon promptly — manipulation under anaesthetic is time-sensitive and works best early." },
+      { k:"uni", label:"Partial (uni) knee replacement", sub:"Only one compartment replaced", pick:/unicompartmental|partial knee/, scale:0.75,
+        note:"Partial replacements usually recover faster than a total, with better range and a more natural-feeling knee." },
+      { k:"revision", label:"Revision replacement", sub:"Repeat knee replacement", pick:/revision/, scale:1.45,
+        note:"Revision knee replacements are bigger operations with slower recovery, often restricted weight-bearing and a lower final range — your surgeon's protocol overrides everything here." }],
     ph:[
       ["Early motion, swelling & walking",0,2,"Get the knee straight, bend it, and walk safely.","full extension (0°), flexion ≥90°, walking with a frame/crutches, wound healing","Follow your weight-bearing status. Do NOT put a pillow under the knee — that causes a flexion contracture."],
       ["Range, gait & early strength",2,6,"Push toward full flexion, walk without aids, rebuild quads.","extension 0°, flexion ≥110–120°, walking without aids, stairs one at a time","Range work is the priority in these weeks — flexion gained now is much harder to get later."],
@@ -1585,7 +1610,16 @@ const REHAB_PLANS = [
       ["Endurance & return to activity",12,26,"Restore endurance and return to low-impact activity.","near-normal walking and stairs, good strength, comfortable daily activity","Low-impact activity (walking, cycling, swimming, golf) is encouraged; running and jumping are generally not."]] },
   { re:/hip replacement|hip arthroplasty|\bthr\b|\btha\b|hip resurfacing|hemiarthroplasty/, label:"Total hip replacement", total:24,
     freq:"Short sessions several times daily early, then 4–5 sessions/week",
-    note:"Recovery is usually quicker than a knee replacement. Follow your surgeon's precautions — they depend on the surgical approach (posterior approach has the most restrictions).",
+    note:"Recovery is usually quicker than a knee replacement. Follow your surgeon's precautions — they depend on the surgical approach.",
+    variants:[
+      { k:"posterior", label:"Posterior approach", sub:"The most common — full hip precautions", scale:1,
+        note:"Posterior approach: the classic precautions apply — don't bend past 90°, don't cross the midline, don't rotate the leg inwards, usually for 6–12 weeks." },
+      { k:"anterior", label:"Anterior approach", sub:"Often fewer restrictions, quicker early recovery", pick:/anterior approach/, scale:0.85,
+        note:"Anterior approach: many surgeons apply few or no movement precautions and early recovery is often quicker — but some restrict extension and external rotation instead. Follow YOUR surgeon's list." },
+      { k:"revision", label:"Revision / complex", sub:"Repeat replacement or a complex case", pick:/revision/, scale:1.4,
+        note:"Revision hips progress more slowly, often with restricted weight-bearing — your surgeon's protocol overrides everything here." },
+      { k:"fracture", label:"After a hip fracture", sub:"Hemiarthroplasty for a broken hip", pick:/fracture|hemiarthroplasty/, scale:1.25,
+        note:"After a fractured hip, rehab also targets falls prevention, bone health and getting back to independence — outcomes depend heavily on early mobilisation." }],
     ph:[
       ["Early mobility & precautions",0,2,"Walk safely, control swelling, protect the new joint.","walking with aids, getting in/out of bed and a chair independently, wound healing","Hip precautions per your approach — typically no bending past 90°, no crossing the midline, no twisting inwards."],
       ["Gait & base strength",2,6,"Walk without aids, rebuild hip strength.","walking without aids or a limp, good glute activation, stairs with a rail","Keep observing your precautions until your surgeon lifts them (often ~6–12 weeks)."],
@@ -1594,6 +1628,14 @@ const REHAB_PLANS = [
   { re:/rotator cuff (repair|reconstruct)|cuff repair|supraspinatus repair|subscapularis repair/, label:"Rotator cuff repair", total:26,
     freq:"Little and often — 3–5 short sessions daily early, then 4–5 sessions/week",
     note:"The repaired tendon needs to heal to bone before it can be loaded — that's why active movement is delayed. Pushing early risks re-tear, which is the main complication.",
+    variants:[
+      { k:"small", label:"Small / medium tear", sub:"Standard repair, good tissue quality", scale:1 },
+      { k:"large", label:"Large / massive tear", sub:"Bigger repair or poorer tissue", pick:/massive|large/, scale:1.3,
+        note:"Large and massive repairs are protected for longer and re-tear rates are higher — expect a slower, more cautious pathway." },
+      { k:"revision", label:"Revision repair", sub:"Repeat surgery after a failed repair", pick:/revision/, scale:1.5,
+        note:"Revision repairs need the most protection and have the least predictable outcome." },
+      { k:"early", label:"Early-motion protocol", sub:"Only if your surgeon specifies it", scale:0.8,
+        note:"Some surgeons use early-motion protocols for small repairs. Only follow this if it's YOUR surgeon's instruction — moving early against a standard protocol risks the repair." }],
     ph:[
       ["Sling & protected passive motion",0,6,"Protect the repair, prevent stiffness with passive movement only.","passive range progressing per protocol, pain settling, sling used as directed","Sling ~4–6 weeks. PASSIVE movement only — no active lifting of the arm, no reaching behind, no weight-bearing through the arm."],
       ["Active-assisted to active motion",6,12,"Regain active range as the repair consolidates.","near-full passive range, active elevation without a shrug, pain settling","Active movement without resistance. Still no lifting or loaded reaching."],
@@ -1602,6 +1644,14 @@ const REHAB_PLANS = [
   { re:/frozen shoulder|adhesive capsulitis/, label:"Frozen shoulder (adhesive capsulitis)", total:52,
     freq:"Short, frequent, gentle sessions daily — 3–5 times/day",
     note:"This is a long condition that runs through three stages — freezing (painful), frozen (stiff), thawing (recovering) — typically 1–3 years but often shorter with good management. Aggressive stretching during the painful stage makes it worse.",
+    variants:[
+      { k:"standard", label:"Standard (natural course)", sub:"Managed with exercise and pain relief", scale:1 },
+      { k:"injection", label:"After a steroid injection", sub:"Injected during the painful/freezing stage", scale:0.72,
+        note:"A corticosteroid injection given EARLY (in the painful freezing stage) is the single most effective intervention — it shortens the painful phase and lets range work start sooner." },
+      { k:"procedure", label:"After hydrodilatation / MUA", sub:"Distension or manipulation under anaesthetic", scale:0.6,
+        note:"After hydrodilatation or a manipulation, the window to gain range is short — start range work immediately and frequently, or the gains are lost." },
+      { k:"diabetic", label:"Diabetes-associated", sub:"Frozen shoulder alongside diabetes", pick:/diabet/, scale:1.3,
+        note:"Frozen shoulder with diabetes is more common, more stubborn, more often bilateral, and slower to resolve — expect a longer course and keep glucose well controlled." }],
     ph:[
       ["Freezing — pain-dominant",0,12,"Control pain and keep the range you have. Don't force it.","night pain settling, pain no longer the dominant problem","Do NOT stretch aggressively — pain is the guide. This stage is about pain relief and gentle movement; a steroid injection can help a lot here."],
       ["Frozen — stiffness-dominant",12,30,"Now work on range — this is the stage where stretching earns its keep.","measurable gains in range, especially external rotation, with less pain","Stretching should be firm but tolerable and settle within 30 minutes. Progress is slow — that's normal."],
@@ -1626,6 +1676,13 @@ const REHAB_PLANS = [
   { re:/achilles (rupture|tear)|achilles (repair|reconstruct)|tendo.?achilles rupture/, label:"Achilles rupture", total:39,
     freq:"Daily home work + 1–2 supervised sessions/week",
     note:"Whether repaired or managed in a boot, the tendon needs graded protection then graded loading. Return to sport is typically 6–12 months, and calf strength often lags for a year or more.",
+    variants:[
+      { k:"operative", label:"Surgical repair", sub:"Tendon repaired, then boot and graded loading", scale:1,
+        note:"Repair carries a slightly lower re-rupture rate but adds wound and infection risk; rehab afterwards is much the same." },
+      { k:"nonop", label:"Non-operative (functional bracing)", sub:"Managed in a boot with heel wedges — no surgery", pick:/non-?operative|conservative|non-?surgical/, scale:1.05,
+        note:"Modern non-operative management with EARLY functional bracing gives re-rupture rates close to surgery — but only if the boot/wedge protocol is followed exactly. Missing the early protection is what causes re-rupture." },
+      { k:"delayed", label:"Delayed presentation / re-rupture", sub:"Diagnosed late, or a second rupture", scale:1.35,
+        note:"Late-diagnosed and re-ruptured tendons heal slower and end with less calf strength — expect a longer pathway." }],
     ph:[
       ["Protected healing in a boot",0,4,"Protect the healing tendon; keep the rest of the leg working.","wound healed (if operated), comfortable in the boot, following your weight-bearing status","Boot with heel wedges per protocol. NO stretching of the tendon and no dorsiflexion past neutral."],
       ["Progressive weight-bearing & range",4,10,"Wean the boot and wedges, restore range and normal walking.","full weight-bearing out of the boot, ankle range to neutral and beyond, walking without a limp","Wean wedges gradually as directed. Still no forced stretching or explosive push-off."],
@@ -1642,6 +1699,14 @@ const REHAB_PLANS = [
   { re:/ankle sprain|lateral ligament.*ankle|\batfl\b|inversion injury|sprained ankle|ankle instab/, label:"Lateral ankle sprain", total:12,
     freq:"Several short sessions daily early, then 4–5 sessions/week",
     note:"Ankle sprains are under-rehabbed — up to a third become chronically unstable. Balance/proprioception training is what prevents recurrence, so don't stop when the pain goes.",
+    variants:[
+      { k:"g1", label:"Grade I (mild)", sub:"Stretched ligament, minimal swelling, can walk", pick:/grade (i|1)\b/, scale:0.4,
+        note:"Grade I: back to sport in ~1–3 weeks — but keep the balance work going for months." },
+      { k:"g2", label:"Grade II (moderate)", sub:"Partial tear, swelling and bruising, painful walking", pick:/grade (ii|2)\b/, scale:0.8 },
+      { k:"g3", label:"Grade III (severe)", sub:"Complete tear, marked swelling, can't weight-bear", pick:/grade (iii|3)\b/, scale:1.4,
+        note:"Grade III: 8–12+ weeks, often braced early. If you couldn't weight-bear at all, an X-ray to exclude fracture (Ottawa rules) is warranted." },
+      { k:"chronic", label:"Chronic instability", sub:"Repeated sprains / the ankle keeps giving way", pick:/chronic|instability|recurrent/, scale:1.8,
+        note:"Chronic instability needs a longer, balance-heavy programme; persistent giving-way despite good rehab warrants a surgical opinion." }],
     ph:[
       ["Protect & settle",0,1,"Control swelling and pain, restore comfortable walking.","swelling settling, weight-bearing comfortably, able to walk with little limp","Compression and elevation, keep moving within comfort. Protective taping/brace as needed."],
       ["Range, gait & early balance",1,3,"Restore full range and normal walking; start balance work.","full range, walking without a limp, able to stand on the leg","Start balance work early — this is the part that prevents re-injury."],
@@ -1657,7 +1722,13 @@ const REHAB_PLANS = [
       ["Return to running & full activity",18,26,"Return to running/impact with a graded plan.","little or no morning pain, tolerating impact without a next-day flare","Build impact volume slowly. Persistent pain after 6+ months warrants review (imaging, injection, or a night splint)."]] },
   { re:/hamstring (strain|tear|pull|injury)|biceps femoris|pulled hamstring/, label:"Hamstring strain", total:8,
     freq:"Daily — hamstring work most days",
-    note:"Re-injury rates are high (up to a third) — usually from returning too early. Eccentric strengthening (Nordics) and running progression are what protect you. Timeline depends on grade (I ~2–3 wks, II ~4–8 wks, III 3+ months).",
+    note:"Re-injury rates are high (up to a third) — usually from returning too early. Eccentric strengthening (Nordics) and running progression are what protect you.",
+    variants:[
+      { k:"g1", label:"Grade I (mild)", sub:"Minimal strength loss, walking normally", pick:/grade (i|1)\b/, scale:0.45,
+        note:"Grade I: typically 2–3 weeks, but still finish the eccentric and sprint progression — this is where re-injuries come from." },
+      { k:"g2", label:"Grade II (moderate)", sub:"Partial tear, clear strength loss and limp", pick:/grade (ii|2)\b/, scale:1 },
+      { k:"g3", label:"Grade III (severe)", sub:"Complete tear or proximal avulsion", pick:/grade (iii|3)\b|avulsion/, scale:2.6,
+        note:"Grade III: 3+ months. Proximal (ischial) avulsions and complete tears warrant a surgical opinion, especially in athletes." }],
     ph:[
       ["Protect & gentle activation",0,1,"Settle bleeding and pain; gentle pain-free activation.","walking normally, pain-free gentle isometrics","Avoid stretching into pain and any sprinting. Compression early."],
       ["Range & progressive isometrics",1,2,"Restore length and start loading without pain.","full pain-free range, comfortable isometrics at increasing length","No explosive or high-speed work yet."],
@@ -1666,6 +1737,13 @@ const REHAB_PLANS = [
   { re:/calf (strain|tear)|gastrocnemius (strain|tear)|soleus strain|torn calf/, label:"Calf strain", total:8,
     freq:"Daily calf loading",
     note:"Calf strains re-injure easily if you return before the calf has real strength endurance. Heel-raise capacity is the key milestone.",
+    variants:[
+      { k:"g1", label:"Grade I (mild)", sub:"Tight, sore, walking normally", pick:/grade (i|1)\b/, scale:0.45 },
+      { k:"g2", label:"Grade II (moderate)", sub:"Partial tear, limping, painful heel raise", pick:/grade (ii|2)\b/, scale:1 },
+      { k:"g3", label:"Grade III (severe)", sub:"Complete tear, can't push off", pick:/grade (iii|3)\b/, scale:2.2,
+        note:"Grade III: 3+ months. Sudden severe calf pain with an audible pop should be assessed to exclude an Achilles rupture — and calf swelling/pain can also be a DVT." },
+      { k:"soleus", label:"Soleus strain", sub:"Deeper, lower calf — slower than gastrocnemius", pick:/soleus/, scale:1.5,
+        note:"Soleus strains are typically slower and more stubborn than gastrocnemius tears; build heel-raise capacity with the knee bent too." }],
     ph:[
       ["Protect & settle",0,1,"Settle pain and swelling; walk comfortably.","walking without a limp, pain-free gentle isometrics","Avoid stretching into pain and explosive push-off. Compression and gentle movement."],
       ["Range & progressive loading",1,3,"Restore range and start progressive heel raises.","full range, comfortable double-leg heel raises","Build calf raises gradually; avoid speed work."],
@@ -1722,6 +1800,14 @@ const REHAB_PLANS = [
   { re:/lumbar (disc|radiculopathy|herniat|prolapse)|sciatica|slipped disc|disc (herniat|prolapse|bulge)|nerve root/, label:"Lumbar disc / sciatica", total:26,
     freq:"Little and often — several short sessions daily",
     note:"Most disc-related leg pain resolves without surgery: ~50% improve by 6 weeks and most by 3 months. Leg pain moving OUT of the leg and toward the back ('centralisation') is a good sign. Progressive weakness or bladder/bowel changes need urgent review.",
+    variants:[
+      { k:"standard", label:"Standard (non-surgical)", sub:"Leg pain, no significant weakness", scale:1 },
+      { k:"weakness", label:"With nerve weakness", sub:"Foot drop or clear muscle weakness", scale:1.3,
+        note:"With real motor weakness (e.g. foot drop) you need medical review — most still recover without surgery, but progressive weakness is a surgical indication and shouldn't be watched indefinitely." },
+      { k:"postop", label:"After microdiscectomy", sub:"Disc surgery already done", pick:/discectomy|laminectomy/, scale:0.85,
+        note:"After microdiscectomy leg pain usually settles quickly; avoid heavy lifting and repeated bending for ~6 weeks, then build back progressively — early graded activity gives better outcomes than prolonged rest." },
+      { k:"stenosis", label:"Spinal stenosis pattern", sub:"Leg pain on walking, eased by sitting/bending", pick:/stenosis|claudication/, scale:1.5,
+        note:"Stenosis behaves differently to a disc: symptoms come on with walking/standing and ease with sitting or leaning forward. Flexion-based exercise and cycling are usually better tolerated than extension." }],
     ph:[
       ["Settle & find your directional preference",0,2,"Reduce leg pain; find positions/movements that centralise it.","leg pain centralising (moving out of the leg toward the back), able to walk short distances","Avoid prolonged sitting and loaded bending early. Keep moving — bed rest makes it worse."],
       ["Restore movement & nerve mobility",2,6,"Restore comfortable movement and nerve glide.","leg pain mostly gone or centralised, walking comfortably, sitting tolerance improving","Progress gently; brief symptom increases that settle are OK, worsening leg pain is not."],
@@ -1730,6 +1816,12 @@ const REHAB_PLANS = [
   { re:/low back pain|lumbago|lumbar strain|mechanical back|back strain|facet/, label:"Low back pain", generic:true, total:12,
     freq:"Daily movement + strengthening 3×/week",
     note:"Most episodes settle substantially within 6 weeks. Staying active and returning to normal activity early gives the best outcome — imaging rarely changes management in the absence of red flags.",
+    variants:[
+      { k:"acute", label:"Acute episode", sub:"New or recent flare-up (under ~6 weeks)", scale:1 },
+      { k:"recurrent", label:"Recurrent", sub:"Keeps coming back every few months", scale:1.4,
+        note:"For recurrent back pain the goal shifts to building capacity and managing load between episodes — the strength and habit work is the prevention." },
+      { k:"persistent", label:"Persistent (3+ months)", sub:"Long-standing pain", pick:/chronic|persistent/, scale:2,
+        note:"Persistent back pain is driven as much by sensitisation, sleep, stress and fear of movement as by tissue — graded exposure to the movements you avoid, plus pacing, matter more than any single exercise." }],
     ph:[
       ["Settle & keep moving",0,2,"Reduce pain while staying as active as you can.","pain settling, able to do most daily activities, sleeping better","Avoid bed rest. Keep walking and moving little and often; brief pain with movement is not damage."],
       ["Restore movement & confidence",2,5,"Restore comfortable movement in all directions.","comfortable bending and moving, back to most normal activity","Gradually reintroduce the movements you've been avoiding."],
@@ -1762,14 +1854,31 @@ const REHAB_PLANS = [
   { re:/stroke|\bcva\b|cerebrovascular accident|hemipleg|hemipar/, label:"Stroke rehabilitation", total:52,
     freq:"Little and often, every day — repetition drives recovery",
     note:"Recovery is fastest in the first 3 months but continues for years — the brain stays plastic. Intensity and repetition are what drive change: high-repetition, task-specific practice beats passive treatment.",
+    variants:[
+      { k:"mild", label:"Mild", sub:"Walking independently, mild weakness", scale:0.5,
+        note:"Milder strokes progress faster — push intensity and dose, and target the specific tasks and fine control you want back." },
+      { k:"moderate", label:"Moderate", sub:"Needs some help with mobility or the arm", scale:1 },
+      { k:"severe", label:"Severe", sub:"Dependent for transfers/mobility", scale:1.5,
+        note:"With severe stroke the early focus is safe transfers, positioning, preventing complications (shoulder pain, contracture, pressure areas) and carer training, alongside task practice." },
+      { k:"posterior", label:"Cerebellar / balance-dominant", sub:"Ataxia and coordination rather than weakness", scale:1.2,
+        note:"Cerebellar strokes present with ataxia and coordination loss rather than weakness — balance, coordination and gaze/vestibular work take priority over strengthening." }],
     ph:[
       ["Early rehabilitation",0,4,"Safe mobility and transfers; start task practice early.","safe transfers and sitting balance, beginning task-specific practice","Falls risk is high — work with your team. Protect a weak/subluxed shoulder; support it and avoid pulling on the arm."],
       ["Intensive task-specific practice",4,12,"High-repetition practice of the tasks you need.","improving sitting/standing balance, walking with the least support you safely can, using the affected arm in tasks","Repetition matters — aim for many quality repetitions. Avoid over-using the good side only ('learned non-use')."],
       ["Strength, walking & arm function",12,26,"Build strength, walking capacity and hand/arm function.","walking further and more independently, improving arm/hand use in daily tasks","Keep pushing task-specific practice; spasticity and fatigue need managing alongside."],
       ["Community reintegration & maintenance",26,52,"Restore community mobility, endurance and daily roles.","independent or assisted community mobility, meaningful daily activity","Recovery continues well past a year — keep training. Manage stroke risk factors (BP, lipids, AF, diabetes) as a priority."]] },
-  { re:/myocardial infarction|heart attack|\bcabg\b|coronary artery bypass|\bpci\b|coronary stent|angioplasty|acute coronary|angina|cardiac rehab/, label:"Cardiac rehabilitation", total:26,
+  { re:/myocardial infarction|heart attack|\bcabg\b|coronary artery bypass|\bpci\b|coronary stent|angioplasty|acute coronary|angina|cardiac rehab|heart failure|cardiomyopath|\bhfref\b|\bhfpef\b|valve (repair|replacement)/, label:"Cardiac rehabilitation", total:26,
     freq:"Aerobic exercise most days (aim ≥150 min/week) + resistance 2–3×/week",
     note:"Cardiac rehab reduces cardiovascular mortality and re-hospitalisation — it's one of the most effective things you can do. Programmes are supervised and progress by symptoms and perceived exertion, not just heart rate (especially on beta-blockers).",
+    variants:[
+      { k:"pci", label:"After a heart attack / stent", sub:"Post-MI or PCI, no chest surgery", scale:0.85,
+        note:"After PCI/stenting there's no chest wound to protect, so activity can build sooner — most start structured rehab within 1–2 weeks." },
+      { k:"cabg", label:"After bypass surgery (CABG)", sub:"Sternotomy — chest precautions apply", pick:/cabg|bypass/, scale:1,
+        note:"After bypass the breastbone needs ~8 weeks to heal: sternal precautions apply (no pushing/pulling/lifting over ~2–4 kg, no arms overhead loaded, brace the chest when coughing)." },
+      { k:"valve", label:"After valve surgery", sub:"Valve repair/replacement via sternotomy", pick:/valve/, scale:1.05,
+        note:"Valve surgery follows the same sternal timeline; if you're on warfarin, take extra care with falls and contact." },
+      { k:"hf", label:"Heart failure", sub:"Reduced ejection fraction — chronic management", pick:/heart failure|cardiomyopath/, scale:1.2,
+        note:"In heart failure, exercise genuinely improves symptoms and admissions — but build slowly, track daily weight, and report a gain over ~2 kg in 2–3 days or new swelling/breathlessness." }],
     ph:[
       ["Early mobilisation (inpatient)",0,1,"Safe early activity and education.","walking short distances comfortably, understanding your warning symptoms","Very light activity only. STOP for chest pain, unusual breathlessness, dizziness or palpitations and seek help."],
       ["Early outpatient recovery",1,6,"Rebuild everyday activity safely; start structured aerobic work.","comfortable walking 10–20 min, no angina with light activity, wound healed if operated","Stay at RPE 11–13 ('light to somewhat hard'). Sternal precautions apply for ~8 weeks after bypass surgery."],
@@ -1786,12 +1895,83 @@ const REHAB_PLANS = [
   { re:/fracture|broken (bone|arm|leg|wrist|ankle)/, label:"Fracture recovery", generic:true, total:20,
     freq:"Short sessions several times daily while immobilised, then 4–5/week",
     note:"Bone union typically takes ~6–8 weeks (longer in the lower limb, in smokers, and with diabetes), but restoring strength and function takes considerably longer. Follow your weight-bearing status exactly.",
+    variants:[
+      { k:"ue", label:"Upper-limb fracture", sub:"Arm, wrist or hand", pick:/(wrist|radius|ulna|humer|clavic|scaphoid|hand|finger|elbow|shoulder|arm)/, scale:0.85,
+        note:"Upper-limb fractures usually unite in ~6 weeks; the bigger battle is stiffness — keep every joint you're allowed to move, moving." },
+      { k:"le", label:"Lower-limb fracture", sub:"Leg, ankle or foot", pick:/(ankle|tibia|fibula|femur|foot|toe|metatarsal|calcane|patella|leg|hip)/, scale:1.15,
+        note:"Lower-limb fractures take longer and weight-bearing status is everything — follow it exactly, and expect strength and confidence to lag well past union." },
+      { k:"stress", label:"Stress fracture", sub:"Overuse fracture, no trauma", pick:/stress fracture/, scale:0.9,
+        note:"Stress fractures are a load problem: relative rest then a graded return, plus fixing the cause (training spikes, low energy availability, bone health, footwear). High-risk sites (femoral neck, anterior tibia, navicular) need specialist input." },
+      { k:"delayed", label:"Delayed / slow union", sub:"Not healing on schedule", scale:1.6,
+        note:"Delayed union needs medical review — smoking, poor nutrition, diabetes, NSAIDs and inadequate immobilisation all slow bone healing." }],
     ph:[
       ["Protected healing",0,6,"Protect the bone; keep neighbouring joints and the rest of you moving.","fracture healing on review/X-ray, neighbouring joints staying mobile","Follow your cast/brace and weight-bearing status exactly. Move the joints above and below to prevent stiffness."],
       ["Restore range",6,9,"Regain motion once the fracture is united.","union confirmed, range improving, swelling settling","Gentle progressive range work — the bone is united but still remodelling."],
       ["Progressive strengthening",9,14,"Rebuild strength and load tolerance.","strength improving, normal daily function returning","Load progressively; bone gets stronger with graded loading."],
       ["Return to full activity",14,20,"Restore full strength and return to your activities.","strength approaching the other side, confident with your activities","Impact and sport only once cleared — the bone remodels for months after union."]] }
 ];
+/* ---------- plan variations ----------
+   One protocol per condition is still a simplification: real pathways differ by
+   grade/severity, surgical approach, tear size and how fast someone is safely
+   progressing. Every plan therefore offers several variations. Plans without
+   their own `variants` fall back to these pace options. `scale` stretches the
+   phase week-boundaries (so the phases stay contiguous and the total follows). */
+const PACE_VARIANTS = [
+  { k:"standard", label:"Standard", sub:"The usual criteria-based pathway", scale:1 },
+  { k:"accelerated", label:"Accelerated", sub:"Younger/fitter, progressing excellently, well supervised", scale:0.75,
+    note:"Accelerated: only appropriate if you're progressing excellently with good control and no swelling — tissue biology doesn't speed up, so the criteria still decide, not the dates." },
+  { k:"conservative", label:"Conservative", sub:"Slower healer, complications, or extra caution", scale:1.35,
+    note:"Conservative: a slower pathway suits complications, other injuries alongside, older age, smoking or diabetes — all of which genuinely slow tissue healing." }
+];
+function planVariants(plan){ return (plan && plan.variants) || PACE_VARIANTS; }
+/* The user's explicit choice wins; otherwise infer the variation from the
+   diagnosis itself (e.g. "Hamstring strain (grade II)" → Grade II, "Revision
+   knee replacement" → revision), falling back to the first option. */
+function selectedVariant(plan, cond){
+  if(!plan) return null;
+  const list = planVariants(plan);
+  const chosen = list.find(v=>v.k === (state.planVariant||{})[plan.label]);
+  if(chosen) return chosen;
+  // infer from the diagnosis — the LONGEST match wins, so "tibia stress fracture"
+  // resolves to the stress-fracture variant rather than the generic lower-limb one
+  const name = ((cond && cond.name) || "").toLowerCase();
+  let best=null, bestLen=0;
+  for(const v of list){
+    if(!v.pick) continue;
+    const m = name.match(v.pick);
+    if(m && m[0].length > bestLen){ best=v; bestLen=m[0].length; }
+  }
+  return best || list[0];
+}
+/* Stretch/compress the phase boundaries by `scale`, keeping them contiguous and
+   never zero-length. Boundaries are scaled (not each phase separately) so the
+   windows stay joined up. */
+function scalePlanPhases(ph, scale){
+  const bounds = [ph[0][1], ...ph.map(f=>f[2])];
+  const sc = bounds.map(b=>Math.round(b*scale));
+  sc[0] = bounds[0];                                          // keep the start anchored
+  for(let i=1;i<sc.length;i++) if(sc[i] <= sc[i-1]) sc[i] = sc[i-1]+1;
+  return ph.map((f,i)=>[f[0], sc[i], sc[i+1], f[3], f[4], f[5]]);
+}
+/* Resolve a base plan + chosen variation into the plan actually used. */
+function applyVariant(plan, v){
+  if(!plan) return null;
+  const ph = (v && v.ph) ? v.ph
+    : (v && v.scale && v.scale!==1) ? scalePlanPhases(plan.ph, v.scale)
+    : plan.ph;
+  return { ...plan, ph, total: ph[ph.length-1][2],
+    note: plan.note + (v && v.note ? " " + v.note : ""),
+    freq: (v && v.freq) || plan.freq,
+    variant: v ? { k:v.k, label:v.label, sub:v.sub } : null,
+    variantList: planVariants(plan).map(x=>({ k:x.k, label:x.label, sub:x.sub })) };
+}
+function setPlanVariant(label, k){
+  state.planVariant = state.planVariant || {};
+  state.planVariant[label] = k;
+  save();
+  state.program = generateProgram(); save();
+  renderProgram(state.program);
+}
 /* Pick the most specific realistic timeline for a condition (longest, most
    specific match wins; post-op-only plans need a surgical context). */
 function detectPlan(cond){
@@ -1839,7 +2019,8 @@ function generateProgram(){
   const items = conds.map((c,ci)=>{
     const proto = window.getProtocol(c.protocol);
     const focus = detectFocus(c.name);
-    const plan = detectPlan(c);                 // realistic condition-specific timeline (may be null)
+    const basePlan = detectPlan(c);             // realistic condition-specific timeline (may be null)
+    const plan = applyVariant(basePlan, selectedVariant(basePlan, c));   // + chosen//inferred variation
     const curPhase = currentPlanPhase(plan);
     let cursor=1;
     const phases = proto.map((pool,p)=>{
@@ -1871,7 +2052,8 @@ function generateProgram(){
     return { name:c.name, domain:c.domain, region:c.region, supervision:c.supervision, phases,
       protocol:c.protocol, clearance:c.clearance, chronicByNature:c.chronicByNature,
       focus: focus ? focus.focus : "",
-      plan: plan ? { label:plan.label, total:plan.total, note:plan.note, freq:plan.freq } : null,
+      plan: plan ? { label:plan.label, total:plan.total, note:plan.note, freq:plan.freq,
+        variant:plan.variant, variantList:plan.variantList } : null,
       planPhase: curPhase,
       about:aboutText(c, track), redflags:DOMAIN_REDFLAGS[c.domain] };
   });
@@ -2281,6 +2463,7 @@ function wireProgram(){
   $$("#programOut details.collapsecard").forEach(d=>d.addEventListener("toggle",()=>{
     if(d.open) openCards.add(d.dataset.card); else openCards.delete(d.dataset.card);
   }));
+  $$("#programOut .planvar").forEach(b=>b.onclick=()=>setPlanVariant(b.dataset.plan, b.dataset.v));
   $$("#programOut .rotatebtn").forEach(b=>b.onclick=()=>rotateExercise(+b.dataset.ci, +b.dataset.pi, +b.dataset.ei));
   $$("#programOut .swapbtn").forEach(b=>b.onclick=()=>openSwap(b));
   $$("#programOut .rerollbtn").forEach(b=>b.onclick=()=>rerollPhase(+b.dataset.ci, +b.dataset.pi));
@@ -3773,9 +3956,17 @@ function planLineHTML(item){
   const at = isFinite(cur)
     ? ` You're around <b>week ${cur}</b>, which puts you in <b>Phase ${item.planPhase+1} of ${item.phases.length}</b>.`
     : "";
+  const vs = p.variantList || [];
+  const curK = p.variant && p.variant.k;
+  const chips = vs.length>1 ? `<div class="planvars no-print">
+      <span class="planvarlbl">Which fits you?</span>
+      ${vs.map(v=>`<button type="button" class="planvar${v.k===curK?" on":""}" data-plan="${esc(p.label)}" data-v="${esc(v.k)}" title="${esc(v.sub||"")}">${esc(v.label)}</button>`).join("")}
+    </div>
+    ${p.variant&&p.variant.sub?`<div class="planvarsub"><b>${esc(p.variant.label)}</b> — ${esc(p.variant.sub)}</div>`:""}` : "";
   return `<div class="planline">
     <div class="planhead">📋 <b>Following the ${esc(p.label)} timeline — about ${p.total} weeks${months}</b></div>
     <div class="plannote">${esc(p.note)}${at}</div>
+    ${chips}
     <div class="planfoot">Phases below use the real week windows for this injury. Progress on the <b>criteria</b>, not the dates — and your surgeon's or therapist's own protocol always comes first.</div>
   </div>`;
 }
