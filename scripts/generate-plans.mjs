@@ -886,6 +886,213 @@ add({ r:"little league(r'?s)? (shoulder|elbow)", label:"Little Leaguer's shoulde
 add({ r:"arthralgia|joint pain", label:"Joint pain (arthralgia)", generic:true,
   ...A.systemic({ label:"Arthralgia", part:"joints", extra:"" }) });
 
+/* ---------------- bone stress & osteochondrosis ---------------- */
+A.bonestress = (s) => ({
+  total: 16,
+  freq: "Daily — relative rest from impact, plus loading the rest of you",
+  note: `${s.label}: bone is overloaded faster than it can remodel. This is a LOAD problem — relative rest from the aggravating impact, then a graded return, plus fixing the cause (training spikes, low energy availability/RED-S, bone health, footwear, technique). Bone stress takes 6–12 weeks to heal.`,
+  variants: [
+    { k:"early", label:"Early (stress reaction)", sub:"Bone oedema, no fracture line", pick:"reaction|early|mild", scale:0.7,
+      note:"A stress reaction caught early settles much faster — respect it now and you avoid a full stress fracture." },
+    { k:"standard", label:"Stress fracture", sub:"Established fracture line", scale:1 },
+    { k:"highrisk", label:"High-risk site", sub:"Femoral neck, anterior tibia, navicular, base of 5th", pick:"femoral neck|anterior tibia|navicular|fifth metatarsal|5th metatarsal|talus|sesamoid", scale:1.6,
+      note:"HIGH-RISK stress fractures (femoral neck, anterior tibial cortex, navicular, base of the 5th metatarsal) have a real risk of non-union or displacement — these need specialist assessment, often non-weight-bearing or surgery. Do not self-manage these." },
+    { k:"recurrent", label:"Recurrent", sub:"Repeated bone stress injuries", pick:"recurrent|repeat|multiple", scale:1.4,
+      note:"Repeated bone stress injuries warrant checking bone density, vitamin D, energy availability and (in women) menstrual function — RED-S is a common driver." }
+  ],
+  ph: [
+    ["Offload & protect the bone", 0, 4,
+     `Take the impact load off the ${s.part} and let the bone heal.`,
+     "pain-free walking and daily activity, local bony tenderness settling",
+     `STOP the impact activity that caused it${s.act ? ` (${s.act})` : ""}. Pain with ordinary walking means you're still overloading it. Keep training the rest of your body — cycling, pool and upper-body work are fine.${s.extra ? " " + s.extra : ""}`],
+    ["Restore load tolerance", 4, 8,
+     "Rebuild strength and non-impact load tolerance.",
+     "no bony tenderness, comfortable with weight-bearing strength work",
+     "No running or jumping yet. Address the cause now: training load, footwear, surfaces, technique, and nutrition/energy availability."],
+    ["Graded return to impact", 8, 12,
+     "Reintroduce impact very gradually.",
+     "pain-free walking, then jogging, with no next-day bony pain",
+     "Return to running in small increments (e.g. walk/jog intervals). ANY return of focal bony pain means stop and step back."],
+    ["Return to sport & prevention", 12, 16,
+     "Rebuild running/sport volume and prevent recurrence.",
+     "back to your sport volume with no bony pain",
+     "Build volume ~10%/week. Recurrence is common if the underlying load, bone health or energy-availability problem isn't fixed."]
+  ]
+});
+
+/* Amputation / limb loss */
+A.amputation = (s) => ({
+  total: 39,
+  freq: "Daily — short frequent sessions",
+  note: `${s.label}: rehab runs from wound healing and shaping the residual limb, through prosthetic fitting, to walking/using it well. Residual-limb care and preventing contracture in the early weeks determine how well a prosthesis fits later.`,
+  variants: [
+    { k:"standard", label:"Standard", sub:"Uncomplicated healing", scale:1 },
+    { k:"vascular", label:"Vascular / diabetic cause", sub:"Amputation for poor circulation or diabetes", pick:"vascular|diabet|dysvascular|ischaem|ischem", scale:1.3,
+      note:"With a vascular or diabetic cause, wound healing is slower and the OTHER limb is also at risk — daily skin checks on both, and protect that remaining foot." },
+    { k:"trauma", label:"Traumatic", sub:"After trauma, otherwise healthy", pick:"trauma|accident|blast", scale:0.85 },
+    { k:"noprosth", label:"Without a prosthesis", sub:"Wheelchair-based mobility", pick:"wheelchair|no prosthe", scale:1.1,
+      note:"Without a prosthesis the focus shifts to transfers, wheelchair skills, upper-limb strength and protecting the shoulders (they now do the walking)." }
+  ],
+  ph: [
+    ["Wound healing, oedema & positioning", 0, 4,
+     "Protect the wound, shape the residual limb and prevent contracture.",
+     "wound healing, swelling reducing with compression, full joint range maintained",
+     `Do NOT rest the residual limb on a pillow or sit with the joint bent all day — contracture develops fast and ruins prosthetic fitting. Compression/shrinker as directed, and check the skin daily.${s.extra ? " " + s.extra : ""}`],
+    ["Strength, balance & pre-prosthetic training", 4, 10,
+     "Build strength and balance ready for a prosthesis.",
+     "residual limb shaped and desensitised, good strength and sitting/standing balance",
+     "Keep the residual limb straight when resting. Phantom sensation and pain are normal and usually settle — mirror therapy and desensitisation help."],
+    ["Prosthetic training", 10, 22,
+     "Learn to wear, load and walk with the prosthesis.",
+     "tolerating wear time, walking with the prosthesis and the least support you safely need",
+     "Check the skin EVERY time you take it off — a red mark lasting more than 20 minutes means the socket needs adjusting. Build wear time gradually."],
+    ["Advanced mobility & community", 22, 39,
+     "Restore endurance, uneven ground, stairs and community activity.",
+     "confident on stairs, slopes and uneven ground; community mobility restored",
+     "Sockets need re-fitting as the limb changes shape. Protect your remaining limb and your shoulders — both are now doing extra work."]
+  ]
+});
+
+const BONESTRESS = [
+  ["Rower's rib stress injury", "rower'?s rib|rib stress (injury|fracture)", "rib", "rowing volume and ergo work", "Rib stress injuries need a real break from rowing/ergo; breathing and coughing hurt — keep breathing deeply to avoid a chest infection."],
+  ["Marathoner's tibial stress", "marathoner'?s tibial|tibial stress (injury|reaction)", "shin", "running volume", "Anterior tibial cortex stress ('dreaded black line') is HIGH-RISK — focal pain on the front of the shin needs imaging, not pushing through."],
+  ["Hook of hamate stress injury", "hook of hamate", "wrist", "gripping a club/bat", "Often needs surgical excision if it doesn't heal — hand a golf/bat grip change is part of prevention."],
+  ["Gymnast's wrist (physeal stress)", "gymnast'?s wrist|distal radial physeal|physeal stress.*wrist", "wrist", "weight-bearing on the hands", "This is a growth-plate injury in a growing athlete — it needs a real break from weight-bearing on the hands or growth can be affected."],
+  ["Weightlifter's distal clavicle osteolysis", "distal clavicle osteolysis|weightlifter'?s shoulder", "collarbone", "heavy bench pressing and dips", "Cut heavy bench/dips and narrow the grip; this is a bone-overload problem that settles when the load changes."],
+  ["Pars / spine bone stress", "bone stress.*spine|vertebral stress", "spine", "repeated extension", ""],
+  ["Femoral neck stress fracture", "femoral neck stress", "hip", "running volume", "HIGH-RISK: femoral neck stress fractures can displace and need urgent orthopaedic assessment — often non-weight-bearing or surgical."],
+  ["Navicular stress fracture", "navicular stress", "midfoot", "running and jumping", "HIGH-RISK: the navicular has poor blood supply — this usually needs a period of non-weight-bearing in a boot and specialist follow-up."],
+  ["Metatarsal stress fracture", "metatarsal stress|march fracture", "forefoot", "running and marching volume", "Base of the 5th metatarsal is high-risk for non-union — that one needs specialist review."],
+  ["Snowboarder's ankle (lateral process of talus)", "snowboarder'?s ankle|lateral process.*talus", "ankle", "landing and impact", "This is a FRACTURE, not a sprain — it's very commonly missed. An ankle still swollen and painful after a snowboarding fall needs a CT. Missed ones go on to non-union and arthritis, so it needs proper immobilisation."],
+  ["Bone stress injury (general)", "bone stress|stress reaction", "bone", "impact volume", ""]
+];
+BONESTRESS.forEach(([label, r, part, act, extra]) => add({ r, label, ...A.bonestress({ label, r, part, act, extra }) }));
+
+const OSTEOCHONDROSES = [
+  ["Köhler's disease (navicular)", "k[oö]hler", "midfoot", "A self-limiting childhood osteochondrosis of the navicular — it resolves fully. Offload with an arch support and let them stay active within comfort."],
+  ["Panner's disease (capitellum)", "panner'?s", "elbow", "A self-limiting childhood osteochondrosis of the capitellum — rest from throwing/weight-bearing on the arm and it recovers. Distinguish it from OCD of the capitellum in older children, which is more serious."],
+  ["Blount's disease (tibia vara)", "blount|tibia vara", "knee", "A growth-plate disorder causing bowing — this is an orthopaedic condition needing bracing or surgery. Rehab supports strength and gait around that."],
+  ["Osteochondrosis (general)", "osteochondrosis|osteochondritis", "joint", "Most childhood osteochondroses are self-limiting and resolve with load management — but they need imaging and follow-up to confirm."]
+];
+OSTEOCHONDROSES.forEach(([label, r, part, extra]) => add({ r, label, ...A.chondral({ label, r, part, extra }) }));
+
+const AMPUTATIONS = [
+  ["Transtibial (below-knee) amputation", "transtibial|below-?knee amputation|\\bbka\\b", "residual limb", "Keep the KNEE straight when resting — a knee flexion contracture is the single biggest obstacle to walking well with a below-knee prosthesis."],
+  ["Transfemoral (above-knee) amputation", "transfemoral|above-?knee amputation|\\baka\\b", "residual limb", "Avoid resting with the hip flexed or abducted — a hip flexion contracture makes an above-knee prosthesis very hard to use. Lie prone daily if you can."],
+  ["Knee disarticulation", "knee disarticulation", "residual limb", ""],
+  ["Hip disarticulation", "hip disarticulation", "residual limb", "Sitting balance and skin care over the pelvis are the early priorities; prosthetic use is demanding and energy-costly."],
+  ["Transpelvic (hemipelvectomy)", "transpelvic|hemipelvectomy", "pelvis", "Very high energy cost for prosthetic walking — wheelchair mobility is often the practical primary option, with pressure care central."],
+  ["Transhumeral / transradial amputation", "transhumeral|transradial|below-?elbow amputation|above-?elbow amputation", "residual limb", "Early prosthetic fitting improves long-term use; protect the other arm from overuse."],
+  ["Shoulder disarticulation", "shoulder disarticulation|forequarter", "residual limb", ""],
+  ["Wrist disarticulation", "wrist disarticulation", "residual limb", ""],
+  ["Partial foot amputation", "partial foot amputation|ray amputation|transmetatarsal", "foot", "Balance changes and the remaining foot is at high risk — daily skin checks and proper footwear/filler are essential."],
+  ["Digit amputation / replantation", "digit (amputation|replantation)|finger amputation|replantation", "hand", "After replantation follow the hand therapist's protocol exactly — the repair, circulation and cold intolerance all need managing; avoid nicotine entirely, it threatens the blood supply."],
+  ["Amputation (general)", "amputation|limb loss|residual limb", "residual limb", ""]
+];
+AMPUTATIONS.forEach(([label, r, part, extra]) => add({ r, label, ...A.amputation({ label, r, part, extra }) }));
+
+/* Sport-eponym overuse & niche named conditions, mapped to the right archetype */
+const EPONYM_TENDON = [
+  ["Golfer's wrist (ECU)", "golfer'?s wrist|\\becu\\b (tendinop|injury|subluxation)|hamate/ecu", "wrist", "the golf swing and gripping", 0, "ECU problems often need a splint and a grip/technique change; a subluxing ECU tendon (a snap on rotation) may need surgery."],
+  ["Surfer's shoulder", "surfer'?s shoulder", "shoulder", "paddling volume", 0, ""],
+  ["CrossFit shoulder overuse", "crossfit shoulder|crossfit overuse", "shoulder", "high-rep overhead work", 0, "High-rep overhead movements under fatigue are the driver — scale volume and fix technique."],
+  ["Triathlete's overuse syndrome", "triathlete'?s overuse|multisport overuse", "multiple sites", "training volume across three disciplines", 0, "Total load across all three disciplines is what counts — the body doesn't know which sport caused it."],
+  ["Baseball catcher's knee", "catcher'?s knee", "knee", "prolonged deep squatting", 0, ""],
+  ["Skater's ankle", "skater'?s ankle", "ankle", "boot pressure and repeated push-off", 0, "Boot fit/lacing is usually the fix."],
+  ["Volleyball shoulder (suprascapular)", "volleyball shoulder|suprascapular", "shoulder", "repeated spiking", 0, "Suprascapular nerve traction from repeated spiking can cause painless infraspinatus wasting — worth a nerve study if the muscle is visibly wasted."],
+  ["Adductor longus enthesopathy", "adductor longus enthesopath|enthesopathy", "groin", "kicking and cutting", 1, ""],
+  ["Peroneal tendon tear", "peroneal tendon (tear|injury|split)", "ankle", "walking on uneven ground", 1, "A split peroneal tendon that doesn't settle may need surgical repair; check for a high arch driving it."],
+  ["Plantar fibromatosis", "plantar fibromatos|ledderhose", "arch", "prolonged standing", 1, "Nodules in the arch — offload with a cut-out insole; stretching the fascia hard tends to irritate it."],
+  ["Haglund's deformity", "haglund", "heel", "stiff heel counters and uphill running", 1, "A bony bump irritated by the shoe's heel counter — open-backed or soft-heeled shoes and a heel lift take the pressure off. Avoid stretching into dorsiflexion, which compresses it."],
+  ["Rotator interval lesion", "rotator interval", "shoulder", "overhead work", 0, ""],
+  ["Bennett lesion", "bennett lesion", "shoulder", "throwing", 0, ""],
+  ["Os acromiale", "os acromiale", "shoulder", "overhead work", 0, "An unfused growth centre — often incidental; if genuinely symptomatic it may need fixation."],
+  ["SICK scapula syndrome", "sick scapula", "shoulder blade", "throwing volume", 0, "Scapular malposition, Inferior medial border prominence, Coracoid pain, dysKinesis — the fix is scapular control plus posterior-capsule and pec-minor length."],
+  ["Cuboid syndrome", "cuboid syndrome", "midfoot", "walking on uneven ground", 0, "Often settles quickly with a cuboid whip/squeeze manipulation plus support — it's frequently missed."],
+  ["Chronic exertional compartment syndrome", "exertional compartment", "lower leg", "running volume", 1, "Predictable pain/tightness at a set distance that stops with rest is the hallmark. Gait retraining (forefoot strike) helps some; refractory cases need fasciotomy — this doesn't settle with loading alone."],
+  ["Miner's / carpet-layer's beat knee", "beat knee|carpet.?layer|miner'?s knee", "knee", "prolonged kneeling", 0, "Kneeling is the cause — knee pads and job rotation are the treatment."],
+  ["Bipartite patella (symptomatic)", "bipartite patella", "kneecap", "jumping and squatting", 0, "Usually an incidental finding; when symptomatic it behaves like a bone stress problem — reduce load and strengthen."],
+  ["Lateral patellar compression syndrome", "lateral patellar compression|excessive lateral pressure", "kneecap", "squatting and stairs", 0, ""],
+  ["Valgus extension overload", "valgus extension overload", "elbow", "throwing", 0, "The posteromedial elbow gets pinched at ball release — throwing volume and mechanics are the drivers."],
+  ["Elbow plica syndrome", "elbow plica|synovial fold.*elbow", "elbow", "repeated bending", 0, ""],
+  ["Climber's finger pulley (A2) injury", "climber'?s (finger )?pulley|a2 pulley|pulley (injury|rupture)", "finger", "crimping", 0, "Crimp grip is the cause — tape/H-taping and avoiding full crimp while it heals; a loud pop with bowstringing needs a surgical opinion."],
+  ["Goalkeeper's thumb", "goalkeeper'?s thumb", "thumb", "the ball forcing the thumb back", 0, "Same injury as skier's thumb (UCL) — a thumb spica splint is usually needed, and a complete tear (Stener lesion) needs surgery."],
+  ["Swan-neck deformity", "swan.?neck", "finger", "gripping", 0, "A ring/figure-of-eight splint blocks the hyperextension and restores function; common in rheumatoid arthritis."],
+  ["Central slip rupture", "central slip", "finger", "gripping", 0, "Splint the middle joint STRAIGHT continuously for ~6 weeks or it becomes a fixed boutonnière deformity."],
+];
+/* Charcot foot must NOT use the tendinopathy archetype — "reduce, don't stop
+   loading" is exactly the wrong advice for an active Charcot process, where
+   walking on the foot destroys the joints. It gets an offloading-first plan. */
+add({ r:"charcot (foot|arthropath|neuroarthropath)|charcot", label:"Charcot foot (neuroarthropathy)", total:52,
+  freq:"Offloading is the treatment — exercise the rest of you while the foot is protected",
+  note:"Charcot neuroarthropathy: in a person with neuropathy the bones of the foot fracture and collapse WITHOUT pain to warn them. The active phase (hot, red, swollen foot) is a medical emergency — total-contact casting and complete offloading are the treatment, and every step taken on it causes more destruction. This runs 6–12+ months until the foot is 'quiescent'.",
+  variants:[
+    { k:"active", label:"Active phase (hot & swollen)", sub:"Red, hot, swollen — the destructive phase", pick:"active|acute|hot", scale:1,
+      note:"ACTIVE PHASE — this is an emergency. Get to a specialist foot service TODAY. Total-contact cast and non-weight-bearing until the foot cools; the temperature difference vs the other foot is what guides progression." },
+    { k:"quiescent", label:"Quiescent / consolidated", sub:"Cooled and stable, in footwear", pick:"quiescent|chronic|consolidat|offloaded|reconditioning", scale:0.7,
+      note:"Once quiescent, the priority is bespoke footwear/orthoses, daily skin checks and gradually rebuilding activity — recurrence and ulceration are the risks." },
+    { k:"ulcer", label:"With an ulcer", sub:"Skin broken over the deformity", pick:"ulcer|wound", scale:1.3,
+      note:"An ulcer over a Charcot deformity is limb-threatening — this needs urgent specialist wound care and complete offloading, not exercise progression." }],
+  ph:[
+    ["Active phase — total offloading", 0, 12,
+     "Protect the foot completely and let the destructive phase burn out.",
+     "the foot cooling (skin temperature within ~2°C of the other foot), swelling and redness settling on specialist review",
+     "DO NOT WALK ON IT. Total-contact cast/boot and non-weight-bearing exactly as your specialist directs — because you can't feel it, pain will not warn you that you're causing damage. Exercise your other limbs, arms and heart instead."],
+    ["Protected transition", 12, 26,
+     "Transition out of the cast into protective footwear under supervision.",
+     "foot temperature settled, X-rays showing consolidation, tolerating protected weight-bearing",
+     "Progress weight-bearing ONLY on your specialist's say-so, in the prescribed device. Check the skin every single day — a red mark or warm spot means stop and be reviewed."],
+    ["Rebuilding activity in protective footwear", 26, 39,
+     "Rebuild strength, balance and walking tolerance safely.",
+     "walking comfortably in bespoke footwear with no skin breakdown or new swelling",
+     "Bespoke footwear/orthoses are permanent, not optional. Any new warmth, swelling or redness = stop and be seen; recurrence is common."],
+    ["Long-term protection & prevention", 39, 52,
+     "Protect the foot for life and keep the rest of you fit.",
+     "stable foot, sustained activity without skin breakdown, daily checks routine",
+     "Lifelong: daily skin checks, protective footwear, podiatry review, and tight glucose control. Protect the OTHER foot too — it's at the same risk. Avoid high-impact activity permanently."]
+  ] });
+EPONYM_TENDON.forEach(([label, r, part, act, slow, extra]) =>
+  add({ r, label, ...A.tendinopathy({ label, r, part, act, slow: !!slow, extra }) }));
+
+const EPONYM_NERVE = [
+  ["Cyclist's ulnar (handlebar) palsy", "cyclist'?s ulnar|handlebar palsy|handlebar", "hand", "pressure on the handlebars", "Padded gloves, bar tape and changing hand position regularly usually fix it; a proper bike fit is the durable answer."],
+  ["Wartenberg syndrome", "wartenberg", "back of the thumb/hand", "tight watch straps, cuffs or handcuffs", "Superficial radial nerve compression — loosen whatever is compressing the wrist (watch, strap, cuff)."],
+  ["Anterior interosseous nerve syndrome", "anterior interosseous", "forearm", "repetitive forearm work", "Causes weakness making an 'OK' sign rather than numbness — many are inflammatory (neuralgic amyotrophy) and recover slowly over 12–18 months."],
+  ["Quadrilateral space syndrome", "quadrilateral space", "shoulder", "overhead and throwing", "Axillary nerve compression — causes outer-shoulder numbness and deltoid/teres minor wasting."],
+  ["Pectoralis minor syndrome", "pectoralis minor syndrome", "arm", "sustained overhead and rounded-shoulder postures", "A sub-type of thoracic outlet — pec minor length and scapular position are the targets."],
+  ["Bowler's thumb", "bowler'?s thumb", "thumb", "gripping the bowling ball", "Digital nerve compression from the ball's thumb hole — re-drill or pad the hole."],
+  ["Notalgia / cheiralgia", "notalgia|cheiralgia", "nerve", "sustained pressure", ""]
+];
+EPONYM_NERVE.forEach(([label, r, part, act, extra]) => add({ r, label, ...A.nerve({ label, r, part, act, extra }) }));
+
+/* Post-op / graft & procedure families */
+const POSTOP = [
+  ["Latarjet procedure recovery", "latarjet|coracoid transfer|bristow", "shoulder", 26,
+   "A bone-block stabilisation — the graft must heal to bone before loading. Follow your surgeon's sling and range limits; return to contact sport is usually ~6 months."],
+  ["Patellar tendon (BPTB) graft recovery", "patellar tendon graft|\\bbptb\\b|bone-?patellar", "knee", 39,
+   "A BPTB graft means anterior knee pain and kneeling discomfort are common early — the graft itself is strong, but expect the donor site to grumble. Quad recovery is slower than with a hamstring graft."],
+  ["Hamstring graft recovery", "hamstring (autograft|graft)", "knee", 39,
+   "With a hamstring graft, hamstring strength lags for months — deep-knee-flexion hamstring strength especially. Don't rush eccentric hamstring loading in the first 12 weeks."],
+  ["Quadriceps tendon graft recovery", "quadriceps (tendon )?(auto)?graft", "knee", 39, ""],
+  ["Tendon transfer recovery", "tendon transfer", "limb", 26,
+   "A transferred tendon has to be re-learned as well as healed — protect it early, then retrain the new movement pattern deliberately."],
+  ["Joint fusion (arthrodesis) recovery", "arthrodesis|joint fusion|fusion recovery", "joint", 26,
+   "The fused joint will not move again — rehab targets the joints around it and adapting technique. Protect the fusion until union is confirmed."],
+  ["Osteotomy recovery", "osteotomy", "limb", 39,
+   "The bone has been deliberately cut and realigned — weight-bearing limits are strict until union (often 6–12 weeks). Follow the surgeon's protocol precisely."],
+  ["Spinal fusion recovery", "spinal fusion|lumbar fusion|cervical fusion|\\balif\\b|\\btlif\\b|\\bacdf\\b", "spine", 39,
+   "No bending, lifting or twisting ('BLT') for the period your surgeon specifies — usually ~6–12 weeks while the fusion consolidates. Walking is the main early exercise."],
+  ["Joint replacement (other joints)", "shoulder (replacement|arthroplasty)|ankle (replacement|arthroplasty)|elbow (replacement|arthroplasty)|reverse (total )?shoulder", "joint", 26,
+   "Follow the surgeon's range and loading limits — reverse shoulder replacements in particular have specific early restrictions and a permanent lifting limit."]
+];
+POSTOP.forEach(([label, r, part, total, extra]) => {
+  const b = retime(A.stiffness({ label, r, part, extra }), total);
+  b.freq = "Short frequent sessions early, then progressive strengthening";
+  b.note = `${label}: your surgeon's protocol always takes precedence over anything here. ${extra} Early protection then graded loading is the pattern — pushing too early risks the repair, doing too little costs range and strength.`;
+  b.variants = PACE;
+  add({ r, label, ...b });
+});
+
 /* ---------------- generic archetype catch-alls ----------------
    Marked generic:true, so ANY specific plan above (or a curated plan in app.js)
    outranks them in detectPlan. These give the long tail of named diagnoses a

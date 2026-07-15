@@ -1972,6 +1972,106 @@ function setPlanVariant(label, k){
   state.program = generateProgram(); save();
   renderProgram(state.program);
 }
+/* ---------- domain fallback timelines ----------
+   The last resort, so EVERY condition gets a real phased timeline with
+   milestones and restrictions rather than the flat template. Only used when no
+   curated or generated plan matches; always `generic:true`. */
+const DOMAIN_FALLBACK = {
+  msk: { label:"Musculoskeletal injury", generic:true, total:16,
+    freq:"Most days — little and often beats occasional long sessions",
+    note:"Tissue heals in stages: protect it briefly, restore movement, then load it progressively. Load is what rebuilds strength — prolonged rest weakens tissue. Some discomfort during exercise that settles within 24 hours is acceptable; pain that's worse the next morning means you did too much.",
+    variants:[
+      { k:"acute", label:"Acute (recent)", sub:"Injured in the last few weeks", pick:/acute|recent|early/i, scale:1 },
+      { k:"subacute", label:"Settling", sub:"Past the early stage, still limited", scale:1.1 },
+      { k:"chronic", label:"Long-standing", sub:"Months of symptoms", pick:/chronic|persistent|long-?standing|recurrent/i, scale:1.6,
+        note:"Long-standing problems need consistent progressive loading over months, plus attention to sleep, stress and total load — not more rest." },
+      { k:"postop", label:"After surgery", sub:"Operated on recently", pick:/post-?op|repair|reconstruct|surgery|surgical/i, scale:1.5,
+        note:"After surgery your surgeon's protocol overrides everything here — especially the early range and weight-bearing limits, which protect the repair." }],
+    ph:[
+      ["Protect & settle", 0, 2, "Calm pain and swelling while keeping gentle movement going.",
+       "pain and swelling settling, moving the area comfortably through most of its range",
+       "Relative rest — reduce the aggravating load, but don't stop moving. Complete rest stiffens joints and weakens tissue."],
+      ["Restore movement", 2, 6, "Rebuild full pain-free range and re-activate the muscles.",
+       "full or near-full pain-free range, able to activate the muscles without a flare",
+       "Work up to the edge of discomfort, not through sharp pain."],
+      ["Progressive loading", 6, 12, "Load the tissue progressively — the main driver of recovery.",
+       "loading with good control, soreness staying low and settling within 24 hours",
+       "Increase load by roughly 10% a week. Soreness that lingers into the next morning means back off a level."],
+      ["Return to full activity", 12, 16, "Restore strength, capacity and your specific demands.",
+       "strength close to the other side, handling your work/sport demands without symptoms",
+       "Build back gradually and keep a maintenance routine — most recurrences follow a sudden spike in load."]] },
+  neuro: { label:"Neurological rehabilitation", generic:true, total:39,
+    freq:"Daily — repetition and intensity are what drive neurological recovery",
+    note:"Neurological recovery is driven by high-repetition, task-specific practice — the nervous system adapts to what you practise. Progress is usually fastest early but continues for a long time. Fatigue and safety (falls) need managing alongside.",
+    variants:[
+      { k:"mild", label:"Mild", sub:"Independent, mild impairment", pick:/mild|early/i, scale:0.6 },
+      { k:"moderate", label:"Moderate", sub:"Needs some help", scale:1 },
+      { k:"severe", label:"Severe", sub:"Dependent for mobility/transfers", pick:/severe|advanced|complete/i, scale:1.4,
+        note:"With severe impairment the early priorities are safe transfers, positioning, preventing complications (contracture, pressure areas, shoulder pain) and carer training, alongside task practice." },
+      { k:"progressive", label:"Progressive condition", sub:"A condition expected to progress", pick:/progressive|multiple sclerosis|parkinson|motor neuron|\bals\b|dystroph/i, scale:1.6,
+        note:"With a progressive condition the goal is maintaining function and independence and managing fatigue — pace carefully and avoid exhausting sessions, which can set you back for days." }],
+    ph:[
+      ["Early rehabilitation & safety", 0, 4, "Establish safe movement and transfers, and start task practice early.",
+       "safe transfers and sitting balance, beginning task-specific practice",
+       "Falls risk is high — work with your team. Protect a weak limb (support a heavy arm; don't pull on it) and watch skin where sensation is reduced."],
+      ["Task-specific practice", 4, 12, "High-repetition practice of the tasks you actually need.",
+       "improving balance and mobility, using the affected side in real tasks",
+       "Repetition is the medicine — aim for many quality repetitions. Avoid relying only on your strong side ('learned non-use')."],
+      ["Strength, mobility & endurance", 12, 26, "Build strength, walking capacity and limb function.",
+       "walking further and more independently, better arm/hand use in daily tasks",
+       "Manage fatigue and tone alongside the training; pace across the day rather than one long session."],
+      ["Community reintegration & maintenance", 26, 39, "Restore community mobility, endurance and daily roles.",
+       "independent or assisted community mobility, meaningful daily activity",
+       "Recovery continues for a long time — keep training. Manage the underlying risk factors with your medical team."]] },
+  cardiac: { label:"Cardiac rehabilitation", generic:true, total:26,
+    freq:"Aerobic exercise most days (build toward 150 min/week) + resistance 2–3×/week",
+    note:"Exercise-based cardiac rehab reduces cardiovascular deaths and re-hospitalisation — it's one of the most effective treatments available. Progress by symptoms and perceived exertion rather than heart rate alone, especially on a beta-blocker.",
+    variants:[
+      { k:"standard", label:"Standard", sub:"Usual supervised pathway", scale:1 },
+      { k:"postop", label:"After chest surgery", sub:"Sternotomy — chest precautions apply", pick:/surgery|surgical|sternotom|bypass|\bcabg\b|valve/i, scale:1.1,
+        note:"After a sternotomy the breastbone needs ~8 weeks: no pushing/pulling/lifting over ~2–4 kg, no loaded arms overhead, and brace your chest when coughing." },
+      { k:"hf", label:"Heart failure", sub:"Reduced pumping function", pick:/heart failure|cardiomyopath|\bhfref\b/i, scale:1.2,
+        note:"In heart failure exercise genuinely improves symptoms and admissions — build slowly, weigh yourself daily, and report a gain over ~2 kg in 2–3 days or new swelling/breathlessness." },
+      { k:"device", label:"With a pacemaker/ICD", sub:"Implanted cardiac device", pick:/pacemaker|\bicd\b|defibrillator|\bcrt\b/i, scale:1.1,
+        note:"With an ICD, keep your heart rate at least ~20 bpm below the therapy threshold and avoid maximal efforts; after implant avoid raising that arm above shoulder height for ~6 weeks." }],
+    ph:[
+      ["Early mobilisation", 0, 2, "Re-establish safe everyday activity and learn your warning symptoms.",
+       "walking short distances comfortably, confident about which symptoms mean stop",
+       "STOP and seek help for chest pain or pressure, unusual breathlessness, dizziness, fainting or palpitations. Very light activity only at this stage."],
+      ["Early outpatient recovery", 2, 6, "Rebuild daily activity and start structured aerobic work.",
+       "comfortable walking 10–20 minutes, no symptoms with light activity",
+       "Keep effort at RPE 11–13 ('light' to 'somewhat hard') — you should be able to talk throughout."],
+      ["Supervised aerobic & resistance training", 6, 14, "Build aerobic capacity and strength, ideally supervised.",
+       "30+ minutes of continuous moderate aerobic exercise, tolerating resistance work",
+       "Progress gradually and report any new chest symptoms straight away. Avoid breath-holding/straining when lifting."],
+      ["Long-term maintenance", 14, 26, "Make it lifelong and manage your risk factors.",
+       "sustaining ≥150 min/week of moderate activity, risk factors actively managed",
+       "The benefit only lasts while the exercise does — plus blood pressure, lipids, glucose, smoking and weight all need managing."]] },
+  pulmonary: { label:"Pulmonary rehabilitation", generic:true, total:12,
+    freq:"Supervised sessions 2–3×/week + walking on the other days",
+    note:"Pulmonary rehab improves breathlessness, exercise capacity and quality of life more than most drugs. Being breathless during exercise is expected and is NOT dangerous — avoiding activity is what drives the downward spiral of deconditioning.",
+    variants:[
+      { k:"standard", label:"Standard", sub:"Usual programme", scale:1 },
+      { k:"severe", label:"Severe / on oxygen", sub:"Very breathless, or using oxygen", pick:/severe|\bgold (iii|iv|3|4)\b|oxygen|end-?stage/i, scale:1.4,
+        note:"If you use oxygen, exercise WITH it as prescribed and keep saturations above your target. Interval training (short bursts with rests) is usually far better tolerated than continuous work." },
+      { k:"postexac", label:"After a flare-up", sub:"Recovering from an exacerbation", pick:/exacerbation|flare|infection|post-?covid|pneumonia/i, scale:1.2,
+        note:"Starting rehab soon after an exacerbation gives the biggest gains — begin gently and build back; strength drops fast during an admission." },
+      { k:"postop", label:"After lung surgery", sub:"Resection or thoracic surgery", pick:/surgery|resection|lobectom|thoracotom|transplant/i, scale:1.3,
+        note:"After thoracic surgery, breathing exercises and airway clearance several times a day prevent chest infection — the main early complication. Shoulder and posture work on the operated side matters too." }],
+    ph:[
+      ["Assessment & gentle start", 0, 2, "Set a safe baseline and learn breathing control.",
+       "comfortable with a baseline walking distance, using pursed-lip breathing",
+       "Breathlessness of 3–4/10 is the target and is safe. Use your reliever inhaler beforehand if prescribed, and pace with the breathing techniques."],
+      ["Building aerobic capacity", 2, 6, "Increase walking/cycling endurance with intervals.",
+       "walking further before needing to stop, recovering more quickly",
+       "Interval training (walk, rest, repeat) is a legitimate option if continuous walking is too breathless."],
+      ["Strength & endurance", 6, 10, "Add resistance training and build endurance.",
+       "improved walking distance, tolerating resistance training",
+       "Include arm work — it helps daily tasks, though it's often more breathless than leg work."],
+      ["Maintenance & self-management", 10, 12, "Lock in the gains with a plan you'll keep.",
+       "sustained improvement in walking distance, confident with your action plan",
+       "Gains fade within 6–12 months if you stop — ongoing exercise is the whole point. Keep your action plan for flare-ups handy."]] }
+};
 /* The generated long-tail timelines (data/plans.js) — archetype × body site,
    same shape as REHAB_PLANS. `r`/`pick` arrive as regex SOURCE strings and are
    compiled once here. Curated plans are listed first so they win ties. */
@@ -2000,7 +2100,9 @@ function detectPlan(cond){
     const len = m[0].length;
     if(spec>bestSpec || (spec===bestSpec && len>bestLen)){ best=p; bestSpec=spec; bestLen=len; }
   }
-  return best;
+  // nothing matched by name — fall back to a real timeline for the condition's domain,
+  // so every condition still gets phases, milestones and restrictions.
+  return best || DOMAIN_FALLBACK[cond.domain] || DOMAIN_FALLBACK.msk;
 }
 /* Which plan phase the user is in right now, from weeks since injury/surgery. */
 function currentPlanPhase(plan){
