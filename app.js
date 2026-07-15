@@ -5267,9 +5267,21 @@ function initHistory(){
    Answers are CLEARED when the gate closes, so a stale pregnancy flag can't survive a change
    of answer and keep reshaping the program invisibly. */
 function pregApplies(){ return state.sex === "Female"; }
+/* Pregnancy drives real contraindication rules (supine/valsalva/prone/inversion avoidance from
+   the 2nd trimester). The questions are gated on Female and the Sex field defaults to "Prefer
+   not to say", so the gate has to announce itself — otherwise the questions are simply missing
+   and the user has no way to know that answering Sex is what brings them back. */
+function syncSexHint(){
+  const el = $("#sexHint"); if(!el) return;
+  el.textContent = pregApplies()
+    ? "Pregnancy questions added below — your program will respect pregnancy precautions."
+    : "Choosing Female adds the pregnancy questions, so your program can respect pregnancy precautions.";
+  el.classList.toggle("on", pregApplies());
+}
 function syncPregWrap(){
   const show = pregApplies();
   let changed = false;
+  syncSexHint();
 
   const el = $("#q_pregStage");
   if(el){

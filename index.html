@@ -69,7 +69,11 @@
         <label class="field"><span class="lab">Age</span>
           <input type="number" id="q_age" min="1" max="120" placeholder="years" /></label>
         <label class="field"><span class="lab">Sex <span class="sub">(for pregnancy-related guidance)</span></span>
-          <select id="q_sex"><option value="">Prefer not to say</option><option>Female</option><option>Male</option><option>Other</option></select></label>
+          <select id="q_sex"><option value="">Prefer not to say</option><option>Female</option><option>Male</option><option>Other</option></select>
+          <!-- The pregnancy questions are gated on Female, and "Prefer not to say" is the default,
+               so without this a pregnant user would never see them and would silently lose the
+               pregnancy precautions. Say what the answer unlocks. -->
+          <span class="sexhint" id="sexHint"></span></label>
       </div>
 
       <div class="field">
