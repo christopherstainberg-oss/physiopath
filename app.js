@@ -3108,6 +3108,241 @@ function movementNotes(name){
   return n.slice(0,2).join(" ");
 }
 /* =====================================================================
+   "WHAT IT IS" / "WHY IT HELPS" — specificity + variance
+   PATTERN_INFO carries one `what` and one `why` per movement pattern, so every
+   squat variant opened and closed with the identical two sentences no matter
+   what the name said. Same disease the How-to had.
+
+   Two things happen here:
+   1. VARIANCE — three true phrasings per pattern, chosen by a hash of the
+      exercise NAME. Deterministic on purpose: the same exercise must always
+      read the same way (a re-render must not reshuffle the words), while
+      different exercises sharing a pattern don't open identically.
+   2. SPECIFICITY — the implement, named variant and modifier each add a clause
+      saying what THEY are / what THEY buy, layered onto the pattern sentence.
+   ===================================================================== */
+const pickAlt = (name, arr) => arr[Math.abs(hashStr(String(name||""))) % arr.length];
+
+const WHAT_ALT = {
+  squat:["A squat is a foundational lower-body movement that bends the hips and knees together.",
+         "The squat is the sit-down-and-stand-up pattern, loaded deliberately.",
+         "A squat bends the hips and knees together to load the whole leg at once."],
+  hinge:["A hip hinge (deadlift-family) movement bends mainly at the hips while the spine stays long.",
+         "A hinge is the pick-something-up pattern: hips travel back, spine stays long.",
+         "A hip hinge loads the back of the body by folding at the hips rather than the knees."],
+  lunge:["A lunge is a split-stance movement that loads one leg at a time.",
+         "A lunge splits your stance so one leg does most of the work.",
+         "A lunge is the stepping pattern — one leg forward, one behind, loaded through the front."],
+  calf:["A calf raise loads the calf muscles and Achilles tendon.",
+        "A calf raise is the push-off pattern: rise onto the toes against your body weight.",
+        "A calf raise works the calf and the Achilles tendon it feeds into."],
+  pull:["A pulling / curling exercise contracts a muscle to draw resistance in or bend a joint.",
+        "A pull draws resistance toward you, or bends a joint against it.",
+        "A pulling movement shortens the muscle to bring the load in."],
+  push:["A pushing / pressing exercise contracts a muscle to press resistance away or straighten a joint.",
+        "A press drives resistance away from you, or straightens a joint against it.",
+        "A pushing movement extends the joint to move the load away."],
+  isometric:["An isometric is a static hold with no joint movement.",
+             "An isometric means the muscle works hard while nothing moves.",
+             "An isometric is a held position — tension without motion."],
+  mobility:["A mobility or stretching drill moves a joint through its available range.",
+            "A mobility drill asks a joint for the range it currently has, gently.",
+            "A mobility exercise works on range of motion rather than strength."],
+  balance:["A balance exercise challenges your stability and body awareness.",
+           "A balance drill deliberately makes staying upright harder than usual.",
+           "A balance exercise trains the reactions that keep you from falling."],
+  plyo:["A plyometric is an explosive jump or hop that trains power and landing control.",
+        "A plyometric trains the spring — jumping, hopping and landing under control.",
+        "A plyometric is fast, springy loading: leave the ground and absorb the landing."],
+  carry:["A loaded carry means walking while holding weight.",
+         "A carry is exactly what it sounds like: pick the load up and walk with it.",
+         "A loaded carry trains the whole body by making you hold something while you move."],
+  cardio:["An aerobic activity raises your heart and breathing rate steadily.",
+          "Aerobic work keeps your heart and breathing up for a sustained stretch.",
+          "This is cardiovascular work — steady effort your heart and lungs have to keep up with."],
+  vestibular:["A vestibular exercise retrains the inner-ear balance system.",
+              "A vestibular drill asks the inner ear and eyes to recalibrate together.",
+              "This retrains the balance system in your inner ear."],
+  breathing:["A breathing exercise trains the diaphragm and breathing pattern.",
+             "A breathing drill retrains how, not just how much, you breathe.",
+             "This trains the diaphragm and the pattern of your breathing."],
+  "anti-ext":["An anti-extension core exercise resists the low back arching.",
+              "This core exercise is about NOT letting the low back arch.",
+              "An anti-extension drill trains the core to stop the spine extending."],
+  "anti-rot":["An anti-rotation core exercise resists twisting.",
+              "This core exercise is about NOT letting the trunk twist.",
+              "An anti-rotation drill trains the core to resist a turning force."],
+  extension:["A back-extension exercise strengthens the muscles that straighten the spine.",
+             "This works the muscles running up the back of your spine.",
+             "A back-extension movement trains the muscles that hold you upright."],
+  flexion:["A trunk-flexion exercise works the abdominals by curling the spine.",
+           "This curls the spine forward to work the abdominals.",
+           "A trunk-flexion drill trains the abdominals through spinal curling."],
+  gait:["A gait drill practices the components of walking.",
+        "A gait drill breaks walking into parts and rehearses them.",
+        "This practices a specific piece of the walking pattern."],
+  agility:["An agility / change-of-direction drill trains fast, controlled starts, stops and turns.",
+           "An agility drill trains stopping, starting and turning at speed.",
+           "This trains quick changes of direction under control."],
+  rotate:["A rotational exercise trains controlled trunk turning and power.",
+          "A rotational drill trains the trunk to turn with control and force.",
+          "This trains twisting — deliberately, and under control."],
+  supine:["A supine (lying on your back) therapeutic exercise — a gentle, low-load movement done on a mat, floor or bed.",
+          "A lying-down therapeutic exercise: low load, done on a mat, bed or floor.",
+          "A supine exercise — you're on your back, so the joint carries almost nothing."],
+  seated:["A seated therapeutic exercise — a gentle, controlled movement done sitting in a sturdy chair.",
+          "A chair-based therapeutic exercise: controlled, supported, no standing needed.",
+          "A seated exercise — the chair takes your weight so the joint doesn't have to."],
+  standing:["A standing therapeutic exercise — a supported, weight-bearing movement done holding a counter or rail.",
+            "An upright, supported exercise done holding a counter or rail.",
+            "A standing exercise — weight-bearing, but with something solid to hold."],
+  pool:["A pool / aquatic therapeutic exercise — done standing or moving in chest-deep water, where buoyancy carries much of your body weight.",
+        "A water-based exercise: buoyancy holds you up so the joint doesn't take the load.",
+        "An aquatic exercise done in chest-deep water, where the water carries most of your weight."],
+  general:["A general conditioning exercise for the area.",
+           "General conditioning work for the region.",
+           "A general strengthening and movement exercise for the area."]
+};
+const WHY_ALT = {
+  squat:["Builds strength in the quads, glutes and whole leg for standing, stairs and lifting.",
+         "This is the pattern behind every chair, stair and kerb you meet — strengthening it shows up everywhere.",
+         "Loads the quads and glutes together, which is what standing up and climbing actually demand."],
+  hinge:["Strengthens the hamstrings, glutes and back for bending, lifting and posture.",
+         "Teaches your hips, not your low back, to do the lifting — which is what protects the back long-term.",
+         "Builds the back of the body: hamstrings, glutes and spinal muscles working as one."],
+  lunge:["Builds single-leg strength, balance and control for walking and stairs.",
+         "Walking is single-leg. Training one leg at a time closes gaps a two-legged exercise hides.",
+         "Develops the single-leg control that stairs, kerbs and uneven ground demand."],
+  calf:["Strengthens the calf and Achilles for push-off, walking and running.",
+        "The calf is the engine of push-off — weak calves show up as a limp long before they show up as pain.",
+        "Builds the calf-Achilles unit that propels every step you take."],
+  pull:["Builds pulling and curling strength and helps balance the joints it crosses.",
+        "Pulling strength balances all the pushing daily life already gives you.",
+        "Strengthens the muscles that draw things toward you and support the joint they cross."],
+  push:["Builds pressing and extending strength for everyday tasks.",
+        "Pressing strength is what pushing doors, standing up from the floor and carrying overhead need.",
+        "Strengthens the muscles that move loads away from you."],
+  isometric:["Builds strength and tendon tolerance and often eases pain — useful when movement hurts.",
+             "Holds often reduce pain while you do them, which makes them the way in when moving hurts.",
+             "Loads the tendon without moving the joint — strength you can build even on a sore day."],
+  mobility:["Restores range of motion and reduces stiffness.",
+            "Range you lose after injury doesn't return on its own — it has to be asked for, regularly.",
+            "Reduces stiffness and gives the joint back the room it needs to work."],
+  balance:["Improves stability and coordination and lowers fall and re-injury risk.",
+           "Balance is trainable at any age, and it is the single most modifiable fall risk you have.",
+           "Sharpens the reactions that catch you before a stumble becomes a fall."],
+  plyo:["Rebuilds power and shock absorption for sport and impact activities.",
+        "Landing is where injuries happen — training it deliberately is what makes running and sport safe again.",
+        "Restores the spring and the shock absorption that impact activities demand."],
+  carry:["Builds grip, core and whole-body strength and endurance.",
+         "Carrying shopping, a toolbox or a child is a real-world test — training it transfers directly.",
+         "Loads grip, trunk and legs together in the way daily life actually asks."],
+  cardio:["Builds cardiovascular fitness, endurance and recovery capacity.",
+          "Aerobic fitness underpins how fast you recover between sessions — and how well tissue heals.",
+          "Improves heart, lung and circulatory capacity, which speeds recovery everywhere else."],
+  vestibular:["Reduces dizziness and improves gaze and balance stability.",
+              "The inner ear recalibrates through controlled exposure — avoiding the symptom keeps it.",
+              "Settles dizziness and steadies your vision when your head moves."],
+  breathing:["Improves breathing efficiency and helps control breathlessness.",
+             "Breathlessness is frightening, and a technique you've practised is what makes it manageable.",
+             "Makes each breath do more work, so you get less breathless doing the same thing."],
+  "anti-ext":["Builds deep core control that protects the spine.",
+              "A core that stops unwanted movement protects the back better than one that only creates it.",
+              "Trains the trunk to stay stable while the limbs work — which is its actual job."],
+  "anti-rot":["Builds trunk stability for lifting, sport and spine protection.",
+              "Resisting a twist is harder, and more useful, than making one.",
+              "Builds the stability that keeps the spine safe when a load pulls you off-centre."],
+  extension:["Strengthens the back extensors for posture and lifting.",
+             "Back muscles that tire early are why sitting and standing start to ache by afternoon.",
+             "Builds endurance in the muscles that hold you upright all day."],
+  flexion:["Builds abdominal strength — introduced when appropriate for your condition.",
+           "Abdominal strength contributes to trunk control, but the timing matters for your condition.",
+           "Strengthens the abdominals as part of overall trunk control."],
+  gait:["Improves walking quality, coordination and confidence.",
+        "Walking well is a skill — after injury it has to be re-learned, not just resumed.",
+        "Rebuilds a smooth, even, confident walking pattern."],
+  agility:["Rebuilds the ability to move quickly and safely — key for returning to sport and reacting in daily life.",
+           "Most re-injuries happen changing direction, not running straight — so that's what gets trained.",
+           "Restores fast, controlled turning and stopping."],
+  rotate:["Builds rotational strength for sport and daily twisting tasks.",
+          "Almost every sporting action and half of daily life involves a twist — untrained, it's a weak link.",
+          "Develops controlled power through the trunk's turning range."],
+  supine:["Rebuilds early strength, control and range with almost no joint loading — ideal after surgery, when weight-bearing is limited, or when standing is painful.",
+          "Lying down removes the joint load entirely, so you can start rebuilding long before standing work is safe.",
+          "Restores muscle activation and range at a stage when the joint can't yet take weight."],
+  seated:["Builds strength and range safely, with support and no standing-balance demand — good early in recovery or when standing is limited.",
+          "Sitting takes balance out of the equation, so all the effort goes to the muscle you're training.",
+          "Lets you build real strength without needing to stand or balance."],
+  standing:["Rebuilds standing strength, hip control and balance in a functional upright position — the bridge from table-based exercises to walking and daily life.",
+            "Upright is where you actually live — this is the bridge from mat work back to walking.",
+            "Trains strength and hip control in the position daily life demands."],
+  pool:["Buoyancy offloads sore or healing joints while the water gives gentle all-around resistance and warmth — so you can move, strengthen and build fitness with far less impact than on land.",
+        "Water lets you move and load a joint weeks before land-based work would be comfortable.",
+        "Buoyancy takes the load off while the water still resists you in every direction."],
+  general:["Helps restore strength, movement and function.",
+           "Contributes to overall strength, movement and function in the area.",
+           "Supports the return of strength and normal movement."]
+};
+
+/* What the implement IS, for the "what it is" line. */
+const WHAT_EQUIP = {
+  "Dumbbell":"loaded with a dumbbell", "Kettlebell":"loaded with a kettlebell", "Barbell":"loaded with a barbell",
+  "Band":"against band resistance", "Loop-band":"against a loop band", "Cable":"against a cable",
+  "Machine":"on a machine", "Suspension":"on suspension straps", "Med-ball":"with a medicine ball",
+  "Sandbag":"with a sandbag", "Chair":"using a chair", "Towel":"using a towel",
+  "Broomstick":"guided by a broomstick", "Backpack":"loaded with a weighted backpack",
+  "Heavy-book":"loaded with a heavy book", "Soup-can":"loaded with a soup can",
+  "Water-bottle":"loaded with water bottles", "Water-jug":"loaded with a water jug"
+};
+/* What the variant/modifier IS (what-line) and what it BUYS (why-line). */
+const SPEC_CLAUSES = [
+  [/\bunilateral\b|single-leg|\b1-leg\b|one-leg/i, "done one side at a time",
+   "Working one side at a time exposes and fixes the side-to-side difference a two-legged version quietly hides."],
+  [/slow-tempo \(3s eccentric\)|slow eccentric|\beccentric\b/i, "with the lowering phase deliberately slowed",
+   "The slow lowering phase is the strongest known stimulus for tendon and muscle remodelling — it is why this version exists."],
+  [/with 2s pause|\bpaused\b|1\.5-rep/i, "with a pause at the hardest point",
+   "Pausing kills the bounce, so the muscle — not momentum — does the work through the hardest part of the range."],
+  [/on unstable surface|\bfoam\b|\bbosu\b|wobble/i, "on a deliberately unstable surface",
+   "An unstable surface trains the fast, reflexive ankle and hip reactions that keep you upright on uneven ground."],
+  [/\bpool\b|aquatic|\bwater\b(?!.?bottle|.?jug)/i, "done in water",
+   "Water supports you and resists you at the same time, so you can load a joint that could not yet take your weight on land.",
+   ["pool"]],
+  [/banded \(accommodating\)/i, "with accommodating band resistance",
+   "Band resistance rises as you extend, so the load matches your strength curve instead of fighting it."],
+  [/\bpartial-range\b/i, "through a limited, comfortable range",
+   "A limited range lets you keep loading and keep progressing on days the full range would flare things up."],
+  [/\bfull-range\b/i, "through the fullest range you can control",
+   "Strength is built mostly in the range you train, so training the full range is what makes it usable everywhere."],
+  [/with isometric hold|\bisometric\b/i, "with a static hold added",
+   "Adding a hold builds tendon tolerance and often calms pain, which keeps you progressing when movement alone hurts.",
+   ["isometric"]],   // redundant when the pattern already IS a hold
+  [/\bwall\b.*(squat|sit)/i, "held against a wall",
+   "The wall takes balance out of it entirely, so every bit of effort goes into the thigh."],
+  [/heel-elevated/i, "with the heels raised",
+   "Raising the heels works around stiff ankles, so limited ankle range stops capping how much your thighs get worked."],
+  [/\bgoblet\b/i, "holding the weight at your chest",
+   "A front-held weight counterbalances you, which is why most people can sit deeper and straighter with it than without."],
+  [/\bbox\b.*(squat|sit)/i, "sitting to a box",
+   "The box fixes your depth, so every rep is the same and progress is something you can actually measure."],
+  [/\bnordic\b/i, "lowering under control against gravity",
+   "This is among the most effective hamstring-injury preventers there is — it loads the muscle hard at long length."],
+  [/eyes-closed/i, "with vision removed",
+   "Closing your eyes forces the ankle and inner ear to balance without vision covering for them."],
+  [/dual-task|counting|while talking/i, "while doing a second task",
+   "Real life never gives balance your full attention — training divided attention is what makes it transfer."]
+];
+function specClauses(name, pattern){
+  const what = [], why = [];
+  for(const [re, w, y, redundantFor] of SPEC_CLAUSES){
+    if(!re.test(name||"")) continue;
+    if(redundantFor && redundantFor.includes(pattern)) continue;   // the pattern sentence already says it
+    if(w) what.push(w);
+    if(y) why.push(y);
+    if(what.length >= 2) break;      // two clauses is plenty for one sentence
+  }
+  return { what, why };
+}
+/* =====================================================================
    EXPLAIN SPECIFICITY LAYERS
    PATTERN_HOWTO has ONE entry per movement pattern, so every one of the 2,086
    squat variants got byte-identical instructions: the same words for "Squat",
@@ -3263,9 +3498,29 @@ function movementExplain(name, pattern, regionArr){
   const p = pattern || inferPattern(name);
   const info = PATTERN_INFO[p] || PATTERN_INFO.general;
   const ht = PATTERN_HOWTO[p] || PATTERN_HOWTO.general;
+  /* One phrasing per pattern meant every squat opened and closed with the same two
+     sentences. Vary by a hash of the NAME (stable across re-renders), then add the
+     clauses that describe THIS variant. */
+  const sc = specClauses(name, p);
+  const eqWhat = (() => {
+    for(const k of Object.keys(WHAT_EQUIP))
+      if(new RegExp("^" + reEsc(k) + "\\b", "i").test(name||"")) return WHAT_EQUIP[k];
+    return ""; })();
+  const whatBits = [eqWhat, ...sc.what].filter(Boolean);
+  const whatBase = pickAlt(name, WHAT_ALT[p] || [info.what]);
+  /* Several base phrasings already contain an em-dash, so appending " — clause" gave
+     "a held position — tension without motion — with a static hold added". Use a
+     separate sentence instead of a second dash. */
+  const whatLine = whatBits.length
+    ? whatBase + " This version is " + whatBits.join(", ") + "."
+    : whatBase;
+  const whyBase = pickAlt(name, WHY_ALT[p] || [info.why]);
+  const whyLine = [whyBase, ...sc.why.slice(0, 2)].join(" ");
   const skip = new Set(["Full body","Cardio","Balance","Gait","Vestibular","Breathing","Core","Grip"]);
   const regs = (regionArr||[]).filter(r=>!skip.has(r));
-  const target = regs.length ? ` It mainly works the ${regs.join(", ").toLowerCase()}.` : "";
+  /* "the knee, hip" reads like a stub. This line appears on every explanation. */
+  const listOf = a => a.length < 2 ? (a[0] || "") : a.slice(0, -1).join(", ") + " and " + a[a.length - 1];
+  const target = regs.length ? ` It mainly works the ${listOf(regs).toLowerCase()}.` : "";
   const notes = movementNotes(name);
   /* Layer the name's own detail over the pattern text: the implement, the named
      variant, then the modifier — so a "Barbell box squat — with 2s pause" no
@@ -3282,9 +3537,9 @@ function movementExplain(name, pattern, regionArr){
     avoid ? `<div class="howmeta howavoid"><b>⚠ Avoid:</b> ${avoid}</div>` : "",
     notes ? `<div class="howmeta"><b>Note:</b> ${notes}</div>` : ""
   ].join("");
-  return `<b>What it is:</b> ${info.what}${target}`
+  return `<b>What it is:</b> ${whatLine}${target}`
     + `<div class="howhead"><b>How to do it</b></div>${stepHTML}${meta}`
-    + `<div class="howwhy"><b>Why it helps:</b> ${info.why}</div>`;
+    + `<div class="howwhy"><b>Why it helps:</b> ${whyLine}</div>`;
 }
 
 /* Shared exercise <li> renderer with Explain + optional Swap (when ctx {ci,pi,ei} given). */
