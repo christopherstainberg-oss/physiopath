@@ -5225,7 +5225,7 @@ function initHistory(){
   $("#q_age").value=state.age; $("#q_sex").value=state.sex; $("#q_meds").value=state.meds; $("#q_notes").value=state.notes;
   $("#parq_pain").checked=state.parq.pain; $("#parq_faint").checked=state.parq.faint; $("#parq_doc").checked=state.parq.doc;
   $("#q_age").oninput=e=>{state.age=e.target.value;save();updateVitalsReadout();};
-  $("#q_sex").oninput=e=>{state.sex=e.target.value;save();};
+  $("#q_sex").oninput=e=>{ state.sex=e.target.value; save(); syncPregWrap(); };   // set THEN gate, not two racing handlers
   $("#q_meds").oninput=e=>{state.meds=e.target.value;save();};
   $("#q_notes").oninput=e=>{state.notes=e.target.value;save();};
   $("#parq_pain").onchange=e=>{state.parq.pain=e.target.checked;save();};
@@ -5256,17 +5256,40 @@ function initHistory(){
       if(key==="equipment"){ if(["none","bands"].includes(e.target.value)) state.homeMode = true;
                              else if(e.target.value==="gym") state.homeMode = false; }
       save(); }; });
-  const sexEl = $("#q_sex"); if(sexEl) sexEl.addEventListener("change", syncPregWrap);
   initADLs();   // occupational-therapy activities-of-daily-living check
+  syncPregWrap();   // last: needs the condition checklist rendered above to find .check[data-flag=pregnancy]
 }
-/* `sex` is asked "for pregnancy-related guidance" - so it should actually gate
-   that guidance rather than be collected and ignored. */
+/* `sex` is asked "for pregnancy-related guidance" - so it gates that guidance rather than
+   being collected and ignored. Both surfaces are gated together: the "Pregnant or recently
+   postpartum" tick in the condition checklist and the pregnancy-stage select. Showing only
+   one of them would leave the flag reachable while the stage that drives the actual rules
+   (supine/valsalva avoidance from t2 on) was hidden.
+   Answers are CLEARED when the gate closes, so a stale pregnancy flag can't survive a change
+   of answer and keep reshaping the program invisibly. */
+function pregApplies(){ return state.sex === "Female"; }
 function syncPregWrap(){
-  const el = $("#q_pregStage"); if(!el) return;
-  const wrap = el.closest(".subfield") || el;
-  const show = !state.sex || ["Female","Other"].includes(state.sex);
-  wrap.classList.toggle("hide", !show);
-  if(!show && state.pregStage){ state.pregStage = ""; el.value = ""; save(); }
+  const show = pregApplies();
+  let changed = false;
+
+  const el = $("#q_pregStage");
+  if(el){
+    const wrap = el.closest(".subfield") || el;
+    wrap.classList.toggle("hide", !show);
+    if(!show && state.pregStage){ state.pregStage = ""; el.value = ""; changed = true; }
+  }
+
+  const box = document.querySelector('.check[data-flag="pregnancy"]');
+  if(box){
+    box.classList.toggle("hide", !show);
+    if(!show && (state.flags||[]).includes("pregnancy")){
+      state.flags = state.flags.filter(f => f !== "pregnancy");
+      box.classList.remove("on");
+      box.setAttribute("aria-checked", "false");
+      const mark = box.querySelector(".box"); if(mark) mark.textContent = "";
+      changed = true;
+    }
+  }
+  if(changed) save();
 }
 /* Urgent / clearance note shown live under the red-flag screen. */
 function updateScreenWarn(){
