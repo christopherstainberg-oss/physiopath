@@ -252,6 +252,10 @@ const SURGERIES = CURATED_SURGERIES.concat(
 );
 
 let _dsCache = { key:null, val:null };
+/* Memoised: on a MISS (a non-surgical diagnosis — the common case) the lookup below runs
+   `SURGERIES.find(s => s.match.test(nm))` to exhaustion over 20,023 regexes ≈ 0.43ms, and
+   gatherFlags/detectPlan/render call it repeatedly. A surgical diagnosis short-circuits on a
+   curated entry near the front and was always cheap. Measured: 200 calls 85.8ms -> ~0ms. */
 function detectSurgery(){
   // memoised: keyed on the only inputs that can change the answer
   const _k = (state.surgeryType||"") + "|" + (state.condIds||[]).join(",");
@@ -324,9 +328,9 @@ function ensureDetailsData(){
   return Promise.all([loadData("activities.js"), loadData("sports.js")]).then(()=>{
     if(typeof setupAutocomplete!=="function") return;
     setupAutocomplete("activitySearch","activityResults","activityChips", window.ACTIVITIES, "returnActivities",
-      { onChange:()=>{ if(state.program) state.program = generateProgram(); save(); } });
+      { onChange:()=>{ if(state.program){ state.program = generateProgram(); save(); if(state.step===4) renderProgram(state.program); } } });
     setupAutocomplete("sportSearch","sportResults","sportChips", window.SPORTS, "returnSports",
-      { onChange:()=>{ if(state.program){ state.program = generateProgram(); save(); } } });
+      { onChange:()=>{ if(state.program){ state.program = generateProgram(); save(); if(state.step===4) renderProgram(state.program); } } });
   });
 }
 function selectedMeds(){ return (state.medIds||[]).map(id=>MEDMAP.get(id)).filter(Boolean); }
@@ -5057,11 +5061,8 @@ function initDetails(){
   $("#surgeryDate").oninput=e=>{ state.surgeryDate=e.target.value; updatePostopLabel(); save(); };
   $("#fitness").oninput=e=>{ state.fitness=e.target.value; save(); };
   $("#goal").oninput=e=>{ state.goal=e.target.value; save(); };
-  // auto-populate return-to activity & sport pickers
-  setupAutocomplete("activitySearch","activityResults","activityChips", window.ACTIVITIES, "returnActivities",
-    { onChange:()=>{ if(state.program && state.step===4) renderProgram(state.program); } });
-  setupAutocomplete("sportSearch","sportResults","sportChips", window.SPORTS, "returnSports",
-    { onChange:()=>{ if(state.program){ state.program=generateProgram(); save(); if(state.step===4) renderProgram(state.program); } } });
+  // The return-to activity & sport pickers are wired by ensureDetailsData() once their datasets
+  // land (goStep(3)) — wiring them here would capture an undefined `data` and be overwritten anyway.
   renderPrecautions();   // Precautions & reminders card (weight-bearing, braces, sternal/abdominal, custom)
 }
 /* ---- reusable auto-populate (typeahead + multi-add chips) ---- */
