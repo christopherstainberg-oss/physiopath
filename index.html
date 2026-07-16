@@ -423,6 +423,9 @@
 
       <div class="rowbtns">
         <span class="muted" id="logToday"></span>
+        <span class="savestate" id="logSaveState"></span>
+        <span class="grow"></span>
+        <button class="btn ghost small hide" id="logDelete">Delete this entry</button>
         <button class="btn primary" id="logBtn">Save entry</button>
       </div>
       <div id="journalToday"></div>
@@ -434,6 +437,12 @@
       <div class="jsearchrow no-print">
         <input type="search" id="journalSearch" placeholder="Search everything you've written — “stairs”, “swelling”, “netball”…" autocomplete="off" />
         <span class="jsearchcount" id="journalSearchCount"></span>
+      </div>
+      <div class="jexport no-print">
+        <button class="btn ghost small" id="jExportTxt">⬇ Download as a readable diary</button>
+        <button class="btn ghost small" id="jExportJson">⬇ Export journal (JSON)</button>
+        <button class="btn ghost small" id="jImport">⬆ Import journal</button>
+        <input type="file" id="jImportFile" accept="application/json,.json" hidden />
       </div>
       <div id="progressBody">
         <div class="empty"><div class="big">📈</div><div>No entries yet — log your first session above.</div></div>

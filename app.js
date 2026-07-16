@@ -5385,6 +5385,79 @@ function importData(file){
   rd.readAsText(file);
 }
 
+/* ---------------------------------------------------------------------
+   JOURNAL IMPORT / EXPORT — separate from the whole-app backup on purpose.
+   The journal is the part someone might want to keep, print, or hand to a
+   physio without also handing over their lab values and medication list.
+   --------------------------------------------------------------------- */
+function journalPayload(){
+  const { apiKey, ...rest } = state;
+  return { _app:"physiopath", _kind:"journal", _version:1, _exported:new Date().toISOString(),
+           entries: (state.log||[]).slice() };
+}
+function exportJournalJSON(){
+  const url = URL.createObjectURL(new Blob([JSON.stringify(journalPayload(), null, 2)], {type:"application/json"}));
+  const a = document.createElement("a");
+  a.href = url; a.download = `physiopath-journal-${todayISO()}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  toast("Journal exported — " + (state.log||[]).length + " entries.");
+}
+/* A diary you can actually read. JSON is for re-importing; this is for keeping. */
+function exportJournalText(){
+  const log = (state.log||[]).slice();
+  if(!log.length){ toast("Nothing written yet."); return; }
+  const conds = selectedConditions().map(c=>c.name).join(", ");
+  const lines = [
+    "# My rehab journal",
+    conds ? "\n" + conds : "",
+    `\n${log.length} entries · ${fmtDate(log[0].date)} to ${fmtDate(log[log.length-1].date)}`,
+    "\n---\n"
+  ];
+  for(const e of log){
+    const m = moodOf(e.mood);
+    lines.push("## " + fmtDate(e.date));
+    const meta = [ m ? m.icon + " " + m.label : null,
+                   `pain ${e.pain}/10`,
+                   `${e.sessions} session${e.sessions===1?"":"s"}`,
+                   e.t ? "written " + new Date(e.t).toLocaleString() : null ].filter(Boolean);
+    lines.push("_" + meta.join(" · ") + "_\n");
+    if(e.note) lines.push(String(e.note).trim() + "\n");
+    lines.push("---\n");
+  }
+  const url = URL.createObjectURL(new Blob([lines.join("\n")], {type:"text/markdown"}));
+  const a = document.createElement("a");
+  a.href = url; a.download = `my-rehab-journal-${todayISO()}.md`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  toast("Diary downloaded — " + log.length + " entries.");
+}
+function importJournal(file){
+  const rd = new FileReader();
+  rd.onload = () => {
+    let p;
+    try{ p = JSON.parse(rd.result); }catch(e){ toast("⚠ That file isn't valid JSON."); return; }
+    const incoming = Array.isArray(p) ? p : (p && (p.entries || (p.state && p.state.log)));
+    if(!Array.isArray(incoming)){ toast("⚠ That doesn't look like a PhysioPath journal."); return; }
+    const clean = incoming.filter(e => e && typeof e.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(e.date));
+    if(!clean.length){ toast("⚠ No entries found in that file."); return; }
+    /* MERGE rather than replace — importing a backup should never be how someone loses the
+       entries they've written since. Same-day collisions are the only thing that overwrites,
+       and they're counted out loud first. */
+    const have = new Map((state.log||[]).map(e=>[e.date, e]));
+    let added = 0, updated = 0;
+    for(const e of clean){ if(have.has(e.date)) updated++; else added++; }
+    if(!confirm(`Import ${clean.length} entries?\n\n${added} new, ${updated} would replace an entry you already have for that day.\n\nEverything else you've written is kept.`)) return;
+    for(const e of clean) have.set(e.date, e);
+    state.log = [...have.values()].sort((a,b)=>a.date<b.date?-1:1);
+    if(!save()){ toast("⚠ Imported, but couldn't save — storage is full or blocked."); return; }
+    renderProgress(); loadLogDay(($("#logDate")&&$("#logDate").value) || todayISO());
+    toast(`Imported — ${added} added, ${updated} updated.`);
+  };
+  rd.onerror = () => toast("⚠ Couldn't read that file.");
+  rd.readAsText(file);
+}
+
 /* ---------- chat UI ---------- */
 function addMsg(text, who){
   const div=document.createElement("div"); div.className="msg "+who;
@@ -6372,13 +6445,38 @@ function initProgress(){
     });
   }
   renderTplRow();
+  /* Autosave: writes when they PAUSE. Also commit on blur and on tab-away, because a phone
+     backgrounding the app is exactly when an unsaved page disappears. */
+  const note = $("#logNote");
+  if(note){ note.addEventListener("input", autosaveSoon); note.addEventListener("blur", autosaveNow); }
+  const sess = $("#logSessions");
+  if(sess){ sess.addEventListener("input", autosaveSoon); sess.addEventListener("blur", autosaveNow); }
+  const pain = $("#logPain");
+  if(pain) pain.addEventListener("change", autosaveSoon);
+  document.addEventListener("visibilitychange", () => { if(document.hidden) autosaveNow(); });
+  window.addEventListener("pagehide", autosaveNow);
+  const del = $("#logDelete");
+  if(del) del.onclick = () => {
+    const d = ($("#logDate") && $("#logDate").value) || todayISO();
+    const e = (state.log||[]).find(x=>x.date===d);
+    if(!e) return;
+    if(!confirm("Delete your entry for " + fmtDate(d) + "?\n\nThis can't be undone" +
+      (e.note ? " — and it's " + String(e.note).trim().split(/\s+/).length + " words you wrote." : "."))) return;
+    deleteLog(d); loadLogDay(d); toast("Deleted the entry for " + fmtDate(d) + ".");
+  };
   const js = $("#journalSearch");
   if(js){ let t; js.oninput = () => { clearTimeout(t); t = setTimeout(renderProgress, 140); }; }
+  if($("#jExportTxt"))  $("#jExportTxt").onclick  = exportJournalText;
+  if($("#jExportJson")) $("#jExportJson").onclick = exportJournalJSON;
+  if($("#jImport") && $("#jImportFile")){
+    $("#jImport").onclick = () => $("#jImportFile").click();
+    $("#jImportFile").onchange = () => { if($("#jImportFile").files[0]) importJournal($("#jImportFile").files[0]); $("#jImportFile").value=""; };
+  }
   const dt = $("#logDate");
   if(dt){
     dt.max = todayISO();
     dt.value = todayISO();
-    dt.onchange = () => loadLogDay(dt.value);
+    dt.onchange = () => { autosaveNow(); loadLogDay(dt.value); };   // commit before moving on, or it's gone
   }
   loadLogDay(todayISO());
   initHealth();
@@ -6413,7 +6511,10 @@ function loadLogDay(d){
   if(head) head.textContent = d === todayISO() ? "Today's journal" : "Journal — " + fmtDate(d);
   const lt = $("#logToday");
   if(lt) lt.textContent = e ? "You already have an entry for this day" : "";
-  syncMood(); renderJournalToday(); renderDiaryHead(d);
+  _autoDirty = false; clearTimeout(_autoT);
+  syncMood(); renderJournalToday(); renderDiaryHead(d); renderSaveState();
+  const _del = $("#logDelete");
+  if(_del) _del.classList.toggle("hide", !(state.log||[]).find(x=>x.date===d));
   if(typeof renderJournalJeffery==="function") renderJournalJeffery();
 }
 /* =====================================================================
@@ -7129,30 +7230,106 @@ function journalTodayHTML(){
     <div class="jfoot">Saved. Edit above and save again to change it.</div>
   </div>`;
 }
+/* `date` is the day the entry is ABOUT; `t`/`edited` are when it was actually written and
+   last touched. Those are different things the moment someone catches up a missed day —
+   an entry dated Saturday and written on Monday should say so rather than pretend. */
+function collectEntry(d){
+  const prev = (state.log||[]).find(e=>e.date === d);
+  const now = Date.now();
+  return {
+    date: d,
+    mood: state.logMood || "",
+    pain: parseInt($("#logPain").value),
+    sessions: Math.max(0, parseInt($("#logSessions").value)||0),
+    note: $("#logNote").value.trim(),
+    t: (prev && prev.t) || now,          // first written — never overwritten
+    edited: now
+  };
+}
+/* Anything worth keeping? Don't create an entry because someone tabbed past the page.
+   AUTOSAVE is stricter than the Save button, and it has to be: #logSessions is PRE-FILLED
+   with 1, so "sessions > 0" is true on a page nobody has touched — opening a day and
+   typing nothing would silently create an entry. A pre-filled default is not user intent.
+   Only the note and the mood are, so autosave requires one of those. Pressing Save is
+   itself intent, so that will still record a day of "1 session" and no words. */
+function entryHasContent(e, strict){
+  if(e.note || e.mood) return true;
+  if(!strict && e.sessions > 0) return true;
+  return false;
+}
+function writeEntry(d, opts){
+  const entry = collectEntry(d);
+  const i = state.log.findIndex(e=>e.date===entry.date);
+  if(i < 0 && !entryHasContent(entry, !!(opts && opts.auto))) return { skipped:true };
+  if(i>=0) state.log[i]=entry; else state.log.push(entry);
+  state.log.sort((a,b)=>a.date<b.date?-1:1);
+  return { wrote: save(), isNew: i < 0, entry };
+}
 function saveLogEntry(){
   /* The date is chosen, not assumed — a journal you can't catch up in gets abandoned
      after the first missed day, and the old code hard-coded todayISO(). */
   const d = ($("#logDate") && $("#logDate").value) || todayISO();
   if(d > todayISO()){ toast("That date is in the future."); return; }
-  const entry = {
-    date: d,
-    mood: state.logMood || "",
-    pain: parseInt($("#logPain").value),
-    sessions: Math.max(0, parseInt($("#logSessions").value)||0),
-    note: $("#logNote").value.trim()
-  };
-  const i = state.log.findIndex(e=>e.date===entry.date);
-  if(i>=0) state.log[i]=entry; else state.log.push(entry);
-  state.log.sort((a,b)=>a.date<b.date?-1:1);
-  const wrote = save();
+  const r = writeEntry(d);
+  if(r.skipped){ toast("Nothing to save yet — write a line, or pick how the day went."); return; }
   /* Deliberately NOT clearing the note: it is the thing they wrote, and wiping it
      told them it was disposable. journalTodayHTML() reads it straight back. */
-  renderProgress(); renderJournalToday();
+  renderProgress(); renderJournalToday(); renderSaveState("saved");
   syncPlanFromLog();
-  if(!wrote) toast("⚠ Couldn't save - your browser storage is full or blocked.");
-  else if(i>=0) toast("Updated your entry for " + fmtDate(d) + ".");
+  if(!r.wrote) toast("⚠ Couldn't save - your browser storage is full or blocked.");
+  else if(!r.isNew) toast("Updated your entry for " + fmtDate(d) + ".");
   else toast(d===todayISO() ? "Saved today's entry." : "Saved — caught up " + fmtDate(d) + ".");
 }
+
+/* ---------------------------------------------------------------------
+   AUTOSAVE. Losing a page you just wrote is the fastest way to stop someone
+   journalling for good, and "click Save or lose it" is a bad deal for a diary.
+   Debounced so it writes when they PAUSE, not on every keystroke, and it does
+   NOT re-render the entry list underneath the cursor while they type — the
+   full render happens on explicit save or when they leave the day.
+   --------------------------------------------------------------------- */
+let _autoT = null, _autoDirty = false;
+function renderSaveState(k){
+  const el = $("#logSaveState"); if(!el) return;
+  const d = ($("#logDate") && $("#logDate").value) || todayISO();
+  const e = (state.log||[]).find(x=>x.date === d);
+  if(k === "saving"){ el.textContent = "Saving…"; el.className = "savestate saving"; return; }
+  if(k === "dirty"){ el.textContent = "Unsaved changes"; el.className = "savestate dirty"; return; }
+  if(!e){ el.textContent = ""; el.className = "savestate"; return; }
+  const when = e.edited || e.t;
+  el.textContent = when ? "Saved " + fmtTime(when) : "Saved";
+  el.className = "savestate saved";
+}
+function autosaveSoon(){
+  _autoDirty = true;
+  renderSaveState("dirty");
+  clearTimeout(_autoT);
+  _autoT = setTimeout(autosaveNow, 1200);
+}
+function autosaveNow(){
+  clearTimeout(_autoT);
+  if(!_autoDirty) return;
+  const d = ($("#logDate") && $("#logDate").value) || todayISO();
+  if(d > todayISO()) return;
+  renderSaveState("saving");
+  const r = writeEntry(d, { auto:true });
+  _autoDirty = false;
+  if(r.skipped){ renderSaveState(); return; }
+  renderSaveState(r.wrote ? "saved" : "dirty");
+  if(!r.wrote) toast("⚠ Couldn't autosave — storage is full or blocked. Copy your text somewhere safe.");
+  renderJournalToday();
+}
+/* An entry dated Saturday but written on Monday should say so — that is what the timestamp
+   is FOR. Silence would imply it was written on the day. */
+function writtenLabel(e){
+  if(!e.t) return "";
+  const wrote = isoOf(new Date(e.t));
+  if(wrote === e.date) return "written " + fmtTime(e.t);
+  const n = Math.round((new Date(wrote+"T12:00:00") - new Date(e.date+"T12:00:00")) / 864e5);
+  return n === 1 ? "written next day" : (n > 1 ? `written ${n} days later` : "written " + fmtTime(e.t));
+}
+const fmtTime = ms => { const d = new Date(ms);
+  return isNaN(d) ? "" : d.toLocaleTimeString(undefined, { hour:"2-digit", minute:"2-digit" }); };
 function renderJournalToday(){
   const host = $("#journalToday"); if(host) host.innerHTML = journalTodayHTML() + logImpactHTML();
   const d = ($("#logDate") && $("#logDate").value) || todayISO();
@@ -7239,6 +7416,7 @@ function renderProgress(){
           ${m?`<span class="jmood">${m.icon} ${esc(m.label)}</span>`:""}
           <span class="jtag">${e.pain}/10</span>
           <span class="jsess">${e.sessions} session${e.sessions===1?"":"s"}</span>
+          ${e.t?`<span class="jwhen">${esc(writtenLabel(e))}</span>`:""}
           <button type="button" class="lx" data-date="${e.date}" title="Delete this entry" aria-label="Delete entry for ${esc(fmtDate(e.date))}">✕</button></div>
         ${e.note?`<div class="jbody">${esc(e.note)}</div>`:""}
       </div>`; }).join("")

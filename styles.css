@@ -276,6 +276,14 @@ body.isoffline .vidnote{display:none}
 .jjform{display:flex;gap:8px;margin-top:12px}
 .jjform input{flex:1}
 .jjthread{max-height:420px;overflow-y:auto}
+/* autosave state, timestamps, journal export */
+.savestate{font-size:11.5px;color:var(--muted);min-height:16px}
+.savestate.saving{opacity:.7}
+.savestate.saved{color:var(--accent-ink)}
+.savestate.dirty{color:var(--warn,#e0a800);font-weight:600}
+.rowbtns .grow{flex:1}
+.jwhen{font-size:11px;color:var(--muted);font-style:italic}
+.jexport{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px}
 /* ---------- the diary page ---------- */
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .tplrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 10px}
