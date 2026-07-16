@@ -3125,25 +3125,15 @@ function movementNotes(name){
 const VID_STRIP_EQUIP = /^(dumbbell|kettlebell|barbell|band|loop-band|cable|machine|suspension|towel|broomstick|chair|med-ball|sandbag|backpack|heavy-book|soup-can|water-bottle|water-jug|resisted|weighted)\s+/i;
 const VID_STRIP_TAIL  = /\s+—\s+.*$/;                       // our " — modifier" suffixes
 const VID_STRIP_PARENS = /\s*\((?!left|right|bilateral)[^)]*\)/gi;   // "(SAQ)", "(holding a counter)"
-/* Qualifier by pattern — "squat" alone returns gym content; these bias toward
-   clinical demonstrations. */
-const VID_QUALIFIER = {
-  supine:"physical therapy", seated:"physical therapy", standing:"physical therapy",
-  pool:"aquatic therapy", balance:"balance training physical therapy", gait:"gait training physical therapy",
-  vestibular:"vestibular rehabilitation", breathing:"breathing exercise technique",
-  mobility:"stretch technique", isometric:"isometric exercise technique",
-  pump:"physical therapy", adl:"occupational therapy"
-};
-/* Program exercises come from the hand-authored protocols, not the generated library, so
+/* Program exercises come from the hand-authored PROTOCOLS, not the generated library, so
    their names are PRESCRIPTIONS rather than movement names: "Gentle ROM around the injury",
-   "Progressive grip work". Searching those verbatim sends people to nothing. Strip the
-   prescription language, expand the jargon nobody types into a search box, and if what
-   remains names no actual movement, return null so no link is offered at all. */
+   "Progressive grip work". Strip the prescription language, expand the jargon nobody types,
+   and if what remains names no actual movement return null so nothing is offered at all. */
 const VID_LEAD  = /^(gentle|progressive|assisted|light|graded|early|controlled|supported|pain-free|active|passive|isometric|advanced)\s+|^with\s+[\w-]+\s+(?=[a-z])/i;
 const VID_JARGON = [[/\brom\b/gi, "range of motion"], [/\bAAROM\b/gi, "assisted range of motion"],
                     [/\bckc\b/gi, "closed chain"], [/\bokc\b/gi, "open chain"], [/\bslr\b/gi, "straight leg raise"],
                     [/\bsaq\b/gi, "short arc quad"], [/\bter\b/gi, "terminal extension"], [/\bnwb\b/gi, ""]];
-/* After cleaning, a query made only of these words names no movement. */
+/* After cleaning, a name made only of these words identifies no movement. */
 const VID_FILLER = /\b(range of motion|exercise|exercises|work|working|activity|injury|injured|area|movement|the|a|an|around|all|direction|directions|and|with|as|tolerated|progression|training|drill|drills|side|both|affected|limb)\b/gi;
 
 function videoMovement(name, pattern){
@@ -3168,27 +3158,15 @@ function videoMovement(name, pattern){
   while(VID_LEAD.test(q)) q = q.replace(VID_LEAD, "");        // "gentle progressive hip rom" -> "hip rom"
   for(const [re, to] of VID_JARGON) q = q.replace(re, to);
   q = q.replace(/\s+/g, " ").trim();
-  /* movement-only; the qualifier is added by videoQuery */
+  /* the movement only — this is what curatedVideoFor() matches on */
   /* Nothing but prescription language left ("gentle ROM around the injury") -> no movement
      to search for, so offer no link rather than a useless one. */
   if(q.replace(VID_FILLER, "").replace(/[^a-z0-9]/g, "").length < 3) return null;
   return q;
 }
-/* The search query is the movement plus a clinical qualifier. */
-function videoQuery(name, pattern){
-  let q = videoMovement(name, pattern);
-  if(!q) return null;
-  /* Don't repeat a word the name already has: "eyes-closed single-leg balance" +
-     "balance training physical therapy" searched for "balance balance training". */
-  const have = new Set(q.split(/[^a-z0-9]+/).filter(Boolean));
-  const qual = (VID_QUALIFIER[pattern] || "exercise technique")
-    .split(" ").filter(w => !have.has(w.toLowerCase())).join(" ");
-  return (q + " " + qual).replace(/\s+/g, " ").trim();
-}
-function videoSearchURL(name, pattern){
-  const q = videoQuery(name, pattern);
-  return q ? "https://www.youtube.com/results?search_query=" + encodeURIComponent(q) : null;
-}
+/* videoQuery()/videoSearchURL() lived here and built a YouTube search. Removed with the
+   search fallback -- keeping an unreachable path that emits links to unvetted content is
+   how it quietly comes back. videoMovement() stays: curatedVideoFor() matches on it. */
 /* ---------------------------------------------------------------------
    CURATED, VERIFIED DEMONSTRATIONS — institutional publishers only.
    Every id below was found via search and then confirmed by fetching
@@ -3297,20 +3275,18 @@ function videoCaveat(){
   if(f.has("pregnancy")) return "Videos won't account for pregnancy — skip lying flat on your back and any breath-holding they show.";
   return "Videos are generic: they don't know your precautions, your phase, or your dose. Your plan's sets and reps win.";
 }
+/* Only ever link a video whose PUBLISHER was verified. There is no search fallback: an
+   unvetted YouTube search dressed as a feature is the app pointing at content it knows
+   nothing about, and "nothing here is vetted" does not make that safe -- it just makes it
+   deniable. If a movement has no verified demonstration, the Explain text stands on its
+   own and we say nothing. The "other videos" link is gone for the same reason: it was the
+   same unvetted search wearing a quieter label. */
 function videoLinkHTML(name, pattern){
-  const url = videoSearchURL(name, pattern);
-  if(!url) return "";                       // no movement to search for — say nothing
   const cur = curatedVideoFor(name, pattern);
-  /* A curated link NAMES its publisher, because that is the only thing that was actually
-     checked. A search link promises nothing and says so. Never imply the video was reviewed. */
-  const main = cur
-    ? `<a class="vidlink vidcur" href="https://www.youtube.com/watch?v=${esc(cur.id)}" target="_blank" rel="noopener noreferrer nofollow">▶ Watch how <span class="vidext">↗</span></a>
-       <span class="vidsrc">from <b>${esc(cur.ch)}</b> <span class="vidver">· link checked ${esc(VIDEO_VERIFIED)}</span></span>
-       <a class="vidmore" href="${esc(url)}" target="_blank" rel="noopener noreferrer nofollow">other videos ↗</a>`
-    : `<a class="vidlink" href="${esc(url)}" target="_blank" rel="noopener noreferrer nofollow">▶ Find a video <span class="vidext">↗</span></a>
-       <span class="vidsrc">opens a YouTube search — nothing here is vetted</span>`;
+  if(!cur) return "";
   return `<div class="vidrow no-print">
-    ${main}
+    <a class="vidlink vidcur" href="https://www.youtube.com/watch?v=${esc(cur.id)}" target="_blank" rel="noopener noreferrer nofollow">▶ Watch how <span class="vidext">↗</span></a>
+    <span class="vidsrc">from <b>${esc(cur.ch)}</b> <span class="vidver">· link checked ${esc(VIDEO_VERIFIED)}</span></span>
     <span class="vidnote">${esc(videoCaveat())}</span>
     <span class="vidoff">You're offline — this needs a connection.</span>
   </div>`;

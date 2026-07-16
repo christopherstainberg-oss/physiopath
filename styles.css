@@ -237,9 +237,7 @@ input[type=range]{flex:1;accent-color:var(--brand);height:30px}
 .vidlink.vidcur{border-color:var(--brand-2);color:var(--accent-ink)}
 .vidsrc{font-size:11.5px;color:var(--muted)}
 .vidver{opacity:.75}
-.vidmore{font-size:11.5px;color:var(--muted);text-decoration:underline}
-.vidmore:hover{color:var(--brand-ink)}
-body.isoffline .vidmore{opacity:.45;pointer-events:none}
+
 .vidoff{display:none;font-size:11.5px;color:var(--warn,#e0a800);font-weight:600}
 body.isoffline .vidlink{opacity:.45;pointer-events:none}
 body.isoffline .vidoff{display:inline}
