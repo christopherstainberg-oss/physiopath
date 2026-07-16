@@ -429,7 +429,12 @@
     </div>
 
         <div class="card" id="progressSummaryCard">
-      <h2>Your progress</h2>
+      <h2>Looking back</h2>
+      <!-- Static, not re-rendered: typing here must not destroy the input under the cursor. -->
+      <div class="jsearchrow no-print">
+        <input type="search" id="journalSearch" placeholder="Search everything you've written — “stairs”, “swelling”, “netball”…" autocomplete="off" />
+        <span class="jsearchcount" id="journalSearchCount"></span>
+      </div>
       <div id="progressBody">
         <div class="empty"><div class="big">📈</div><div>No entries yet — log your first session above.</div></div>
       </div>

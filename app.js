@@ -6372,6 +6372,8 @@ function initProgress(){
     });
   }
   renderTplRow();
+  const js = $("#journalSearch");
+  if(js){ let t; js.oninput = () => { clearTimeout(t); t = setTimeout(renderProgress, 140); }; }
   const dt = $("#logDate");
   if(dt){
     dt.max = todayISO();
@@ -6731,6 +6733,67 @@ function personalOpenQs(){
   if(prev) out.push({ t:"open", q:`Last time you wrote: “${String(prev.note).slice(0,70)}” — how's that now?` });
   return out;
 }
+/* ---------------------------------------------------------------------
+   RECALL — the whole point of keeping a journal.
+   Months of entries are worthless if nobody can find anything in them. Two
+   readers need to: the user ("what did I say about stairs?") and Jeffery, who
+   should be able to quote a Tuesday in March back at someone convinced they
+   have made no progress. That is the single most useful thing this data can do
+   — people in long rehab genuinely cannot remember how bad week two was.
+   --------------------------------------------------------------------- */
+const STOP_W = new Set(["the","a","an","and","or","but","my","me","i","it","is","was","to","of","in","on","at","for","with","that","this","had","have","has","been","did","do","so","if","not","its","im","ive"]);
+const jWords = t => String(t||"").toLowerCase().split(/[^a-z0-9']+/)
+  .filter(w => w.length > 2 && !STOP_W.has(w)).map(w => w.length > 4 && w.endsWith("s") ? w.slice(0,-1) : w);
+
+/* Free-text search over everything they've written. */
+function journalSearch(q, limit){
+  const toks = jWords(q);
+  const log = (state.log||[]).filter(e => e.note);
+  if(!toks.length) return [];
+  const hits = log.map(e => {
+    const hay = " " + jWords(e.note).join(" ") + " ";
+    const score = toks.reduce((a,t) => a + (hay.includes(" "+t+" ") ? 2 : (hay.includes(t) ? 1 : 0)), 0);
+    return { e, score };
+  }).filter(x => x.score > 0).sort((a,b) => b.score - a.score || (a.e.date < b.e.date ? 1 : -1));
+  return hits.slice(0, limit || 20).map(x => x.e);
+}
+/* What Jeffery can dig up unprompted: an older entry that echoes today's. */
+function journalEcho(note, beforeISO){
+  const toks = jWords(note);
+  if(toks.length < 2) return null;
+  const older = (state.log||[]).filter(e => e.note && e.date < (beforeISO || todayISO()));
+  let best = null, bestScore = 0;
+  for(const e of older){
+    const hay = " " + jWords(e.note).join(" ") + " ";
+    const sc = toks.reduce((a,t) => a + (hay.includes(" "+t+" ") ? 1 : 0), 0);
+    if(sc > bestScore){ bestScore = sc; best = e; }
+  }
+  return bestScore >= 2 ? best : null;
+}
+/* A good day, from a while back — for when today is bleak and nothing feels like progress. */
+function journalBrightSpot(){
+  const cut = new Date(); cut.setDate(cut.getDate() - 7);
+  const old = (state.log||[]).filter(e => e.note && e.date < isoOf(cut) && (e.mood === "good" || e.pain <= 3));
+  return old.length ? old[old.length - 1] : null;
+}
+const fmtAgo = d => {
+  const n = Math.round((Date.now() - new Date(d + "T12:00:00").getTime()) / 864e5);
+  return n <= 1 ? "yesterday" : (n < 14 ? n + " days ago" : (n < 60 ? Math.round(n/7) + " weeks ago" : Math.round(n/30) + " months ago"));
+};
+
+/* Offline conversation — no API, so it leans on the one thing it genuinely has: their own
+   back catalogue. Being asked "what did I say about X" and answering with a real quote is
+   worth more than a canned line. */
+function jefferyChatOffline(msg){
+  const found = journalSearch(msg, 2);
+  if(found.length){
+    const e = found[0];
+    return `You wrote this ${fmtAgo(e.date)} — ${fmtDate(e.date)}:\n\n_“${String(e.note).slice(0,220)}”_\n\n` +
+      (found[1] ? `And ${fmtAgo(found[1].date)}: _“${String(found[1].note).slice(0,140)}”_\n\n` : "") +
+      `That's from your own journal, not me guessing. I'm offline right now — add a Claude API key on the Jeffery step and I can actually talk about it.`;
+  }
+  return jefferyReflectOffline(msg);
+}
 /* Offline reflection: warm, and grounded in what they actually wrote/logged rather than
    a fortune cookie. */
 function jefferyReflectOffline(note){
@@ -6748,9 +6811,17 @@ function jefferyReflectOffline(note){
   if(/stairs|walking|work|sleep|driving|shopping/.test(t))
     bits.push("The everyday stuff is the real measure — better than any number on a chart.");
   if(rp && rp.mean >= 6) bits.push(`You've been averaging ${rp.mean}/10 lately, and your plan has already eased off to match. You don't need to push through this.`);
+  /* The payoff for keeping a journal: being shown that you HAVE said this before, and what
+     happened next. Nobody in month four remembers week two. */
+  const echo = journalEcho(note);
+  if(echo) bits.push(`You wrote something similar ${fmtAgo(echo.date)} — ${fmtDate(echo.date)}:\n\n_“${String(echo.note).slice(0,180)}”_`);
+  else if(/worse|flare|swollen|fed up|frustrat|hopeless|slow|never/.test(t)){
+    const bright = journalBrightSpot();
+    if(bright) bits.push(`Worth reading this back — it's yours, from ${fmtAgo(bright.date)}:\n\n_“${String(bright.note).slice(0,180)}”_\n\nToday isn't the whole picture.`);
+  }
   if(!bits.length) bits.push("Noted — and kept. I'll have this in mind next time you're here.");
   bits.push("I'm offline right now, so this is the short version. Add a Claude API key on the Jeffery step and I can actually talk properly.");
-  return bits.slice(0, 3).join("\n\n");
+  return bits.slice(0, 4).join("\n\n");
 }
 /* Online: same person, different register from the Coach tab. */
 function jefferyJournalSystem(){
@@ -6773,7 +6844,18 @@ reading a chart for the first time.
   or their mood, answer THAT. The knee can wait a day.
 - Praise effort and consistency, never the numbers.
 - You are not a therapist. If they sound genuinely low, be kind, be human, and gently
-  suggest a real person — do not counsel them.`;
+  suggest a real person — do not counsel them.
+
+USE THE ARCHIVE. You have months of their own words above, with dates. A friend of five
+years remembers, and this is the single most useful thing you can do for someone in long
+rehab: nobody in month four remembers how bad week two actually was.
+- When they say nothing is improving, find the entry that proves otherwise and quote it
+  with its date: "You wrote on 3 March: '...'. Read that again."
+- When something echoes an older entry, say so — same worry, same wall, six weeks apart.
+- If they ask what they said about something, quote it. Do not paraphrase their own words.
+- Quote ONLY what is in the archive above. Never invent an entry, never approximate a date,
+  and if it isn't there, say you can't find it. Making up something they "wrote" would be
+  worse than useless — they will know, and they will stop trusting the rest.`;
 }
 
 function renderJournalJeffery(){
@@ -6792,12 +6874,27 @@ function renderJournalJeffery(){
       q.opts.map((o,i)=>`<button type="button" class="jjopt" data-i="${i}">${esc(o.label)}</button>`).join("")
     }</div>` : ""}
     <div class="jjthread" id="jjThread"></div>
+    <form class="jjform no-print" id="jjForm" autocomplete="off">
+      <input type="text" id="jjInput" placeholder="Say something to Jeffery…" aria-label="Say something to Jeffery" />
+      <button class="btn primary small" type="submit">Send</button>
+    </form>
     <div class="jjrow no-print">
       <button class="btn ghost small" id="jjUse">${closed ? "Write about it instead ↓" : "Answer this in my journal ↓"}</button>
-      <button class="btn ghost small" id="jjTalk">Say it to Jeffery</button>
+      <button class="btn ghost small" id="jjTalk">Send today's entry</button>
+      <button class="btn ghost small hide" id="jjClear">Clear chat</button>
     </div>`;
   $("#jjUse").onclick = () => appendToNote(q.q);
   $("#jjTalk").onclick = () => jefferyJournalReply();
+  $("#jjForm").addEventListener("submit", e => {
+    e.preventDefault();
+    const el = $("#jjInput"); const v = el.value.trim();
+    if(!v) return;
+    el.value = ""; jjSend(v, false);
+  });
+  $("#jjClear").onclick = () => {
+    if((state.jjThread||[]).length && !confirm("Clear this conversation? Your journal entries stay.")) return;
+    state.jjThread = []; save(); renderJJThread();
+  };
   if(closed) host.querySelectorAll(".jjopt").forEach(b=>{
     b.onclick = () => answerClosed(q, q.opts[+b.dataset.i]);
   });
@@ -6821,39 +6918,71 @@ function renderJJThread(){
   const el = $("#jjThread"); if(!el) return;
   el.innerHTML = (state.jjThread||[]).map(t =>
     `<div class="jjmsg ${t.who==="you"?"jjyou":"jjbot"}">${mdLite(t.text)}</div>`).join("");
+  el.scrollTop = el.scrollHeight;
+  const c = $("#jjClear"); if(c) c.classList.toggle("hide", !(state.jjThread||[]).length);
 }
 /* The journal's note IS the message — they've already written it; don't make them type twice. */
-async function jefferyJournalReply(){
+/* This RESET the thread on every call — `state.jjThread = [{...}]` — so it could never be a
+   conversation, only a one-shot reaction, and the API was sent a single message with no
+   history. A friend you can only say one thing to isn't a friend. */
+const JJ_MAX = 60;
+function jjPush(who, text){
+  state.jjThread = (state.jjThread || []).concat([{ who, text }]);
+  if(state.jjThread.length > JJ_MAX) state.jjThread = state.jjThread.slice(-JJ_MAX);
+  save();
+}
+/* Same rule as the Coach tab: the API needs messages[0] to be a user turn, so trim forward
+   rather than slicing blindly. */
+function jjWindow(n){
+  let w = (state.jjThread||[]).slice(-(n||12))
+    .map(t => ({ role: t.who === "you" ? "user" : "assistant", content: t.text }))
+    .filter(m => m.content && m.content !== "_thinking…_");
+  while(w.length && w[0].role !== "user") w = w.slice(1);
+  /* Collapse any same-role neighbours the trim leaves behind — the API rejects them. */
+  const out = [];
+  for(const m of w){
+    if(out.length && out[out.length-1].role === m.role) out[out.length-1].content += "\n\n" + m.content;
+    else out.push(m);
+  }
+  return out;
+}
+/* Kick the conversation off from what they wrote on the page. */
+function jefferyJournalReply(){
   const note = ($("#logNote") && $("#logNote").value.trim()) || "";
   if(!note){ toast("Write a line first — then I'll have something to reply to."); return; }
-  state.jjThread = [{ who:"you", text: note }];
-  /* Checked BEFORE anything cheerful is chosen: a warm reflection aimed at someone who has
-     just written something bleak is worse than saying nothing. */
-  if(DISTRESS_RE.test(note)){
-    state.jjThread.push({ who:"jeffery", text: DISTRESS_REPLY });
-    save(); renderJJThread(); return;
-  }
-  if(!coachOnline()){
-    state.jjThread.push({ who:"jeffery", text: jefferyReflectOffline(note) });
-    save(); renderJJThread(); return;
-  }
-  state.jjThread.push({ who:"jeffery", text: "_thinking…_" });
+  return jjSend(note, true);
+}
+/* One path for every turn, so a follow-up gets the same care as the first message. */
+async function jjSend(text, isEntry){
+  const msg = String(text||"").trim();
+  if(!msg) return;
+  jjPush("you", msg);
   renderJJThread();
+  /* Checked on EVERY turn, before anything cheerful is chosen and before any API call — a
+     warm reflection aimed at someone who just wrote something bleak is worse than silence,
+     and distress can surface on turn 5 as easily as turn 1. */
+  if(DISTRESS_RE.test(msg)){ jjPush("jeffery", DISTRESS_REPLY); renderJJThread(); return; }
+  if(!coachOnline()){
+    jjPush("jeffery", isEntry ? jefferyReflectOffline(msg) : jefferyChatOffline(msg));
+    renderJJThread(); return;
+  }
+  jjPush("jeffery", "_thinking…_");
+  renderJJThread();
+  const iThinking = state.jjThread.length - 1;
   try{
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method:"POST",
       headers:{ "content-type":"application/json", "x-api-key":state.apiKey.trim(),
         "anthropic-version":"2023-06-01", "anthropic-dangerous-direct-browser-access":"true" },
       body: JSON.stringify({ model: state.apiModel || "claude-opus-4-8", max_tokens: 700,
-        system: jefferyJournalSystem(),
-        messages: [{ role:"user", content: `Today's journal entry:\n\n"${note}"` }] })
+        system: jefferyJournalSystem(), messages: jjWindow(12) })
     });
     if(!res.ok){ let m = "HTTP "+res.status; try{ const j = await res.json(); if(j.error&&j.error.message) m = j.error.message; }catch(e){} throw new Error(m); }
     const data = await res.json();
-    const text = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n").trim();
-    state.jjThread[1] = { who:"jeffery", text: text || jefferyReflectOffline(note) };
+    const out = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n").trim();
+    state.jjThread[iThinking] = { who:"jeffery", text: out || jefferyReflectOffline(msg) };
   }catch(err){
-    state.jjThread[1] = { who:"jeffery", text: jefferyReflectOffline(note) };
+    state.jjThread[iThinking] = { who:"jeffery", text: (isEntry ? jefferyReflectOffline(msg) : jefferyChatOffline(msg)) };
   }
   save(); renderJJThread();
 }
@@ -7088,6 +7217,11 @@ function renderProgress(){
   /* "Day streak: 0" lands hardest on the person having the worst week, which is exactly
      backwards in rehab — flares are part of it. Same information, without the punishment. */
   const rec = loggedRecently(14);
+  /* Months of entries are useless if you can't find anything in them. */
+  const jq = ($("#journalSearch") && $("#journalSearch").value.trim()) || "";
+  const shown = jq ? journalSearch(jq, 200) : log.slice().reverse();
+  const cnt = $("#journalSearchCount");
+  if(cnt) cnt.textContent = jq ? `${shown.length} of ${log.length} entries` : "";
   body.innerHTML = `
     ${adherenceHTML()}
     <div class="progstats">
@@ -7098,9 +7232,9 @@ function renderProgress(){
     </div>
     <div class="progtrend"><span class="trendtag ${trendCls}">${trendTxt}</span>
       ${streak>1?`<span class="streaksoft">${streak} in a row 🔥</span>`:""}</div>
-    <div class="chartwrap">${painChartSVG(log)}</div>
+    ${jq ? `<div class="jsearchnote">${shown.length ? `Everything you've written mentioning “${esc(jq)}”, best match first.` : `Nothing you've written mentions “${esc(jq)}”.`}</div>` : `<div class="chartwrap">${painChartSVG(log)}</div>`}
     <div class="jlist">${
-      log.slice().reverse().map(e=>{ const m=moodOf(e.mood); return `<div class="jcard">
+      shown.map(e=>{ const m=moodOf(e.mood); return `<div class="jcard">
         <div class="jtop"><span class="jdate2">${esc(fmtDate(e.date))}</span>
           ${m?`<span class="jmood">${m.icon} ${esc(m.label)}</span>`:""}
           <span class="jtag">${e.pain}/10</span>
@@ -8544,6 +8678,13 @@ function buildCoachSystem(){
   const _notes = (state.log||[]).filter(e=>e.note).slice(-6).reverse()
     .map(e=>{ const m = moodOf(e.mood); return `${fmtDate(e.date)}${m?` (${m.label.toLowerCase()} day)`:""}: "${String(e.note).slice(0,160)}"`; });
   const journalLine = _notes.length ? _notes.join(" | ") : "none written";
+  /* A deeper slice for RECALL. The 6 above are recent context; these are the back
+     catalogue, oldest first, so he can quote a specific Tuesday in March at someone
+     convinced they have made no progress. Trimmed hard so it can't crowd out the prompt. */
+  const _all = (state.log||[]).filter(e=>e.note);
+  const _older = _all.slice(0, Math.max(0, _all.length - 6)).slice(-18)
+    .map(e=>{ const m = moodOf(e.mood); return `${e.date}${m?` [${m.k}]`:""} pain ${e.pain}/10: "${String(e.note).slice(0,110)}"`; });
+  const archiveLine = _older.length ? _older.join(" | ") : "nothing older yet";
   const setupLine = [ state.equipment && `equipment: ${lbl(state.equipment)}`, state.timePerDay && lbl(state.timePerDay),
     state.workDemand && `work: ${lbl(state.workDemand)}`, state.moveConfidence && lbl(state.moveConfidence),
     state.priorEpisodes && lbl(state.priorEpisodes), state.homeMode && "Home mode is ON (household objects)" ]
@@ -8563,6 +8704,7 @@ USER CONTEXT
 - Setup & capacity: ${setupLine}
 - What they are LOGGING (trust this over the intake pain figure): ${logLine}
 - THEIR OWN WORDS from the journal, newest first (quote these back when relevant — this is what they actually told you): ${journalLine}
+- EARLIER JOURNAL ENTRIES, oldest first — their back catalogue: ${archiveLine}
 - Vitals entered: ${enteredVitals}
 - Heart-rate & exertion: ${hrLine}
 - Cardiac device: ${deviceLineHR}
