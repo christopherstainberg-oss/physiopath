@@ -296,7 +296,7 @@ const state = {
   medIds:[], medFilter:false, homeMode:false, customPrecautions:[], clinicianProtocols:[], clinPrecautionProtocol:"", clinicianGuided:false,
   medDoses:{}, weightBearing:{status:"",pct:"",lbs:"",side:"",limb:"le"}, devices:[],
   cardiacDevice:{type:"",icdRate:""}, specialPrecautions:[], planVariant:{}, progress:{},
-  log:[], logMood:"", chatHistory:[], apiKey:"", apiModel:"claude-opus-4-8"
+  log:[], logMood:"", jjThread:[], chatHistory:[], apiKey:"", apiModel:"claude-opus-4-8"
 };
 const MED_FILTERABLE = ["fluoroquinolone","anticoagulant","antiplatelet","opioid","sedative","muscle_relaxant","gabapentinoid","antipsychotic"];
 /* ---------- on-demand data loading ----------
@@ -5463,16 +5463,17 @@ function goStep(n){
   if(n===3) ensureDetailsData();      // sports/activities only matter from Details on
   if(n===3) renderPrecautions();                              // Precautions card lives in Details — keep it current
   if(n===4 && state.program){ renderProgram(state.program); renderDriftNote(); }   // Program reflects precaution/detail/clinician + log changes
-  if(n===5){
+  if(n===5){                                                 // Journal — the daily return visit
     /* initProgress() ran at BOOT, before they had a condition or ADLs, so the journal prompt
        was computed against an empty state and stuck on the generic line. Refresh on entry —
        this also rolls the date over if the app was left open past midnight. */
     const _d = $("#logDate");
     if(_d){ _d.max = todayISO(); if(!_d.value || _d.value > todayISO()) _d.value = todayISO(); loadLogDay(_d.value); }
-    renderProgress(); renderHealth(); renderDataWarn();
+    renderProgress(); renderJournalJeffery();
   }
-  if(n===6) initCoach();
-  if(n===7) initLibrary();
+  if(n===6){ renderHealth(); renderDataWarn(); }              // Health & vitals
+  if(n===7) initCoach();
+  if(n===8) initLibrary();
 }
 
 /* ---------- cardiac device detail (shown when Pacemaker/ICD is ticked) ---------- */
@@ -6402,6 +6403,201 @@ function loadLogDay(d){
   const lt = $("#logToday");
   if(lt) lt.textContent = e ? "You already have an entry for this day" : "";
   syncMood(); renderJournalToday();
+  if(typeof renderJournalJeffery==="function") renderJournalJeffery();
+}
+/* =====================================================================
+   JEFFERY IN THE JOURNAL
+   The Coach tab answers questions. This is the other half: someone who opens
+   the conversation, remembers, and asks. The voice is a friend of five years
+   rather than a clinician — warm, specific, unhurried, never chirpy at someone
+   having a bad week.
+
+   ⚠ A warm journal that asks "how are you doing?" WILL surface low mood.
+   Depression is common in long rehab, and "positive vibes" aimed at someone
+   who has just written something bleak is worse than saying nothing. So
+   distress is checked BEFORE any cheerful reflection is chosen, and it is
+   answered with warmth and a real signpost — not a slogan, and not a
+   diagnosis. This app is educational; it is not a therapist and must not
+   perform one.
+   ===================================================================== */
+const DISTRESS_RE = /\b(kill myself|killing myself|end (?:it|my life)|want to die|better off dead|no point (?:going on|in living|anymore)|can'?t go on|give up on life|self[- ]harm|hurt myself|suicid\w*|hopeless|worthless|nothing matters anymore)\b/i;
+const DISTRESS_REPLY =
+  "Thank you for writing that down — that took something, and I'd rather you said it than sat with it alone.\n\n" +
+  "I'm an app, and I'm genuinely not the right kind of help for how you're feeling right now. A person is. " +
+  "Please talk to your GP, or reach a crisis line — in the UK, Samaritans on **116 123**, any time, free. " +
+  "In the US, call or text **988**. Elsewhere, **findahelpline.com** lists one for your country.\n\n" +
+  "If you're in danger right now, please call your emergency number.\n\n" +
+  "Your journal is still here whenever you want it. So is the rest of this — but that part first, please.";
+
+/* Time of day makes a greeting sound like a person rather than a template. */
+function partOfDay(){
+  const h = new Date().getHours();
+  return h < 12 ? "morning" : (h < 18 ? "afternoon" : "evening");
+}
+/* Openers reference something REAL — how long they've been at this, what they wrote last,
+   whether they've been away. A friend of five years would notice. */
+function jefferyOpener(){
+  const log = state.log || [];
+  const conds = selectedConditions();
+  const cond = conds.length ? conds[0].name.replace(/\s*\(.*$/, "").toLowerCase() : "";
+  const last = log.length ? log[log.length-1] : null;
+  const gap = last ? Math.round((Date.now() - new Date(last.date+"T12:00:00").getTime())/864e5) : null;
+  const rec = loggedRecently(14);
+  const it = state.program && state.program.items && state.program.items[0];
+  const ph = it && (it.phases||[]).find(x=>x.current);
+
+  if(!log.length)
+    return `Good ${partOfDay()}. I'm Jeffery — I'll be here every day you fancy writing something.\n\nNo pressure to be profound: a line is plenty${cond?`, even if it's just how the ${esc(cond)} behaved today`:""}. Whatever you put here, I'll remember it.`;
+  if(gap !== null && gap >= 7)
+    return `Good ${partOfDay()} — it's been ${gap} days. No lecture; life does that.\n\nYou're not behind, and you haven't undone anything. Want to tell me where things are now?`;
+  if(gap !== null && gap >= 3)
+    return `Good ${partOfDay()}. Been a few days — glad you're back.\n\nPick up wherever you are; you don't have to fill in the gap.`;
+  const rough = log.slice(-3).filter(e=>e.mood==="rough"||e.mood==="sore").length;
+  if(rough >= 2)
+    return `Good ${partOfDay()}. The last few days have been sore ones, from what you've written.\n\nThat's worth saying out loud: rough patches are part of this, not evidence you've done something wrong. How's today sitting?`;
+  if(rec.hit >= 10)
+    return `Good ${partOfDay()}. ${rec.hit} of the last ${rec.of} days written up — that's real consistency, and it's the unglamorous bit that actually works.\n\nHow's today?`;
+  if(ph && ph.title)
+    return `Good ${partOfDay()}. You're into <b>${esc(ph.title)}</b> now${cond?` with the ${esc(cond)}`:""} — a long way from where this started.\n\nHow's today been?`;
+  return `Good ${partOfDay()}. Good to see you.\n\nHow's today been?`;
+}
+/* Deliberately not all about the injury. Rehab is months long and lives inside a life —
+   sleep, work, mood and whether anyone's asked how you are all move the outcome, and a
+   friend would ask about them. */
+const JOURNAL_QS = {
+  rehab: [
+    "What did your body let you do today that it wouldn't have a month ago?",
+    "Anything that felt easier than you expected?",
+    "Was there a moment today you thought “oh, that used to hurt”?",
+    "What are you still avoiding — and is that caution or habit at this point?",
+    "If your physio asked “how's it going?” right now, what would you actually say?",
+    "Which exercise are you quietly dreading? No judgement, I'm just curious.",
+    "What would “a good week” look like from here?"
+  ],
+  life: [
+    "Outside all this — how are you, actually?",
+    "How did you sleep? It matters more to healing than most people are told.",
+    "Has anyone asked how you're doing lately? Properly asked, I mean.",
+    "What's the most annoying thing this injury is keeping you from? Say it, it helps.",
+    "What did you enjoy today, even briefly?",
+    "Is there something you've stopped doing that you could start again, even a bit?",
+    "How's your patience with all this holding up? Honest answer.",
+    "What are you looking forward to?"
+  ]
+};
+/* Alternate rehab / life by day so it doesn't become an interrogation about one knee. */
+function jefferyQuestion(dateISO){
+  const d = dateISO || todayISO();
+  const h = Math.abs(hashStr(d));
+  const pool = (h % 3 === 0) ? JOURNAL_QS.life : JOURNAL_QS.rehab;   // ~1 day in 3 is a life question
+  return pool[h % pool.length];
+}
+/* Offline reflection: warm, and grounded in what they actually wrote/logged rather than
+   a fortune cookie. */
+function jefferyReflectOffline(note){
+  const t = String(note||"").toLowerCase();
+  const rp = recentPain();
+  const bits = [];
+  if(/worse|flare|swollen|swelling|sore|hurt|pain/.test(t))
+    bits.push("Sore days are data, not failure — the plan expects them, and one bad day doesn't undo a month of work.");
+  else if(/better|easier|good|great|progress|closer|managed/.test(t))
+    bits.push("That's worth noticing properly. Progress in rehab is mostly made of days like this one, and they're easy to forget by next week.");
+  if(/tired|exhausted|knackered|fatigue|drained/.test(t))
+    bits.push("Tiredness is doing more of the work than people realise — healing is metabolically expensive. Rest counts as part of the programme, not a break from it.");
+  if(/frustrat|fed up|sick of|annoy|angry|slow/.test(t))
+    bits.push("Frustration is fair. This is slow in a way nobody warns you about, and being fed up with it doesn't mean you're doing it wrong.");
+  if(/stairs|walking|work|sleep|driving|shopping/.test(t))
+    bits.push("The everyday stuff is the real measure — better than any number on a chart.");
+  if(rp && rp.mean >= 6) bits.push(`You've been averaging ${rp.mean}/10 lately, and your plan has already eased off to match. You don't need to push through this.`);
+  if(!bits.length) bits.push("Noted — and kept. I'll have this in mind next time you're here.");
+  bits.push("I'm offline right now, so this is the short version. Add a Claude API key on the Jeffery step and I can actually talk properly.");
+  return bits.slice(0, 3).join("\n\n");
+}
+/* Online: same person, different register from the Coach tab. */
+function jefferyJournalSystem(){
+  return buildCoachSystem() +
+`
+
+YOU ARE WRITING BACK IN THE USER'S PRIVATE JOURNAL, NOT ANSWERING A SUPPORT TICKET.
+Voice: a close friend of about five years who happens to know rehab. Warm, specific,
+unhurried, dry humour welcome. You have read everything above — their plan, their phase,
+their logged pain, their own words — so talk like someone who remembers, not someone
+reading a chart for the first time.
+
+- Reply to what they actually wrote. Quote a phrase of theirs back if it helps.
+- 2-4 short paragraphs. No headings, no bullet lists, no sign-off.
+- Ask ONE question at the end, and make it one only they would be asked.
+- Never open with "I'm sorry to hear that" or "It sounds like". Never say "as an AI".
+- Do not cheerlead. If they had a bad day, say so plainly and sit with it for a sentence
+  before offering anything. Toxic positivity is worse than silence here.
+- Do not turn every entry into rehab advice. If they wrote about their week, their sleep
+  or their mood, answer THAT. The knee can wait a day.
+- Praise effort and consistency, never the numbers.
+- You are not a therapist. If they sound genuinely low, be kind, be human, and gently
+  suggest a real person — do not counsel them.`;
+}
+
+function renderJournalJeffery(){
+  const host = $("#journalJeffery"); if(!host) return;
+  const q = jefferyQuestion(($("#logDate")&&$("#logDate").value) || todayISO());
+  host.innerHTML = `
+    <div class="jjhead"><span class="jjav" aria-hidden="true">🧑‍⚕️</span>
+      <div><div class="jjname">Jeffery</div><div class="jjrole">your rehab specialist${coachOnline()?"":" · offline mode"}</div></div></div>
+    <div class="jjsay">${mdLite(jefferyOpener())}</div>
+    <div class="jjq">${esc(q)}</div>
+    <div class="jjthread" id="jjThread"></div>
+    <div class="jjrow no-print">
+      <button class="btn ghost small" id="jjUse">Answer this in my journal ↓</button>
+      <button class="btn ghost small" id="jjTalk">Say it to Jeffery</button>
+    </div>`;
+  $("#jjUse").onclick = () => {
+    const n = $("#logNote");
+    if(!n) return;
+    n.value = (n.value ? n.value.replace(/\s*$/,"") + "\n\n" : "") + q + "\n";
+    n.focus(); n.setSelectionRange(n.value.length, n.value.length);
+  };
+  $("#jjTalk").onclick = () => jefferyJournalReply();
+  renderJJThread();
+}
+function renderJJThread(){
+  const el = $("#jjThread"); if(!el) return;
+  el.innerHTML = (state.jjThread||[]).map(t =>
+    `<div class="jjmsg ${t.who==="you"?"jjyou":"jjbot"}">${mdLite(t.text)}</div>`).join("");
+}
+/* The journal's note IS the message — they've already written it; don't make them type twice. */
+async function jefferyJournalReply(){
+  const note = ($("#logNote") && $("#logNote").value.trim()) || "";
+  if(!note){ toast("Write a line first — then I'll have something to reply to."); return; }
+  state.jjThread = [{ who:"you", text: note }];
+  /* Checked BEFORE anything cheerful is chosen: a warm reflection aimed at someone who has
+     just written something bleak is worse than saying nothing. */
+  if(DISTRESS_RE.test(note)){
+    state.jjThread.push({ who:"jeffery", text: DISTRESS_REPLY });
+    save(); renderJJThread(); return;
+  }
+  if(!coachOnline()){
+    state.jjThread.push({ who:"jeffery", text: jefferyReflectOffline(note) });
+    save(); renderJJThread(); return;
+  }
+  state.jjThread.push({ who:"jeffery", text: "_thinking…_" });
+  renderJJThread();
+  try{
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method:"POST",
+      headers:{ "content-type":"application/json", "x-api-key":state.apiKey.trim(),
+        "anthropic-version":"2023-06-01", "anthropic-dangerous-direct-browser-access":"true" },
+      body: JSON.stringify({ model: state.apiModel || "claude-opus-4-8", max_tokens: 700,
+        system: jefferyJournalSystem(),
+        messages: [{ role:"user", content: `Today's journal entry:\n\n"${note}"` }] })
+    });
+    if(!res.ok){ let m = "HTTP "+res.status; try{ const j = await res.json(); if(j.error&&j.error.message) m = j.error.message; }catch(e){} throw new Error(m); }
+    const data = await res.json();
+    const text = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n").trim();
+    state.jjThread[1] = { who:"jeffery", text: text || jefferyReflectOffline(note) };
+  }catch(err){
+    state.jjThread[1] = { who:"jeffery", text: jefferyReflectOffline(note) };
+  }
+  save(); renderJJThread();
 }
 /* =====================================================================
    THE JOURNAL
@@ -8219,11 +8415,11 @@ document.addEventListener("DOMContentLoaded",()=>{
   // Details(3)/Program(4)/Health(5) need a condition; Injury(2) is where you pick it; Clinician(1) is a setup form (no condition needed).
   $$("[data-goto]").forEach(b=>b.onclick=()=>{
     const n=+b.dataset.goto;
-    if([3,4,5].includes(n) && !state.condIds.length){ toast("Pick at least one condition first."); goStep(2); return; }
+    if([3,4,5,6].includes(n) && !state.condIds.length){ toast("Pick at least one condition first."); goStep(2); return; }
     goStep(n);
   });
   $$(".step").forEach(s=>s.onclick=()=>{ const n=+s.dataset.step;
-    if([3,4,5].includes(n) && !state.condIds.length){ toast("Pick a condition first."); goStep(2); return; }
+    if([3,4,5,6].includes(n) && !state.condIds.length){ toast("Pick a condition first."); goStep(2); return; }
     goStep(n); });
   // History → next: always continue to the Clinician step (1) → Injury → Details. The checkbox only
   // controls whether the Clinician step auto-populates a starter protocol; it never bypasses it.
@@ -8245,7 +8441,9 @@ document.addEventListener("DOMContentLoaded",()=>{
   });
   if(state.program) renderProgram(state.program);
   // PWA app-shortcut routing (?go=coach|library|build|progress)
-  const goMap={ build:2, details:3, clinician:1, program:4, progress:5, coach:6, library:7 };
+  /* ?go= shortcuts. "progress" kept as an alias so any installed PWA shortcut or saved link
+     still lands somewhere sensible after the Journal took index 5. */
+  const goMap={ build:2, details:3, clinician:1, program:4, journal:5, progress:6, health:6, coach:7, library:8 };
   const go=new URLSearchParams(location.search).get("go");
   goStep(go && goMap[go]!=null ? goMap[go] : (state.step||0));
 });

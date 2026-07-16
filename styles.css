@@ -242,6 +242,21 @@ input[type=range]{flex:1;accent-color:var(--brand);height:30px}
 body.isoffline .vidlink{opacity:.45;pointer-events:none}
 body.isoffline .vidoff{display:inline}
 body.isoffline .vidnote{display:none}
+/* ---------- Jeffery, in the journal ---------- */
+.jjhead{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.jjav{font-size:26px;line-height:1;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;background:var(--chip);border:1px solid var(--line);flex:0 0 auto}
+.jjname{font-weight:800;font-size:15px}
+.jjrole{font-size:11.5px;color:var(--muted)}
+.jjsay{font-size:14px;line-height:1.6;white-space:pre-wrap}
+.jjq{margin-top:12px;padding:11px 13px;border-radius:12px;font-size:14px;line-height:1.5;font-weight:600;
+  background:var(--chip);border-left:3px solid var(--brand-2)}
+.jjrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.jjthread{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.jjmsg{font-size:13.5px;line-height:1.6;padding:10px 12px;border-radius:12px;white-space:pre-wrap;overflow-wrap:break-word}
+.jjyou{align-self:flex-end;max-width:88%;background:var(--brand);color:#04121f;border-bottom-right-radius:4px}
+.jjbot{align-self:flex-start;max-width:92%;background:var(--panel-2);border:1px solid var(--line);border-bottom-left-radius:4px}
+@media print{ .jjrow,.jjq{display:none!important} }
 /* ---------- the journal ---------- */
 .moodrow{display:flex;flex-wrap:wrap;gap:8px}
 .moodbtn{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;
