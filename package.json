@@ -12,7 +12,7 @@
     "build": "node scripts/build.mjs",
     "serve": "node scripts/serve.mjs",
     "dev": "node scripts/serve.mjs",
-    "test": "node test/safety.test.mjs",
+    "test": "node test/index.mjs",
     "test:smoke": "node test/smoke.mjs"
   },
   "license": "MIT"

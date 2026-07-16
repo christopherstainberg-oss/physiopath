@@ -9,41 +9,9 @@
    OWN rule definitions (PROTO_AGE_RULES, SPECIAL_PRECAUTIONS, the tag vocab)
    so the tests move in lockstep with the engine.
 ===================================================================== */
-import { loadEngine, planFor, allExercises, phaseSizes } from "./harness.mjs";
+import { planFor, allExercises, phaseSizes } from "./harness.mjs";
 import { suite, test, assert, assertEvery, report } from "./runner.mjs";
-
-const E = loadEngine();
-
-/* ---- pick representative conditions out of the live catalogue ---- */
-const pick = re => {
-  const c = E.window.CONDITIONS.find(c => re.test(c.name) || re.test(c.region || ""));
-  if (!c) throw new Error("no condition matches " + re);
-  return c;
-};
-const COND = {
-  acl:        pick(/acl reconstruction/i),
-  tkr:        pick(/knee replacement|knee arthroplasty/i),
-  thr:        pick(/hip replacement|hip arthroplasty/i),
-  cuff:       pick(/rotator cuff (repair|tear)/i),
-  ankle:      pick(/ankle sprain/i),
-  lbp:        pick(/low back pain|lumbar/i),
-  stroke:     pick(/stroke/i),
-  cardiac:    pick(/cardiac rehab|coronary|CABG|heart failure/i),
-  copd:       pick(/COPD|pulmonary/i),
-  osteo:      pick(/osteoporos/i),
-  cp:         pick(/cerebral palsy/i),
-  severs:     pick(/sever|calcaneal apophysitis/i),
-  frozen:     pick(/frozen shoulder|adhesive capsulitis/i),
-};
-const idsOf = (...keys) => keys.map(k => COND[k].id);
-
-const AGES_CHILD = [1, 3, 5, 8, 12];
-const AGES_TEEN = [13, 14, 15];
-const AGES_ADULT = [25, 40, 70];
-
-/* two live regexes straight out of the engine's own age table */
-const MAXIMAL_RE = E.PROTO_AGE_RULES[0][0];    // olympic|clean|snatch|1rm|max effort|nordic|bound|…
-const EQUIP_RE   = E.PROTO_AGE_RULES[1][0];    // barbell|kettlebell|machine|…|leg press|bench press
+import { E, COND, AGES_CHILD, AGES_TEEN, AGES_ADULT, MAXIMAL_RE, EQUIP_RE } from "./shared.mjs";
 
 /* ===================================================================
    1. No empty phases — a phase with zero exercises is an abandoned plan.
@@ -243,4 +211,7 @@ suite("negative controls (invariants must reject known-bad plans)");
   });
 }
 
-report();
+/* Report only when run directly (`node test/safety.test.mjs`); the aggregator
+   test/index.mjs imports every suite and calls report() once at the end. */
+import { pathToFileURL } from "node:url";
+if (import.meta.url === pathToFileURL(process.argv[1]).href) report();
