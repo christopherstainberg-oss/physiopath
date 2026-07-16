@@ -4372,7 +4372,13 @@ function exItemHTML(e, regionArr, ctx, medHidden){
 const openPhases = new Set();                       // remembers which phases are expanded across re-renders
 function togglePhase(head, key){
   const ph = head.parentElement; ph.classList.toggle("open");
-  if(ph.classList.contains("open")) openPhases.add(key); else openPhases.delete(key);
+  const open = ph.classList.contains("open");
+  if(open) openPhases.add(key); else openPhases.delete(key);
+  head.setAttribute("aria-expanded", open ? "true" : "false");
+}
+/* Keyboard parity for the role=button phase headers: Enter/Space toggle, like a click. */
+function phaseHeadKey(ev, head, key){
+  if(ev.key === "Enter" || ev.key === " " || ev.key === "Spacebar"){ ev.preventDefault(); togglePhase(head, key); }
 }
 /* Collapsible card (auto-collapsed by default). `openCards` remembers, within
    the session, which ones the user expanded so re-renders don't re-close them. */
@@ -5059,11 +5065,11 @@ function clinicianProtocolCards(){
       const open = (pi===0 || openPhases.has(key)) ? "open" : "";
       const rows = ph.ex.map(e=>exItemHTML({ n:e.n, d:e.d, c:e.c })).join("");
       return `<div class="phase ${open}">
-        <div class="head" onclick="togglePhase(this,'${key}')">
+        <div class="head" role="button" tabindex="0" aria-expanded="${open?"true":"false"}" onclick="togglePhase(this,'${key}')" onkeydown="phaseHeadKey(event,this,'${key}')">
           <div class="pnum">${pi+1}</div>
           <div><div class="ptitle">${esc(ph.title)}${ph.weeks?` <span class="pweeks">· ${esc(ph.weeks)}</span>`:""}</div>
           ${ph.goal?`<div class="goal">${esc(ph.goal)}</div>`:""}</div>
-          <div class="caret">▾</div>
+          <div class="caret" aria-hidden="true">▾</div>
         </div>
         <div class="body"><ul class="exlist">${rows}</ul></div></div>`;
     }).join("");
@@ -5617,11 +5623,11 @@ function renderProgram(prog){
         return exItemHTML(disp, [item.region], {ci, pi:i, ei}, hiddenNames && hiddenNames.has(e.n));
       }).join("");
       html += `<div class="phase ${open}${ph.current?" nowphase":""}">
-        <div class="head" onclick="togglePhase(this,'${key}')">
+        <div class="head" role="button" tabindex="0" aria-expanded="${open?"true":"false"}" onclick="togglePhase(this,'${key}')" onkeydown="phaseHeadKey(event,this,'${key}')">
           <div class="pnum">${i+1}</div>
           <div><div class="ptitle">${ph.current?`<span class="nowpill">📍 you are here</span> `:""}${esc(ph.title)} <span class="pweeks">· Weeks ${ph.weekStart}–${ph.weekEnd}</span></div>
           <div class="goal">${esc(ph.goal)}</div></div>
-          <div class="caret">▾</div>
+          <div class="caret" aria-hidden="true">▾</div>
         </div>
         <div class="body">
           ${ph.restrict?`<div class="planrestrict"><b>⚠ At this stage:</b> ${esc(ph.restrict)}</div>`:""}
@@ -6194,11 +6200,22 @@ function startNewChat(ask){
 ===================================================================== */
 function goStep(n){
   state.step=n; save();
-  $$(".panel").forEach((p,i)=>p.classList.toggle("hide", i!==n));
-  $$(".step").forEach((s,i)=>{ s.classList.toggle("active", i===n); s.classList.toggle("done", i<n); });
+  // Honour reduced-motion for the JS scrolls (the CSS killswitch can't reach a JS `behavior`).
+  const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const behavior = reduce ? "auto" : "smooth";
+  const panels=$$(".panel");
+  panels.forEach((p,i)=>p.classList.toggle("hide", i!==n));
+  $$(".step").forEach((s,i)=>{ const on=i===n; s.classList.toggle("active", on); s.classList.toggle("done", i<n);
+    if(on) s.setAttribute("aria-current","step"); else s.removeAttribute("aria-current"); });
   const act=document.querySelector(".step.active");        // keep the active step visible in the scrollable nav
-  if(act&&act.scrollIntoView) try{ act.scrollIntoView({inline:"center",block:"nearest",behavior:"smooth"}); }catch(e){}
-  window.scrollTo({top:0,behavior:"smooth"});
+  if(act&&act.scrollIntoView) try{ act.scrollIntoView({inline:"center",block:"nearest",behavior}); }catch(e){}
+  window.scrollTo({top:0,behavior});
+  // Move focus into the newly shown panel: the Next/Back button that triggered this is now
+  // display:none, so focus would otherwise fall to <body> — losing keyboard users' place and
+  // giving screen-reader users no signal the view changed. Focus the panel heading instead.
+  const panel=panels[n];
+  if(panel){ const h=panel.querySelector("h2,h3,[data-panel-focus]")||panel;
+    try{ h.setAttribute("tabindex","-1"); h.focus({preventScroll:true}); }catch(e){} }
   if(n===0) syncOptSecs();                                   // reflect anything already answered
   if(n===1) initClinician();                                  // Clinician section (now right after History)
   if(n===2) ensureConditions();       // the catalogue is only needed once they go looking

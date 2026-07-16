@@ -19,18 +19,18 @@
 </head>
 <body>
 <header class="app">
-  <div class="logo">✚</div>
+  <div class="logo" aria-hidden="true">✚</div>
   <div class="brand">
-    <div class="brandname">PhysioPath</div>
+    <div class="brandname" role="heading" aria-level="1">PhysioPath</div>
     <div class="brandsub">Personalized Injury Recovery</div>
   </div>
   <div class="grow"></div>
-  <button class="icon-btn no-print" id="printBtn" title="Print / Save PDF">🖨</button>
-  <button class="icon-btn no-print" id="resetBtn" title="Start over">↺</button>
+  <button class="icon-btn no-print" id="printBtn" title="Print / Save PDF" aria-label="Print or save as PDF">🖨</button>
+  <button class="icon-btn no-print" id="resetBtn" title="Start over" aria-label="Start over">↺</button>
 </header>
 
 <!-- step progress -->
-<nav class="steps no-print" id="steps">
+<nav class="steps no-print" id="steps" aria-label="Setup progress">
   <button class="step" data-step="0"><i>1</i><span>History</span></button>
   <button class="step" data-step="1"><i>2</i><span>Clinician</span></button>
   <button class="step" data-step="2"><i>3</i><span>Injury</span></button>
@@ -140,7 +140,7 @@
           <span>A recent <b>significant injury</b> (major fall, collision, or accident).</span></label>
         <label class="check-row urgent"><input type="checkbox" data-screen="cauda" />
           <span><b>Loss of bladder or bowel control</b>, or <b>numbness around the groin/saddle</b>.</span></label>
-        <div class="screenwarn" id="screenWarn"></div>
+        <div class="screenwarn" id="screenWarn" role="alert" aria-live="assertive"></div>
       </div>
 
       <!-- Everything above is the safety core: it decides what is unsafe to prescribe, so it
@@ -219,7 +219,7 @@
         <summary><span class="optsum">Daily activities you find hard</span><span class="optbuy">→ adds practice for those exact tasks</span></summary>
       <div class="field">
         <span class="lab">Daily activities you find hard <span class="sub">(optional — occupational-therapy check: search a task, then rate how hard it is right now)</span></span>
-        <input type="text" id="adlSearch" placeholder="Search e.g. ‘bathing’, ‘dressing’, ‘stairs’, ‘cooking’, ‘buttons’, ‘jars’…" autocomplete="off" />
+        <input type="text" id="adlSearch" aria-label="Search daily activities you find hard" placeholder="Search e.g. ‘bathing’, ‘dressing’, ‘stairs’, ‘cooking’, ‘buttons’, ‘jars’…" autocomplete="off" />
         <div class="results acresults hide" id="adlResults"></div>
         <div class="adllist" id="adlList"></div>
       </div>
@@ -230,7 +230,7 @@
         <summary><span class="optsum">Medications</span><span class="optbuy">→ flags exercise interactions</span></summary>
       <div class="field">
         <span class="lab">Medications <span class="sub">(optional — search 10,000+; flags exercise considerations)</span></span>
-        <input type="text" id="medSearch" placeholder="Search e.g. ‘metoprolol’, ‘Eliquis’, ‘prednisone’, ‘gabapentin’…" autocomplete="off" />
+        <input type="text" id="medSearch" aria-label="Search medications" placeholder="Search e.g. ‘metoprolol’, ‘Eliquis’, ‘prednisone’, ‘gabapentin’…" autocomplete="off" />
         <div class="selected" id="selectedMeds"></div>
         <div class="results medresults hide" id="medResults"></div>
       </div>
@@ -272,7 +272,7 @@
         <span class="tag cardiac">cardiac</span> <span class="tag pulm">pulmonary</span> <span class="tag ped">paediatric&nbsp;0–18</span>. Pick one or more.</p>
 
       <div class="searchbar">
-        <input type="text" id="condSearch" placeholder="Search e.g. ‘rotator cuff’, ‘ACL’, ‘COPD’, ‘stroke’, ‘low back’…" autocomplete="off" />
+        <input type="text" id="condSearch" aria-label="Search injuries and conditions" placeholder="Search e.g. ‘rotator cuff’, ‘ACL’, ‘COPD’, ‘stroke’, ‘low back’…" autocomplete="off" />
         <div class="filters" id="domainFilters">
           <button class="fchip on" data-d="all">📋 All</button>
           <button class="fchip" data-d="msk">🦴 MSK</button>
@@ -476,7 +476,7 @@
       <h2>Looking back</h2>
       <!-- Static, not re-rendered: typing here must not destroy the input under the cursor. -->
       <div class="jsearchrow no-print">
-        <input type="search" id="journalSearch" placeholder="Search everything you've written — “stairs”, “swelling”, “netball”…" autocomplete="off" />
+        <input type="search" id="journalSearch" aria-label="Search your journal" placeholder="Search everything you've written — “stairs”, “swelling”, “netball”…" autocomplete="off" />
         <span class="jsearchcount" id="journalSearchCount"></span>
       </div>
       <div class="jexport no-print">
@@ -575,7 +575,7 @@
         </div>
         <div class="coachbtns">
           <button class="btn ghost small hide no-print" id="newChatBtn" title="Clear this conversation">New chat</button>
-          <button class="icon-btn no-print" id="coachSettingsBtn" title="AI settings">⚙</button>
+          <button class="icon-btn no-print" id="coachSettingsBtn" title="AI settings" aria-label="AI settings">⚙</button>
         </div>
       </div>
 
@@ -606,7 +606,7 @@
       <div class="chatlog" id="chatlog"></div>
       <div class="suggests" id="suggests"></div>
       <form class="chatform" id="chatform">
-        <input type="text" id="chatInput" placeholder="Type your question…" autocomplete="off" />
+        <input type="text" id="chatInput" aria-label="Ask Jeffery a question" placeholder="Type your question…" autocomplete="off" />
         <button class="btn primary" type="submit">Send</button>
       </form>
     </div>
@@ -621,9 +621,9 @@
       <p class="hint">Browse <b id="exCount">5000</b> exercises and variations (load, tempo, stance,
         surface, equipment). Filter by body area and level. <span id="exSafeNote"></span></p>
       <div class="searchbar">
-        <input type="text" id="exSearch" placeholder="Search e.g. ‘single-leg squat’, ‘band row’, ‘balance’, ‘eccentric’…" autocomplete="off" />
+        <input type="text" id="exSearch" aria-label="Search the exercise library" placeholder="Search e.g. ‘single-leg squat’, ‘band row’, ‘balance’, ‘eccentric’…" autocomplete="off" />
         <div class="filters">
-          <select id="exRegion"><option value="all">All body areas</option></select>
+          <select id="exRegion" aria-label="Filter by body area"><option value="all">All body areas</option></select>
           <select id="exDiff">
             <option value="all">All levels</option>
             <option value="1">Level 1 · gentle / early</option>
