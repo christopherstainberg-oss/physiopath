@@ -67,8 +67,11 @@
       </label>
 
       <div class="grid2">
-        <label class="field"><span class="lab">Age</span>
-          <input type="number" id="q_age" min="1" max="120" placeholder="years" /></label>
+        <!-- min="1" made a baby's age unenterable, which quietly broke the whole paediatric
+             path: age now selects the exercises, and a parent of a 6-month-old had no way to
+             say so. Decimals are the point — 0.5 is six months. -->
+        <label class="field"><span class="lab">Age <span class="sub">(a child's age changes the exercises — 0.5 = 6 months)</span></span>
+          <input type="number" id="q_age" min="0" max="120" step="any" placeholder="years" /></label>
         <label class="field"><span class="lab">Sex <span class="sub">(for pregnancy-related guidance)</span></span>
           <select id="q_sex"><option value="">Prefer not to say</option><option>Female</option><option>Male</option><option>Other</option></select>
           <!-- The pregnancy questions are gated on Female, and "Prefer not to say" is the default,

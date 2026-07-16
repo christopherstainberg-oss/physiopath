@@ -194,19 +194,11 @@ const BASES = [
      "treading water","cross-country ski (pool, no-touch)","aqua jumping jacks",
      "kickboard flutter kick (deep end)","standing hamstring stretch (pool)","standing calf stretch (at the pool wall)","wall push-offs (pool)"]},
 
-  // ---- Pediatric / developmental (0–18 yrs; play-based, low-load, parent/therapist supervised) ----
-  {b:"(infant)", pat:"general", reg:["Full body"], tags:["pediatric"], eq:["bw"], cue:"Parent-led play — gentle, on the floor, and always supervised.",
-   mods:["tummy time","supported sitting","rolling side-to-side","reaching for toys","assisted crawling","pull-to-stand","cruising along furniture","supported standing","assisted stepping","gentle kicking play"]},
-  {b:"(toddler)", pat:"gait", reg:["Gait","Balance","Full body"], tags:["pediatric","balance"], eq:["bw"], cue:"Turn it into a game; supervise closely and keep it fun.",
-   mods:["walking practice","stair climbing with help","stepping over toys","squat-to-stand play","ball-rolling play","gentle two-foot jumping","marching game","backward-walking game","balance-line walk","obstacle crawl"]},
-  {b:"(kids balance game)", pat:"balance", reg:["Balance","Full body"], tags:["pediatric","balance"], eq:["bw"], cue:"Make it playful; stand near help and progress slowly.",
-   mods:["single-leg flamingo stand","tightrope-line walk","hopscotch hops","balance-board play","freeze-dance stops","beanbag balance","stepping-stones","heel-to-toe walk","spin-and-steady","catch on one leg"]},
-  {b:"(kids animal walk)", pat:"general", reg:["Full body","Core"], tags:["pediatric","weight_bearing"], eq:["bw"], cue:"Playful animal walks build strength; keep it light and fun.",
-   mods:["bear crawl","crab walk","frog jumps","bunny hops","wheelbarrow walk with helper","donkey kicks","inchworm","duck walk","superhero plank","assisted monkey hang"]},
-  {b:"(kids jumping game)", pat:"plyo", reg:["Knee","Ankle","Balance"], tags:["pediatric","impact","balance"], eq:["bw"], cue:"Soft, quiet landings; short playful bursts with rest.",
-   mods:["two-foot jumps","jump over a line","star jumps","hopscotch","skipping practice","side-to-side hops","jump-and-freeze","bunny-hop course","leapfrog","cone-weave run"]},
-  {b:"(teen)", pat:"squat", reg:["Knee","Hip","Full body"], tags:["pediatric","weight_bearing"], eq:["bw","band","can","bottle","pack"], cue:"Learn good form first with light or bodyweight load.",
-   mods:["squat","split squat","step-up","glute bridge","wall sit","calf raise","reverse lunge","single-leg balance","incline push-up","plank hold"]},
+  /* ⚠ Paediatric exercises are NOT in BASES — see PED_SETS below. They must not run through
+     difficulty()/DOSE, which are written for adults: `difficulty()` matched /jump/ and rated
+     a toddler's two-foot jumping game 4 (i.e. gated it to the final phase), and DOSE.squat
+     handed a four-year-old "3×8–12". They also need a real age RANGE per movement, which a
+     name suffix like "(teen)" cannot express. */
 ];
 
 /* Ordinary household objects double as improvised equipment — inject them into
@@ -313,6 +305,298 @@ for(const base of BASES){
       out.push({ id:"e"+(out.length+1), name, region:base.reg, pattern:base.pat,
         equipment: elabel || "bodyweight", difficulty:diff, tags, dose, cue });
       idx++;
+    }
+  }
+}
+
+/* =====================================================================
+   PAEDIATRIC / DEVELOPMENTAL LIBRARY (0–18 yr)
+   ---------------------------------------------------------------------
+   Every movement carries a real age RANGE (aMin/aMax, in years) instead of a
+   "(teen)" name suffix, because "under 18" is not a clinical category. The
+   ranges are the actual developmental windows — pull-to-stand is 8–13 months,
+   hopping on one foot is 3½–6 years, skipping is 5+ — so a movement is offered
+   to the children it is genuinely appropriate for and to no one else.
+
+   Bands mirror PED_AGE in generate-surgeries.mjs so a procedure's age band and
+   the exercise library speak the same language.
+
+   Evidence base for the shape of this:
+   - Motor milestones (WHO windows / CDC): rolling ~4–6 mo, sitting ~6 mo,
+     crawling ~8–10 mo, cruising ~9–12 mo, walking ~12 mo (range 9–15),
+     jumping two feet ~2 yr, hopping ~3½–4 yr, skipping ~5 yr.
+   - Youth resistance training is SAFE AND EFFECTIVE when supervised and
+     technique-led (NSCA position statement, Faigenbaum 2009; International
+     Consensus, Lloyd/Faigenbaum BJSM 2014). The "don't lift until you're 16"
+     folklore is wrong — but the evidence is specific: technique before load,
+     1–3 sets × 6–15 reps, 2–3 non-consecutive days/week, qualified supervision,
+     and NO maximal (1RM) or ballistic lifting until skeletally mature AND
+     technically proficient. Strength gains in pre-pubertal children are
+     neural, not hypertrophic — so they are real, and they are earned by
+     practice rather than by load.
+   - Integrative neuromuscular training (landing mechanics, balance, agility)
+     reduces injury in youth sport and is appropriate from ~7 yr
+     (FIFA 11+ Kids, PEP, Sportsmetrics).
+   - Growth plates: the apophysis is the weak link while open, so traction
+     apophysitis (Sever's ~8–14, Osgood-Schlatter ~10–15) is managed with load
+     control, not rest. Peak height velocity (~11½ girls, ~13½ boys) is the
+     window of highest injury risk and slowest tolerance for load jumps.
+   ===================================================================== */
+const PED_BANDS = {
+  neonatal:   [0,    0.084],
+  infant:     [0.084, 1],
+  toddler:    [1,    3],
+  preschool:  [3,    6],
+  school:     [6,    12],
+  adolescent: [12,   18]
+};
+/* Dose is written for the band, not translated from an adult template. Nobody counts
+   sets with a nine-month-old; nobody tells a fifteen-year-old to "play for 5 minutes". */
+const PED_SETS = [
+{ band:"neonatal", pat:"ped_handling", prog:[], tags:["pediatric"],
+  cue:"Parent-led and gentle — exactly as your team showed you. Stop if your baby is distressed.",
+  items:[
+  {n:"Supervised tummy time (very short bouts)", reg:["Full body","Core"], t:["prone"], a:[0,0.5],   d:"1–2 min, 3–4× a day", diff:1},
+  {n:"Tummy time on a parent's chest",           reg:["Full body","Core"], t:["prone"], a:[0,0.4],   d:"5–10 min when settled", diff:1},
+  {n:"Side-lying positioning play",              reg:["Full body"],        t:[],        a:[0,0.5],   d:"a few minutes, alternate sides", diff:1},
+  {n:"Hands-to-midline play",                    reg:["Full body"],        t:[],        a:[0.05,0.5],d:"a few times a day", diff:1},
+  {n:"Visual tracking in midline",               reg:["Neck"],             t:[],        a:[0,0.3],   d:"1–2 min, a few times a day", diff:1},
+  {n:"Supported upright holding (head control)", reg:["Neck","Core"],      t:[],        a:[0.05,0.5],d:"short holds through the day", diff:1},
+  {n:"Gentle passive shoulder range of motion",  reg:["Shoulder"],         t:[],        a:[0,1],     d:"5 slow reps at each nappy change", diff:1},
+  {n:"Gentle passive elbow & forearm range of motion", reg:["Elbow","Forearm"], t:[],   a:[0,1],     d:"5 slow reps at each nappy change", diff:1},
+  {n:"Gentle passive hip range of motion (within the allowed range)", reg:["Hip"], t:[],a:[0,1],     d:"5 slow reps, as instructed", diff:1},
+  {n:"Passive foot & ankle stretches",           reg:["Foot","Ankle"],     t:[],        a:[0,1],     d:"5×10s, several × day", diff:1},
+  {n:"Neck side-bend stretch (torticollis)",     reg:["Neck"],             t:[],        a:[0,1],     d:"3×10–15s, 3–4× a day", diff:1},
+  {n:"Neck rotation stretch (torticollis)",      reg:["Neck"],             t:[],        a:[0,1],     d:"3×10–15s, 3–4× a day", diff:1},
+  {n:"Positioning to encourage turning to the tight side", reg:["Neck"],   t:[],        a:[0,1],     d:"all day — cot, feeding, play", diff:1},
+  {n:"Carrying and handling in midline",         reg:["Full body"],        t:[],        a:[0,0.6],   d:"throughout the day", diff:1}
+]},
+
+{ band:"infant", pat:"ped_milestone", prog:["","with hands-on help","with a favourite toy as the target"],
+  tags:["pediatric"], cue:"Follow your baby's lead — short, happy bouts beat long ones. Always supervised.",
+  items:[
+  {n:"Tummy time on a firm surface",         reg:["Full body","Core"],  t:["prone"], a:[0.084,0.6], d:"build to 30–60 min a day in short bouts", diff:1},
+  {n:"Prop-on-forearms in tummy time",       reg:["Core","Shoulder"],   t:["prone"], a:[0.15,0.55], d:"3–5 bouts a day", diff:1},
+  {n:"Prop-on-hands (high prone)",           reg:["Core","Shoulder"],   t:["prone"], a:[0.3,0.75],  d:"3–5 bouts a day", diff:2},
+  {n:"Reaching for a toy in tummy time",     reg:["Shoulder","Core"],   t:["prone"], a:[0.3,0.8],   d:"play for 5–10 min", diff:2},
+  {n:"Kicking play in lying",                reg:["Hip","Knee"],        t:["supine_flat"], a:[0.084,0.5], d:"play for 5–10 min", diff:1},
+  {n:"Bringing feet to hands",               reg:["Core","Hip"],        t:["supine_flat"], a:[0.25,0.65], d:"play for 5 min", diff:1},
+  {n:"Rolling tummy-to-back practice",       reg:["Full body","Core"],  t:[],        a:[0.25,0.65], d:"a few tries each way, daily", diff:2},
+  {n:"Rolling back-to-tummy practice",       reg:["Full body","Core"],  t:[],        a:[0.3,0.75],  d:"a few tries each way, daily", diff:2},
+  {n:"Supported sitting with hands down",    reg:["Core","Balance"],    t:[],        a:[0.35,0.65], d:"short bouts, well cushioned", diff:1},
+  {n:"Independent sitting and reaching",     reg:["Core","Balance"],    t:["balance"], a:[0.5,0.95],d:"play for 10 min", diff:2},
+  {n:"Weight-shift in sitting",              reg:["Core","Balance"],    t:["balance"], a:[0.45,0.95], d:"play for 5 min", diff:2},
+  {n:"Sitting rotation reach to both sides", reg:["Core","Balance"],    t:["balance"], a:[0.5,1.1], d:"5–10 each way", diff:2},
+  {n:"Reaching across the midline in sitting", reg:["Core","Shoulder"], t:[],        a:[0.5,1.1],   d:"5–10 each way", diff:2},
+  {n:"Pivoting in prone",                    reg:["Core","Full body"],  t:["prone"], a:[0.45,0.8],  d:"play for 5 min", diff:2},
+  {n:"Commando (tummy) crawling",            reg:["Full body","Core"],  t:["prone"], a:[0.5,0.9],   d:"play for 5–10 min", diff:2},
+  {n:"Four-point rocking",                   reg:["Core","Hip"],        t:["weight_bearing"], a:[0.55,0.9], d:"play for 5 min", diff:2},
+  {n:"Hands-and-knees crawling",             reg:["Full body","Core"],  t:["weight_bearing"], a:[0.65,1.2], d:"play across the room", diff:2},
+  {n:"Transitions from sitting to crawling", reg:["Core","Hip"],        t:["weight_bearing"], a:[0.6,1.1],  d:"a few each way, daily", diff:2},
+  {n:"Supported standing at a low table",    reg:["Hip","Knee","Balance"], t:["weight_bearing","balance"], a:[0.6,1.25], d:"short bouts of play", diff:2},
+  {n:"Pull-to-stand at the sofa",            reg:["Hip","Knee"],        t:["weight_bearing"], a:[0.65,1.2], d:"a few times through play", diff:2},
+  {n:"Controlled lowering from standing",    reg:["Knee","Hip"],        t:["weight_bearing"], a:[0.7,1.3],  d:"a few times through play", diff:2},
+  {n:"Cruising along the furniture",         reg:["Hip","Knee","Balance","Gait"], t:["weight_bearing","balance"], a:[0.75,1.3], d:"play for 5–10 min", diff:2},
+  {n:"Assisted stepping (hands held)",       reg:["Gait","Balance"],    t:["weight_bearing","balance"], a:[0.8,1.4], d:"short walks, a few × day", diff:2},
+  {n:"Independent standing balance",         reg:["Balance"],           t:["weight_bearing","balance"], a:[0.85,1.4], d:"a few seconds, building up", diff:3},
+  {n:"First steps practice",                 reg:["Gait","Balance"],    t:["weight_bearing","balance"], a:[0.9,1.6], d:"short bursts, lots of praise", diff:3},
+  {n:"Squat-to-stand from the floor",        reg:["Knee","Hip"],        t:["weight_bearing"], a:[0.9,1.8],  d:"through play", diff:3},
+  {n:"Bear-walk on hands and feet",          reg:["Full body","Core"],  t:["weight_bearing"], a:[0.9,1.6],  d:"a few metres, playfully", diff:3},
+  {n:"Pushing a stable walker toy",          reg:["Gait","Balance"],    t:["weight_bearing","balance"], a:[0.9,1.6], d:"across the room, supervised", diff:2},
+  {n:"Grasp-and-release play",               reg:["Wrist / Hand","Forearm"], t:[],   a:[0.4,1.3],   d:"play for 5–10 min", diff:1},
+  {n:"Banging and transferring toys hand-to-hand", reg:["Wrist / Hand","Forearm"], t:[], a:[0.45,1.2], d:"play for 5–10 min", diff:1}
+]},
+
+{ band:"toddler", pat:"ped_play", prog:["","with a helper","as a counting game"],
+  tags:["pediatric"], cue:"Make it a game. Toddlers repeat what's fun, not what's prescribed — supervise closely.",
+  items:[
+  {n:"Walking practice on level ground",     reg:["Gait","Balance"],   t:["weight_bearing","balance"], a:[1,2.2],   d:"little and often through the day", diff:1},
+  {n:"Walking on grass or uneven ground",    reg:["Gait","Balance"],   t:["weight_bearing","balance"], a:[1.3,3.2], d:"5–10 min outdoors", diff:2},
+  {n:"Running practice",                     reg:["Gait","Cardio"],    t:["weight_bearing","impact"], a:[1.5,3.2],  d:"short bursts of chase", diff:2},
+  {n:"Stair climbing with a rail and help",  reg:["Knee","Hip","Balance"], t:["weight_bearing","balance"], a:[1.5,3.2], d:"a few steps, both feet per step", diff:2},
+  {n:"Stair descent with help",              reg:["Knee","Balance"],   t:["weight_bearing","balance"], a:[1.6,3.2], d:"a few steps, hand held", diff:2},
+  {n:"Squat-to-stand to pick up a toy",      reg:["Knee","Hip"],       t:["weight_bearing"], a:[1,3.2],   d:"scatter toys and let them collect", diff:1},
+  {n:"Sit-to-stand from a small chair",      reg:["Knee","Hip"],       t:["weight_bearing"], a:[1.2,3.2], d:"5–10 through play", diff:1},
+  {n:"Squatting to play at floor level",     reg:["Knee","Hip"],       t:["weight_bearing"], a:[1.2,3.2], d:"as long as they'll stay", diff:1},
+  {n:"Kicking a large ball",                 reg:["Hip","Knee","Balance"], t:["weight_bearing","balance"], a:[1.5,3.2], d:"10–15 kicks each foot", diff:2},
+  {n:"Rolling a ball back and forth",        reg:["Core","Shoulder"],  t:[],        a:[1,2.6],   d:"play for 5–10 min", diff:1},
+  {n:"Throwing a ball overhand",             reg:["Shoulder","Core"],  t:["overhead"], a:[2,3.5], d:"10–15 throws", diff:2},
+  {n:"Two-foot jumping in place",            reg:["Knee","Ankle"],     t:["impact","weight_bearing"], a:[2,3.2], d:"5–10 playful jumps", diff:2},
+  {n:"Jumping off a low step (hands held)",  reg:["Knee","Ankle"],     t:["impact","weight_bearing"], a:[2.2,3.5], d:"5–8 jumps, soft landings", diff:3},
+  {n:"Climbing on low playground equipment", reg:["Full body"],        t:["weight_bearing"], a:[1.5,3.5], d:"supervised free play", diff:2},
+  {n:"Crawling through a tunnel",            reg:["Full body","Core"], t:["weight_bearing"], a:[1.2,3.2], d:"a few trips, playfully", diff:1},
+  {n:"Pushing or pulling a toy trolley",     reg:["Gait","Full body"], t:["weight_bearing"], a:[1.2,2.8], d:"across the room", diff:1},
+  {n:"Marching game",                        reg:["Gait","Hip","Balance"], t:["weight_bearing","balance"], a:[1.5,3.2], d:"1–2 min to music", diff:1},
+  {n:"Backward-walking game",                reg:["Gait","Balance"],   t:["weight_bearing","balance"], a:[1.8,3.2], d:"a few metres, supervised", diff:2},
+  {n:"Walking along a line",                 reg:["Balance","Gait"],   t:["weight_bearing","balance"], a:[2,3.5],   d:"a few passes", diff:2},
+  {n:"Stepping over small obstacles",        reg:["Balance","Gait"],   t:["weight_bearing","balance"], a:[1.5,3.2], d:"a short obstacle path", diff:2},
+  {n:"Standing on one foot with support",    reg:["Balance"],          t:["weight_bearing","balance"], a:[2,3.5],   d:"try for 1–2s each side", diff:3},
+  {n:"Carrying a light object while walking",reg:["Gait","Core"],      t:["weight_bearing"], a:[1.5,3.2], d:"across the room", diff:2},
+  {n:"Riding a push-along balance bike",     reg:["Hip","Knee","Balance"], t:["weight_bearing","balance"], a:[2,3.5], d:"10 min supervised", diff:2},
+  {n:"Pulling socks on and off",             reg:["Wrist / Hand","Hip"], t:[],      a:[2,3.5],   d:"at every change", diff:2},
+  {n:"Stacking and reaching up high",        reg:["Shoulder","Core"],  t:["overhead"], a:[1.2,3.2], d:"play for 5–10 min", diff:1},
+  {n:"Bubble-popping reach and step",        reg:["Balance","Shoulder"], t:["weight_bearing","balance"], a:[1.5,3.2], d:"2–3 min", diff:2},
+  {n:"Bear-walk animal game",                reg:["Full body","Core"], t:["weight_bearing"], a:[2,3.5],   d:"a few metres", diff:2},
+  {n:"Dancing and music-and-movement play",  reg:["Full body","Cardio"], t:["weight_bearing","aerobic"], a:[1.2,3.5], d:"5–10 min", diff:1}
+]},
+
+{ band:"preschool", pat:"ped_skill", prog:["","as a timed game","with a small challenge"],
+  tags:["pediatric"], cue:"Fundamental movement skills are built by playing them — keep it short, varied and fun.",
+  items:[
+  {n:"Hopping on one foot",              reg:["Ankle","Knee","Balance"], t:["impact","weight_bearing","balance"], a:[3.5,6.5], d:"5–10 hops each side", diff:3},
+  {n:"Galloping",                        reg:["Gait","Balance"],   t:["impact","weight_bearing","balance"], a:[3.5,6.5], d:"across the room a few times", diff:3},
+  {n:"Skipping practice",                reg:["Gait","Balance"],   t:["impact","weight_bearing","balance"], a:[5,7],     d:"a few passes", diff:3},
+  {n:"Standing on one foot (build to 10s)", reg:["Balance"],       t:["weight_bearing","balance"], a:[3,6.5],  d:"3× each side", diff:2},
+  {n:"Heel-to-toe walk along a line",    reg:["Balance","Gait"],   t:["weight_bearing","balance"], a:[3.5,6.5], d:"3 passes", diff:3},
+  {n:"Low balance-beam walk",            reg:["Balance"],          t:["weight_bearing","balance"], a:[3.5,6.5], d:"3 passes, spotted", diff:3},
+  {n:"Stepping-stones course",           reg:["Balance","Gait"],   t:["weight_bearing","balance"], a:[3,6.5],  d:"3–4 trips", diff:2},
+  {n:"Freeze-dance stop-and-balance",    reg:["Balance","Cardio"], t:["weight_bearing","balance","aerobic"], a:[3,6.5], d:"3–5 min", diff:2},
+  {n:"Beanbag balance on the head",      reg:["Balance","Core"],   t:["weight_bearing","balance"], a:[3.5,6.5], d:"walk 3 passes", diff:2},
+  {n:"Catching a large ball",            reg:["Shoulder","Core"],  t:[],        a:[3,5.5],   d:"10–15 catches", diff:2},
+  {n:"Catching a smaller ball",          reg:["Shoulder","Core"],  t:[],        a:[4.5,7],   d:"10–15 catches", diff:3},
+  {n:"Throwing at a target",             reg:["Shoulder","Core"],  t:["overhead"], a:[3.5,6.5], d:"10–15 throws each arm", diff:2},
+  {n:"Kicking a moving ball",            reg:["Hip","Knee","Balance"], t:["weight_bearing","balance"], a:[4,6.5], d:"10 each foot", diff:3},
+  {n:"Jumping over a line",              reg:["Knee","Ankle"],     t:["impact","weight_bearing"], a:[3,5.5],  d:"8–10 jumps", diff:2},
+  {n:"Jumping down from a low step",     reg:["Knee","Ankle"],     t:["impact","weight_bearing"], a:[3,5.5],  d:"8–10, soft quiet landings", diff:3},
+  {n:"Hopscotch",                        reg:["Knee","Ankle","Balance"], t:["impact","weight_bearing","balance"], a:[4,7], d:"3–4 courses", diff:3},
+  {n:"Star jumps",                       reg:["Full body","Cardio"], t:["impact","weight_bearing","aerobic"], a:[4,7], d:"10–15", diff:2},
+  {n:"Riding a tricycle",                reg:["Hip","Knee","Cardio"], t:["aerobic"], a:[3,5.5], d:"10–15 min", diff:2},
+  {n:"Riding a balance bike",            reg:["Balance","Hip","Knee"], t:["balance"], a:[3,5.5], d:"10–15 min", diff:2},
+  {n:"Stairs with alternating feet",     reg:["Knee","Hip","Balance"], t:["weight_bearing","balance"], a:[3,5.5], d:"a flight, with a rail", diff:2},
+  {n:"Bear-crawl animal walk",           reg:["Full body","Core"], t:["weight_bearing"], a:[3,6.5], d:"3× across the room", diff:2},
+  {n:"Crab-walk animal walk",            reg:["Full body","Core"], t:["weight_bearing"], a:[3.5,6.5], d:"3× across the room", diff:3},
+  {n:"Frog jumps",                       reg:["Knee","Hip"],       t:["impact","weight_bearing"], a:[3.5,6.5], d:"8–10 jumps", diff:3},
+  {n:"Bunny hops",                       reg:["Ankle","Knee"],     t:["impact","weight_bearing"], a:[3,6.5],  d:"10 hops", diff:2},
+  {n:"Wheelbarrow walk with a helper",   reg:["Shoulder","Core"],  t:["weight_bearing"], a:[4,7],   d:"2–3× a few metres", diff:3},
+  {n:"Obstacle course",                  reg:["Full body","Balance"], t:["weight_bearing","balance"], a:[3,6.5], d:"3–4 laps", diff:2},
+  {n:"Tiptoe walking game",              reg:["Calf","Ankle","Balance"], t:["weight_bearing","balance"], a:[3,6.5], d:"3 passes", diff:2},
+  {n:"Heel walking game",                reg:["Ankle","Foot"],     t:["weight_bearing"], a:[3.5,6.5], d:"3 passes", diff:2},
+  {n:"Wall push-ups as a game",          reg:["Shoulder","Core"],  t:["weight_bearing"], a:[4,7],   d:"10", diff:2},
+  {n:"Superhero prone hold",             reg:["Core","Thoracic/Upper back"], t:["prone","spine_extension"], a:[4,7], d:"3×5–10s", diff:2},
+  {n:"Bridge 'tunnel' hold",             reg:["Hip","Glute","Core"], t:["supine_flat"], a:[4,7],   d:"3×5–10s", diff:2},
+  {n:"Sit-to-stand races",               reg:["Knee","Hip"],       t:["weight_bearing"], a:[3.5,6.5], d:"10", diff:2},
+  {n:"Rolling a ball under the foot",    reg:["Foot"],             t:[],        a:[3.5,7],   d:"1–2 min each foot", diff:1}
+]},
+
+{ band:"school", pat:"ped_train", prog:["","technique focus","with a light band","with a 3s hold"],
+  tags:["pediatric"],
+  cue:"Technique first, load later — at this age strength comes from practice and coordination, not weight.",
+  items:[
+  {n:"Bodyweight squat (technique)",      reg:["Knee","Hip"],      t:["weight_bearing"], a:[6,12.5], d:"2×10–12", diff:1},
+  {n:"Sit-to-stand from a chair",         reg:["Knee","Hip"],      t:["weight_bearing"], a:[6,12.5], d:"2×10", diff:1},
+  {n:"Glute bridge",                      reg:["Hip","Glute","Core"], t:["supine_flat"], a:[6,12.5], d:"2×10–12", diff:1},
+  {n:"Wall sit (short holds)",            reg:["Knee","Hip"],      t:["weight_bearing"], a:[7,12.5], d:"3×10–20s", diff:2},
+  {n:"Step-up onto a low step",           reg:["Knee","Hip","Balance"], t:["weight_bearing","balance"], a:[6,12.5], d:"2×8 each", diff:2},
+  {n:"Step-down with control",            reg:["Knee","Hip"],      t:["weight_bearing"], a:[7,12.5], d:"2×8 each", diff:2},
+  {n:"Single-leg balance (eyes open)",    reg:["Balance","Ankle"], t:["weight_bearing","balance"], a:[6,12.5], d:"3×20–30s each", diff:1},
+  {n:"Single-leg balance (eyes closed)",  reg:["Balance","Ankle"], t:["weight_bearing","balance"], a:[7,12.5], d:"3×15–20s each", diff:2},
+  {n:"Tandem stance",                     reg:["Balance"],         t:["weight_bearing","balance"], a:[6,12.5], d:"3×30s each", diff:1},
+  {n:"Double-leg heel raises",            reg:["Calf","Ankle"],    t:["weight_bearing"], a:[6,12.5], d:"2×12–15", diff:1},
+  {n:"Single-leg heel raise (supported)", reg:["Calf","Ankle"],    t:["weight_bearing"], a:[7,12.5], d:"2×10 each", diff:2},
+  {n:"Lateral band walk",                 reg:["Hip","Glute"],     t:["weight_bearing"], a:[7,12.5], d:"2×10 steps each way", diff:2},
+  {n:"Clamshell",                         reg:["Hip","Glute"],     t:[],        a:[6,12.5], d:"2×12 each", diff:1},
+  {n:"Plank from the knees",              reg:["Core"],            t:["prone"], a:[7,12.5], d:"3×15–20s", diff:2},
+  {n:"Front plank (short holds)",         reg:["Core"],            t:["prone"], a:[8,12.5], d:"3×15–25s", diff:2},
+  {n:"Side plank from the knees",         reg:["Core"],            t:[],        a:[8,12.5], d:"3×15s each", diff:2},
+  {n:"Dead-bug",                          reg:["Core"],            t:["supine_flat"], a:[6,12.5], d:"2×8 each", diff:1},
+  {n:"Bird-dog",                          reg:["Core","Spine"],    t:["weight_bearing"], a:[6,12.5], d:"2×8 each", diff:1},
+  {n:"Incline push-up",                   reg:["Shoulder","Core"], t:["weight_bearing"], a:[7,12.5], d:"2×8–12", diff:2},
+  {n:"Band row",                          reg:["Scapula/Upper back"], t:[],     a:[7,12.5], d:"2×12", diff:1},
+  {n:"Band external rotation",            reg:["Shoulder"],        t:[],        a:[7,12.5], d:"2×12 each", diff:1},
+  {n:"Scapular squeeze",                  reg:["Scapula/Upper back"], t:[],     a:[6,12.5], d:"2×10 (3s hold)", diff:1},
+  {n:"Wall angels",                       reg:["Scapula/Upper back","Thoracic/Upper back"], t:["overhead"], a:[7,12.5], d:"2×8 slow", diff:2},
+  {n:"Quad sets",                         reg:["Knee"],            t:["supine_flat"], a:[6,12.5], d:"3×10 (5s hold)", diff:1},
+  {n:"Straight-leg raise",                reg:["Knee","Hip"],      t:["supine_flat"], a:[6,12.5], d:"3×10", diff:1},
+  {n:"Heel slides",                       reg:["Knee"],            t:["supine_flat"], a:[6,12.5], d:"3×10", diff:1},
+  {n:"Ankle pumps",                       reg:["Ankle","Calf"],    t:[],        a:[6,12.5], d:"3×20 slow", diff:1},
+  {n:"Ankle alphabet",                    reg:["Ankle"],           t:[],        a:[6,12.5], d:"2× each foot", diff:1},
+  {n:"Calf stretch",                      reg:["Calf","Ankle"],    t:[],        a:[6,12.5], d:"3×30s each", diff:1},
+  {n:"Hamstring stretch",                 reg:["Hip","Knee"],      t:[],        a:[6,12.5], d:"3×30s each", diff:1},
+  {n:"Hip flexor stretch",                reg:["Hip"],             t:[],        a:[7,12.5], d:"3×30s each", diff:1},
+  {n:"Short-foot exercise",               reg:["Foot"],            t:[],        a:[8,12.5], d:"3×10 (5s hold)", diff:2},
+  {n:"Two-foot drop-and-stick landing",   reg:["Knee","Balance"],  t:["impact","weight_bearing","balance"], a:[8,12.5], d:"3×6, quiet landings", diff:3},
+  {n:"Single-leg hop-and-stick",          reg:["Knee","Ankle","Balance"], t:["impact","weight_bearing","balance"], a:[9,12.5], d:"3×5 each", diff:3},
+  {n:"Lateral hop-and-stick",             reg:["Knee","Ankle","Balance"], t:["impact","weight_bearing","balance"], a:[9,12.5], d:"3×5 each", diff:3},
+  {n:"Deceleration practice",             reg:["Knee","Balance"],  t:["impact","weight_bearing","balance"], a:[9,12.5], d:"4×10 m", diff:3},
+  {n:"Basic agility ladder",              reg:["Gait","Balance","Ankle"], t:["impact","weight_bearing","balance"], a:[8,12.5], d:"4–6 passes", diff:3},
+  {n:"Short shuttle run",                 reg:["Cardio","Knee"],   t:["impact","weight_bearing","aerobic"], a:[9,12.5], d:"4–6 reps", diff:4},
+  {n:"Skipping with a rope",              reg:["Calf","Ankle","Cardio"], t:["impact","weight_bearing","aerobic"], a:[7,12.5], d:"3×30s", diff:3},
+  {n:"Bike riding for endurance",         reg:["Cardio","Knee","Hip"], t:["aerobic"], a:[6,12.5], d:"15–25 min", diff:1},
+  {n:"Light medicine-ball chest pass",    reg:["Shoulder","Core"], t:[],        a:[9,12.5], d:"2×10", diff:2},
+  {n:"Toe walking practice",              reg:["Calf","Ankle"],    t:["weight_bearing"], a:[6,12.5], d:"3×10 m", diff:1},
+  {n:"Heel walking practice",             reg:["Ankle","Foot"],    t:["weight_bearing"], a:[6,12.5], d:"3×10 m", diff:1}
+]},
+
+{ band:"adolescent", pat:"ped_strength", prog:["","technique focus","tempo 3-1-3","eccentric focus","progressive load"],
+  tags:["pediatric"],
+  cue:"Supervised, technique before load. Build reps and quality before weight — and no max-effort singles until you're skeletally mature and your technique is solid.",
+  items:[
+  {n:"Goblet squat (technique-first)",     reg:["Knee","Hip"],     t:["weight_bearing"], a:[12,18], d:"3×8–12", diff:2},
+  {n:"Barbell back squat (supervised)",    reg:["Knee","Hip"],     t:["weight_bearing"], a:[14,18], d:"3×6–10", diff:3},
+  {n:"Romanian deadlift (light, technique)", reg:["Hip","Spine","Core"], t:["weight_bearing"], a:[13,18], d:"3×8–10", diff:3},
+  {n:"Split squat",                        reg:["Knee","Hip"],     t:["weight_bearing","balance"], a:[12,18], d:"3×8–10 each", diff:2},
+  {n:"Bulgarian split squat",              reg:["Knee","Hip"],     t:["weight_bearing","balance"], a:[13,18], d:"3×8 each", diff:3},
+  {n:"Loaded step-up",                     reg:["Knee","Hip"],     t:["weight_bearing"], a:[12,18], d:"3×8 each", diff:2},
+  {n:"Assisted Nordic hamstring curl",     reg:["Knee","Hip"],     t:[],        a:[14,18], d:"3×5 slow", diff:4},
+  {n:"Single-leg Romanian deadlift",       reg:["Hip","Knee","Balance"], t:["weight_bearing","balance"], a:[13,18], d:"3×8 each", diff:3},
+  {n:"Hip thrust",                         reg:["Hip","Glute"],    t:["supine_flat"], a:[13,18], d:"3×8–12", diff:2},
+  {n:"Spanish squat",                      reg:["Knee"],           t:["weight_bearing"], a:[13,18], d:"3×30–45s", diff:2},
+  {n:"Isometric knee extension hold",      reg:["Knee"],           t:[],        a:[12,18], d:"4×30s", diff:1},
+  {n:"Single-leg press",                   reg:["Knee","Hip"],     t:[],        a:[13,18], d:"3×10 each", diff:2},
+  {n:"Hamstring curl (band or machine)",   reg:["Knee"],           t:[],        a:[13,18], d:"3×10–12", diff:2},
+  {n:"Lateral band walk",                  reg:["Hip","Glute"],    t:["weight_bearing"], a:[12,18], d:"3×12 steps each way", diff:1},
+  {n:"Copenhagen plank (short lever)",     reg:["Hip","Core"],     t:[],        a:[13,18], d:"3×15–20s each", diff:3},
+  {n:"Front plank",                        reg:["Core"],           t:["prone"], a:[12,18], d:"3×30–45s", diff:2},
+  {n:"Side plank",                         reg:["Core"],           t:[],        a:[12,18], d:"3×20–30s each", diff:2},
+  {n:"Pallof press (anti-rotation)",       reg:["Core"],           t:[],        a:[12,18], d:"3×10 each", diff:2},
+  {n:"Dead-bug",                           reg:["Core"],           t:["supine_flat"], a:[12,18], d:"3×10 each", diff:1},
+  {n:"Push-up",                            reg:["Shoulder","Core"], t:["weight_bearing"], a:[12,18], d:"3×8–12", diff:2},
+  {n:"Incline push-up",                    reg:["Shoulder","Core"], t:["weight_bearing"], a:[12,18], d:"3×10–12", diff:1},
+  {n:"Inverted row",                       reg:["Scapula/Upper back"], t:[],    a:[12,18], d:"3×8–12", diff:2},
+  {n:"Band or cable row",                  reg:["Scapula/Upper back"], t:[],    a:[12,18], d:"3×12", diff:1},
+  {n:"Overhead press (light, technique)",  reg:["Shoulder"],       t:["overhead"], a:[14,18], d:"3×8–10", diff:3},
+  {n:"Band external rotation",             reg:["Shoulder"],       t:[],        a:[12,18], d:"3×12 each", diff:1},
+  {n:"Prone Y-T-W raises",                 reg:["Scapula/Upper back","Shoulder"], t:["prone"], a:[12,18], d:"3×10 each", diff:2},
+  {n:"Face pull",                          reg:["Scapula/Upper back","Shoulder"], t:[], a:[13,18], d:"3×12–15", diff:2},
+  {n:"Single-leg calf raise",              reg:["Calf","Ankle"],   t:["weight_bearing"], a:[12,18], d:"3×12–15 each", diff:2},
+  {n:"Eccentric heel drop",                reg:["Calf","Ankle"],   t:["weight_bearing"], a:[13,18], d:"3×15 slow", diff:3},
+  {n:"Low box jump (landing focus)",       reg:["Knee","Ankle"],   t:["impact","weight_bearing"], a:[13,18], d:"4×5, quiet landings", diff:4},
+  {n:"Drop-and-stick landing",             reg:["Knee","Balance"], t:["impact","weight_bearing","balance"], a:[12,18], d:"3×6", diff:3},
+  {n:"Single-leg hop-and-stick",           reg:["Knee","Ankle","Balance"], t:["impact","weight_bearing","balance"], a:[12,18], d:"3×6 each", diff:3},
+  {n:"Bounding",                           reg:["Knee","Ankle"],   t:["impact","weight_bearing","high_intensity"], a:[14,18], d:"4×20 m", diff:4},
+  {n:"A-skip",                             reg:["Gait","Ankle"],   t:["impact","weight_bearing"], a:[13,18], d:"4×20 m", diff:3},
+  {n:"Submaximal sprint mechanics",        reg:["Gait","Cardio"],  t:["impact","weight_bearing","high_intensity","aerobic"], a:[13,18], d:"6×20 m at 70–80%", diff:4},
+  {n:"45-degree change of direction",      reg:["Knee","Balance"], t:["impact","weight_bearing","balance"], a:[13,18], d:"6 each way", diff:4},
+  {n:"5-10-5 shuttle",                     reg:["Knee","Cardio"],  t:["impact","weight_bearing","high_intensity","aerobic"], a:[14,18], d:"4–6 reps", diff:4},
+  {n:"Agility ladder",                     reg:["Gait","Balance","Ankle"], t:["impact","weight_bearing","balance"], a:[12,18], d:"4–6 passes", diff:3},
+  {n:"Neuromuscular warm-up (11+ style)",  reg:["Full body","Balance"], t:["weight_bearing","balance"], a:[12,18], d:"15 min before sport", diff:2},
+  {n:"Single-leg balance with perturbation", reg:["Balance","Ankle"], t:["weight_bearing","balance"], a:[12,18], d:"3×30s each", diff:3},
+  {n:"Y-balance reach",                    reg:["Balance","Knee"], t:["weight_bearing","balance"], a:[12,18], d:"3×6 each direction", diff:3},
+  {n:"Wall sit",                           reg:["Knee","Hip"],     t:["weight_bearing"], a:[12,18], d:"3×30–45s", diff:2},
+  {n:"Bike intervals",                     reg:["Cardio","Knee"],  t:["aerobic"], a:[12,18], d:"20 min (intervals)", diff:2},
+  {n:"Rowing technique work",              reg:["Cardio","Scapula/Upper back"], t:["aerobic"], a:[13,18], d:"15–20 min", diff:2},
+  {n:"Jump-landing technique drill",       reg:["Knee","Balance"], t:["impact","weight_bearing","balance"], a:[12,18], d:"3×8", diff:2}
+]}
+];
+
+for(const set of PED_SETS){
+  const [bLo, bHi] = PED_BANDS[set.band];
+  for(const it of set.items){
+    const progs = (it.p === 0 || !set.prog.length) ? [""] : set.prog;
+    for(const p of progs){
+      const name = cap(p ? `${it.n} — ${p}` : it.n);
+      const key = slug(name); if(seen.has(key)) continue; seen.add(key);
+      /* The declared window is the movement's own; the band is a sanity clamp so a set
+         can't leak outside the age group it was written for. */
+      const aMin = Math.max(it.a[0], bLo === 0 ? 0 : Math.min(it.a[0], bLo));
+      const aMax = it.a[1];
+      let diff = it.diff;
+      if(p === "technique focus" || p === "with hands-on help" || p === "with a helper") diff = Math.max(1, diff - 1);
+      if(p === "with a small challenge" || p === "progressive load" || p === "as a timed game") diff = Math.min(4, diff + 1);
+      out.push({ id:"e"+(out.length+1), name, region:it.reg, pattern:set.pat,
+        equipment:"bodyweight", difficulty:diff,
+        tags:[...new Set([...set.tags, ...(it.t||[])])],
+        dose:it.d, cue:set.cue, aMin:+aMin.toFixed(3), aMax:+aMax.toFixed(3), band:set.band });
     }
   }
 }

@@ -266,8 +266,9 @@ let _dsCache = { key:null, val:null };
    gatherFlags/detectPlan/render call it repeatedly. A surgical diagnosis short-circuits on a
    curated entry near the front and was always cheap. Measured: 200 calls 85.8ms -> ~0ms. */
 function detectSurgery(){
-  // memoised: keyed on the only inputs that can change the answer
-  const _k = (state.surgeryType||"") + "|" + (state.condIds||[]).join(",");
+  // memoised: keyed on the only inputs that can change the answer — age included, because
+  // auto-detect now picks the age band that fits the patient.
+  const _k = (state.surgeryType||"") + "|" + (state.condIds||[]).join(",") + "|" + (state.age||"");
   if(_dsCache.key === _k) return _dsCache.val;
   const _v = _detectSurgeryUncached();
   _dsCache = { key:_k, val:_v };
@@ -280,10 +281,33 @@ function _detectSurgeryUncached(){
   }
   for(const c of selectedConditions()){
     const nm = c.name.toLowerCase();
-    const hit = surgeries().find(s=>s.match.test(nm));
-    if(hit) return hit;
+    const hits = surgeries().filter(s=>s.match.test(nm));
+    if(!hits.length) continue;
+    /* ⚠ Paediatric procedures exist once per age band and ALL of them share one match
+       regex, so .find() silently returned band #1 — "neonatal" — for every child. A
+       6-year-old with Perthes was auto-detected as having had newborn surgery, and got the
+       newborn precaution note ("all care is parent-led"). Pick the band that fits the
+       patient; with nothing to go on, fall back to the first hit exactly as before. */
+    const a = ageForSurgeryPick();
+    if(a != null && hits.length > 1){
+      const want = PED_BANDS.find(b => a >= b.lo && a < b.hi);
+      const fit = want && hits.find(s => {
+        const m = (s.name||"").match(PED_SURG_BAND_RE);
+        return m && m[1].toLowerCase() === want.surg;
+      });
+      if(fit) return fit;
+    }
+    return hits[0];
   }
   return state.surgery==="yes" ? OTHER_SURGERY : null;
+}
+/* The age we can know WITHOUT asking detectSurgery — otherwise userAgeInfo() and
+   detectSurgery() would call each other in a loop. */
+function ageForSurgeryPick(){
+  const a = parseFloat(state.age);
+  if(Number.isFinite(a) && a >= 0 && a < 120) return a;
+  const cb = conditionAgeBand();
+  return cb ? (cb.lo + cb.hi) / 2 : null;
 }
 function weeksPostOp(){
   if(state.surgeryDate){
@@ -1065,16 +1089,183 @@ function isAquaticEx(e){
   if(Array.isArray(e.region) && e.region.includes("Pool / aquatic (therapeutic)")) return true;
   return AQUATIC_NAME_RE.test(e.name || e.n || "");
 }
-// Child-only play/developmental moves (tagged "pediatric"; some equipment variants
-// carry an age suffix like "(teen)"/"(infant)"/"(kids …)"). Kept out of adult plans.
-const PED_NAME_RE = /\((?:infant|toddler|pre-?school|child|kids?|teen|adolescent|baby|newborn)\b[^)]*\)/i;
-function isPediatricEx(e){
-  if(!e) return false;
-  if(Array.isArray(e.tags) && e.tags.includes("pediatric")) return true;
-  return PED_NAME_RE.test(e.name || e.n || "");
+/* =====================================================================
+   AGE-APPROPRIATE EXERCISE MATCHING
+   ---------------------------------------------------------------------
+   "Under 18" is not a clinical category, and the old gate treated it as one:
+   it only kept child moves OUT of adult plans, and never kept ADULT moves out
+   of a child's. Measured before this change: a 3-year-old was offered "Barbell
+   squat" and "Machine single-leg squat", a 4-year-old with cerebral palsy was
+   prescribed "Barbell tempo deadlift", and a 1-year-old's program was byte-for-
+   byte identical to a 40-year-old's. Age changed nothing.
+
+   The fix is a single idea: every exercise has an age WINDOW, and so does the
+   user. A paediatric movement declares its own (aMin/aMax, from the generator —
+   pull-to-stand is 8–13 months, not "childhood"); an adult-library movement
+   declares only a floor, inferred from what it actually demands. One comparison
+   then does both jobs — a 40-year-old fails a play movement's aMax exactly as a
+   4-year-old fails a barbell's aMin — so the two directions can't drift apart.
+   ===================================================================== */
+/* `k` matches the generator's band key; `surg` matches the label baked into paediatric
+   surgery names by generate-surgeries.mjs. They differ for one band only (school /
+   school-age), which is exactly the kind of near-match worth naming rather than patching
+   over at the call site. */
+const PED_BANDS = [
+  { k:"neonatal",   surg:"neonatal",   lo:0,     hi:0.084, label:"neonatal (0–1 mo)" },
+  { k:"infant",     surg:"infant",     lo:0.084, hi:1,     label:"infant (1–12 mo)" },
+  { k:"toddler",    surg:"toddler",    lo:1,     hi:3,     label:"toddler (1–3 yr)" },
+  { k:"preschool",  surg:"preschool",  lo:3,     hi:6,     label:"preschool (3–5 yr)" },
+  { k:"school",     surg:"school-age", lo:6,     hi:12,    label:"school-age (6–11 yr)" },
+  { k:"adolescent", surg:"adolescent", lo:12,    hi:18,    label:"adolescent (12–18 yr)" }
+];
+const AGE_ADULT = 30;                    // stand-in when no age is given; only its "is an adult" quality is used
+function pedBandOf(a){ return PED_BANDS.find(b => a >= b.lo && a < b.hi) || null; }
+
+/* The paediatric surgery picker already asks which age band the child is in — it's part of
+   the procedure they chose ("· age school-age (6–11 yr)"). Reading it back is not a guess
+   about the child; it's the answer they already gave. An exact age still wins, and the
+   program says out loud which one it used. */
+const PED_SURG_BAND_RE = /·\s*age\s+(neonatal|infant|toddler|preschool|school-age|adolescent)/i;
+const PED_SURG_BAND_MID = { neonatal:0.04, infant:0.5, toddler:2, preschool:4.5, "school-age":9, adolescent:15 };
+/* ⚠ EXPLICIT selection only — never detectSurgery(). Every age band of a paediatric
+   procedure shares one `match` regex (18 Perthes entries, one per band × approach, all
+   matching "perthes"), so auto-detect returns whichever sits first in the file, which is
+   always "neonatal". Reading a band off an auto-detected surgery would have told us a
+   6-year-old with Perthes was a newborn — a guess dressed as an answer. When they pick the
+   procedure from the list they are choosing the band themselves, and that we can trust. */
+function surgeryAgeBand(){
+  if(!state.surgeryType || state.surgeryType === "auto" || state.surgeryType === "other") return null;
+  const s = surgeries().find(x => x.id === state.surgeryType);
+  const m = s && s.name && s.name.match(PED_SURG_BAND_RE);
+  return m ? m[1].toLowerCase() : null;
 }
-// blank/invalid age must read as ADULT — Number("") is 0, so parse explicitly.
-function isAdultUser(){ const a = parseFloat(state.age); return !(Number.isFinite(a) && a < 18); }
+/* The diagnosis itself often states the age group, and the catalogue is full of it: 1,674
+   conditions are named "— adolescent athlete", and the curated paediatric list names
+   conditions that only occur in a known window. None of it was readable — conditions carry
+   no age field — so "Sever's disease" and "Slipped capital femoral epiphysis" arrived at the
+   exercise picker as anonymous as a rotator cuff.
+
+   These are the real epidemiological windows, not guesses about this particular child:
+   Sever's is a traction apophysitis of the calcaneal growth plate and resolves when it
+   fuses (~8–14); Osgood-Schlatter is the tibial tubercle (~10–15); SCFE is peri-pubertal
+   (~10–16); Perthes is ~4–9; DDH, clubfoot, torticollis and brachial plexus birth injury
+   are infant diagnoses by definition.
+   ⚠ /\badult\b/ MUST stay first — the catalogue deliberately carries adult sequelae of
+   childhood conditions ("Cerebral palsy (adult reconditioning)", "Congenital clubfoot
+   (adult reconditioning)"), and prescribing tummy time to a 45-year-old with residual DDH
+   would be the same class of error as the one this whole layer exists to fix. */
+const CONDITION_AGE_RULES = [
+  [/\badult\b/i,                                            null],
+  [/adolescent/i,                                           [12, 18]],
+  [/\bSCFE\b|slipped capital/i,                             [10, 16]],
+  [/osgood|sinding-larsen/i,                                [10, 15]],
+  [/sever'?s|calcaneal apophysitis/i,                       [8, 14]],
+  [/iselin/i,                                               [9, 14]],
+  [/little leaguer/i,                                       [9, 15]],
+  [/gymnast'?s wrist/i,                                     [10, 16]],
+  [/perthes/i,                                              [4, 9]],
+  [/\bDDH\b|developmental (hip )?dysplasia|hip dysplasia/i, [0, 1]],
+  [/clubfoot|talipes|metatarsus adductus/i,                 [0, 1]],
+  [/torticollis/i,                                          [0, 1]],
+  [/erb'?s|klumpke|brachial plexus birth/i,                 [0, 1]],
+  [/blount/i,                                               [1, 12]],
+  [/toe-?walking/i,                                         [1, 8]],
+  [/cerebral palsy/i,                                       [1, 18]],
+  [/spina bifida|myelomeningocele/i,                        [0, 18]],
+  [/duchenne|becker muscular|muscular dystrophy|spinal muscular atrophy/i, [2, 18]],
+  [/juvenile idiopathic arthritis|juvenile arthritis|\bJIA\b/i, [2, 16]],
+  [/apophysitis/i,                                          [8, 15]],
+  [/paediatric|pediatric/i,                                 [3, 12]],
+  [/juvenile/i,                                             [2, 16]],
+  [/older adult/i,                                          [65, 90]]
+];
+function conditionAgeBand(){
+  for(const c of selectedConditions()){
+    for(const [re, band] of CONDITION_AGE_RULES){
+      if(re.test(c.name || "")) return band ? { lo:band[0], hi:band[1], from:c.name } : null;
+    }
+  }
+  return null;
+}
+/* Returns { age, source } — always a number, so callers never branch on null.
+   `source`: "stated" | "surgery" | "condition" | "assumed-adult".
+   Order is deliberate: what they typed beats what their procedure implies, which beats what
+   their diagnosis implies. Every inference is something the USER selected, not a guess about
+   them — and the Program says out loud which one it used. */
+function userAgeInfo(){
+  const a = parseFloat(state.age);
+  if(Number.isFinite(a) && a >= 0 && a < 120) return { age:a, source:"stated" };
+  const band = surgeryAgeBand();
+  if(band) return { age:PED_SURG_BAND_MID[band], source:"surgery", band };
+  const cb = conditionAgeBand();
+  if(cb) return { age:+((cb.lo + cb.hi) / 2).toFixed(2), source:"condition", lo:cb.lo, hi:cb.hi, from:cb.from };
+  return { age:AGE_ADULT, source:"assumed-adult" };
+}
+const userAgeYears = () => userAgeInfo().age;
+const isChildUser  = () => userAgeYears() < 18;
+
+/* Age-neutral therapeutic work — quad sets, ankle pumps, heel slides, breathing. A
+   school-age child does these exactly as an adult does; a toddler cannot follow them. */
+const PED_SAFE_PAT = new Set(["pump","supine","seated","standing","pool","breathing","mobility","isometric"]);
+const PED_HEAVY_EQ = /^(Barbell|Kettlebell|Machine|Sandbag|Cable|Suspension|Med-ball|Dumbbell)/i;
+/* Floors for the adult library. Youth resistance training is safe and effective when it is
+   supervised and technique-led (NSCA position statement 2009; International Consensus,
+   BJSM 2014) — so this is not "no weights until 16", which the evidence contradicts. It is:
+   free-weight barbell/machine work from the adolescent years with coaching, bodyweight and
+   band work earlier, and maximal or ballistic lifting not at all until skeletal maturity. */
+function exAgeMin(e){
+  if(e._am !== undefined) return e._am;
+  let v;
+  if(e.aMin != null) v = e.aMin;                                        // paediatric library: it declares its own
+  else {
+    const t = e.tags || [];
+    if(PED_HEAVY_EQ.test(e.equipment || "")) v = 14;
+    else if(t.includes("high_intensity") || e.difficulty >= 4) v = 14;  // ballistic / maximal — skeletal maturity
+    else if(e.difficulty === 3) v = 12;
+    else if(PED_SAFE_PAT.has(e.pattern) && e.difficulty <= 2 && !t.includes("impact")) v = 6;
+    else v = 12;
+  }
+  try{ Object.defineProperty(e, "_am", { value:v, enumerable:false }); }catch(_){}
+  return v;
+}
+const exAgeMax = e => (e.aMax != null ? e.aMax : 200);
+const exAgeOk  = (e, age) => age >= exAgeMin(e) && age < exAgeMax(e);
+/* Kept for the Library browser's badge — "is this a child's movement?" is still a fair
+   question to ask of one exercise, it just isn't how the plan gets filtered any more. */
+const isPediatricEx = e => !!e && (Array.isArray(e.tags) ? e.tags.includes("pediatric") : false);
+
+/* The protocols and INJURY_FOCUS are hand-authored PROSE ("Closed-chain leg press / squat
+   (progressive)") with no equipment or difficulty field, so exAgeMin()'s inference has
+   nothing to read — and these items bypass the library entirely, which is exactly how a
+   4-year-old with cerebral palsy ended up prescribed a barbell deadlift. A name table does
+   the same job. Ordered heaviest-first; the first match wins.
+   The 14 line is free-weight barbell/machine work, matching the adolescent library's own
+   "Barbell back squat (supervised) — 14+" so the two layers can't contradict each other.
+   It is NOT a claim that weights are unsafe before then: the consensus is technique-led
+   resistance training from ~7-8, which is what the 7 and 12 lines allow. */
+/* ⚠ These thresholds MUST agree with the paediatric library's own aMin values, or the two
+   layers contradict each other: the 5-10-5 shuttle sat at 13 here and 14 there, so a
+   13-year-old's protocol kept a drill the library would have refused them. Same movement,
+   two answers, decided by which layer it happened to arrive through. */
+const PROTO_AGE_RULES = [
+  [/barbell|kettlebell|machine|smith|sled|sandbag|cable|leg press|lat pull|bench press|olympic|clean|snatch|\b1rm\b|max(imal)? (lift|effort)|nordic|bound|depth (jump|drop)|pro-agility|5-10-5|t-drill|shuttle/i, 14],
+  [/pistol|sprint|plyo|carioca|cutting|change of direction|a-skip|deceleration/i, 13],
+  [/eccentric|deficit|weighted|loaded|goblet|bulgarian|copenhagen|single-leg romanian|hop-and-stick|drop-and-stick|box jump|agility/i, 12],
+  [/quad set|glute set|ankle pump|heel slide|pendulum|passive|isometric|stretch|breathing|diaphragm|range of motion|\brom\b|mobility|positioning|elevation|compression|tummy time|play/i, 4],
+  [/walk|balance|bridge|clam|band|sit-to-stand|step-up|step-down|heel raise|calf raise|plank|bird-dog|dead-bug|scapular|\brow\b|push-up|squat|marching|cycling|bike|swim|reach/i, 7]
+];
+const protoAgeMin = n => { for(const [re,a] of PROTO_AGE_RULES) if(re.test(n)) return a; return 10; };
+/* One test for both kinds of item: the library declares its window, prose gets one inferred. */
+function exItemAgeOk(e, age){
+  const min = (e.aMin != null) ? e.aMin : protoAgeMin(e.n || e.name || "");
+  const max = (e.aMax != null) ? e.aMax : 200;
+  return age >= min && age < max;
+}
+/* ⚠ Adults are returned untouched, by identity — this whole layer must be a no-op at 18+
+   and for anyone who never gave an age. */
+function adaptForAge(list, age){
+  return age >= 18 ? list : list.filter(e => exItemAgeOk(e, age));
+}
 /* Contraindication-filtered library options for a condition's region & phase.
    seed changes the ordering (used by "reroll"); count sets how many to return. */
 function libraryOptions(protocol, phaseIdx, flags, exclude, count, seed){
@@ -1084,17 +1275,29 @@ function libraryOptions(protocol, phaseIdx, flags, exclude, count, seed){
   const rset = new Set(regions);
   const bucket = phaseIdx+1;                      // 1..4
   const allowed = new Set([bucket]); if(bucket>1) allowed.add(bucket-1);
+  /* The difficulty bucket is an ADULT progression: phase 1 offers difficulty 1 only, which
+     works because the adult library is full of isometrics and ROM. A play library isn't —
+     measured, a 4-year-old's phase 1 matched ZERO exercises (nothing in Knee/Hip/Ankle is
+     "difficulty 1" when the easiest thing a preschooler does is still a game), and the phase
+     emptied. For a child the progression that matters is the age band, so widen the early
+     buckets to "anything easy" and let the later ones tier normally. Never exceeds the
+     adult bucket, so nothing gets harder than the phase intends. */
+  const _childAge = userAgeYears();
+  if(_childAge < 18){ allowed.clear(); for(let d=1; d<=Math.max(2,bucket); d++) allowed.add(d); }
   const exSet = new Set((exclude||[]).map(n=>n.toLowerCase()));
   const allowAqua = aquaticAllowed();
-  const adult = isAdultUser();                     // keep child-only "(infant)/(teen)" moves out of adult plans
+  const age = userAgeYears();                      // one window, both directions — see exAgeOk()
   const pool = window.EXERCISES.filter(e =>
     e.region.some(r=>rset.has(r)) && allowed.has(e.difficulty) && !exSet.has(e.name.toLowerCase()) &&
     (allowAqua || !isAquaticEx(e)) &&              // no aquatic suggestions until water-confidence is set
-    (!adult || !isPediatricEx(e)));
+    exAgeOk(e, age));
   let { kept } = window.applyContra(pool, flags);
   kept = kept.filter(e=>nameAllowed(e.name));      // respect device / weight-bearing restrictions
   kept.sort((a,b)=> hashStr(a.name+"|"+seed) - hashStr(b.name+"|"+seed));
-  return kept.slice(0,count).map(e=>({ n:e.name, d:e.dose, c:e.cue, warn:e.warn, pattern:e.pattern, region:e.region, tags:e.tags }));
+  /* aMin/aMax/band ride along: without them a paediatric pick loses its declared window the
+     moment it enters the program, and the later re-filters would judge it on its NAME. */
+  return kept.slice(0,count).map(e=>({ n:e.name, d:e.dose, c:e.cue, warn:e.warn, pattern:e.pattern,
+    region:e.region, tags:e.tags, aMin:e.aMin, aMax:e.aMax, band:e.band }));
 }
 
 /* ---------- injury-specific layer ----------
@@ -2753,6 +2956,25 @@ function currentPlanPhase(plan){
   const cp = Math.min(criteriaPhase(plan), plan.ph.length-1);
   return wp < 0 ? cp : Math.min(cp, wp);
 }
+/* Region-blind age-matched fill. Only runs when a child's phase would otherwise be nearly
+   empty, and only ever ADDS — every other gate (contraindications, devices, weight-bearing)
+   still applies, because "the phase looked thin" is not a reason to hand a child something
+   their precautions forbid. */
+function pedTopUp(kept, age, p, flags){
+  if(!window.EXERCISES) return kept;
+  const have = new Set(kept.map(e=>e.n.toLowerCase()));
+  const bucket = Math.max(2, p+1);
+  let pool = window.EXERCISES.filter(e => isPediatricEx(e) && exAgeOk(e, age)
+    && e.difficulty <= bucket && !have.has(e.name.toLowerCase()));
+  pool = window.applyContra(pool, flags).kept.filter(e=>nameAllowed(e.name));
+  pool.sort((a,b)=> hashStr(a.name+"|ped") - hashStr(b.name+"|ped"));
+  for(const e of pool){
+    if(kept.length >= 3) break;
+    kept.push({ n:e.name, d:e.dose, c:e.cue, pattern:e.pattern, region:e.region, tags:e.tags,
+                aMin:e.aMin, aMax:e.aMax, band:e.band });
+  }
+  return kept;
+}
 function enrichPhase(kept, protocol, p, flags){
   const target = phaseTarget(p);
   if(kept.length < target){
@@ -2771,6 +2993,7 @@ function generateProgram(){
 
   const R = activeRestrictions();   // device / upper-limb weight-bearing name-based restrictions
   const adlPlan = adlFocusPlan(flags);   // task-specific ADL practice per phase (primary condition only)
+  const age = userAgeYears();       // AGE_ADULT when unstated, so adults take the untouched path
   const items = conds.map((c,ci)=>{
     const proto = window.getProtocol(c.protocol);
     const focus = detectFocus(c.name);
@@ -2788,9 +3011,18 @@ function generateProgram(){
       const seen = new Set(sig.map(s=>s.n.toLowerCase()));
       let merged = [...sig, ...pool.filter(e=>!seen.has(e.n.toLowerCase()))];
       if(R.avoid.length) merged = merged.filter(e=>!R.avoid.some(re=>re.test(e.n)));   // drop device/limb-restricted moves
+      merged = adaptForAge(merged, age);            // protocol + signature prose — the layer that bypasses the library
       const { kept, removed } = window.applyContra(merged, flags);
       window.ensureMinimum(kept, flags, 3);
+      /* ensureMinimum pulls from SAFE_SUBS, which is adult-authored, so it can undo the
+         line above. Re-filter, THEN enrich — enrichPhase tops up from libraryOptions,
+         which is already age-gated, so the backfill lands age-appropriate. */
+      if(age < 18){ const ok = kept.filter(e=>exItemAgeOk(e, age)); kept.length = 0; kept.push(...ok); }
       enrichPhase(kept, c.protocol, p, flags);
+      /* Last resort. The age filter can strip a phase faster than the region-scoped library
+         can refill it — a plan with an empty phase is worse than one with a general
+         movement in it. Region is dropped here, age and precautions never are. */
+      if(age < 18 && kept.length < 3) pedTopUp(kept, age, p, flags);
       let ex = R.avoid.length ? kept.filter(e=>!R.avoid.some(re=>re.test(e.n))) : kept;  // final gate (ensureMinimum/enrich)
       // enrichPhase can only grow a phase — trim to the user's real time budget so a
       // short session isn't an abandoned one. Signature/protocol items come first, so
@@ -4059,10 +4291,10 @@ function addExOptsHTML(opts){
    medication filtering changed the program but not the library.
    Both callers now share this, so they cannot drift apart again.
    --------------------------------------------------------------------- */
-function userGateCtx(){ return { allowAqua: aquaticAllowed(), adult: isAdultUser() }; }
+function userGateCtx(){ return { allowAqua: aquaticAllowed(), age: userAgeYears() }; }
 function exPassesUserGates(e, ctx){
   if(!ctx.allowAqua && isAquaticEx(e)) return false;     // withhold aquatic until water confidence is set
-  if(ctx.adult && isPediatricEx(e)) return false;        // no child-only moves for adults
+  if(!exAgeOk(e, ctx.age)) return false;                 // both ways: no play moves for adults, no barbells for children
   return nameAllowed(e.name);                            // device / weight-bearing name restrictions
 }
 /* File order is 2,086 squat variants first, so an unfiltered library opened on 80 squats and
@@ -5116,6 +5348,7 @@ function renderProgram(prog){
   html += returnGoalsCard();
   html += adlSuggestionsCard();
   html += homeCard(homeAdapted);
+  html += pedGuidanceCard();      // age reshapes everything below it, so it says so first
   html += safetyNotesCard(prog);
   html += riskAwarenessCard(prog);
   html += vitalsCard(prog);
@@ -5162,6 +5395,70 @@ function renderProgram(prog){
   html += suggestionsCard(prog);
   out.innerHTML = html;
   wireProgram();
+}
+
+/* ---------------------------------------------------------------------
+   PAEDIATRIC GUIDANCE
+   What "age-appropriate" actually means for THIS band, plus the two things
+   most likely to be got wrong: that children shouldn't do resistance training
+   (they should — supervised and technique-led), and that a growing skeleton
+   fails at the growth plate rather than the muscle.
+   The age SOURCE is stated out loud. Age silently reshapes the whole program
+   now, so an inferred one has to be visible and correctable, not a secret.
+   --------------------------------------------------------------------- */
+const PED_BAND_GUIDE = {
+  neonatal: { icon:"👶", head:"Newborn — all care is parent-led",
+    body:"At this age 'exercise' is handling, positioning and gentle range of motion, done by you, exactly as the team showed you. Short and settled beats long and upset.",
+    key:["Tummy time from day one, awake and supervised — it builds the neck and shoulder strength everything else stands on.",
+         "Passive range of motion is slow and small. It should never make your baby cry out.",
+         "Position changes through the day matter more than any single exercise."] },
+  infant: { icon:"👶", head:"Infant — the work is the milestones",
+    body:"Rehab here means helping the next motor milestone arrive: rolling around 4–6 months, sitting around 6, crawling 8–10, cruising 9–12, walking around 12 (anywhere from 9 to 15 is normal). Play IS the therapy.",
+    key:["Follow your baby's lead. Several happy 5-minute bouts beat one long session.",
+         "Aim for around an hour of tummy time across the day, in short goes.",
+         "Milestone ranges are wide. Steady progress matters more than hitting a date."] },
+  toddler: { icon:"🧸", head:"Toddler — repetition disguised as a game",
+    body:"Toddlers repeat what's fun, not what's prescribed. Every item below is a game on purpose — that's what gets the reps in.",
+    key:["Count out loud, race them, make it silly. Compliance at this age is entertainment.",
+         "Expect falls. Supervise, childproof, and let them practise anyway.",
+         "Little and often through the day beats a scheduled session."] },
+  preschool: { icon:"🧒", head:"Preschool — fundamental movement skills",
+    body:"This is when hopping (~3½–4), catching, and skipping (~5) arrive. These skills are the foundation for everything later, and they're built by playing them.",
+    key:["Vary it. Lots of different movements beats drilling one.",
+         "Short bouts — 5–10 focused minutes is a full session at this age.",
+         "Praise effort, not performance. Kids who feel clumsy stop moving."] },
+  school: { icon:"🧑", head:"School-age — technique first, load later",
+    body:"Children can and should do resistance training — supervised, technique-led, with light or bodyweight load. Strength gains at this age come from the nervous system learning the movement, not from muscle bulk, so quality of practice IS the training stimulus.",
+    key:["1–2 sets of 8–15 reps, 2–3 non-consecutive days a week. Technique before any load.",
+         "Balance and landing practice isn't filler — it measurably lowers injury risk in youth sport.",
+         "No maximal (one-rep-max) lifting. Not a strength issue — a growing skeleton's weak link is the growth plate."] },
+  adolescent: { icon:"🧑‍🦱", head:"Adolescent — close to adult, with two differences",
+    body:"From here rehab looks much like an adult's, and progressive resistance training is both safe and effective with coaching. Two things still set it apart: the growth plates are open, and growth itself is a risk factor.",
+    key:["Build reps and quality before weight. Add load only once technique holds up under fatigue.",
+         "Still no max-effort singles or ballistic lifting until skeletal maturity and solid technique.",
+         "Around the growth spurt (~11½ in girls, ~13½ in boys) injury risk peaks and tolerance for jumps in load drops. Progress slower during it, not faster.",
+         "Pain at a bony point that's tender to press — knee, heel — is usually a growth-plate traction issue. Manage the load; don't push through it."] }
+};
+function pedGuidanceCard(){
+  const info = userAgeInfo();
+  if(info.age >= 18) return "";
+  const band = pedBandOf(info.age); if(!band) return "";
+  const g = PED_BAND_GUIDE[band.k]; if(!g) return "";
+  /* Say where the age came from. An inferred age that silently rewrites the plan is the
+     same failure as no age at all — only harder to notice. */
+  const src = info.source === "stated"
+    ? `Based on the age you entered — <b>${esc(String(state.age))}</b>.`
+    : info.source === "surgery"
+      ? `No age entered, so this uses the age band of the procedure you chose — <b>${esc(info.band)}</b>. Add an exact age in Medical history for a closer match.`
+      : `No age entered, so this uses the usual age range for <b>${esc(String(info.from||"your diagnosis"))}</b> (${info.lo}–${info.hi} yr). Add an exact age in Medical history for a closer match.`;
+  return `<div class="card pedcard">
+    <h2>${g.icon} ${esc(g.head)}</h2>
+    <p class="hint pedsrc">${src}</p>
+    <div class="pedband">Age group used: <b>${esc(band.label)}</b></div>
+    <p class="pedbody">${esc(g.body)}</p>
+    <ul class="pedkeys">${g.key.map(k=>`<li>${esc(k)}</li>`).join("")}</ul>
+    <p class="pedfoot">Every exercise below is filtered to this age group — movements written for adults, and play written for younger children, are both held back. Educational guidance only: a paediatric physiotherapist should set and supervise a child's program.</p>
+  </div>`;
 }
 
 function suggestionsCard(prog){
@@ -6126,6 +6423,11 @@ function initHistory(){
   $("#q_age").value=state.age; $("#q_sex").value=state.sex; $("#q_meds").value=state.meds; $("#q_notes").value=state.notes;
   $("#parq_pain").checked=state.parq.pain; $("#parq_faint").checked=state.parq.faint; $("#parq_doc").checked=state.parq.doc;
   $("#q_age").oninput=e=>{state.age=e.target.value;save();updateVitalsReadout();};
+  /* Age now selects the exercises, so it has to rebuild the plan like any other precaution.
+     On CHANGE, not input: typing "15" passes through "1", and regenerating per keystroke
+     would briefly hand a teenager an infant's program. */
+  $("#q_age").onchange=()=>{ if(state.program){ state.program=generateProgram(); save();
+    if(state.step===4) renderProgram(state.program); toast("Age updated — your exercises were rematched to it."); } };
   $("#q_sex").oninput=e=>{ state.sex=e.target.value; save(); syncPregWrap(); };   // set THEN gate, not two racing handlers
   $("#q_meds").oninput=e=>{state.meds=e.target.value;save();};
   $("#q_notes").oninput=e=>{state.notes=e.target.value;save();};
@@ -9347,6 +9649,18 @@ function buildCoachSystem(){
   /* Which of those actually get DONE. The session count says "3 this week" while one
      movement is silently dropped every time — this is the only place that shows up. */
   const doneLine = exSkipLine();
+  /* Jeffery answered a 4-year-old exactly as he answered a 40-year-old, because age never
+     reached him. It reshapes the whole plan now, so he has to know it — and know which
+     answer produced it, so he can say so rather than sound certain about a guess. */
+  const _ai = userAgeInfo(), _ab = _ai.age < 18 ? pedBandOf(_ai.age) : null;
+  const pedLine = !_ab ? "adult" :
+    `PAEDIATRIC — ${_ab.label}. Age ${_ai.age} (${_ai.source === "stated" ? "entered by the user"
+      : _ai.source === "surgery" ? "inferred from the age band of the procedure they chose — flag the assumption if it matters"
+      : `inferred from the usual age range for their diagnosis (${_ai.lo}–${_ai.hi} yr) — flag the assumption if it matters`}). `
+    + "Address the PARENT/CARER for under-12s and the young person directly from about 12. Their program is filtered to this age group. "
+    + "Evidence to hold to: supervised, technique-led resistance training IS safe and effective for children — do NOT repeat the \"no weights until 16\" myth — but no maximal (1RM) or ballistic lifting until skeletal maturity. "
+    + "A growing skeleton's weak link is the growth plate, so pain at a tender bony point (knee, heel) means manage the load rather than push through. "
+    + "Around peak height velocity (~11.5 girls, ~13.5 boys) injury risk peaks and tolerance for jumps in load falls.";
   /* weeksPostOp() and state.weeks DIVERGE once a surgery date is set — the prompt used
      the raw intake number, so Jeffery could be weeks off on a post-op timeline. */
   const wpo = weeksPostOp();
@@ -9404,6 +9718,7 @@ USER CONTEXT
 - Where they are RIGHT NOW: ${phaseLine}
 - Their current phase's prescribed exercises (refer to these by number if asked): ${exLine}
 - Which of those they ACTUALLY tick off: ${doneLine}
+- Age group: ${pedLine}
 - Medications: ${medLine}
 - Medication considerations for exercise: ${medNoteLine}
 - Setup & capacity: ${setupLine}

@@ -17,12 +17,12 @@
    carry dark text (.btn.primary, .planvar.on). Darkening them for light mode would fix the
    text and break the buttons, so text usages get their own ink tokens. In dark mode the ink
    IS the accent; light mode overrides only the ink. */
-:root{ --brand-ink:var(--brand); --accent-ink:var(--brand-2); }
+:root{ --brand-ink:var(--brand); --accent-ink:var(--brand-2); --ped-ink:var(--ped); }
 @media (prefers-color-scheme: light){
   :root{--bg:#eef3f8;--panel:#fff;--panel-2:#f2f6fb;--line:#d7e2ee;--text:#132030;--muted:#5b6c80;--shadow:0 8px 30px rgba(20,40,70,.10);
     /* the dark-mode accents measured 2.59:1 and 1.64:1 on white -- both fail WCAG AA (4.5:1),
        and --brand-2 was the colour of the cardiac-device heart-rate limit text. */
-    --brand-ink:#0b5fa8; --accent-ink:#0a6e4a; --chip:#e4ecf6;
+    --brand-ink:#0b5fa8; --accent-ink:#0a6e4a; --chip:#e4ecf6; --ped-ink:#a32b6b;
     --rule:rgba(20,60,110,.13); --paper:#fffdf7}   /* warm paper, not clinical white */
 }
 *{box-sizing:border-box}
@@ -500,6 +500,17 @@ body.isoffline .vidnote{display:none}
 .adlbuild{font-size:12px;color:var(--muted);margin:2px 0 0}
 .adlbuild b{color:var(--text)}
 .adlcard{border-color:#a78bfa}
+/* Paediatric guidance — age reshapes the whole plan, so it leads and it looks like it. */
+.pedcard{border-color:var(--ped)}
+.pedsrc{margin:0 0 10px}
+.pedband{display:inline-block;font-size:12.5px;background:var(--chip);border:1px solid var(--line);
+  border-radius:999px;padding:3px 10px;margin-bottom:10px}
+.pedband b{color:var(--ped-ink)}
+.pedbody{font-size:14px;line-height:1.6;margin:0 0 10px}
+.pedkeys{margin:0 0 10px;padding-left:20px;font-size:13.5px;line-height:1.6}
+.pedkeys li{margin-bottom:6px}
+.pedfoot{font-size:12px;color:var(--muted);line-height:1.55;margin:0;
+  border-top:1px solid var(--line);padding-top:9px}
 .adlsugg{border:1px solid var(--line);border-radius:10px;background:var(--panel-2);padding:10px 12px;margin:9px 0}
 .adlsugg-h{font-size:13.5px;margin-bottom:5px}
 .adlsugg-tasks{color:var(--muted);font-size:11.5px;font-weight:500;margin-left:4px}
