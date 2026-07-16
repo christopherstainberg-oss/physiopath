@@ -335,10 +335,11 @@ const state = {
 const MED_FILTERABLE = ["fluoroquinolone","anticoagulant","antiplatelet","opioid","sedative","muscle_relaxant","gabapentinoid","antipsychotic"];
 /* ---------- on-demand data loading ----------
    The app shipped 33.5MB of JS at boot while the first screen needs ~78KB of it.
-   These four datasets (medications 3.5MB, sports, activities, coach-kb 11.5MB —
-   ~15.8MB, 47% of the payload) aren't touched until much later steps, so they're
-   fetched when the step that needs them opens. Everything that reads them was
-   already guarded on `window.X` being absent, which is what makes this safe. */
+   These four datasets (medications 3.5MB, sports, activities, coach-kb) aren't
+   touched until much later steps, so they're fetched when the step that needs
+   them opens. Everything that reads them was already guarded on `window.X` being
+   absent, which is what makes this safe. (coach-kb.js is now an ~82KB seed that
+   expands to the full 20k-entry KB in-browser — it used to be an 11.5MB file.) */
 const _dataP = {};
 function loadData(file){
   if(_dataP[file]) return _dataP[file];
@@ -5863,7 +5864,7 @@ const GENERIC_KW = new Set(["what is","what","whats","about","tell me about","te
    the 2-letter keywords in the generated KB ("ra", "ms", "cp", "md") matched INSIDE
    ordinary words: "radiates" -> rheumatoid arthritis, "symptoms" -> multiple sclerosis.
    Normalising both sides to " word word " and testing for " kw " kills the whole class
-   without regenerating the 11.5MB file. Stemming keeps "knees" matching "knee". */
+   without touching the generated KB. Stemming keeps "knees" matching "knee". */
 const _stem = w => (w.length > 3 && w.endsWith("s") && !w.endsWith("ss")) ? w.slice(0, -1) : w;
 /* Document frequency over COACH_KB, computed once. The generated file gives every one
    of its 371 conditions the same 57 question templates, so a keyword's spread tells you
@@ -6151,7 +6152,7 @@ function suggestedQuestions(){
 }
 function initCoach(){
   if((state.medIds||[]).length) ensureMedData();   // MEDMAP drives the prompt's medication lines
-  loadData("coach-kb.js");   // 11.5MB — only the Coach step needs it
+  loadData("coach-kb.js");   // ~82KB seed, expands in-browser — only the Coach step needs it
   updateCoachMode();
   renderChatlog();            // rehydrate the thread — this used to wipe it on every visit
   renderSuggests();
