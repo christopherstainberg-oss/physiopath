@@ -3108,6 +3108,99 @@ function movementNotes(name){
   return n.slice(0,2).join(" ");
 }
 /* =====================================================================
+   "WATCH HOW" — a CONSTRUCTED YouTube search, never a stored video id.
+   Specific video ids are deliberately NOT used: this file cannot verify what
+   is actually at a given id, ids rot as channels delete and privatise, and a
+   rehab app vouching for the wrong demonstration is a safety problem, not a
+   broken link. A search URL is built from the name, so it cannot be wrong
+   about a video it never names.
+   The link is click-only and opens a new tab — never an <iframe>, which would
+   contact Google on render and quietly falsify "Nothing is uploaded".
+   ===================================================================== */
+
+/* The generated names are ours, not search terms: nobody searches "Soup-can
+   split squat — unilateral". Strip the implement and our modifier suffixes
+   down to the movement a human would actually type, but KEEP named variants —
+   a goblet squat is a different search from a box squat. */
+const VID_STRIP_EQUIP = /^(dumbbell|kettlebell|barbell|band|loop-band|cable|machine|suspension|towel|broomstick|chair|med-ball|sandbag|backpack|heavy-book|soup-can|water-bottle|water-jug|resisted|weighted)\s+/i;
+const VID_STRIP_TAIL  = /\s+—\s+.*$/;                       // our " — modifier" suffixes
+const VID_STRIP_PARENS = /\s*\((?!left|right|bilateral)[^)]*\)/gi;   // "(SAQ)", "(holding a counter)"
+/* Qualifier by pattern — "squat" alone returns gym content; these bias toward
+   clinical demonstrations. */
+const VID_QUALIFIER = {
+  supine:"physical therapy", seated:"physical therapy", standing:"physical therapy",
+  pool:"aquatic therapy", balance:"balance training physical therapy", gait:"gait training physical therapy",
+  vestibular:"vestibular rehabilitation", breathing:"breathing exercise technique",
+  mobility:"stretch technique", isometric:"isometric exercise technique",
+  pump:"physical therapy", adl:"occupational therapy"
+};
+/* Program exercises come from the hand-authored protocols, not the generated library, so
+   their names are PRESCRIPTIONS rather than movement names: "Gentle ROM around the injury",
+   "Progressive grip work". Searching those verbatim sends people to nothing. Strip the
+   prescription language, expand the jargon nobody types into a search box, and if what
+   remains names no actual movement, return null so no link is offered at all. */
+const VID_LEAD  = /^(gentle|progressive|assisted|light|graded|early|controlled|supported|pain-free|active|passive|isometric|advanced)\s+/i;
+const VID_JARGON = [[/\brom\b/gi, "range of motion"], [/\bAAROM\b/gi, "assisted range of motion"],
+                    [/\bckc\b/gi, "closed chain"], [/\bokc\b/gi, "open chain"], [/\bslr\b/gi, "straight leg raise"],
+                    [/\bsaq\b/gi, "short arc quad"], [/\bter\b/gi, "terminal extension"], [/\bnwb\b/gi, ""]];
+/* After cleaning, a query made only of these words names no movement. */
+const VID_FILLER = /\b(range of motion|exercise|exercises|work|working|activity|injury|injured|area|movement|the|a|an|around|all|direction|directions|and|with|as|tolerated|progression|training|drill|drills|side|both|affected|limb)\b/gi;
+
+function videoQuery(name, pattern){
+  let q = String(name||"")
+    .replace(VID_STRIP_TAIL, "")
+    .replace(VID_STRIP_PARENS, "")
+    .replace(/\s*\((left|right|bilateral)\)\s*$/i, "")
+    .trim()
+    .replace(VID_STRIP_EQUIP, "")
+    .replace(/\s*\/\s*/g, " ")          // "Deadlift / hip hinge" -> one phrase
+    .replace(/,/g, " ")                  // "Ankle pumps, seated" is a name, not a query
+    .replace(/&/g, " and ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if(!q) q = String(name||"").trim();
+  q = q.toLowerCase();
+  while(VID_LEAD.test(q)) q = q.replace(VID_LEAD, "");        // "gentle progressive hip rom" -> "hip rom"
+  for(const [re, to] of VID_JARGON) q = q.replace(re, to);
+  q = q.replace(/\s+/g, " ").trim();
+  /* Nothing but prescription language left ("gentle ROM around the injury") -> no movement
+     to search for, so offer no link rather than a useless one. */
+  if(q.replace(VID_FILLER, "").replace(/[^a-z0-9]/g, "").length < 3) return null;
+  /* Don't repeat a word the name already has: "eyes-closed single-leg balance" +
+     "balance training physical therapy" searched for "balance balance training". */
+  const have = new Set(q.split(/[^a-z0-9]+/).filter(Boolean));
+  const qual = (VID_QUALIFIER[pattern] || "exercise technique")
+    .split(" ").filter(w => !have.has(w.toLowerCase())).join(" ");
+  return (q + " " + qual).replace(/\s+/g, " ").trim();
+}
+function videoSearchURL(name, pattern){
+  const q = videoQuery(name, pattern);
+  return q ? "https://www.youtube.com/results?search_query=" + encodeURIComponent(q) : null;
+}
+/* A generic video knows nothing about this user's precautions. If the engine has
+   reshaped or removed a whole class of movement for them, say so ON the link —
+   the one place they're about to go and watch someone do it differently. */
+function videoCaveat(){
+  const f = new Set(gatherFlags());
+  const wb = (state.weightBearing||{}).status;
+  if(wb && wb !== "fwb" && wb !== "wbat")
+    return `Your weight-bearing order is ${(WB_STATUS[wb]||{}).abbr||wb} — videos will show the full standing version. Follow your plan's version, not theirs.`;
+  if(f.has("sternal_precautions")) return "You're under sternal precautions — ignore any pushing, pulling or overhead loading a video shows.";
+  if(f.has("spinal_precautions"))  return "You're under spinal precautions (no bending, lifting or twisting) — a general video won't respect them.";
+  if(f.has("abdominal_precautions")) return "You're under abdominal precautions — ignore any sit-ups, crunches or planks a video adds.";
+  if(f.has("pregnancy")) return "Videos won't account for pregnancy — skip lying flat on your back and any breath-holding they show.";
+  return "Videos are generic: they don't know your precautions, your phase, or your dose. Your plan's sets and reps win.";
+}
+function videoLinkHTML(name, pattern){
+  const url = videoSearchURL(name, pattern);
+  if(!url) return "";                       // no movement to search for — say nothing
+  return `<div class="vidrow no-print">
+    <a class="vidlink" href="${esc(url)}" target="_blank" rel="noopener noreferrer nofollow">▶ Watch how <span class="vidext">↗</span></a>
+    <span class="vidnote">${esc(videoCaveat())}</span>
+    <span class="vidoff">You're offline — this needs a connection.</span>
+  </div>`;
+}
+/* =====================================================================
    "WHAT IT IS" / "WHY IT HELPS" — specificity + variance
    PATTERN_INFO carries one `what` and one `why` per movement pattern, so every
    squat variant opened and closed with the identical two sentences no matter
@@ -3539,7 +3632,8 @@ function movementExplain(name, pattern, regionArr){
   ].join("");
   return `<b>What it is:</b> ${whatLine}${target}`
     + `<div class="howhead"><b>How to do it</b></div>${stepHTML}${meta}`
-    + `<div class="howwhy"><b>Why it helps:</b> ${whyLine}</div>`;
+    + `<div class="howwhy"><b>Why it helps:</b> ${whyLine}</div>`
+    + videoLinkHTML(name, p);
 }
 
 /* Shared exercise <li> renderer with Explain + optional Swap (when ctx {ci,pi,ei} given). */
@@ -7779,6 +7873,9 @@ function renderExResults(){
 document.addEventListener("DOMContentLoaded",()=>{
   load();
   initHistory(); initOptSecs(); initMeds(); initSearch(); initDetails(); initProgress(); initDataCard(); initCoachSettings();
+  /* The app works offline; these links don't. Flag it rather than let the tap do nothing. */
+  const syncOffline = () => document.body.classList.toggle("isoffline", !navigator.onLine);
+  window.addEventListener("online", syncOffline); window.addEventListener("offline", syncOffline); syncOffline();
   // Details(3)/Program(4)/Health(5) need a condition; Injury(2) is where you pick it; Clinician(1) is a setup form (no condition needed).
   $$("[data-goto]").forEach(b=>b.onclick=()=>{
     const n=+b.dataset.goto;
