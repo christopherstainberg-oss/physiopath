@@ -296,7 +296,7 @@ const state = {
   medIds:[], medFilter:false, homeMode:false, customPrecautions:[], clinicianProtocols:[], clinPrecautionProtocol:"", clinicianGuided:false,
   medDoses:{}, weightBearing:{status:"",pct:"",lbs:"",side:"",limb:"le"}, devices:[],
   cardiacDevice:{type:"",icdRate:""}, specialPrecautions:[], planVariant:{}, progress:{},
-  log:[], logMood:"", jjThread:[], chatHistory:[], apiKey:"", apiModel:"claude-opus-4-8"
+  log:[], logMood:"", logTpl:"blank", jjThread:[], chatHistory:[], apiKey:"", apiModel:"claude-opus-4-8"
 };
 const MED_FILTERABLE = ["fluoroquinolone","anticoagulant","antiplatelet","opioid","sedative","muscle_relaxant","gabapentinoid","antipsychotic"];
 /* ---------- on-demand data loading ----------
@@ -6371,6 +6371,7 @@ function initProgress(){
       };
     });
   }
+  renderTplRow();
   const dt = $("#logDate");
   if(dt){
     dt.max = todayISO();
@@ -6410,7 +6411,7 @@ function loadLogDay(d){
   if(head) head.textContent = d === todayISO() ? "Today's journal" : "Journal — " + fmtDate(d);
   const lt = $("#logToday");
   if(lt) lt.textContent = e ? "You already have an entry for this day" : "";
-  syncMood(); renderJournalToday();
+  syncMood(); renderJournalToday(); renderDiaryHead(d);
   if(typeof renderJournalJeffery==="function") renderJournalJeffery();
 }
 /* =====================================================================
@@ -6856,6 +6857,68 @@ async function jefferyJournalReply(){
   }
   save(); renderJJThread();
 }
+/* ---------------------------------------------------------------------
+   DIARY TEMPLATES
+   A blank box is the thing people bounce off — "write something about your
+   day" is a bigger ask than it looks at 11pm. A half-written page is much
+   easier to talk back to, so these are openers, not forms: headings the user
+   can ignore, delete or write straight over. Blank stays the default for
+   anyone who just wants to write.
+   The "Rough day" one exists because the days worth capturing most are the
+   ones when a five-part template feels like homework.
+   --------------------------------------------------------------------- */
+const DIARY_TEMPLATES = [
+  { k:"blank", label:"Blank", body:"" },
+  { k:"quick", label:"One line", body:"Today — " },
+  { k:"full",  label:"Full page", body:
+    "How today went —\n\n\nWhat I managed —\n\n\nWhat was hard —\n\n\nOne good thing —\n\n\nNote to future me —\n\n" },
+  { k:"rough", label:"Rough day", body:
+    "Today was a hard one because —\n\n\nWhat I still did, even so —\n\n\nWhat might help tomorrow —\n\n\n(One line is plenty today. Nobody's marking this.)\n" },
+  { k:"win",   label:"Milestone", body:
+    "Today I finally —\n\n\nHow it felt —\n\n\nWhat got me here —\n\n\nRead this again on a bad day.\n" }
+];
+function applyTemplate(k){
+  const t = DIARY_TEMPLATES.find(x=>x.k===k); if(!t) return;
+  const n = $("#logNote"); if(!n) return;
+  /* Never silently overwrite what they have already written. */
+  if(n.value.trim() && t.body && !confirm("Replace what you've written with the " + t.label.toLowerCase() + " template?")) return;
+  if(t.k === "blank"){
+    if(n.value.trim() && !confirm("Clear this entry?")) return;
+    n.value = "";
+  } else n.value = t.body;
+  state.logTpl = k; save();
+  syncTplRow();
+  n.focus();
+  /* Land the cursor after the first heading, where they actually start writing. */
+  const i = n.value.indexOf("—");
+  n.setSelectionRange(i >= 0 ? i + 2 : n.value.length, i >= 0 ? i + 2 : n.value.length);
+}
+function syncTplRow(){
+  $$("#logTpl .tplbtn").forEach(b=>{
+    const on = b.dataset.k === (state.logTpl || "blank");
+    b.classList.toggle("on", on);
+    b.setAttribute("aria-pressed", String(on));
+  });
+}
+function renderTplRow(){
+  const row = $("#logTpl"); if(!row) return;
+  row.innerHTML = `<span class="tpllab">Start from —</span>` + DIARY_TEMPLATES.map(t=>
+    `<button type="button" class="tplbtn" data-k="${t.k}" aria-pressed="false">${esc(t.label)}</button>`).join("");
+  row.querySelectorAll(".tplbtn").forEach(b=> b.onclick = () => applyTemplate(b.dataset.k));
+  syncTplRow();
+}
+/* The page shows its own date, the way a diary does. */
+function renderDiaryHead(d){
+  const day = $("#diaryDay"), meta = $("#diaryMeta");
+  const dt = new Date((d || todayISO()) + "T12:00:00");
+  if(day) day.textContent = isNaN(dt) ? "" : dt.toLocaleDateString(undefined, { weekday:"long", day:"numeric", month:"long", year:"numeric" });
+  if(meta){
+    const e = (state.log||[]).find(x=>x.date === (d || todayISO()));
+    const m = e && moodOf(e.mood);
+    meta.textContent = e ? (m ? m.icon + " " + m.label : "written") : "";
+  }
+}
+
 /* =====================================================================
    THE JOURNAL
    This was a clinical data form wearing a friendly heading: a 0-10 slider, a
@@ -6963,6 +7026,8 @@ function saveLogEntry(){
 }
 function renderJournalToday(){
   const host = $("#journalToday"); if(host) host.innerHTML = journalTodayHTML() + logImpactHTML();
+  const d = ($("#logDate") && $("#logDate").value) || todayISO();
+  if(typeof renderDiaryHead === "function") renderDiaryHead(d);   // keep the page's own date line honest
 }
 /* A new precaution (e.g. a logged hypertensive crisis) is a SAFETY change and applies at once.
    A pain shift only offers a rebuild, because rebuilding throws away the user's own edits. */

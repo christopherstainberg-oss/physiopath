@@ -387,10 +387,17 @@
 
       <!-- The note is the point of a journal, so it leads and it gets a real prompt drawn
            from this user's own answers rather than a blank box. -->
-      <label class="field"><span class="lab">In your words <span class="sub">(optional, but this is the bit worth keeping)</span></span>
+      <div class="field diarywrap">
         <span class="jprompt" id="logPrompt"></span>
-        <textarea id="logNote" rows="3" placeholder="Anything you'd want to remember, or tell your physio."></textarea>
-      </label>
+        <!-- Templates are a way in, not a form. A blank page is the thing people bounce off;
+             a half-written one they can talk back to is much easier to start. -->
+        <div class="tplrow no-print" id="logTpl" role="group" aria-label="Start from a template"></div>
+        <div class="diarypage">
+          <div class="diaryhead"><span class="diaryday" id="diaryDay"></span><span class="diarymeta" id="diaryMeta"></span></div>
+          <label class="sr-only" for="logNote">Your journal entry</label>
+          <textarea id="logNote" class="diaryarea" rows="9" placeholder="Dear diary… (or just: knee sore, did my exercises anyway)"></textarea>
+        </div>
+      </div>
 
       <details class="optsec" id="logDetail">
         <summary><span class="optsum">Add the numbers</span><span class="optbuy">→ drives your pain trend and plan</span></summary>
