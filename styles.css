@@ -257,6 +257,12 @@ body.isoffline .vidnote{display:none}
 .jjyou{align-self:flex-end;max-width:88%;background:var(--brand);color:#04121f;border-bottom-right-radius:4px}
 .jjbot{align-self:flex-start;max-width:92%;background:var(--panel-2);border:1px solid var(--line);border-bottom-left-radius:4px}
 @media print{ .jjrow,.jjq{display:none!important} }
+.jjopts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.jjopt{cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;
+  border:1px solid var(--line);background:var(--panel-2);color:var(--text);
+  border-radius:999px;padding:9px 15px;min-height:40px;transition:.15s}
+.jjopt:hover{border-color:var(--brand-2);background:var(--chip)}
+.jjopt:active{transform:translateY(1px)}
 /* ---------- the journal ---------- */
 .moodrow{display:flex;flex-wrap:wrap;gap:8px}
 .moodbtn{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;

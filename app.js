@@ -6395,7 +6395,15 @@ function loadLogDay(d){
   if($("#logPain")){ $("#logPain").value = e ? e.pain : 3; $("#logPainVal").textContent = e ? e.pain : 3; }
   if($("#logSessions")) $("#logSessions").value = e ? e.sessions : 1;
   if($("#logNote")) $("#logNote").value = e ? (e.note||"") : "";
-  if($("#logPrompt")) $("#logPrompt").innerHTML = journalPrompt(d);
+  /* Don't stack two questions. When Jeffery asks an OPEN question his card is the prompt,
+     so the note stays quiet; when he asks a CLOSED one (a tap), the written prompt
+     complements it instead of competing with it. */
+  const _q = jefferyQuestion(d);
+  const _p = $("#logPrompt");
+  if(_p){
+    if(_q.t === "closed"){ _p.innerHTML = journalPrompt(d); _p.classList.remove("hide"); }
+    else { _p.innerHTML = ""; _p.classList.add("hide"); }
+  }
   const hint = $("#logDateHint");
   if(hint) hint.textContent = d === todayISO() ? "today" : (e ? "editing a past entry" : "catching up a missed day");
   const head = $("#logHead");
@@ -6463,34 +6471,105 @@ function jefferyOpener(){
 }
 /* Deliberately not all about the injury. Rehab is months long and lives inside a life —
    sleep, work, mood and whether anyone's asked how you are all move the outcome, and a
-   friend would ask about them. */
+   friend would ask about them.
+
+   Two kinds of question, on purpose:
+   - OPEN ones invite writing, and produce the sentences worth keeping.
+   - CLOSED ones are a single tap. They matter most on exactly the days someone has no
+     energy to write — a bad day should still be loggable in three seconds — and some of
+     the most clinically useful things are yes/no by nature (night pain, new pain
+     somewhere else, whether the brace is actually being worn).
+   Every closed option carries Jeffery's reply, so a tap opens the conversation instead of
+   ending it. `more:true` nudges toward the note; the answer is never a dead end. */
 const JOURNAL_QS = {
   rehab: [
-    "What did your body let you do today that it wouldn't have a month ago?",
-    "Anything that felt easier than you expected?",
-    "Was there a moment today you thought “oh, that used to hurt”?",
-    "What are you still avoiding — and is that caution or habit at this point?",
-    "If your physio asked “how's it going?” right now, what would you actually say?",
-    "Which exercise are you quietly dreading? No judgement, I'm just curious.",
-    "What would “a good week” look like from here?"
+    { t:"open", q:"What did your body let you do today that it wouldn't have a month ago?" },
+    { t:"open", q:"Anything that felt easier than you expected?" },
+    { t:"open", q:"Was there a moment today you thought “oh, that used to hurt”?" },
+    { t:"open", q:"What are you still avoiding — and is that caution or habit at this point?" },
+    { t:"open", q:"If your physio asked “how's it going?” right now, what would you actually say?" },
+    { t:"open", q:"Which exercise are you quietly dreading? No judgement, I'm just curious." },
+    { t:"open", q:"What would “a good week” look like from here?" },
+    { t:"closed", q:"Did you get your exercises done today?", opts:[
+      { label:"All of them", reply:"Good. That's the boring bit that actually does the work — most people skip it and wonder why nothing changes." },
+      { label:"Some", reply:"Some is a real answer, and it beats none by more than people think. Short and often wins.", more:true },
+      { label:"Not today", reply:"That's alright. One day off isn't a setback, and guilt has never healed anything. Anything get in the way?", more:true }
+    ]},
+    { t:"closed", q:"Any pain somewhere it didn't used to hurt?", opts:[
+      { label:"No", reply:"Good — that's the answer I was hoping for. New pain elsewhere usually means something's compensating." },
+      { label:"Yes", reply:"Worth keeping an eye on. New pain in a fresh spot often means something else is taking the load — mention it to your physio if it sticks around. Where is it, and what does it feel like?", more:true }
+    ]},
+    { t:"closed", q:"Did it wake you in the night?", opts:[
+      { label:"Slept fine", reply:"That's a better sign than any number on a chart. Sleep is when the repairing actually happens." },
+      { label:"Once or twice", reply:"Not unusual, especially after a bigger day. Worth watching the pattern rather than the one night.", more:true },
+      { label:"Kept me awake", reply:"That's worth telling your physio — pain that regularly wakes you is one of the things they specifically want to know about. How many nights this week?", more:true }
+    ]},
+    { t:"closed", q:"Is the swelling up, down, or about the same?", opts:[
+      { label:"Down", reply:"That's your best day-to-day gauge, and down is the direction you want." },
+      { label:"Same", reply:"Steady is fine. Swelling is a slow mover.", more:true },
+      { label:"Up", reply:"Swelling is the honest umpire of load — up usually means yesterday asked a bit much. Ease off a notch rather than pushing through. What did you do differently?", more:true }
+    ]},
+    { t:"closed", q:"How confident do you feel putting weight through it?", opts:[
+      { label:"Confident", reply:"Confidence matters more than people credit — trusting it is half of using it normally again." },
+      { label:"Getting there", reply:"That's the honest middle, and it's where most of rehab lives.", more:true },
+      { label:"Not at all", reply:"Fair. Fear of it is real and it's part of the injury, not a character flaw — it usually settles as the strength does. What worries you most about it?", more:true }
+    ]}
   ],
   life: [
-    "Outside all this — how are you, actually?",
-    "How did you sleep? It matters more to healing than most people are told.",
-    "Has anyone asked how you're doing lately? Properly asked, I mean.",
-    "What's the most annoying thing this injury is keeping you from? Say it, it helps.",
-    "What did you enjoy today, even briefly?",
-    "Is there something you've stopped doing that you could start again, even a bit?",
-    "How's your patience with all this holding up? Honest answer.",
-    "What are you looking forward to?"
+    { t:"open", q:"Outside all this — how are you, actually?" },
+    { t:"open", q:"How did you sleep? It matters more to healing than most people are told." },
+    { t:"open", q:"What's the most annoying thing this injury is keeping you from? Say it, it helps." },
+    { t:"open", q:"What did you enjoy today, even briefly?" },
+    { t:"open", q:"Is there something you've stopped doing that you could start again, even a bit?" },
+    { t:"open", q:"How's your patience with all this holding up? Honest answer." },
+    { t:"open", q:"What are you looking forward to?" },
+    { t:"closed", q:"Did you get out of the house today?", opts:[
+      { label:"Yes", reply:"Good. Getting out does something for this that no exercise sheet does." },
+      { label:"No", reply:"Some days that's just how it goes. Worth noticing if it becomes the pattern rather than the day.", more:true }
+    ]},
+    { t:"closed", q:"Have you got someone to talk to about all this?", opts:[
+      { label:"Yes", reply:"That's genuinely one of the better predictors of how this goes. Don't underrate it." },
+      { label:"Not really", reply:"That's a hard one to admit, and it's more common in long rehab than anyone says out loud. I'm here daily, but I'm an app — a real person is worth the effort if you can find one.", more:true }
+    ]},
+    { t:"closed", q:"Feeling like yourself lately?", opts:[
+      { label:"Mostly", reply:"Good. Recovery is as much about that as it is about range of motion." },
+      { label:"Not really", reply:"Thanks for saying so. Months of this wears people down, and feeling flat about it is a normal response to an abnormal amount of waiting — not a weakness. If it's been weeks rather than days, that's worth mentioning to your GP.", more:true }
+    ]},
+    { t:"closed", q:"Been eating and drinking properly?", opts:[
+      { label:"Yes", reply:"Good — healing is expensive, metabolically. Protein and water do more than any supplement." },
+      { label:"Not really", reply:"Easily done when everything's an effort. It genuinely affects how fast tissue repairs, so it's worth a small fix rather than a big plan.", more:true }
+    ]}
   ]
 };
-/* Alternate rehab / life by day so it doesn't become an interrogation about one knee. */
+/* Alternate rehab / life by day so it doesn't become an interrogation about one knee, and
+   alternate open / closed so there is always a low-effort way in on a bad day. */
 function jefferyQuestion(dateISO){
   const d = dateISO || todayISO();
   const h = Math.abs(hashStr(d));
   const pool = (h % 3 === 0) ? JOURNAL_QS.life : JOURNAL_QS.rehab;   // ~1 day in 3 is a life question
-  return pool[h % pool.length];
+  const want = (h % 2 === 0) ? "closed" : "open";                    // ~half are a single tap
+  let use = pool.filter(x => x.t === want);
+  /* Personal questions built from THEIR data (hard ADL, phase criteria, sport goal, last
+     entry) join the OPEN rotation — a question only they would be asked beats a good
+     generic one, and Jeffery is the one asking now. */
+  if(want === "open"){
+    const personal = personalOpenQs();
+    if(personal.length) use = personal.concat(use);
+  }
+  if(!use.length) use = pool;
+  return use[Math.abs(hashStr(d + "|" + want)) % use.length];
+}
+function personalOpenQs(){
+  const out = [];
+  const hard = (state.adls||[]).filter(a=>a.level>=1);
+  if(hard.length) out.push({ t:"open", q:`You said ${hard[0].name.toLowerCase()} was hard — how was that today?` });
+  const it = state.program && state.program.items && state.program.items[0];
+  const ph = it && (it.phases||[]).find(x=>x.current);
+  if(ph && ph.criteria) out.push({ t:"open", q:`To reach the next phase you need: ${String(ph.criteria)}. Any closer?` });
+  if((state.returnSports||[]).length) out.push({ t:"open", q:`${state.returnSports[0]} is the goal — did anything feel closer to it today?` });
+  const prev = (state.log||[]).filter(e=>e.note).slice(-1)[0];
+  if(prev) out.push({ t:"open", q:`Last time you wrote: “${String(prev.note).slice(0,70)}” — how's that now?` });
+  return out;
 }
 /* Offline reflection: warm, and grounded in what they actually wrote/logged rather than
    a fortune cookie. */
@@ -6539,25 +6618,44 @@ reading a chart for the first time.
 
 function renderJournalJeffery(){
   const host = $("#journalJeffery"); if(!host) return;
-  const q = jefferyQuestion(($("#logDate")&&$("#logDate").value) || todayISO());
+  const day = ($("#logDate")&&$("#logDate").value) || todayISO();
+  const q = jefferyQuestion(day);
+  /* A closed question is answered where it is asked — one tap, no typing. An open one
+     invites the note. Both end up in the same journal entry. */
+  const closed = q.t === "closed";
   host.innerHTML = `
     <div class="jjhead"><span class="jjav" aria-hidden="true">🧑‍⚕️</span>
       <div><div class="jjname">Jeffery</div><div class="jjrole">your rehab specialist${coachOnline()?"":" · offline mode"}</div></div></div>
     <div class="jjsay">${mdLite(jefferyOpener())}</div>
-    <div class="jjq">${esc(q)}</div>
+    <div class="jjq">${esc(q.q)}</div>
+    ${closed ? `<div class="jjopts no-print" role="group" aria-label="${esc(q.q)}">${
+      q.opts.map((o,i)=>`<button type="button" class="jjopt" data-i="${i}">${esc(o.label)}</button>`).join("")
+    }</div>` : ""}
     <div class="jjthread" id="jjThread"></div>
     <div class="jjrow no-print">
-      <button class="btn ghost small" id="jjUse">Answer this in my journal ↓</button>
+      <button class="btn ghost small" id="jjUse">${closed ? "Write about it instead ↓" : "Answer this in my journal ↓"}</button>
       <button class="btn ghost small" id="jjTalk">Say it to Jeffery</button>
     </div>`;
-  $("#jjUse").onclick = () => {
-    const n = $("#logNote");
-    if(!n) return;
-    n.value = (n.value ? n.value.replace(/\s*$/,"") + "\n\n" : "") + q + "\n";
-    n.focus(); n.setSelectionRange(n.value.length, n.value.length);
-  };
+  $("#jjUse").onclick = () => appendToNote(q.q);
   $("#jjTalk").onclick = () => jefferyJournalReply();
+  if(closed) host.querySelectorAll(".jjopt").forEach(b=>{
+    b.onclick = () => answerClosed(q, q.opts[+b.dataset.i]);
+  });
   renderJJThread();
+}
+function appendToNote(text){
+  const n = $("#logNote"); if(!n) return;
+  n.value = (n.value ? n.value.replace(/\s*$/,"") + "\n\n" : "") + text + "\n";
+  n.focus(); n.setSelectionRange(n.value.length, n.value.length);
+}
+/* A tap must never dead-end. It records the answer, Jeffery says something back, and where
+   the answer is worth expanding he asks for the detail rather than filing it and moving on. */
+function answerClosed(q, opt){
+  appendToNote(q.q + " — " + opt.label);
+  state.jjThread = [{ who:"you", text: opt.label },
+                    { who:"jeffery", text: opt.reply }];
+  save(); renderJJThread();
+  if(opt.more){ const n = $("#logNote"); if(n) n.focus(); }
 }
 function renderJJThread(){
   const el = $("#jjThread"); if(!el) return;
