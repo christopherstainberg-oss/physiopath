@@ -3287,12 +3287,20 @@ const PATTERN_HOWTO = {
     steps:["Push through the balls of your feet and rise up as high as you can onto your toes.","Pause for a moment at the top, with your ankles fully pointed.","Lower all the way down, slowly. If you're on a step, let your heels drop below it until you feel a stretch."],
     tempo:"Take 1–2 seconds to rise, and 3–4 seconds to lower. The slow lowering is where most of the benefit is — don't rush it.",
     avoid:"Don't bounce or hurry. Let your calves do the work rather than gripping with your toes."},
+  /* ⚠ push/pull are used for LEG movements too — the generator files hamstring curls under
+     "pull" and hip abduction under "push", which is fair as a category and useless as an
+     instruction: 928 leg exercises were being told to set their shoulder blades and lead
+     with the elbow. `legSteps`/`legAvoid` are swapped in by movementExplain() when the
+     regions are lower-limb only. Same movement category, right body part. */
   pull:{setup:"Set the resistance and stand or sit tall and steady. Take the slack out of the band or cable before you start, so there's tension from the first inch.",
     steps:["Start by gently pulling your shoulder blades down and back, before your arm moves at all.","Pull the resistance smoothly towards you, leading with your elbow rather than your hand.","Squeeze the working muscle for a moment at the end.","Let it back slowly to full stretch, keeping tension the whole way — don't just let go."],
+    legSteps:["Take the slack out first, so the muscle is working from the very first inch instead of snatching at it.","Bend or draw the joint smoothly through its range, keeping the rest of you still.","Squeeze the working muscle for a moment at the end.","Let it back slowly to full stretch, keeping tension the whole way — don't just let go."],
     tempo:"Pull for 1–2 seconds, and take about 3 seconds to let it back. Breathe out as you pull.",
-    avoid:"Don't shrug your shoulders up, swing, or heave. If you have to jerk it to move it, it's too heavy."},
+    avoid:"Don't shrug your shoulders up, swing, or heave. If you have to jerk it to move it, it's too heavy.",
+    legAvoid:"Don't swing or heave it. If you have to jerk it to move it, it's too heavy."},
   push:{setup:"Set your feet or your back somewhere solid so you're stable, and start with the joint at an angle that feels comfortable.",
     steps:["Tighten your tummy and gently set your shoulder blades down and back.","Press the resistance smoothly away from you through the fullest range you can manage comfortably.","Stop just before your elbows or knees snap completely straight, so the muscle keeps the tension.","Bring it back to the start slowly and under control."],
+    legSteps:["Tighten your tummy and keep the rest of your body still — only the working leg should move.","Push or straighten the leg smoothly through the fullest range you can manage comfortably.","Stop just before the knee snaps completely straight, so the muscle keeps the tension.","Bring it back to the start slowly and under control."],
     tempo:"Press for 1–2 seconds, and take about 3 seconds to come back. Breathe out as you press.",
     avoid:"Don't hold your breath, and don't push into a range that pinches or hurts. Smooth and pain-free."},
   isometric:{setup:"Get into the position you've been given, then hunt for the exact angle where you feel the right muscle working but nothing sharp anywhere.",
@@ -3411,28 +3419,51 @@ const PATTERN_HOWTO = {
     tempo:"About 2 seconds down, 1 second up, unless you've been told otherwise. Breathe out on the effort — never hold your breath under a weight.",
     avoid:"No maximum-effort single lifts and no bouncing the weight while you're still growing. If a bony point hurts — just below your kneecap, or the back of your heel — that's a growth plate, not a muscle. Ease off and get it looked at."}
 };
+/* True when a movement touches a lower-limb region and NO upper-limb one. Spine/Core/Balance
+   are neither, so they don't veto — "Copenhagen hip adduction" (Hip+Core) is still a leg
+   movement for this purpose, and the shoulder-blade cue is still wrong for it.
+   ⚠ This says nothing about whether a movement is a leg exercise in general — a deadlift
+   (Hip+Spine+Core) returns true here too. It only decides which STEPS to show, and only
+   push/pull define legSteps, so hinge/squat/lunge are untouched by it either way. */
+const UPPER_REG = new Set(["Shoulder","Scapula/Upper back","Elbow","Forearm","Wrist / Hand","Neck","Thoracic/Upper back"]);
+const LOWER_REG = new Set(["Hip","Glute","Knee","Ankle","Calf","Foot"]);
+const isLowerLimbOnly = regs => Array.isArray(regs)
+  && regs.some(r => LOWER_REG.has(r)) && !regs.some(r => UPPER_REG.has(r));
+
+/* ⚠ A CASCADE — the first match wins, so ORDER is the logic. This runs for every item that
+   has no explicit `pattern` field, which means the whole hand-authored protocol layer, not
+   just the library. A name that matches nothing lands on "general", and its Explain says
+   "move through a range that stays pain-free" and nothing else. */
 function inferPattern(name){
   const l = name.toLowerCase();
-  if(/agility|ladder|carioca|shuffle|shuttle|\bcutting\b|zig-zag|t-drill|5-10-5|pro-agility|mirror drill|backpedal|figure-8|dot drill|line hops|deceleration/.test(l)) return "agility";
+  if(/agility|ladder|carioca|shuffle|shuttle|\bcutting\b|zig-zag|t-drill|5-10-5|pro-agility|mirror drill|backpedal|figure-8|dot drill|line hops|deceleration|change of direction/.test(l)) return "agility";
   if(/gaze|vor|habituation/.test(l)) return "vestibular";
   if(/breath|diaphragm|pursed|spirometr/.test(l)) return "breathing";
-  if(/dead bug/.test(l)) return "anti-ext";
+  /* ⚠ was /dead bug/ — a SPACE. Every one of these is written "dead-bug", here and in the
+     protocols ("Hip hinge / dead-bug core"), so this never once fired. */
+  if(/dead-?\s?bug/.test(l)) return "anti-ext";
   if(/bird-dog|pallof|anti-rotation|wood-?chop|\bchop\b|\blift\b \(/.test(l)) return "anti-rot";
-  if(/jump|hop|bound|pogo|plyo|depth/.test(l)) return "plyo";
-  if(/plank|wall sit|isometric|\bhold\b|dead-hang|chin tuck|quad set|glute set/.test(l)) return "isometric";
+  /* Circulation. Nothing else in the cascade catches "Ankle pumps", so it read as general —
+     on the one exercise most likely to be someone's entire day-one program. */
+  if(/ankle pump|point-and-flex|foot pump/.test(l)) return "pump";
+  if(/jump|hop|bound|pogo|plyo|depth|drop-and-stick|skipping/.test(l)) return "plyo";
+  /* Before isometric on purpose: /\bhold\b/ below would otherwise claim "Sit-to-stand — with
+     a 3s hold" and explain a chair stand as a static hold. It's a squat with a pause in it. */
+  if(/sit-to-stand/.test(l)) return "squat";
+  if(/plank|wall sit|isometric|\bhold\b|dead-hang|chin tuck|quad set|glute set|short-foot/.test(l)) return "isometric";
   if(/carry|farmer|suitcase|waiter/.test(l)) return "carry";
-  if(/calf raise|heel raise|calf/.test(l)) return "calf";
+  if(/calf raise|heel raise|calf|heel drop/.test(l)) return "calf";
   if(/lunge|step-up|split squat|step-down/.test(l)) return "lunge";
   if(/squat/.test(l)) return "squat";
   if(/deadlift|hinge|bridge|hip thrust|good-morning|kickback|romanian|hip extension/.test(l)) return "hinge";
   if(/crunch|sit-up|curl-up|v-up|trunk flexion|reverse crunch/.test(l)) return "flexion";
   if(/superman|cobra|back extension|hyperextension|prone extension/.test(l)) return "extension";
   if(/tandem walk|braiding|grapevine|gait|marching|obstacle stepping|backward walk/.test(l)) return "gait";
-  if(/balance|single-leg stance|star-excursion|weight-shift|reach|foam|bosu|perturbation/.test(l)) return "balance";
+  if(/balance|single-leg stance|tandem stance|star-excursion|weight-shift|reach|foam|bosu|perturbation/.test(l)) return "balance";
   if(/walk|jog|run|cycl|bike|row|elliptical|stair|swim|aqua|conditioning|interval|sled/.test(l)) return "cardio";
-  if(/stretch|\brom\b|mobility|pendulum|cat-camel|open-book|circle|alphabet|thread|slide|wall walk/.test(l)) return "mobility";
+  if(/stretch|\brom\b|mobility|pendulum|cat-camel|open-book|circle|alphabet|thread|slide|wall walk|wall angel/.test(l)) return "mobility";
   if(/row|pull|curl|face pull|rear-delt|external rotation|scapular|y-t-w|deviation|glide/.test(l)) return "pull";
-  if(/press|push-up|raise|fly|scaption|full-can|internal rotation|extension|leg extension/.test(l)) return "push";
+  if(/press|push-up|raise|fly|scaption|full-can|internal rotation|extension|leg extension|chest pass|med-?ball (pass|throw)/.test(l)) return "push";
   return "general";
 }
 /* Kept for the handful of cues the equipment/variant/modifier layers don't reach.
@@ -4157,7 +4188,19 @@ const VARIANT_HOWTO = [
   [/rolling a ball (back and forth|under the foot)/i, { set:"Sit facing each other with legs apart, or sit them down with the ball under one foot.", step:"Roll it slowly and name what's happening — 'ready… go!'. The waiting and the turn-taking matter as much as the rolling.", avoid:"Use a ball big enough that it can't be swallowed and slow enough to be caught." }],
   [/stacking and reaching up high|bubble-popping/i, { set:"Put the interesting thing just above their comfortable reach, so they have to stretch or come up on their toes.", step:"Height is the dial you're turning. Higher makes them reach, stretch and balance; lower just makes it easy.", avoid:"Nothing they can pull down onto themselves." }],
   [/pulling socks on and off|carrying a light object while walking/i, { set:"Build it into the day — getting dressed, carrying their cup to the table.", step:"Give them the last step first: pull the sock off from the heel, carry the cup the last metre. Then hand them more of it as they get better.", avoid:"Allow far more time than it takes you to do it. Rushing is what makes everyone give up on this one." }],
-  [/stepping over small obstacles/i, { set:"Lay out a line of soft, low things — cushions, rolled towels, pool noodles.", step:"High enough that they have to lift a knee, low enough that landing on one doesn't hurt.", avoid:"Nothing hard or rolling. Books and toy cars are how this goes wrong." }]
+  [/stepping over small obstacles/i, { set:"Lay out a line of soft, low things — cushions, rolled towels, pool noodles.", step:"High enough that they have to lift a knee, low enough that landing on one doesn't hurt.", avoid:"Nothing hard or rolling. Books and toy cars are how this goes wrong." }],
+
+  /* ---- Movements no PATTERN describes honestly. ----------------------------
+     Forcing these into the nearest pattern is worse than leaving them generic: a clamshell
+     told to "push your bottom back towards the wall" (hinge) or an A-skip told to "slow down
+     under control before each turn" (agility) is confidently wrong, and confidently wrong is
+     the one thing an instruction must never be. They get named steps instead. */
+  [/clamshell/i,                     { set:"Lie on your side with your knees bent to about 45 degrees, one hip stacked directly over the other, and your head resting on your arm.", step:"Keep your feet touching and lift your top knee towards the ceiling, like a clam opening. Your hips must NOT roll backwards — that's the whole exercise.", avoid:"If your top hip rolls back, you've gone too far. Rest your back against a wall to feel it, and lift less." }],
+  [/short-foot/i,                    { set:"Sit with your foot flat on the floor, knee over your ankle.", step:"Without curling your toes, pull the ball of your foot gently back towards your heel so the arch lifts a little. It's a small movement — a few millimetres.", avoid:"Toes stay flat and relaxed. If they're clawing, you're using the wrong muscles — ease off until they settle." }],
+  [/wall angel/i,                    { set:"Stand with your back against a wall, feet a little way out from it, with your lower back, upper back and head touching.", step:"Put your arms up against the wall in a goalpost shape, then slide them up and back down while keeping your wrists, elbows and back in contact.", avoid:"Only go as high as you can without your back arching away from the wall. Most people manage far less than they expect, and that's the point." }],
+  [/\ba-skip\b|\bb-skip\b/i,         { set:"Find 20 metres of clear, flat ground.", step:"Skip forward driving one knee up to hip height, with the opposite arm forward, then land under your hips on the ball of your foot.", avoid:"This is a rhythm drill, not a race. If you're reaching your foot out in front of you, slow right down." }],
+  [/sprint mechanics/i,              { set:"Warm up thoroughly first — this is fast work, even at 70–80%.", step:"Run tall with your hips high, driving your knees forward and your foot down underneath you rather than out in front.", avoid:"Submaximal means submaximal. If you're straining, you've stopped practising technique and started racing." }],
+  [/neuromuscular warm-up|11\+ style/i, { set:"Do it before sport, not after — it replaces your warm-up rather than adding to it.", step:"Work through the blocks in order: easy running, then balance and single-leg control, then landing and cutting, then a few faster runs to finish.", avoid:"Skipping it on match days is how it stops working. The programmes that cut injuries are the ones done twice a week, every week." }]
 ];
 function explainVariants(name){
   const out = { set:[], steps:[], avoid:[] };
@@ -4261,15 +4304,21 @@ function movementExplain(name, pattern, regionArr){
     const mp = inferPattern(name);
     if(mp && mp !== "general" && !/^ped_/.test(mp) && PATTERN_HOWTO[mp]) mech = PATTERN_HOWTO[mp].steps || [];
   }
+  /* push/pull are the right CATEGORY for a hamstring curl or a hip abduction and the wrong
+     INSTRUCTIONS — see the note on those entries. The region already tells us which body
+     part is working, so use it. */
+  const legOnly = isLowerLimbOnly(regionArr);
+  const htSteps = (legOnly && ht.legSteps) ? ht.legSteps : (ht.steps || []);
+  const htAvoid = (legOnly && ht.legAvoid) ? ht.legAvoid : ht.avoid;
   const setup = [ht.setup, eq && eq.set, ...vr.set].filter(Boolean).join(" ");
   /* When the mechanics lead, the band contributes coaching rather than a second set of
      instructions — two is enough, and it keeps the list at a length someone will read. */
-  const bandSteps = mech.length ? (ht.steps || []).slice(0, 2) : (ht.steps || []);
+  const bandSteps = mech.length ? htSteps.slice(0, 2) : htSteps;
   const steps = [`<b>Set up —</b> ${setup}`]
     .concat(mech, bandSteps, vr.steps, md.steps).slice(0, 9);
   const stepHTML = `<ol class="howsteps">${steps.map(s=>`<li>${s}</li>`).join("")}</ol>`;
   const tempo = md.tempo || ht.tempo;                       // a modifier's tempo overrides the pattern's
-  const avoid = [ht.avoid, eq && eq.avoid, ...vr.avoid, ...md.avoid].filter(Boolean).join(" ");
+  const avoid = [htAvoid, eq && eq.avoid, ...vr.avoid, ...md.avoid].filter(Boolean).join(" ");
   const meta = [
     tempo ? `<div class="howmeta"><b>⏱ Tempo &amp; breathing:</b> ${tempo}</div>` : "",
     avoid ? `<div class="howmeta howavoid"><b>⚠ Avoid:</b> ${avoid}</div>` : "",
