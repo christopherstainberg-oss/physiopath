@@ -305,7 +305,7 @@ const state = {
   medIds:[], medFilter:false, homeMode:false, customPrecautions:[], clinicianProtocols:[], clinPrecautionProtocol:"", clinicianGuided:false,
   medDoses:{}, weightBearing:{status:"",pct:"",lbs:"",side:"",limb:"le"}, devices:[],
   cardiacDevice:{type:"",icdRate:""}, specialPrecautions:[], planVariant:{}, progress:{},
-  log:[], logMood:"", logTpl:"blank", jjThread:[], chatHistory:[], apiKey:"", apiModel:"claude-opus-4-8"
+  log:[], logMood:"", logDone:[], logTpl:"blank", jjThread:[], chatHistory:[], apiKey:"", apiModel:"claude-opus-4-8"
 };
 const MED_FILTERABLE = ["fluoroquinolone","anticoagulant","antiplatelet","opioid","sedative","muscle_relaxant","gabapentinoid","antipsychotic"];
 /* ---------- on-demand data loading ----------
@@ -5463,6 +5463,12 @@ function exportJournalText(){
                    e.t ? "written " + new Date(e.t).toLocaleString() : null ].filter(Boolean);
     lines.push("_" + meta.join(" · ") + "_\n");
     if(e.note) lines.push(String(e.note).trim() + "\n");
+    /* What was prescribed that day and what got done. This is the part a physio reads
+       first, and it's the reason the offered list is stored per entry rather than
+       reconstructed from whatever the plan happens to say by the time it's exported. */
+    if((e.done||[]).length && (e.plan||[]).length){
+      lines.push("Exercises: " + e.plan.map(n=>(e.done.includes(n)?"[x] ":"[ ] ") + n).join(", ") + "\n");
+    }
     lines.push("---\n");
   }
   const url = URL.createObjectURL(new Blob([lines.join("\n")], {type:"text/markdown"}));
@@ -6496,6 +6502,21 @@ function initProgress(){
     });
   }
   renderTplRow();
+  /* Delegated — renderLogEx() rebuilds these rows whenever the day changes. Ticking must
+     NOT re-render the list: it's a checkbox someone is clicking down a column, and
+     rebuilding under the cursor loses focus and the next click. */
+  const exl = $("#logExList");
+  if(exl) exl.addEventListener("change", ev => {
+    const cb = ev.target;
+    if(!cb || cb.type !== "checkbox" || !cb.dataset.n) return;
+    const set = new Set(state.logDone || []);
+    if(cb.checked) set.add(cb.dataset.n); else set.delete(cb.dataset.n);
+    state.logDone = _logExOffer.filter(n=>set.has(n));   // keep the phase's order, not click order
+    const li = cb.closest(".extick");
+    if(li) li.classList.toggle("on", cb.checked);
+    syncLogExSum();
+    autosaveSoon();
+  });
   /* Autosave: writes when they PAUSE. Also commit on blur and on tab-away, because a phone
      backgrounding the app is exactly when an unsaved page disappears. */
   const note = $("#logNote");
@@ -6544,6 +6565,7 @@ function syncMood(){
 function loadLogDay(d){
   const e = (state.log||[]).find(x=>x.date === d);
   state.logMood = e ? (e.mood||"") : "";
+  state.logDone = (e && Array.isArray(e.done)) ? e.done.slice() : [];   // before renderLogEx reads it
   if($("#logPain")){ $("#logPain").value = e ? e.pain : 3; $("#logPainVal").textContent = e ? e.pain : 3; }
   if($("#logSessions")) $("#logSessions").value = e ? e.sessions : 1;
   if($("#logNote")) $("#logNote").value = e ? (e.note||"") : "";
@@ -6563,7 +6585,7 @@ function loadLogDay(d){
   const lt = $("#logToday");
   if(lt) lt.textContent = e ? "You already have an entry for this day" : "";
   _autoDirty = false; clearTimeout(_autoT);
-  syncMood(); renderJournalToday(); renderDiaryHead(d); renderSaveState();
+  syncMood(); renderLogEx(d); renderJournalToday(); renderDiaryHead(d); renderSaveState();
   const _del = $("#logDelete");
   if(_del) _del.classList.toggle("hide", !(state.log||[]).find(x=>x.date===d));
   if(typeof renderJournalJeffery==="function") renderJournalJeffery();
@@ -6599,6 +6621,9 @@ function partOfDay(){
 }
 /* Openers reference something REAL — how long they've been at this, what they wrote last,
    whether they've been away. A friend of five years would notice. */
+/* ⚠ Returns MARKDOWN, not HTML — the caller renders it through mdLite(), which escapes
+   first and then converts **bold**. Anything HTML in here reaches the user as literal
+   angle brackets, and anything pre-esc()'d comes out double-escaped as "&amp;". */
 function jefferyOpener(){
   const log = state.log || [];
   const conds = selectedConditions();
@@ -6610,7 +6635,7 @@ function jefferyOpener(){
   const ph = it && (it.phases||[]).find(x=>x.current);
 
   if(!log.length)
-    return `Good ${partOfDay()}. I'm Jeffery — I'll be here every day you fancy writing something.\n\nNo pressure to be profound: a line is plenty${cond?`, even if it's just how the ${esc(cond)} behaved today`:""}. Whatever you put here, I'll remember it.`;
+    return `Good ${partOfDay()}. I'm Jeffery — I'll be here every day you fancy writing something.\n\nNo pressure to be profound: a line is plenty${cond?`, even if it's just how the ${cond} behaved today`:""}. Whatever you put here, I'll remember it.`;
   if(gap !== null && gap >= 7)
     return `Good ${partOfDay()} — it's been ${gap} days. No lecture; life does that.\n\nYou're not behind, and you haven't undone anything. Want to tell me where things are now?`;
   if(gap !== null && gap >= 3)
@@ -6621,7 +6646,7 @@ function jefferyOpener(){
   if(rec.hit >= 10)
     return `Good ${partOfDay()}. ${rec.hit} of the last ${rec.of} days written up — that's real consistency, and it's the unglamorous bit that actually works.\n\nHow's today?`;
   if(ph && ph.title)
-    return `Good ${partOfDay()}. You're into <b>${esc(ph.title)}</b> now${cond?` with the ${esc(cond)}`:""} — a long way from where this started.\n\nHow's today been?`;
+    return `Good ${partOfDay()}. You're into **${ph.title}** now${cond?` with the ${cond}`:""} — a long way from where this started.\n\nHow's today been?`;
   return `Good ${partOfDay()}. Good to see you.\n\nHow's today been?`;
 }
 /* Deliberately not all about the injury. Rehab is months long and lives inside a life —
@@ -6875,6 +6900,11 @@ function jefferyQuestion(dateISO){
 }
 function personalOpenQs(){
   const out = [];
+  /* The most specific question the app can ask, and it costs nothing: it's their own data.
+     Curious, not disappointed — "what's putting you off" invites the real answer ("it hurts"),
+     where "why haven't you" invites a lie. */
+  const sk = (exSkipStats()||{rows:[]}).rows.filter(r=>r.streak>=3).sort((a,b)=>b.streak-a.streak)[0];
+  if(sk) out.push({ t:"open", q:`The ${sk.n.toLowerCase()} hasn't been ticked for ${sk.streak} sessions. No judgement — what's putting you off it?` });
   const hard = (state.adls||[]).filter(a=>a.level>=1);
   if(hard.length) out.push({ t:"open", q:`You said ${hard[0].name.toLowerCase()} was hard — how was that today?` });
   const it = state.program && state.program.items && state.program.items[0];
@@ -6997,6 +7027,15 @@ reading a chart for the first time.
 - Praise effort and consistency, never the numbers.
 - You are not a therapist. If they sound genuinely low, be kind, be human, and gently
   suggest a real person — do not counsel them.
+
+THE EXERCISE TICKS. You can see which movements they tick off and which quietly get
+dropped, and that is worth ONE curious question when the pattern above is real — "what's
+putting you off the split squats?" — because the answer is nearly always useful: it hurts,
+it's boring, or they can't actually do it, and each of those has a different fix.
+- Ask because the answer matters. Never to chase compliance, never as a telling-off.
+- Once. Not two days running, and never as the opener on a day they've written something bad.
+- If the line above says there are no ticks yet, they simply aren't using the checklist.
+  Say NOTHING about skipping — you have no idea what they did.
 
 USE THE ARCHIVE. You have months of their own words above, with dates. A friend of five
 years remembers, and this is the single most useful thing you can do for someone in long
@@ -7225,6 +7264,8 @@ function journalPrompt(dateISO){
      user with a hard ADL, a sport goal and phase criteria still got "Anything you'd want to
      remember?" most days — which is the blank box the prompt exists to replace. */
   const personal = [];
+  const _sk = (exSkipStats()||{rows:[]}).rows.filter(r=>r.streak>=3).sort((a,b)=>b.streak-a.streak)[0];
+  if(_sk) personal.push(`The <b>${esc(_sk.n.toLowerCase())}</b> hasn't been ticked for ${_sk.streak} sessions — what's putting you off it?`);
   const hard = (state.adls||[]).filter(a=>a.level>=1);
   if(hard.length) personal.push(`You said <b>${esc(hard[0].name.toLowerCase())}</b> was hard — how was that today?`);
   const it = state.program && state.program.items && state.program.items[0];
@@ -7266,6 +7307,16 @@ function logImpactHTML(){
   return `<div class="jimpact"><b>What this changed:</b> ${bits.join(" ")}</div>`;
 }
 
+/* Reading back what you DIDN'T do is the half that changes anything — but it gets stated,
+   not scolded. Four of six on a bad week is still four, and a checklist that tuts at people
+   is a checklist they stop opening. */
+function exMissedHTML(e){
+  if(!(e.done||[]).length || !(e.plan||[]).length) return "";
+  const missed = e.plan.filter(n=>!e.done.includes(n));
+  if(!missed.length) return `<div class="jexdone">✓ The whole list. Every one.</div>`;
+  return `<div class="jexmiss"><b>Not this time:</b> ${missed.map(n=>esc(exLabel(n))).join(", ")}.</div>`;
+}
+
 /* Today's entry, read back as writing rather than swallowed into a table row. */
 function journalTodayHTML(){
   const d = ($("#logDate") && $("#logDate").value) || todayISO();
@@ -7276,18 +7327,144 @@ function journalTodayHTML(){
     <div class="jtop"><span class="jdate2">${esc(fmtDate(e.date))}</span>
       ${m?`<span class="jmood">${m.icon} ${esc(m.label)}</span>`:""}
       <span class="jtag">${e.pain}/10</span>
-      <span class="jsess">${e.sessions} session${e.sessions===1?"":"s"}</span></div>
+      <span class="jsess">${e.sessions} session${e.sessions===1?"":"s"}</span>
+      ${(e.done||[]).length?`<span class="jex">✓ ${e.done.length}/${(e.plan||e.done).length} exercises</span>`:""}</div>
     ${e.note?`<div class="jbody">${esc(e.note)}</div>`:`<div class="jbody jempty">No note for this day.</div>`}
+    ${exMissedHTML(e)}
     <div class="jfoot">Saved. Edit above and save again to change it.</div>
   </div>`;
 }
+/* =====================================================================
+   EXERCISE TICKS
+   "Sessions done: 2" is a number nobody can act on. Ticking the actual
+   exercises costs the same effort and answers the question that matters —
+   WHICH ones aren't happening. Three sessions a week with the Nordic curls
+   quietly dropped every time is not the plan on paper, and the session
+   count can never show that.
+
+   Deliberately ADDITIVE: state.sessions still drives adherence() and
+   weeklyTarget(). Deriving sessions from ticks would break every entry
+   written before today and would also be wrong — one session can cover the
+   whole list, so six ticks is not six sessions.
+   ===================================================================== */
+
+/* The current phase's exercises across every condition, deduped by name: the same movement
+   prescribed for two conditions is one tick, not two. */
+function currentPhaseEx(){
+  const p = state.program;
+  if(!p || !p.items) return [];
+  const multi = p.items.length > 1;
+  const out = [];
+  p.items.forEach(it=>{
+    const ph = (it.phases||[]).find(x=>x.current) || (it.phases||[])[0];
+    if(!ph) return;
+    (ph.ex||[]).forEach(e=>{
+      if(!out.some(o=>o.n === e.n)) out.push({ n:e.n, dose:e.d||"", grp: multi ? it.name : "" });
+    });
+  });
+  return out;
+}
+/* Ticks are keyed on the REAL exercise name so a toggle of Home mode can't orphan a day's
+   history — but the label has to match what the Program step shows them, or they're
+   hunting for "Dumbbell goblet squat" in a list that says "Backpack goblet squat". */
+function exLabel(n){
+  if(!state.homeMode || !state.program) return n;
+  for(const it of (state.program.items||[]))
+    for(const ph of (it.phases||[]))
+      for(const e of (ph.ex||[]))
+        if(e.n === n){ const s = homeSwap(e); return (s && s.n) || n; }
+  return n;
+}
+/* A skip only counts on a day we have EVIDENCE for: the exercise was on the list AND they
+   ticked something. `done:[]` is ambiguous — "I did none of them" and "I never scrolled
+   down to the ticks" look identical from here — so a day with no ticks at all proves
+   nothing. Undercounting skips is fine; telling someone "you've skipped this 8 sessions
+   running" because they don't use the checklist is not. */
+function exEvidence(before){
+  return (state.log||[]).filter(e => (!before || e.date < before)
+    && Array.isArray(e.plan) && e.plan.length
+    && Array.isArray(e.done) && e.done.length);
+}
+/* Consecutive most-recent evidence days where it was prescribed and didn't get done. Stops
+   at the first day it wasn't prescribed — a movement added at phase 2 was not "skipped"
+   through all of phase 1, it didn't exist yet. That is why `plan` is stored per entry
+   rather than compared against today's list. */
+function exSkipStreak(name, before){
+  const ev = exEvidence(before);
+  let n = 0;
+  for(let i = ev.length - 1; i >= 0; i--){
+    if(!ev[i].plan.includes(name)) break;
+    if(ev[i].done.includes(name)) break;
+    n++;
+  }
+  return n;
+}
+function exSkipStats(){
+  const ev = exEvidence();
+  if(ev.length < 3) return null;                 // three ticked days is the floor for a pattern
+  const rows = currentPhaseEx().map(x=>{
+    const offered = ev.filter(e=>e.plan.includes(x.n));
+    return { n:x.n, offered:offered.length, did:offered.filter(e=>e.done.includes(x.n)).length,
+             streak:exSkipStreak(x.n) };
+  }).filter(r=>r.offered >= 3);
+  return rows.length ? { days:ev.length, rows } : null;
+}
+/* Feeds the prompt. Jeffery asking "what's putting you off the split squats?" is the whole
+   point of the ticks — the data is useless if it only ever renders as a pill. */
+function exSkipLine(){
+  const s = exSkipStats();
+  if(!s) return "no exercise-level ticks yet (they may not be using the checklist — do not infer skipping from this)";
+  const rows = s.rows.slice().sort((a,b)=>(a.did/a.offered)-(b.did/b.offered));
+  return `across ${s.days} ticked sessions — ` + rows.map(r=>
+    `${r.n}: done ${r.did}/${r.offered}${r.streak>=2?`, skipped the last ${r.streak}`:""}`).join(" | ");
+}
+/* The list currently on screen, in order. collectEntry() stores THIS rather than
+   re-deriving the phase, so what gets recorded is exactly what they ticked against. */
+let _logExOffer = [];
+function renderLogEx(d){
+  const host = $("#logExList"); if(!host) return;
+  const e = (state.log||[]).find(x=>x.date === d);
+  /* A past day shows the list that was prescribed THEN. Phases advance and exercises get
+     rotated, so re-labelling an old entry with today's list would quietly rewrite history. */
+  const stored = e && Array.isArray(e.plan) && e.plan.length;
+  const list = stored ? e.plan.map(n=>({ n, dose:"", grp:"" })) : currentPhaseEx();
+  _logExOffer = list.map(x=>x.n);
+  const wrap = $("#logEx");
+  if(wrap) wrap.classList.toggle("hide", !list.length);
+  if(!list.length){ host.innerHTML = ""; return; }
+
+  const done = new Set(state.logDone||[]);
+  const today = d === todayISO();
+  let grp = "";
+  host.innerHTML = list.map(x=>{
+    let head = "";
+    if(x.grp && x.grp !== grp){ grp = x.grp; head = `<li class="exgrp">${esc(grp)}</li>`; }
+    const on = done.has(x.n);
+    const st = today ? exSkipStreak(x.n, d) : 0;      // a streak pill on a day you're editing months later is noise
+    return `${head}<li class="extick${on?" on":""}">
+      <label><input type="checkbox" data-n="${esc(x.n)}"${on?" checked":""} />
+        <span class="extbox" aria-hidden="true"></span>
+        <span class="extmain"><span class="extn">${esc(exLabel(x.n))}</span>${x.dose?`<span class="extd">${esc(x.dose)}</span>`:""}</span>
+        ${st>=3?`<span class="skippill" title="Not ticked on your last ${st} sessions. Worth a line about why — that's more useful than doing it badly.">skipped ${st}×</span>`:""}
+      </label></li>`;
+  }).join("");
+  syncLogExSum();
+}
+function syncLogExSum(){
+  const el = $("#logExSum"); if(!el) return;
+  const n = (state.logDone||[]).filter(x=>_logExOffer.includes(x)).length;
+  el.textContent = n ? `→ ${n} of ${_logExOffer.length} ticked`
+                     : "→ shows which exercises keep getting skipped";
+}
+
 /* `date` is the day the entry is ABOUT; `t`/`edited` are when it was actually written and
    last touched. Those are different things the moment someone catches up a missed day —
    an entry dated Saturday and written on Monday should say so rather than pretend. */
 function collectEntry(d){
   const prev = (state.log||[]).find(e=>e.date === d);
   const now = Date.now();
-  return {
+  const done = (state.logDone||[]).filter(n=>_logExOffer.includes(n));   // keep done ⊆ plan
+  const entry = {
     date: d,
     mood: state.logMood || "",
     pain: parseInt($("#logPain").value),
@@ -7296,6 +7473,12 @@ function collectEntry(d){
     t: (prev && prev.t) || now,          // first written — never overwritten
     edited: now
   };
+  /* Only record the offered list when they actually ticked against it. Stamping today's
+     phase onto a three-week-old entry nobody ticked would invent a plan they never saw,
+     and exEvidence() would then read every blank as a skip. done and plan rise and fall
+     together, so an entry either carries real tick data or carries none. */
+  if(done.length){ entry.done = done; entry.plan = _logExOffer.slice(); }
+  return entry;
 }
 /* Anything worth keeping? Don't create an entry because someone tabbed past the page.
    AUTOSAVE is stricter than the Save button, and it has to be: #logSessions is PRE-FILLED
@@ -7305,6 +7488,7 @@ function collectEntry(d){
    itself intent, so that will still record a day of "1 session" and no words. */
 function entryHasContent(e, strict){
   if(e.note || e.mood) return true;
+  if((e.done||[]).length) return true;    // ticking a box is intent; a pre-filled `1` is not
   if(!strict && e.sessions > 0) return true;
   return false;
 }
@@ -8872,6 +9056,9 @@ function buildCoachSystem(){
   const exLine = curPh && (curPh.ex||[]).length
     ? curPh.ex.map((e,i)=>`${i+1}. ${e.n}${e.d?` — ${e.d}`:""}`).join(" | ")
     : "none yet";
+  /* Which of those actually get DONE. The session count says "3 this week" while one
+     movement is silently dropped every time — this is the only place that shows up. */
+  const doneLine = exSkipLine();
   /* weeksPostOp() and state.weeks DIVERGE once a surgery date is set — the prompt used
      the raw intake number, so Jeffery could be weeks off on a post-op timeline. */
   const wpo = weeksPostOp();
@@ -8928,6 +9115,7 @@ USER CONTEXT
 - Rehab plan in effect: ${planLine}
 - Where they are RIGHT NOW: ${phaseLine}
 - Their current phase's prescribed exercises (refer to these by number if asked): ${exLine}
+- Which of those they ACTUALLY tick off: ${doneLine}
 - Medications: ${medLine}
 - Medication considerations for exercise: ${medNoteLine}
 - Setup & capacity: ${setupLine}

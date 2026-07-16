@@ -8,6 +8,10 @@
   --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
   --rule:rgba(126,166,208,.22);        /* the ruled line on the diary page */
   --paper:#141d27;
+  /* The quiet raised fill behind pills and hover states. This was referenced in 16 places
+     and defined in none of them, so every one of them resolved to the initial value —
+     i.e. transparent. Every chip and hover background in the app was simply missing. */
+  --chip:#22344a;
 }
 /* --brand / --brand-2 are dual-purpose: they colour TEXT and they fill BACKGROUNDS that
    carry dark text (.btn.primary, .planvar.on). Darkening them for light mode would fix the
@@ -18,7 +22,7 @@
   :root{--bg:#eef3f8;--panel:#fff;--panel-2:#f2f6fb;--line:#d7e2ee;--text:#132030;--muted:#5b6c80;--shadow:0 8px 30px rgba(20,40,70,.10);
     /* the dark-mode accents measured 2.59:1 and 1.64:1 on white -- both fail WCAG AA (4.5:1),
        and --brand-2 was the colour of the cardiac-device heart-rate limit text. */
-    --brand-ink:#0b5fa8; --accent-ink:#0a6e4a;
+    --brand-ink:#0b5fa8; --accent-ink:#0a6e4a; --chip:#e4ecf6;
     --rule:rgba(20,60,110,.13); --paper:#fffdf7}   /* warm paper, not clinical white */
 }
 *{box-sizing:border-box}
@@ -36,7 +40,11 @@ h1,h2,h3,p,li,.en,.rn,.ec{overflow-wrap:break-word}
 .chatlog,.results,.medresults,.loglist,.chartwrap,.swapbox{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
 .expbtn,.rotatebtn,.swapbtn{padding:6px 2px;min-height:34px;display:inline-flex;align-items:center}
 .selchip .x{width:24px;height:24px}
-@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+/* ⚠ `*` does NOT match pseudo-elements, so ::before/::after kept their transitions here and
+   escaped the killswitch entirely. That is not a cosmetic miss: a transitioned property on a
+   pseudo-element stays pinned at its START value under reduced motion, so the journal's
+   checkmark (opacity 0 → 1 on tick) was invisible forever for exactly these users. */
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
 
 .wrap{max-width:920px;margin:0 auto;padding:16px 16px 40px}
 .grow{flex:1}
@@ -349,6 +357,41 @@ body.isoffline .vidnote{display:none}
 .jmood{font-weight:600}
 .jtag{background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:1px 8px;font-variant-numeric:tabular-nums}
 .jsess{color:var(--muted)}
+.jex{color:var(--brand-ink);font-weight:600}
+.jexdone,.jexmiss{margin-top:8px;font-size:12.5px;line-height:1.5;color:var(--muted)}
+.jexdone{color:var(--brand-ink);font-weight:600}
+.jexmiss b{color:var(--text)}
+
+/* Ticking the phase's real exercises. Rows are big enough to hit with a thumb after a
+   session, which is the only moment anyone is going to fill this in. */
+.exticks{list-style:none;margin:0;padding:4px 10px 0;display:flex;flex-direction:column;gap:2px}
+.extick label{display:flex;align-items:center;gap:10px;cursor:pointer;padding:9px 8px;
+  border-radius:9px;min-height:44px;transition:background .12s}
+.extick label:hover{background:var(--chip)}
+.extick input{position:absolute;opacity:0;width:0;height:0}
+.extbox{flex:none;width:19px;height:19px;border:2px solid var(--line);border-radius:6px;
+  background:var(--panel-2);position:relative;transition:.12s}
+/* A real glyph faded in, NOT a rotated/scaled border box. The scale(0)→scale(1) trick is
+   the usual way to draw this, but a transform on a pseudo-element is the one property that
+   would not take an override here (even with !important), so the tick risked never showing
+   and the blue fill was the only signal you'd hit it. Dark ink on the brand fill matches
+   .btn.primary and clears 3:1 in both themes; white would have been 2.59:1. */
+.extbox::after{content:"✓";position:absolute;inset:0;display:grid;place-items:center;
+  font-size:12px;font-weight:900;line-height:1;color:#04121f;opacity:0;transition:opacity .12s}
+.extick input:checked+.extbox{background:var(--brand);border-color:var(--brand)}
+.extick input:checked+.extbox::after{opacity:1}
+.extick input:focus-visible+.extbox{outline:2px solid var(--brand);outline-offset:2px}
+.extmain{display:flex;flex-wrap:wrap;align-items:baseline;gap:3px 8px;min-width:0}
+.extn{font-size:13.5px;line-height:1.35}
+.extd{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.extick.on .extn{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--line)}
+.exgrp{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;
+  color:var(--muted);padding:10px 8px 2px}
+/* Stated, not scolded — muted, and it only appears after three skipped sessions. */
+.skippill{margin-left:auto;flex:none;font-size:11px;font-weight:600;white-space:nowrap;
+  color:var(--muted);background:var(--chip);border:1px solid var(--line);
+  border-radius:999px;padding:2px 8px}
+.extnote{margin:6px 10px 10px;font-size:11.5px}
 .jtop .lx{margin-left:auto;background:none;border:0;color:var(--muted);cursor:pointer;
   font-size:13px;line-height:1;padding:6px;min-width:30px;min-height:30px;border-radius:8px}
 .jtop .lx:hover{color:var(--danger);background:var(--chip)}
