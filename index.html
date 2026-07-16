@@ -58,11 +58,22 @@
       <p class="hint">We ask this <b>first</b> so your program respects any medical precautions
         (contraindications). Nothing is uploaded — it stays on your device.</p>
 
+      <!-- Two sides of one question: who's setting this up? They're mutually exclusive
+           (ticking one clears the other) so the state can never say both. Leaving both
+           unticked is the neutral default — Next still stops at the optional Clinician step. -->
       <label class="clinguide" id="clinGuideCard">
         <input type="checkbox" id="q_clinicianGuided" />
         <span class="clinguidemain">
           <span class="clinguideh">🩺 Clinician-guided session</span>
           <span class="clinguidesub" id="clinGuideSub">Tick this if a <b>clinician</b> is setting up this program. <b>Next</b> will take you straight to the <b>Clinician step</b>, pre-filled with a protocol to adjust. Leave it unticked to continue as a patient — Next goes to <b>choosing your injury</b>.</span>
+        </span>
+      </label>
+
+      <label class="clinguide selfguide" id="selfGuideCard">
+        <input type="checkbox" id="q_selfGuided" />
+        <span class="clinguidemain">
+          <span class="clinguideh">🧭 Self-guided session</span>
+          <span class="clinguidesub" id="selfGuideSub">Doing this on your own? Tick this to <b>skip the Clinician step</b> — <b>Next</b> takes you straight to <b>choosing your injury</b>. You can still open the Clinician step any time from the steps bar above if you'd like a clinician's help.</span>
         </span>
       </label>
 

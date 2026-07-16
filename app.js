@@ -326,7 +326,7 @@ const state = {
   vitalsLog:[], labs:{}, labHist:{},
   screen:{}, falls:"", aid:"", smoking:"", alcohol:"", sleep:"", stress:"", waterConfidence:"", adls:[],
   equipment:"", timePerDay:"", workDemand:"", priorEpisodes:"", moveConfidence:"", pregStage:"", footSensation:"",
-  medIds:[], medFilter:false, homeMode:false, customPrecautions:[], clinicianProtocols:[], clinPrecautionProtocol:"", clinicianGuided:false,
+  medIds:[], medFilter:false, homeMode:false, customPrecautions:[], clinicianProtocols:[], clinPrecautionProtocol:"", clinicianGuided:false, selfGuided:false,
   medDoses:{}, weightBearing:{status:"",pct:"",lbs:"",side:"",limb:"le"}, devices:[],
   cardiacDevice:{type:"",icdRate:""}, specialPrecautions:[], planVariant:{}, progress:{},
   log:[], logMood:"", logDone:[], logTpl:"blank", photoNoted:false,
@@ -5087,16 +5087,28 @@ function initClinician(){
     if(t && !t.value.trim()){ t.value = CLIN_STARTER; if(n && !n.value.trim()) n.value = "Clinician protocol (adjust as needed)"; updateClinPreview(); }
   }
 }
-/* Reflect the History "Clinician-guided" checkbox in the card styling + Next button.
-   Next always continues to the Clinician step (→ Injury → Details); the checkbox only
-   decides whether that step arrives pre-filled with a starter protocol to adjust. */
-function syncClinGuide(){
-  const on = !!state.clinicianGuided;
-  const card = $("#clinGuideCard"); if(card) card.classList.toggle("on", on);
-  const btn = $("#historyNext"); if(btn) btn.textContent = on ? "Next: clinician setup →" : "Next: continue →";
-  const sub = $("#clinGuideSub"); if(sub) sub.innerHTML = on
+/* Reflect the two History session-mode checkboxes in card styling, the checkboxes
+   themselves (mutual exclusivity means one can flip the other) and the Next button.
+   - Clinician-guided → Next opens the Clinician step pre-filled with a starter to adjust.
+   - Self-guided → Next SKIPS the Clinician step and goes straight to Injury.
+   - Neither (the default) → Next stops at the optional, empty Clinician step.
+   The routing itself lives in the #historyNext handler; this only keeps the UI honest. */
+function syncSessionMode(){
+  const cg = !!state.clinicianGuided, sg = !!state.selfGuided;
+  const cgEl = $("#q_clinicianGuided"); if(cgEl) cgEl.checked = cg;
+  const sgEl = $("#q_selfGuided");      if(sgEl) sgEl.checked = sg;
+  const cgCard = $("#clinGuideCard"); if(cgCard) cgCard.classList.toggle("on", cg);
+  const sgCard = $("#selfGuideCard"); if(sgCard) sgCard.classList.toggle("on", sg);
+  const btn = $("#historyNext");
+  if(btn) btn.textContent = sg ? "Next: choose your injury →"
+                          : cg ? "Next: clinician setup →"
+                               : "Next: continue →";
+  const cgSub = $("#clinGuideSub"); if(cgSub) cgSub.innerHTML = cg
     ? `<b>On.</b> <b>Next</b> opens the <b>Clinician step</b> pre-filled with a protocol to adjust, then Injury and Details.`
     : `Tick this if a <b>clinician</b> is setting up this program — the Clinician step will arrive pre-filled with a protocol to adjust. Either way, <b>Next</b> continues through <b>Clinician → Injury → Details</b> (the Clinician step is optional — patients can just click through it).`;
+  const sgSub = $("#selfGuideSub"); if(sgSub) sgSub.innerHTML = sg
+    ? `<b>On.</b> <b>Next</b> skips the Clinician step and goes straight to <b>choosing your injury</b>. You can still open the <b>Clinician step</b> any time from the steps bar above.`
+    : `Doing this on your own? Tick this to <b>skip the Clinician step</b> — <b>Next</b> takes you straight to <b>choosing your injury</b>. You can still open the Clinician step any time from the steps bar above if you'd like a clinician's help.`;
 }
 function clinicianIntroCard(){
   return `<div class="card clinintro">
@@ -10145,10 +10157,15 @@ document.addEventListener("DOMContentLoaded",()=>{
   $$(".step").forEach(s=>s.onclick=()=>{ const n=+s.dataset.step;
     if([3,4,5,6].includes(n) && !state.condIds.length){ toast("Pick a condition first."); goStep(2); return; }
     goStep(n); });
-  // History → next: always continue to the Clinician step (1) → Injury → Details. The checkbox only
-  // controls whether the Clinician step auto-populates a starter protocol; it never bypasses it.
-  const histNext = $("#historyNext"); if(histNext) histNext.onclick=()=>goStep(1);
-  const cg = $("#q_clinicianGuided"); if(cg){ cg.checked = !!state.clinicianGuided; cg.onchange=()=>{ state.clinicianGuided=cg.checked; save(); syncClinGuide(); }; syncClinGuide(); }
+  // History → next: goes to the Clinician step (1) by default, but SKIPS straight to Injury (2)
+  // when self-guided is on. Either way the Clinician step stays reachable from the steps bar and
+  // from Injury's "← Back", so a self-guided user can always double back for a clinician's help.
+  const histNext = $("#historyNext"); if(histNext) histNext.onclick=()=>goStep(state.selfGuided ? 2 : 1);
+  // Clinician-guided and self-guided are opposites — ticking one clears the other so the state
+  // can never claim both "a clinician is setting this up" and "I'm doing it myself".
+  const cg = $("#q_clinicianGuided"); if(cg) cg.onchange=()=>{ state.clinicianGuided=cg.checked; if(cg.checked) state.selfGuided=false; save(); syncSessionMode(); };
+  const sg = $("#q_selfGuided");      if(sg) sg.onchange=()=>{ state.selfGuided=sg.checked; if(sg.checked) state.clinicianGuided=false; save(); syncSessionMode(); };
+  syncSessionMode();
   const clinNext = $("#clinToProgram"); if(clinNext) clinNext.onclick=()=>goStep(2);   // Clinician → Injury (consecutive)
   $("#generateBtn").onclick=doGenerate;
   $("#printBtn").onclick=()=>{ preparePrint(); window.print(); };

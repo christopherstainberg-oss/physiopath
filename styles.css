@@ -753,8 +753,22 @@ svg.chart .dot{fill:var(--brand)}
 .clinguide.on{background:rgba(92,225,166,.18);box-shadow:0 0 0 3px rgba(92,225,166,.18)}
 .clinguide input[type=checkbox]{margin-top:2px;flex:0 0 auto;width:20px;height:20px;accent-color:var(--brand-2);cursor:pointer}
 .clinguidemain{display:flex;flex-direction:column;gap:3px}
-.clinguideh{font-weight:800;font-size:15px;color:var(--brand-2)}
+/* --brand-2 is an accent/background colour and fails as 15px bold TEXT in light mode; the
+   ink token is the contrast-safe version (identical in dark mode). */
+.clinguideh{font-weight:800;font-size:15px;color:var(--accent-ink)}
 .clinguidesub{font-size:12.5px;color:var(--muted);line-height:1.5}
+/* Self-guided is the counterpart to clinician-guided, so it reads as a pair but in the blue
+   brand rather than the green, so the two options are visually distinct at a glance.
+   ⚠ The tint is kept LIGHTER than the green card's: blue composites darker over the light
+   page, and at .08 it pushed the --muted sub-text under 4.5:1. These opacities keep the
+   12.5px sub readable in light mode even in the .on state (measured: heading 5.0+, sub 4.5+). */
+.selfguide{border-color:var(--brand);background:rgba(62,166,255,.05)}
+.selfguide:hover{background:rgba(62,166,255,.07)}
+/* The "on" state is carried by the ring + border, NOT a darker fill — the muted sub-text
+   can't clear 4.5:1 over anything heavier than ~.06 blue on the light page. */
+.selfguide.on{background:rgba(62,166,255,.06);box-shadow:0 0 0 3px rgba(62,166,255,.28)}
+.selfguide input[type=checkbox]{accent-color:var(--brand)}
+.selfguide .clinguideh{color:var(--brand-ink)}
 
 /* program editing controls */
 .exrowtools{display:flex;gap:14px;align-items:center;margin-top:7px;flex-wrap:wrap}
