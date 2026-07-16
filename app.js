@@ -3139,7 +3139,7 @@ const VID_QUALIFIER = {
    "Progressive grip work". Searching those verbatim sends people to nothing. Strip the
    prescription language, expand the jargon nobody types into a search box, and if what
    remains names no actual movement, return null so no link is offered at all. */
-const VID_LEAD  = /^(gentle|progressive|assisted|light|graded|early|controlled|supported|pain-free|active|passive|isometric|advanced)\s+/i;
+const VID_LEAD  = /^(gentle|progressive|assisted|light|graded|early|controlled|supported|pain-free|active|passive|isometric|advanced)\s+|^with\s+[\w-]+\s+(?=[a-z])/i;
 const VID_JARGON = [[/\brom\b/gi, "range of motion"], [/\bAAROM\b/gi, "assisted range of motion"],
                     [/\bckc\b/gi, "closed chain"], [/\bokc\b/gi, "open chain"], [/\bslr\b/gi, "straight leg raise"],
                     [/\bsaq\b/gi, "short arc quad"], [/\bter\b/gi, "terminal extension"], [/\bnwb\b/gi, ""]];
@@ -3153,9 +3153,14 @@ function videoQuery(name, pattern){
     .replace(/\s*\((left|right|bilateral)\)\s*$/i, "")
     .trim()
     .replace(VID_STRIP_EQUIP, "")
-    .replace(/\s*\/\s*/g, " ")          // "Deadlift / hip hinge" -> one phrase
+    /* Compound names list alternatives ("A / B"), progressions ("A: x → y") and add-ons
+       ("A + B"). Keep the FIRST clause -- it is the movement; the rest is dosing detail that
+       turns the search into noise.
+       The slash only means "or" when it is SPACE-DELIMITED: "Radial/ulnar deviation" is ONE
+       movement and splitting it searched for "radial", while "Wrist flexion / wrist curl /
+       extension" really is a list. Same for &/+. Colons and arrows always separate. */
+    .split(/\s+(?:\/|\+|&)\s+|\s*(?::|→)\s*/)[0]
     .replace(/,/g, " ")                  // "Ankle pumps, seated" is a name, not a query
-    .replace(/&/g, " and ")
     .replace(/\s+/g, " ")
     .trim();
   if(!q) q = String(name||"").trim();
