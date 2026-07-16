@@ -9,9 +9,10 @@
     "gen:exercises": "node scripts/generate-exercises.mjs",
     "gen:medications": "node scripts/generate-medications.mjs",
     "gen:icons": "node scripts/generate-icons.mjs",
+    "assemble": "node scripts/assemble-app.mjs",
     "build": "node scripts/build.mjs",
-    "serve": "node scripts/serve.mjs",
-    "dev": "node scripts/serve.mjs",
+    "serve": "node scripts/assemble-app.mjs && node scripts/serve.mjs",
+    "dev": "node scripts/assemble-app.mjs && node scripts/serve.mjs",
     "test": "node test/index.mjs",
     "test:smoke": "node test/smoke.mjs"
   },

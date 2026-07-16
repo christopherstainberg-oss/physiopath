@@ -2,9 +2,13 @@
 import { mkdirSync, cpSync, rmSync, writeFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { writeApp } from "./assemble-app.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const DIST = join(ROOT, "dist");
+
+// 0) assemble app.js from src/engine.js + src/ui.js so dist ships the current source
+writeApp();
 
 // 1) regenerate generated assets (importing runs each generator's top-level code)
 await import("./generate-conditions.mjs");

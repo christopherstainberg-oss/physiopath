@@ -6,6 +6,7 @@ WORKDIR /app
 # No runtime dependencies — the generators use only Node built-ins.
 COPY package.json ./
 COPY scripts ./scripts
+COPY src ./src
 COPY data ./data
 COPY icons ./icons
 COPY index.html styles.css app.js sw.js manifest.webmanifest ./

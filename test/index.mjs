@@ -7,6 +7,7 @@
    Individual files are still runnable on their own (`node test/coverage.test.mjs`)
    — each self-reports only when it's the process entry point.
 ===================================================================== */
+import "./assembly.test.mjs";
 import "./safety.test.mjs";
 import "./coverage.test.mjs";
 import "./snapshots.test.mjs";
