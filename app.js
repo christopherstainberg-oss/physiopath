@@ -305,7 +305,8 @@ const state = {
   medIds:[], medFilter:false, homeMode:false, customPrecautions:[], clinicianProtocols:[], clinPrecautionProtocol:"", clinicianGuided:false,
   medDoses:{}, weightBearing:{status:"",pct:"",lbs:"",side:"",limb:"le"}, devices:[],
   cardiacDevice:{type:"",icdRate:""}, specialPrecautions:[], planVariant:{}, progress:{},
-  log:[], logMood:"", logDone:[], logTpl:"blank", jjThread:[], chatHistory:[], apiKey:"", apiModel:"claude-opus-4-8"
+  log:[], logMood:"", logDone:[], logTpl:"blank", photoNoted:false,
+  jjThread:[], chatHistory:[], apiKey:"", apiModel:"claude-opus-4-8"
 };
 const MED_FILTERABLE = ["fluoroquinolone","anticoagulant","antiplatelet","opioid","sedative","muscle_relaxant","gabapentinoid","antipsychotic"];
 /* ---------- on-demand data loading ----------
@@ -5391,19 +5392,32 @@ function coachAnswer(qRaw){
    warning. The API key is excluded on purpose - a backup file is something
    people email to themselves or hand to a physio.
    --------------------------------------------------------------------- */
-function exportData(){
+/* ⚠ This file is called "backup", so it has to BE one. Photos live in IndexedDB rather than
+   in state, so serialising state alone would hand someone a file named backup that silently
+   omits the only irreplaceable thing in the app. */
+async function exportData(){
   const { apiKey, ...safe } = state;
-  const payload = { _app:"physiopath", _version:1, _exported:new Date().toISOString(), state:safe };
-  const url = URL.createObjectURL(new Blob([JSON.stringify(payload,null,2)], {type:"application/json"}));
-  const a = document.createElement("a");
-  a.href = url; a.download = `physiopath-backup-${todayISO()}.json`;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url), 1000);
-  toast("Backup downloaded" + (apiKey ? " - your API key was left out on purpose" : ""));
+  const btn = $("#exportBtn"), label = btn && btn.textContent;
+  if(btn){ btn.disabled = true; btn.textContent = "Packing…"; }
+  try{
+    const photos = await photoPack();
+    const payload = { _app:"physiopath", _version:2, _exported:new Date().toISOString(), state:safe, photos };
+    const json = JSON.stringify(payload, null, 2);
+    const url = URL.createObjectURL(new Blob([json], {type:"application/json"}));
+    const a = document.createElement("a");
+    a.href = url; a.download = `physiopath-backup-${todayISO()}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+    toast(`Backup downloaded — ${photos.length ? photos.length + " photo" + (photos.length===1?"":"s") + " included · " : ""}`
+      + fmtBytes(json.length) + (apiKey ? " · your API key was left out on purpose" : ""));
+  }catch(e){
+    console.warn("backup failed:", e);
+    toast("⚠ Couldn't build the backup file.");
+  }finally{ if(btn){ btn.disabled = false; btn.textContent = label; } }
 }
 function importData(file){
   const rd = new FileReader();
-  rd.onload = () => {
+  rd.onload = async () => {
     let p;
     try{ p = JSON.parse(rd.result); }
     catch(e){ toast("⚠ That file isn't valid JSON."); return; }
@@ -5413,12 +5427,23 @@ function importData(file){
     }
     const when = (p && p._exported) ? new Date(p._exported).toLocaleDateString() : "an unknown date";
     const n = (incoming.log||[]).length;
-    if(!confirm(`Restore this backup from ${when}?\n\nIt contains ${n} logged session${n===1?"":"s"}.\n\nThis REPLACES everything currently in the app. Export first if you are not sure.`)) return;
+    const pics = (p && Array.isArray(p.photos) ? p.photos : []).filter(photoValid);
+    /* This restore REPLACES, and photos sit outside state — so without clearing them a v1
+       backup would leave today's photos stranded against a restored older journal, on days
+       they were never taken. Counted out loud, because they are not recoverable. */
+    let have = 0;
+    try{ have = (await photoAll()).length; }catch(_){}
+    if(!confirm(`Restore this backup from ${when}?\n\nIt contains ${n} logged session${n===1?"":"s"}`
+      + `${pics.length?` and ${pics.length} photo${pics.length===1?"":"s"}`:""}.\n\n`
+      + `This REPLACES everything currently in the app`
+      + (have ? `, including the ${have} photo${have===1?"":"s"} on this device` : "")
+      + `. Export first if you are not sure.`)) return;
     const key = state.apiKey;                        // never clobber the live key from a file
     Object.keys(state).forEach(k=>{ delete state[k]; });
     Object.assign(state, JSON.parse(JSON.stringify(DEFAULT_STATE)), incoming);
     if(key) state.apiKey = key;
     if(!save()){ toast("⚠ Restored, but couldn't save - storage is full or blocked."); return; }
+    try{ await photoClear(); await photoUnpack(pics); }catch(_){}
     location.reload();
   };
   rd.onerror = () => toast("⚠ Couldn't read that file.");
@@ -5430,28 +5455,77 @@ function importData(file){
    The journal is the part someone might want to keep, print, or hand to a
    physio without also handing over their lab values and medication list.
    --------------------------------------------------------------------- */
-function journalPayload(){
-  const { apiKey, ...rest } = state;
-  return { _app:"physiopath", _kind:"journal", _version:1, _exported:new Date().toISOString(),
-           entries: (state.log||[]).slice() };
+const blobToDataURL = b => new Promise((res, rej) => {
+  const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r.readAsDataURL(b); });
+const dataURLToBlob = u => fetch(u).then(r => r.blob());
+
+/* ⚠ Photos live in IndexedDB, NOT in state — so they are invisible to anything that only
+   serialises state, and an export that skipped them would be a backup that silently isn't
+   one. That is the v105 bug with pictures attached. BOTH exports walk the store through
+   these two helpers, so neither can drift away from the other. */
+async function photoPack(){
+  try{
+    return await Promise.all((await photoAll()).map(async p =>
+      ({ id:p.id, date:p.date, w:p.w, h:p.h, t:p.t, size:p.size, data: await blobToDataURL(p.blob) })));
+  }catch(_){ return []; }    // IndexedDB unavailable => no photos to lose
 }
-function exportJournalJSON(){
-  const url = URL.createObjectURL(new Blob([JSON.stringify(journalPayload(), null, 2)], {type:"application/json"}));
-  const a = document.createElement("a");
-  a.href = url; a.download = `physiopath-journal-${todayISO()}.json`;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url), 1000);
-  toast("Journal exported — " + (state.log||[]).length + " entries.");
+const photoValid = x => x && typeof x.data === "string" && /^data:image\//.test(x.data)
+  && typeof x.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(x.date);
+/* Keyed on the original id, so re-importing the same backup restores rather than duplicates.
+   A photo that fails to land is COUNTED, not swallowed — a backup that half-restores in
+   silence is the whole thing worth avoiding here. */
+async function photoUnpack(pics){
+  let ok = 0, fail = 0;
+  for(const x of (pics||[]).filter(photoValid)){
+    try{
+      const blob = await dataURLToBlob(x.data);
+      await photoPut({ id: x.id || (x.date + "-" + Math.random().toString(16).slice(2)), date: x.date,
+                       blob, w: x.w||0, h: x.h||0, size: blob.size, t: x.t || Date.now() });
+      ok++;
+    }catch(_){ fail++; }
+  }
+  return { ok, fail };
+}
+const photoTally    = r => r.ok   ? `, ${r.ok} photo${r.ok===1?"":"s"} restored` : "";
+const photoFailNote = r => r.fail ? ` ⚠ ${r.fail} photo${r.fail===1?"":"s"} couldn't be restored.` : "";
+
+async function journalPayload(){
+  return { _app:"physiopath", _kind:"journal", _version:2, _exported:new Date().toISOString(),
+           entries: (state.log||[]).slice(), photos: await photoPack() };
+}
+async function exportJournalJSON(){
+  const btn = $("#jExportJson"), label = btn && btn.textContent;
+  if(btn){ btn.disabled = true; btn.textContent = "Packing…"; }   // base64 of 50 photos is not instant
+  try{
+    const payload = await journalPayload();
+    const json = JSON.stringify(payload, null, 2);
+    const url = URL.createObjectURL(new Blob([json], {type:"application/json"}));
+    const a = document.createElement("a");
+    a.href = url; a.download = `physiopath-journal-${todayISO()}.json`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+    const np = payload.photos.length;
+    toast(`Journal exported — ${payload.entries.length} entries${np?` and ${np} photo${np===1?"":"s"}`:""} · ${fmtBytes(json.length)}.`);
+  }catch(e){
+    console.warn("journal export failed:", e);
+    toast("⚠ Couldn't build the export file — your photos may be too large for one file.");
+  }finally{ if(btn){ btn.disabled = false; btn.textContent = label; } }
 }
 /* A diary you can actually read. JSON is for re-importing; this is for keeping. */
-function exportJournalText(){
+async function exportJournalText(){
   const log = (state.log||[]).slice();
   if(!log.length){ toast("Nothing written yet."); return; }
   const conds = selectedConditions().map(c=>c.name).join(", ");
+  /* Markdown cannot carry the photos, and a file called "my rehab journal" that quietly
+     isn't all of it is how someone wipes a device believing they have a copy. Say it in
+     the file, and name the button that does back them up. */
+  let np = 0;
+  try{ np = (await photoAll()).length; }catch(_){}
   const lines = [
     "# My rehab journal",
     conds ? "\n" + conds : "",
     `\n${log.length} entries · ${fmtDate(log[0].date)} to ${fmtDate(log[log.length-1].date)}`,
+    np ? `\n> ⚠ Your ${np} progress photo${np===1?" is":"s are"} NOT in this file — text can't hold images.\n> Use "Export journal (JSON)" to back ${np===1?"it":"them"} up.` : "",
     "\n---\n"
   ];
   for(const e of log){
@@ -5480,25 +5554,28 @@ function exportJournalText(){
 }
 function importJournal(file){
   const rd = new FileReader();
-  rd.onload = () => {
+  rd.onload = async () => {
     let p;
     try{ p = JSON.parse(rd.result); }catch(e){ toast("⚠ That file isn't valid JSON."); return; }
     const incoming = Array.isArray(p) ? p : (p && (p.entries || (p.state && p.state.log)));
     if(!Array.isArray(incoming)){ toast("⚠ That doesn't look like a PhysioPath journal."); return; }
     const clean = incoming.filter(e => e && typeof e.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(e.date));
-    if(!clean.length){ toast("⚠ No entries found in that file."); return; }
+    const pics = (p && Array.isArray(p.photos) ? p.photos : []).filter(photoValid);
+    if(!clean.length && !pics.length){ toast("⚠ No entries found in that file."); return; }
     /* MERGE rather than replace — importing a backup should never be how someone loses the
        entries they've written since. Same-day collisions are the only thing that overwrites,
        and they're counted out loud first. */
     const have = new Map((state.log||[]).map(e=>[e.date, e]));
     let added = 0, updated = 0;
     for(const e of clean){ if(have.has(e.date)) updated++; else added++; }
-    if(!confirm(`Import ${clean.length} entries?\n\n${added} new, ${updated} would replace an entry you already have for that day.\n\nEverything else you've written is kept.`)) return;
+    if(!confirm(`Import ${clean.length} entries${pics.length?` and ${pics.length} photo${pics.length===1?"":"s"}`:""}?\n\n`
+      + `${added} new, ${updated} would replace an entry you already have for that day.\n\nEverything else you've written is kept.`)) return;
     for(const e of clean) have.set(e.date, e);
     state.log = [...have.values()].sort((a,b)=>a.date<b.date?-1:1);
     if(!save()){ toast("⚠ Imported, but couldn't save — storage is full or blocked."); return; }
+    const r = await photoUnpack(pics);
     renderProgress(); loadLogDay(($("#logDate")&&$("#logDate").value) || todayISO());
-    toast(`Imported — ${added} added, ${updated} updated.`);
+    toast(`Imported — ${added} added, ${updated} updated${photoTally(r)}.${photoFailNote(r)}`);
   };
   rd.onerror = () => toast("⚠ Couldn't read that file.");
   rd.readAsText(file);
@@ -6528,14 +6605,44 @@ function initProgress(){
   document.addEventListener("visibilitychange", () => { if(document.hidden) autosaveNow(); });
   window.addEventListener("pagehide", autosaveNow);
   const del = $("#logDelete");
-  if(del) del.onclick = () => {
+  if(del) del.onclick = async () => {
     const d = ($("#logDate") && $("#logDate").value) || todayISO();
     const e = (state.log||[]).find(x=>x.date===d);
     if(!e) return;
+    /* Photos live in their own store keyed by date, so they would quietly survive a
+       "delete this entry" and reappear on that day. Deleting the day means the day —
+       but the photos get counted out loud first, because that is not recoverable. */
+    let pics = [];
+    try{ pics = await photoForDay(d); }catch(_){}
+    const words = e.note ? String(e.note).trim().split(/\s+/).length : 0;
+    const bits = [ words ? words + " words you wrote" : null,
+                   pics.length ? pics.length + (pics.length===1 ? " photo" : " photos") : null ].filter(Boolean);
     if(!confirm("Delete your entry for " + fmtDate(d) + "?\n\nThis can't be undone" +
-      (e.note ? " — and it's " + String(e.note).trim().split(/\s+/).length + " words you wrote." : "."))) return;
-    deleteLog(d); loadLogDay(d); toast("Deleted the entry for " + fmtDate(d) + ".");
+      (bits.length ? " — and it's " + bits.join(" and ") + "." : "."))) return;
+    try{ await photoDeleteDay(d); }catch(_){}
+    deleteLog(d); loadLogDay(d);
+    toast("Deleted the entry for " + fmtDate(d) + (pics.length ? " and its photos." : "."));
   };
+  /* Photos. The picker is a plain file input so it gets the camera on a phone and the
+     library everywhere else, without asking for a camera permission we don't need. */
+  const pf = $("#logPhotoFile"), pb = $("#logPhotoBtn");
+  if(pb && pf){
+    pb.onclick = () => pf.click();
+    pf.onchange = async () => {
+      const d = ($("#logDate") && $("#logDate").value) || todayISO();
+      pb.disabled = true; pb.textContent = "Adding…";
+      try{ await addPhotos(pf.files, d); }
+      finally{ pb.disabled = false; pb.textContent = "＋ Add a photo"; pf.value = ""; }
+    };
+  }
+  const pl = $("#logPhotoList");
+  if(pl) pl.addEventListener("click", async ev => {
+    const b = ev.target.closest(".pdel"); if(!b) return;
+    if(!confirm("Delete this photo?\n\nThis can't be undone.")) return;
+    const d = ($("#logDate") && $("#logDate").value) || todayISO();
+    try{ await photoDelete(b.dataset.id); await renderPhotos(d); toast("Photo deleted."); }
+    catch(_){ toast("⚠ Couldn't delete that photo."); }
+  });
   const js = $("#journalSearch");
   if(js){ let t; js.oninput = () => { clearTimeout(t); t = setTimeout(renderProgress, 140); }; }
   if($("#jExportTxt"))  $("#jExportTxt").onclick  = exportJournalText;
@@ -6585,7 +6692,7 @@ function loadLogDay(d){
   const lt = $("#logToday");
   if(lt) lt.textContent = e ? "You already have an entry for this day" : "";
   _autoDirty = false; clearTimeout(_autoT);
-  syncMood(); renderLogEx(d); renderJournalToday(); renderDiaryHead(d); renderSaveState();
+  syncMood(); renderLogEx(d); renderPhotos(d); renderJournalToday(); renderDiaryHead(d); renderSaveState();
   const _del = $("#logDelete");
   if(_del) _del.classList.toggle("hide", !(state.log||[]).find(x=>x.date===d));
   if(typeof renderJournalJeffery==="function") renderJournalJeffery();
@@ -7335,6 +7442,122 @@ function journalTodayHTML(){
   </div>`;
 }
 /* =====================================================================
+   PROGRESS PHOTOS
+   The most motivating thing in long rehab is seeing month one next to now,
+   because nobody can remember how bad week two actually was. But a photo is
+   a different kind of data from "pain 4/10", and the differences are the
+   whole design:
+
+   - localStorage cannot hold images (5MB, and base64 inflates by a third),
+     so these live in IndexedDB. Which means EVERY promise the journal makes
+     about export has to be re-earned: the JSON export walks this store too,
+     or it is a backup that silently isn't one. That exact lie was fixed once
+     already at v105 and is not being reintroduced with pictures.
+   - Phone photos carry EXIF, and EXIF carries GPS. Re-encoding through a
+     canvas drops every tag as a side effect — the pixels survive, the home
+     address does not. That is worth doing even though nothing is uploaded.
+   - "Stored on your device only" is the same promise as ever, but the stakes
+     are not. Pain 4/10 on a shared laptop is nothing; a photo of someone's
+     torso is not nothing. So it is said plainly, at the point of adding.
+   - Safari evicts unused site data after ~7 days, IndexedDB included.
+     storage.persist() is the actual defence, so we ask for it rather than
+     just warning about it.
+   ===================================================================== */
+const PHOTO_DB = "physiopath-photos", PHOTO_STORE = "photos";
+const PHOTO_EDGE = 1280, PHOTO_Q = 0.82;    // plenty for posture/swelling/ROM; ~150-350KB each
+let _photoDB = null, _photoBroken = false;
+
+function photoDB(){
+  if(_photoDB) return Promise.resolve(_photoDB);
+  return new Promise((res, rej) => {
+    if(!window.indexedDB) return rej(new Error("no-idb"));
+    const rq = indexedDB.open(PHOTO_DB, 1);
+    rq.onupgradeneeded = () => {
+      const db = rq.result;
+      if(!db.objectStoreNames.contains(PHOTO_STORE)){
+        const st = db.createObjectStore(PHOTO_STORE, { keyPath:"id" });
+        st.createIndex("date", "date", { unique:false });
+      }
+    };
+    rq.onsuccess = () => { _photoDB = rq.result; res(_photoDB); };
+    /* Private-mode Firefox and locked-down profiles reject IndexedDB outright. That must
+       degrade to "no photos" rather than taking the journal down with it. */
+    rq.onerror = () => { _photoBroken = true; rej(rq.error || new Error("idb-open")); };
+  });
+}
+function photoTx(mode){
+  return photoDB().then(db => db.transaction(PHOTO_STORE, mode).objectStore(PHOTO_STORE));
+}
+const _idb = rq => new Promise((res, rej) => { rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error); });
+const photoPut    = rec  => photoTx("readwrite").then(st => _idb(st.put(rec)));
+const photoGet    = id   => photoTx("readonly").then(st => _idb(st.get(id)));
+const photoDelete = id   => photoTx("readwrite").then(st => _idb(st.delete(id)));
+const photoAll    = ()   => photoTx("readonly").then(st => _idb(st.getAll())).then(r => (r||[]).sort((a,b)=>a.date<b.date?-1:(a.date>b.date?1:a.t-b.t)));
+const photoClear  = ()   => photoTx("readwrite").then(st => _idb(st.clear()));
+const photoForDay = date => photoTx("readonly").then(st => _idb(st.index("date").getAll(date))).then(r => (r||[]).sort((a,b)=>a.t-b.t));
+function photoDeleteDay(date){
+  return photoForDay(date).then(ps => Promise.all(ps.map(p => photoDelete(p.id))).then(()=>ps.length));
+}
+
+/* EXIF orientation is the classic trap: drawImage paints raw pixels, so a portrait photo
+   from a phone lands on its side unless the decode applies the tag. Ask for it explicitly,
+   and fall back to <img>, where browsers have applied orientation by default for years. */
+async function photoDecode(file){
+  if(window.createImageBitmap){
+    try{ return await createImageBitmap(file, { imageOrientation:"from-image" }); }
+    catch(_){ try{ return await createImageBitmap(file); }catch(__){} }
+  }
+  return await new Promise((res, rej) => {
+    const img = new Image(), u = URL.createObjectURL(file);
+    img.onload  = () => { URL.revokeObjectURL(u); res(img); };
+    img.onerror = () => { URL.revokeObjectURL(u); rej(new Error("decode")); };
+    img.src = u;
+  });
+}
+async function photoShrink(file, edge, q){
+  const src = await photoDecode(file);
+  const w0 = src.width || src.naturalWidth, h0 = src.height || src.naturalHeight;
+  if(!w0 || !h0) throw new Error("decode");
+  const s = Math.min(1, edge / Math.max(w0, h0));
+  const w = Math.max(1, Math.round(w0*s)), h = Math.max(1, Math.round(h0*s));
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  c.getContext("2d").drawImage(src, 0, 0, w, h);
+  if(src.close) src.close();
+  const blob = await new Promise(r => c.toBlob(r, "image/jpeg", q));
+  if(!blob) throw new Error("encode");
+  return { blob, w, h };
+}
+/* Safari drops unused site data after ~7 days and IndexedDB is not exempt, so the entries
+   are only as durable as this. Asking is the mitigation; the answer gets reported honestly
+   rather than assumed. */
+async function photoPersist(){
+  try{
+    if(!navigator.storage || !navigator.storage.persist) return null;
+    if(await navigator.storage.persisted()) return true;
+    return await navigator.storage.persist();
+  }catch(_){ return null; }
+}
+async function photoAdd(file, date){
+  if(!/^image\//.test(file.type || "")) { toast("⚠ That isn't an image file."); return null; }
+  let sh;
+  try{ sh = await photoShrink(file, PHOTO_EDGE, PHOTO_Q); }
+  catch(_){ toast("⚠ Couldn't read that image."); return null; }
+  const rec = { id: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2)),
+                date, blob: sh.blob, w: sh.w, h: sh.h, size: sh.blob.size, t: Date.now() };
+  try{ await photoPut(rec); }
+  catch(e){
+    /* A photo that didn't save must never look like one that did. */
+    toast(/quota/i.test(String(e && e.name)) ? "⚠ Out of storage — the photo wasn't saved. Delete a few older ones."
+                                             : "⚠ Couldn't save that photo on this device.");
+    return null;
+  }
+  photoPersist();
+  return rec;
+}
+const photoBytes = ps => ps.reduce((n,p)=>n + (p.size || (p.blob && p.blob.size) || 0), 0);
+const fmtBytes = n => n < 1024 ? n + " B" : (n < 1048576 ? (n/1024).toFixed(0) + " KB" : (n/1048576).toFixed(1) + " MB");
+
+/* =====================================================================
    EXERCISE TICKS
    "Sessions done: 2" is a number nobody can act on. Ticking the actual
    exercises costs the same effort and answers the question that matters —
@@ -7455,6 +7678,71 @@ function syncLogExSum(){
   const n = (state.logDone||[]).filter(x=>_logExOffer.includes(x)).length;
   el.textContent = n ? `→ ${n} of ${_logExOffer.length} ticked`
                      : "→ shows which exercises keep getting skipped";
+}
+
+/* ---------------------------------------------------------------------
+   PHOTO UI. Object URLs are revoked on every re-render — a diary left open
+   for an hour of scrolling would otherwise leak a blob per thumbnail.
+   --------------------------------------------------------------------- */
+let _photoURLs = [];
+function photoURL(blob){ const u = URL.createObjectURL(blob); _photoURLs.push(u); return u; }
+function photoRevoke(){ _photoURLs.forEach(u=>{ try{ URL.revokeObjectURL(u) }catch(_){} }); _photoURLs = []; }
+
+async function renderPhotos(d){
+  const host = $("#logPhotoList"); if(!host) return;
+  const wrap = $("#logPhotos");
+  if(_photoBroken || !window.indexedDB){
+    if(wrap) wrap.classList.add("hide");
+    return;
+  }
+  let ps = [], all = [];
+  try{ ps = await photoForDay(d); all = await photoAll(); }
+  catch(_){ if(wrap) wrap.classList.add("hide"); return; }
+  if(wrap) wrap.classList.remove("hide");
+  photoRevoke();
+  const sum = $("#logPhotoSum");
+  if(sum) sum.textContent = all.length
+    ? `→ ${all.length} photo${all.length===1?"":"s"} · ${fmtBytes(photoBytes(all))}`
+    : "→ month one next to now is the thing you can't remember";
+  host.innerHTML = ps.length ? ps.map(p=>`
+    <figure class="pthumb">
+      <img src="${photoURL(p.blob)}" alt="Progress photo from ${esc(fmtDate(p.date))}" loading="lazy" />
+      <figcaption>${esc(fmtTime(p.t))}</figcaption>
+      <button type="button" class="pdel" data-id="${esc(p.id)}" title="Delete this photo" aria-label="Delete this photo">✕</button>
+    </figure>`).join("")
+    : `<li class="pempty">No photos for this day.</li>`;
+  renderPhotoCompare(all);
+}
+/* The payoff. Two photos far enough apart to show something, captioned with the gap —
+   "you can't remember week two" is the entire reason this feature exists. */
+function renderPhotoCompare(all){
+  const host = $("#photoCompare"); if(!host) return;
+  if(!all || all.length < 2 || all[0].date === all[all.length-1].date){ host.innerHTML = ""; return; }
+  const a = all[0], b = all[all.length-1];
+  const days = Math.round((new Date(b.date+"T12:00:00") - new Date(a.date+"T12:00:00")) / 864e5);
+  const span = days >= 60 ? `${Math.round(days/30)} months` : (days >= 14 ? `${Math.round(days/7)} weeks` : `${days} days`);
+  host.innerHTML = `<div class="pcompare">
+    <div class="pcmphead"><b>${esc(span)} apart</b> — ${esc(fmtDate(a.date))} → ${esc(fmtDate(b.date))}</div>
+    <div class="pcmprow">
+      <figure><img src="${photoURL(a.blob)}" alt="Progress photo from ${esc(fmtDate(a.date))}" /><figcaption>Then</figcaption></figure>
+      <figure><img src="${photoURL(b.blob)}" alt="Progress photo from ${esc(fmtDate(b.date))}" /><figcaption>Now</figcaption></figure>
+    </div></div>`;
+}
+async function addPhotos(files, d){
+  const list = [...files];
+  if(!list.length) return;
+  let added = 0;
+  for(const f of list){ if(await photoAdd(f, d)) added++; }
+  if(!added) return;
+  await renderPhotos(d);
+  const p = await photoPersist();
+  /* Say it once, on the first photo, and say what it actually means. */
+  if(!state.photoNoted){
+    state.photoNoted = true; save();
+    toast(p === false
+      ? "Saved on this device. ⚠ Your browser may clear it if you don't open the app for a while — export to keep a copy."
+      : "Saved on this device only. Export the journal to keep a copy.");
+  } else toast(added === 1 ? "Photo added." : added + " photos added.");
 }
 
 /* `date` is the day the entry is ABOUT; `t`/`edited` are when it was actually written and

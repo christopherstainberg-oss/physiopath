@@ -392,6 +392,35 @@ body.isoffline .vidnote{display:none}
   color:var(--muted);background:var(--chip);border:1px solid var(--line);
   border-radius:999px;padding:2px 8px}
 .extnote{margin:6px 10px 10px;font-size:11.5px}
+
+/* Progress photos */
+.pgrid{list-style:none;margin:0;padding:10px 10px 0;display:grid;gap:8px;
+  grid-template-columns:repeat(auto-fill,minmax(96px,1fr))}
+.pthumb{margin:0;position:relative;border-radius:10px;overflow:hidden;border:1px solid var(--line);
+  background:var(--panel-2)}
+.pthumb img{display:block;width:100%;aspect-ratio:3/4;object-fit:cover}
+.pthumb figcaption{position:absolute;left:0;right:0;bottom:0;font-size:10.5px;padding:3px 6px;
+  color:#fff;background:linear-gradient(transparent,rgba(0,0,0,.72));font-variant-numeric:tabular-nums}
+/* Always visible, not hover-only: a delete you can't reach on a touch screen isn't a delete. */
+.pdel{position:absolute;top:4px;right:4px;width:26px;height:26px;border-radius:8px;cursor:pointer;
+  border:0;background:rgba(0,0,0,.62);color:#fff;font-size:12px;line-height:1;padding:0}
+.pdel:hover{background:var(--danger);color:#fff}
+.pdel:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.pempty{grid-column:1/-1;color:var(--muted);font-size:12.5px;padding:2px 0 4px}
+.prow{padding:10px 10px 0}
+.pnote{margin:8px 10px 0;font-size:11.5px;line-height:1.55}
+.pnote b{color:var(--text)}
+/* The payoff: two photos, side by side, with the gap named. */
+.pcompare{margin:12px 10px 10px;padding:10px;border:1px solid var(--brand-2);border-radius:12px;background:var(--bg)}
+.pcmphead{font-size:12.5px;color:var(--muted);margin-bottom:8px}
+.pcmphead b{color:var(--accent-ink)}
+.pcmprow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pcmprow figure{margin:0}
+.pcmprow img{display:block;width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:8px;border:1px solid var(--line)}
+.pcmprow figcaption{font-size:11px;font-weight:700;color:var(--muted);text-align:center;padding-top:4px}
+/* If they've opened the section and printed it, the photos are the content — the controls
+   and the on-device privacy note are not. */
+@media print{ .pdel,.prow,.pnote{display:none!important} }
 .jtop .lx{margin-left:auto;background:none;border:0;color:var(--muted);cursor:pointer;
   font-size:13px;line-height:1;padding:6px;min-width:30px;min-height:30px;border-radius:8px}
 .jtop .lx:hover{color:var(--danger);background:var(--chip)}

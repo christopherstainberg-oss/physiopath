@@ -408,6 +408,24 @@
         <p class="hint extnote">Tick as many as you like from one session — this doesn't change your session count.</p>
       </details>
 
+      <!-- Photos are the one thing here nobody can reconstruct from memory, and the one thing
+           with a real privacy cost. Both facts are stated where the decision gets made,
+           not buried in a settings page. Collapsed by default: unlike the ticks, this is
+           not a daily action, and a camera button on a diary page is presumptuous. -->
+      <details class="optsec hide" id="logPhotos">
+        <summary><span class="optsum">Progress photos</span><span class="optbuy" id="logPhotoSum">→ month one next to now is the thing you can't remember</span></summary>
+        <ul class="pgrid" id="logPhotoList"></ul>
+        <div class="prow">
+          <button type="button" class="btn ghost small" id="logPhotoBtn">＋ Add a photo</button>
+          <input type="file" id="logPhotoFile" accept="image/*" multiple hidden />
+        </div>
+        <p class="hint pnote">Photos stay on this device — nothing is uploaded, and location and
+          camera tags are stripped before saving. But anyone who can open this browser can see
+          them, so think twice on a shared or work device. Your browser can also clear them if
+          you don't open the app for a while — <b>“Export journal (JSON)” is the only copy</b>.</p>
+        <div id="photoCompare"></div>
+      </details>
+
       <details class="optsec" id="logDetail">
         <summary><span class="optsum">Add the numbers</span><span class="optbuy">→ drives your pain trend and plan</span></summary>
         <div class="grid2">
