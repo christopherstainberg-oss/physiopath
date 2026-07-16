@@ -3249,114 +3249,167 @@ const PATTERN_INFO = {
   seated:{what:"A seated therapeutic exercise — a gentle, controlled movement done sitting in a sturdy chair.",how:"Sit tall with your feet supported (or the working leg free to move) and take the joint slowly through range, or hold, staying pain-free.",why:"Builds strength and range safely, with support and no standing-balance demand — good early in recovery or when standing is limited."},
   standing:{what:"A standing therapeutic exercise — a supported, weight-bearing movement done holding a counter or rail.",how:"Stand tall beside a sturdy support and move the working leg (or your whole body) slowly and controlled through a pain-free range, or hold — keeping your hips level.",why:"Rebuilds standing strength, hip control and balance in a functional upright position — the bridge from table-based exercises to walking and daily life."},
   pool:{what:"A pool / aquatic therapeutic exercise — done standing or moving in chest-deep water, where buoyancy carries much of your body weight.",how:"In chest-deep water, move slowly against the water's resistance, holding the pool wall or edge for support when you need it; deeper-water drills use a flotation belt.",why:"Buoyancy offloads sore or healing joints while the water gives gentle all-around resistance and warmth — so you can move, strengthen and build fitness with far less impact than on land."},
+  pump:{what:"An ankle pump — the simplest exercise there is: pointing and flexing your foot to squeeze the calf and push blood back up the leg.",how:"Point your toes away, then pull them back towards your nose, slowly and fully, little and often through the day.",why:"Your calf is a pump. Every squeeze pushes blood back towards your heart, which reduces swelling and lowers the risk of a clot while you're less mobile than usual. It costs nothing and needs no equipment."},
+  ped_handling:{what:"Parent-led handling — gentle positioning and movement done FOR your baby, not by them.",how:"On a firm, safe surface, support the limb with your whole hand and move it slowly only as far as it goes easily, a few times a day.",why:"Keeps joints and muscles supple while a newborn can't move much themselves, and stops stiffness setting in during the weeks that matter most."},
+  ped_milestone:{what:"Milestone play — helping the next stage of your baby's movement arrive, through play rather than exercise.",how:"Get on the floor with them, put a toy just out of reach, and give the smallest help that lets them do the rest themselves.",why:"Babies build strength and control by practising the next thing they're nearly ready for. Rolling, sitting and crawling aren't taught — they're rehearsed, and this is the rehearsal."},
+  ped_play:{what:"A movement game — the toddler version of an exercise, because toddlers repeat what's fun and ignore what's prescribed.",how:"Show them first, give it a name, count out loud together, and cheer every go.",why:"At this age the repetitions only happen if it's a game. The strength, balance and coordination come as a by-product of playing it enough times."},
+  ped_skill:{what:"A fundamental movement skill — hopping, catching, balancing — practised as a game.",how:"Demonstrate once, give one instruction at a time, make it a challenge they can win, and praise the effort.",why:"These skills are the building blocks everything later stands on. Children who master them stay active; children who feel clumsy quietly stop moving, and that's harder to fix than any injury."},
+  ped_train:{what:"Technique-first training for a school-age child — the movement learned properly before any weight is added.",how:"Practise slowly with no weight until it looks identical every rep, then add a band or a light load.",why:"Children do get stronger from training, but at this age the gains come from the nervous system learning the movement rather than from bigger muscles. That means good practice IS the training — and it's why technique comes before load, not after it."},
+  ped_strength:{what:"Supervised resistance training for a teenager — close to adult training, with the growing skeleton taken into account.",how:"Learn it light, keep every rep looking the same, and add weight only when the last rep looks like the first.",why:"Properly supervised resistance training is safe and effective for teenagers — the old 'no weights until you're grown' advice doesn't hold up. What still applies is the growth plate: it's the weak link until it closes, so build reps and quality first and leave maximum-effort lifts alone until you're done growing."},
   general:{what:"A general conditioning exercise for the area.",how:"Perform with control through a pain-free range, exhaling on effort.",why:"Helps restore strength, movement and function."}
 };
-/* Step-by-step technique detail per movement pattern — feeds the "How to do it" block. */
+/* Step-by-step technique detail per movement pattern — feeds the "How to do it" block.
+   ---------------------------------------------------------------------
+   ⚠ WRITE THESE IN PLAIN WORDS. Measured before the v158 rewrite, 84% of explanations
+   (152 of 182 distinct shapes) leaned on words only a clinician reads without stopping:
+   "brace", "neutral", "core", "engage", "mid-foot", "lock-out", "torso", "hip hinge".
+   Flesch-Kincaid rated that text grade 5 and missed all of it, because the problem isn't
+   sentence length — those words are SHORT. They're just borrowed from another trade.
+   The rule: say the thing physically. "Brace your core" is "tighten your tummy like
+   someone's about to poke it". "Neutral spine" is "back in its normal shape — not rounded,
+   not arched". Every clinical constraint that matters (heels down, knees don't cave, don't
+   hold your breath) SURVIVES the translation — plain is not vague, and it isn't shorter.
+   --------------------------------------------------------------------- */
 const PATTERN_HOWTO = {
-  squat:{setup:"Stand with feet hip-to-shoulder-width apart, toes turned slightly out, weight balanced over your mid-foot. Brace your stomach as if about to be poked.",
-    steps:["Break at the hips and knees at the same time, sitting your hips back and down.","Keep your chest up; let your knees travel forward over your toes — they may pass the toes as long as your heels stay flat.","Descend as far as you can while your heels stay down and your low back stays neutral (no rounding or tucking).","Drive up through your whole foot and squeeze your glutes at the top."],
-    tempo:"Lower for 2–3 seconds, then stand at a controlled pace. Breathe in on the way down, out as you drive up.",
-    avoid:"Don't let the knees cave inward or the heels lift — widen your stance or reduce depth if they do."},
-  hinge:{setup:"Stand tall, feet hip-width, a slight soft bend in the knees. Set your shoulders back and brace your core.",
-    steps:["Push your hips straight back toward the wall behind you, letting your torso tip forward as one unit.","Keep your spine long and flat — imagine a broomstick touching your head, upper back and tailbone.","Lower until you feel a stretch in the hamstrings (often about shin height), keeping the weight close to your legs.","Drive your hips forward to stand tall and squeeze your glutes — don't lean back at the top."],
-    tempo:"Lower under control for ~3 seconds; return smoothly. Exhale as you stand up.",
-    avoid:"Don't round your back or turn it into a squat — the movement comes from the hips, not the knees."},
-  lunge:{setup:"Stand tall, then take a controlled step into a long split stance (or set up already staggered).",
-    steps:["Lower straight down by bending both knees, dropping the back knee toward the floor.","Keep your front shin roughly vertical and your weight through the front heel and mid-foot.","Stop just before the back knee touches, keeping your torso upright.","Push through the front foot to return to the start."],
-    tempo:"Lower for ~2 seconds, pause briefly, then rise. Breathe out on the way up.",
-    avoid:"Don't let the front knee collapse inward or shoot far past the toes, and don't lean your trunk forward."},
-  calf:{setup:"Stand tall, feet hip-width, near a wall or rail for light balance. Place the balls of the feet on a step for extra range if prescribed.",
-    steps:["Push through the balls of your feet to rise as high as you can onto your toes.","Pause a moment at the top with the ankles fully pointed.","Lower slowly all the way down — let the heels drop below the step if you're using one."],
-    tempo:"Rise for 1–2 seconds, lower for 3–4 seconds — the slow lower is where much of the benefit is.",
-    avoid:"Don't bounce or rush; keep it smooth and let the calves, not gripping toes, do the work."},
-  pull:{setup:"Set the resistance and get into a stable, tall posture; take up the slack before you start.",
-    steps:["Set your shoulder blades — gently draw them back and down before the arm moves.","Pull the resistance smoothly toward you (or curl the joint), leading with the elbow.","Squeeze the working muscle for a moment at the end of the range.","Return slowly to full length, keeping tension the whole way."],
-    tempo:"Pull for 1–2 seconds, control the return for ~3 seconds. Exhale as you pull.",
-    avoid:"Don't shrug, swing or heave with momentum — if you have to jerk the weight, lighten it."},
-  push:{setup:"Set a stable base and tall posture; start the joint at a comfortable, pain-free angle.",
-    steps:["Brace your core and set your shoulder blades.","Press the resistance smoothly away (or straighten the joint) through a full, controlled range.","Stop just short of a harsh lock-out, keeping tension on the muscle.","Lower back to the start slowly and with control."],
-    tempo:"Press for 1–2 seconds, lower for ~3 seconds. Exhale as you press.",
-    avoid:"Don't hold your breath or flare the joint into a painful range — keep it smooth and pain-free."},
-  isometric:{setup:"Move into the prescribed position and set your posture; find the exact angle where the target muscle works but nothing sharp is felt.",
-    steps:["Gently build tension in the target muscle to a firm but comfortable effort (about 5–7 out of 10).","Hold perfectly still — no bouncing or shifting.","Keep breathing steadily throughout the hold.","Ease off slowly at the end rather than dropping suddenly."],
-    tempo:"Hold for the prescribed time (often 20–45 seconds), then rest. Never hold your breath.",
-    avoid:"Don't strain to maximum or push into pain — steady, sub-maximal tension is the goal."},
-  mobility:{setup:"Get into the starting position and relax the surrounding muscles; the aim is gentle range, not force.",
-    steps:["Move slowly and smoothly toward the end of the comfortable range.","Ease to the first point of gentle stretch or resistance — not pain.","Hold briefly, or move rhythmically in and out if it's a dynamic drill.","Return slowly to the start and repeat."],
-    tempo:"Move deliberately; for static stretches hold ~20–30 seconds. Breathe out as you ease into range.",
-    avoid:"Don't bounce or force through pain — range should improve gradually, not be wrenched."},
-  balance:{setup:"Set up beside a sturdy support (counter, rail or wall) you can touch if needed; footwear as prescribed.",
-    steps:["Get into position (e.g. stand on one leg) with your gaze fixed on a point ahead.","Brace your core gently and keep a soft bend in the knee.","Hold steady, correcting with small foot and ankle adjustments rather than flailing your arms.","Progress — add movement, close your eyes or use a softer surface — only when the level feels secure."],
-    tempo:"Hold or work for the prescribed time; rest and repeat. Breathe normally.",
-    avoid:"Don't hold your breath or lock the knee; keep support within reach so you can push yourself safely."},
-  plyo:{setup:"Warm up first. Pick a surface with some give and clear space; start with a low height or short distance.",
-    steps:["Load by dipping into a quarter-squat with the hips back and chest up.","Jump or hop with full effort, extending the hips, knees and ankles together.","Focus on the landing — land softly on the mid-foot and absorb through the hips and knees.","Land 'quietly' with the knees tracking over the toes, then reset before the next rep."],
-    tempo:"Explode up, then land soft and controlled. Quality over quantity — stop if landings get sloppy.",
-    avoid:"Don't land stiff-legged or with the knees caving in; cut the height or reps if form breaks down."},
-  carry:{setup:"Pick up the load with a good hip hinge; stand tall with it at your side(s) or front as prescribed.",
-    steps:["Stand as tall as you can — ribs down, shoulders back, core braced.","Take short, deliberate, even steps.","Keep the weight from swinging and your torso from leaning or tipping.","Set the load down with control using your legs, not your back."],
-    tempo:"Walk at a steady pace for the prescribed distance or time; breathe normally throughout.",
-    avoid:"Don't hold your breath, lean toward the weight, or let your posture collapse — stop when you can't stay tall."},
-  cardio:{setup:"Choose your mode (walk, bike, row, etc.) and start with a few minutes of easy warm-up.",
-    steps:["Build to your target effort — a conversational 'moderate' pace, or your prescribed intervals.","Keep a smooth, rhythmic pattern and steady breathing.","Use your heart-rate zone and/or RPE (see the cardio target above) to stay in range.","Finish with a few minutes of easy cool-down."],
-    tempo:"Sustain the prescribed duration or intervals; at a moderate pace you should be able to talk but not sing.",
-    avoid:"Don't red-line to breathlessness, and stop for chest pain, dizziness or unusual symptoms."},
-  vestibular:{setup:"Sit or stand safely near support, ready to provoke mild dizziness that then settles.",
-    steps:["Perform the prescribed gaze or head movement (e.g. keep your eyes on a target while turning your head).","Move at a pace that brings on mild symptoms without overwhelming you.","Continue for the set time, then pause and let symptoms settle before the next set.","Progress the speed or difficulty gradually as symptoms ease."],
-    tempo:"Work for the prescribed time; rest between sets until dizziness settles.",
-    avoid:"Don't push to severe nausea — a little provocation is therapeutic, a lot is counterproductive."},
-  breathing:{setup:"Get comfortable — sitting upright or lying with knees bent. Rest one hand on your belly.",
-    steps:["Breathe in slowly through your nose, letting your belly (not your chest) rise into your hand.","Keep your shoulders and neck relaxed.","Breathe out slowly and fully — through pursed lips if prescribed — for longer than you breathed in.","Pause briefly, then repeat at an unhurried pace."],
+  squat:{setup:"Stand with your feet about as wide as your hips, toes turned out a little. Your weight should feel even, through the middle of each foot. Tighten your tummy like someone's about to poke it.",
+    steps:["Bend your knees and push your bottom backwards, like you're reaching for a chair behind you.","Keep your chest up. Your knees will travel forwards over your toes — that's fine, as long as your heels stay stuck to the floor.","Go down as far as you can while your heels stay down and your back keeps its normal shape. Don't let it round or tuck under.","Push the floor away through your whole foot to stand back up, and squeeze your bottom at the top."],
+    tempo:"Take 2–3 seconds to go down, then stand up at a steady pace. Breathe in on the way down, out as you push up.",
+    avoid:"Don't let your knees fall inwards or your heels lift. If they do, stand a bit wider or don't go down as far."},
+  hinge:{setup:"Stand tall, feet about hip-width apart, knees slightly soft rather than locked straight. Pull your shoulders back and tighten your tummy.",
+    steps:["Push your bottom straight back towards the wall behind you, letting your chest tip forwards as one piece.","Keep your back long and flat — imagine a broomstick resting along it, touching your head, your upper back and your tailbone.","Go down until you feel a stretch down the back of your thighs, usually around shin height. Keep the weight close to your legs the whole way.","Push your hips forwards to stand up tall and squeeze your bottom. Don't lean back at the top."],
+    tempo:"Take about 3 seconds to go down, then come up smoothly. Breathe out as you stand.",
+    avoid:"Don't let your back round, and don't turn it into a squat. The bend comes from your hips, not your knees."},
+  lunge:{setup:"Stand tall, then step forwards into a long stride — one foot well in front of the other, like you're standing on two railway tracks rather than a tightrope.",
+    steps:["Drop straight down by bending both knees, sending your back knee towards the floor.","Keep your front shin roughly upright, and your weight through your front heel and the middle of your foot.","Stop just before your back knee touches the floor. Stay tall — don't tip forwards.","Push through your front foot to stand back up."],
+    tempo:"Take about 2 seconds to go down, pause for a moment, then come up. Breathe out on the way up.",
+    avoid:"Don't let your front knee fall inwards or shoot far past your toes, and don't lean your chest forwards."},
+  calf:{setup:"Stand tall, feet about hip-width, near a wall or rail you can touch for balance. If you've been told to use a step, put the balls of your feet on the edge with your heels hanging off.",
+    steps:["Push through the balls of your feet and rise up as high as you can onto your toes.","Pause for a moment at the top, with your ankles fully pointed.","Lower all the way down, slowly. If you're on a step, let your heels drop below it until you feel a stretch."],
+    tempo:"Take 1–2 seconds to rise, and 3–4 seconds to lower. The slow lowering is where most of the benefit is — don't rush it.",
+    avoid:"Don't bounce or hurry. Let your calves do the work rather than gripping with your toes."},
+  pull:{setup:"Set the resistance and stand or sit tall and steady. Take the slack out of the band or cable before you start, so there's tension from the first inch.",
+    steps:["Start by gently pulling your shoulder blades down and back, before your arm moves at all.","Pull the resistance smoothly towards you, leading with your elbow rather than your hand.","Squeeze the working muscle for a moment at the end.","Let it back slowly to full stretch, keeping tension the whole way — don't just let go."],
+    tempo:"Pull for 1–2 seconds, and take about 3 seconds to let it back. Breathe out as you pull.",
+    avoid:"Don't shrug your shoulders up, swing, or heave. If you have to jerk it to move it, it's too heavy."},
+  push:{setup:"Set your feet or your back somewhere solid so you're stable, and start with the joint at an angle that feels comfortable.",
+    steps:["Tighten your tummy and gently set your shoulder blades down and back.","Press the resistance smoothly away from you through the fullest range you can manage comfortably.","Stop just before your elbows or knees snap completely straight, so the muscle keeps the tension.","Bring it back to the start slowly and under control."],
+    tempo:"Press for 1–2 seconds, and take about 3 seconds to come back. Breathe out as you press.",
+    avoid:"Don't hold your breath, and don't push into a range that pinches or hurts. Smooth and pain-free."},
+  isometric:{setup:"Get into the position you've been given, then hunt for the exact angle where you feel the right muscle working but nothing sharp anywhere.",
+    steps:["Slowly build up the tension in that muscle until it's firm but comfortable — about 5 or 6 out of 10 effort.","Hold completely still. No bouncing, no shifting around.","Keep breathing normally the whole time. Count out loud if it helps you not to hold your breath.","Let the tension go slowly at the end rather than dropping it suddenly."],
+    tempo:"Hold for the time you've been given — often 20–45 seconds — then rest. Never hold your breath.",
+    avoid:"Don't strain as hard as you possibly can, and don't push into pain. Steady and moderate is the whole point."},
+  mobility:{setup:"Get into the starting position and let the muscles around the joint go soft. You're asking for range here, not forcing it.",
+    steps:["Move slowly and smoothly towards the end of the range that feels comfortable.","Ease to the first point where you feel a gentle stretch or some resistance. Not pain — the first gentle pull.","Hold it there, or move gently in and out if you've been told to keep it moving.","Come back slowly to the start and go again."],
+    tempo:"Move deliberately. For a held stretch, stay there about 20–30 seconds. Breathe out as you ease in.",
+    avoid:"Don't bounce and don't force it. Range comes back gradually — it can't be yanked out of a joint."},
+  balance:{setup:"Set up next to something solid you can grab — a kitchen counter, a rail, a wall. Wear whatever shoes you've been told to.",
+    steps:["Get into position (for example, standing on one leg) and fix your eyes on a spot in front of you.","Tighten your tummy gently and keep a soft bend in your knee — don't lock it straight.","Hold steady. Make small corrections with your foot and ankle rather than waving your arms about.","Only make it harder — adding movement, closing your eyes, standing on something soft — once this level feels safe."],
+    tempo:"Hold or work for the time you've been given, then rest and repeat. Breathe normally.",
+    avoid:"Don't hold your breath or lock your knee. Keep something to grab within reach so you can push yourself without risking a fall."},
+  plyo:{setup:"Warm up first. Find a surface with a bit of give and clear space around you, and start with a low height or a short distance.",
+    steps:["Dip down into a quarter-squat with your hips back and chest up — that's your spring loading.","Jump or hop with full effort, straightening your hips, knees and ankles together.","The landing is the point of the exercise. Land softly on the middle of your foot and let your hips and knees soak it up.","Land quietly, with your knees pointing over your toes, then reset before the next one."],
+    tempo:"Explode up, land soft. Quality over quantity — stop the set the moment your landings get sloppy.",
+    avoid:"Don't land with stiff, straight legs or with your knees falling inwards. Drop the height or the reps if your form goes."},
+  carry:{setup:"Pick the weight up by pushing your hips back and keeping your back flat — not by rounding over it. Stand up tall with it at your side, or in front, as you've been told.",
+    steps:["Stand as tall as you can — ribs down, shoulders back, tummy tight.","Take short, deliberate, even steps.","Don't let the weight swing, and don't let yourself lean or tip towards it.","Put it down with control by bending your legs, not your back."],
+    tempo:"Walk at a steady pace for the distance or time you've been given. Keep breathing normally throughout.",
+    avoid:"Don't hold your breath, don't lean towards the weight, and stop as soon as you can't stay tall."},
+  cardio:{setup:"Pick your activity — walking, bike, rower, whatever you've got — and start with a few easy minutes to warm up.",
+    steps:["Build up to your target effort: a pace where you could talk but not sing, or the intervals you've been given.","Keep a smooth, steady rhythm and steady breathing.","Use your heart-rate zone or the effort scale (see the cardio target above) to check you're in the right range.","Finish with a few easy minutes to cool down."],
+    tempo:"Keep going for the time or intervals you've been given. At a moderate pace you should be able to hold a conversation.",
+    avoid:"Don't push until you can't breathe. Stop for chest pain, dizziness, or anything that feels wrong."},
+  vestibular:{setup:"Sit or stand somewhere safe with support nearby. Expect a bit of dizziness — that's the exercise working, not something going wrong.",
+    steps:["Do the eye or head movement you've been given — for example, keep your eyes locked on a target while you turn your head.","Move at a speed that brings on mild dizziness without overwhelming you.","Keep going for the set time, then stop and let the dizziness settle before the next set.","Speed it up or make it harder only as the symptoms settle faster."],
+    tempo:"Work for the time you've been given, and rest between sets until the dizziness has settled.",
+    avoid:"Don't push on to feeling really sick. A little dizziness helps your brain adapt; a lot just sets you back."},
+  breathing:{setup:"Get comfortable — sitting upright, or lying down with your knees bent. Rest one hand on your belly.",
+    steps:["Breathe in slowly through your nose and let your belly rise into your hand. Your chest should barely move.","Keep your shoulders and neck loose.","Breathe out slowly and completely — through pursed lips, like blowing out a candle, if you've been told to — taking longer than you took to breathe in.","Pause for a moment, then go again. Don't rush it."],
     tempo:"Aim for a slow rhythm — roughly in for 4, out for 6. Never hold your breath or force it.",
-    avoid:"Don't let the upper chest and shoulders do the work, and don't strain — it should feel calm."},
-  "anti-ext":{setup:"Set your low back flat to the floor (or into a neutral brace) and engage your core before moving.",
-    steps:["Brace your abdominals as if bracing for a light punch.","Move your arms and/or legs slowly as prescribed while keeping the low back completely still.","Only move as far as you can before the back starts to arch.","Return under control and reset the brace each rep."],
-    tempo:"Move slowly; breathe steadily and don't hold your breath.",
-    avoid:"Don't let the back arch or the belly 'dome' up — shorten the range if you lose the flat-back position."},
-  "anti-rot":{setup:"Set a stable stance and brace your core; take up tension so the resistance is trying to rotate you.",
-    steps:["Square your hips and shoulders to the front.","Press or move as prescribed while resisting the pull that wants to twist you.","Keep the trunk dead still — the challenge is to not rotate.","Return slowly, staying square the whole time."],
-    tempo:"Move deliberately and hold the end position briefly; breathe steadily.",
-    avoid:"Don't let your torso twist toward the resistance — reduce the load if you can't stay square."},
-  extension:{setup:"Position yourself as prescribed (e.g. lying face-down) with the spine neutral and the neck long.",
-    steps:["Gently engage the muscles that straighten the spine.","Lift into a small, controlled range — think 'long and tall', not 'crank it high'.","Pause briefly at the top without pinching the low back.","Lower slowly back to the start."],
-    tempo:"Lift for 1–2 seconds, lower for ~3 seconds. Exhale as you lift.",
-    avoid:"Don't hyper-arch or jerk upward — if you feel pinching, reduce the range."},
-  flexion:{setup:"Lie on your back with knees bent (or as prescribed); rest your hands lightly by your head without pulling the neck.",
-    steps:["Draw your ribs gently toward your hips to curl the upper spine.","Peel the shoulder blades off the floor — you don't need to sit all the way up.","Keep the neck relaxed with a soft chin tuck (don't yank the head forward).","Lower slowly and with control."],
-    tempo:"Curl up for ~2 seconds, lower for ~2–3 seconds. Exhale as you curl.",
-    avoid:"Don't pull on your neck or use momentum — the abs, not the arms or hip flexors, should do the work."},
-  gait:{setup:"Choose a clear, flat path with support (rail or wall) nearby; look ahead, not down at your feet.",
-    steps:["Perform the prescribed stepping pattern with even, deliberate steps.","Keep your posture tall and let your arms swing naturally if the drill allows.","Place each foot with control — heel-to-toe unless told otherwise.","Keep support within reach; add pace or difficulty only as you feel steady."],
-    tempo:"Move at a controlled pace; the quality of each step matters more than speed.",
-    avoid:"Don't look down or rush — if you feel unsteady, slow down and stay near support."},
-  agility:{setup:"Warm up thoroughly first. Mark out a small course with everyday objects (cans, bottles, tape) and clear the space; wear supportive shoes.",
-    steps:["Start in an athletic stance — knees soft, weight on the balls of the feet.","Accelerate, then decelerate under control before each turn — 'sink' into your hips to brake.","Plant the outside foot and push off to change direction, keeping the knee tracking over the foot (never letting it cave inward).","Build up speed and sharper angles only as your control and confidence improve."],
-    tempo:"Short, sharp efforts with full rest between — treat it like sprinting, not conditioning. Stop when form gets sloppy.",
-    avoid:"Don't let the knee collapse inward on cuts or land stiff-legged; slow down or shorten the course if control slips."},
-  rotate:{setup:"Set an athletic stance with soft knees and a braced core; take up tension on the resistance.",
-    steps:["Start the turn from your hips and trunk, letting them lead the arms.","Rotate smoothly through a controlled range and pivot the back foot to protect the knee.","Keep the arms and core connected as one unit, not just swinging the arms.","Return under control to the start."],
-    tempo:"Turn with intent, then control the return; exhale through the effort.",
-    avoid:"Don't twist only from the low back or wrench the movement — the power comes from the hips."},
-  general:{setup:"Set up in a stable, comfortable position with good posture.",
-    steps:["Move through a pain-free range with control.","Keep the target area working and the surrounding joints relaxed.","Pause briefly at the hardest point if it feels controlled.","Return slowly to the start."],
-    tempo:"Move smoothly at a controlled pace with a slower return. Exhale on the effort.",
-    avoid:"Don't rush, hold your breath, or push into pain — smooth and controlled wins."},
-  supine:{setup:"Lie on your back on a firm, comfortable surface (mat, bed or floor). Unless told otherwise, keep the non-working leg bent with the foot flat to support your low back.",
-    steps:["Gently draw in / brace your core so your low back stays comfortable.","Move the working leg or muscle slowly and deliberately through the prescribed range — or build a steady, held contraction.","Only go as far as stays pain-free and controlled; quality matters more than range early on.","Lower or release slowly under control, then reset for the next rep."],
-    tempo:"Move for about 2–3 seconds each way, or hold for the prescribed time; breathe normally — never hold your breath.",
-    avoid:"Don't let your low back arch off the floor or hold your breath — shorten the range or add a brief hold if you lose control."},
-  seated:{setup:"Sit tall toward the front of a sturdy, stable chair with your feet flat and hip-width (or the working leg free to move). Sit up straight rather than slumping back.",
-    steps:["Set your posture — tall spine, relaxed shoulders, core gently braced.","Move the working joint slowly through the prescribed range (for example straighten or lift the leg) — or build a steady hold.","Pause briefly at the working end of the range if it feels controlled.","Lower slowly under control and reset for the next rep."],
-    tempo:"Move for about 2–3 seconds each way, or hold for the prescribed time; exhale on the effort and keep breathing.",
-    avoid:"Don't swing with momentum, slump, or push into sharp pain — keep it slow and controlled."},
-  standing:{setup:"Stand tall facing or beside a sturdy, stable surface (a kitchen counter, heavy table or rail) you can rest a hand on for balance. Feet hip-width, weight even, knees soft.",
-    steps:["Set your posture — stand tall, core gently braced, shoulders relaxed; rest one or both hands lightly on the support.","Move the working leg (or lower and raise your body) slowly and deliberately through the prescribed range — or hold the position steady.","Keep your standing leg strong and your hips level — don't let the pelvis drop or your trunk lean to cheat the movement.","Return under control to the start, staying tall throughout."],
-    tempo:"Move for about 2–3 seconds each way, or hold for the prescribed time; breathe normally throughout.",
-    avoid:"Don't grip the support for dear life or twist/lean to compensate — use just enough support to stay steady, and reduce the range if your form breaks down."},
-  pool:{setup:"Use a warm pool. Stand where the water is about chest-deep so buoyancy takes weight off your legs, within easy reach of the wall or a rail. Enter and exit using the steps or ramp, and never swim or exercise in a pool alone.",
-    steps:["Find your balance in the water with a hand on the wall if you need it; stand tall with your core gently braced.","Move slowly and deliberately — the water gives resistance in every direction, so smooth, controlled effort is what builds strength.","Keep the movement pain-free and use the wall for support whenever your balance is challenged.","For deeper-water drills, wear a flotation belt and stay within your comfort and confidence in the water."],
-    tempo:"Work for the prescribed reps or time; move steadily against the water and breathe normally — don't hold your breath.",
-    avoid:"Don't go deeper than you're confident in, don't exercise alone, and get out if you feel cold, dizzy or unwell. Take care on wet, slippery pool edges."}
+    avoid:"Don't let your upper chest and shoulders do the lifting, and don't strain. This should feel calming."},
+  "anti-ext":{setup:"Lie down and press your lower back flat against the floor, so there's no gap under it. Tighten your tummy and keep it tight.",
+    steps:["Tighten your stomach as if you're about to take a light punch to the belly.","Slowly move your arms and legs as you've been told, while your lower back stays completely still and flat.","Only go as far as you can before your back starts to lift or arch away from the floor. That point is your range — even if it's small.","Come back under control, and re-tighten your tummy before every rep."],
+    tempo:"Move slowly. Keep breathing steadily — don't hold your breath.",
+    avoid:"Don't let your back arch off the floor or your belly push up into a dome. If you lose the flat back, make the movement smaller."},
+  "anti-rot":{setup:"Stand or kneel steady, tummy tight, with the band or cable pulling from one side. Take the slack out so it's actively trying to twist you.",
+    steps:["Square your hips and shoulders to the front, like headlights pointing straight ahead.","Press or move as you've been told, while refusing to let the pull twist you.","Keep your body completely still. Not twisting IS the exercise — the arms are just along for the ride.","Come back slowly, staying square the whole time."],
+    tempo:"Move deliberately and hold the far position for a moment. Keep breathing.",
+    avoid:"Don't let your body turn towards the pull. If you can't stay square, use a lighter band or stand closer to the anchor."},
+  extension:{setup:"Get into position — usually lying face-down — with your back in its normal shape and your neck long, eyes down at the floor.",
+    steps:["Gently switch on the muscles that run either side of your spine.","Lift a small amount, thinking 'long and tall' rather than 'as high as I can'.","Pause for a moment at the top. You shouldn't feel any pinching in your lower back.","Lower slowly back down."],
+    tempo:"Lift for 1–2 seconds, lower for about 3. Breathe out as you lift.",
+    avoid:"Don't arch hard or jerk upwards. If you feel a pinch in your lower back, lift less far."},
+  flexion:{setup:"Lie on your back with your knees bent, or as you've been told. Rest your hands lightly beside your head — don't lace them behind your neck and pull.",
+    steps:["Draw your ribs gently down towards your hips so your upper back curls off the floor.","Lift your shoulder blades clear of the floor. You don't need to come all the way up to sitting.","Keep your neck relaxed with your chin slightly tucked, like you're holding a peach under it. Don't yank your head forwards.","Lower slowly and with control."],
+    tempo:"Curl up for about 2 seconds, lower for 2–3. Breathe out as you curl.",
+    avoid:"Don't pull on your neck and don't use a swing to get up. Your stomach muscles should be doing this, not your arms."},
+  gait:{setup:"Find a clear, flat path with a rail or wall nearby. Look ahead at where you're going, not down at your feet.",
+    steps:["Walk the stepping pattern you've been given, with even, deliberate steps.","Stand tall and let your arms swing naturally, if the drill allows it.","Place each foot down with control — heel first, then toe, unless you've been told otherwise.","Keep support within arm's reach. Add speed or difficulty only once you feel steady."],
+    tempo:"Move at a controlled pace. How well each step lands matters far more than how fast you get there.",
+    avoid:"Don't look at your feet and don't rush. If you feel wobbly, slow down and get closer to the rail."},
+  agility:{setup:"Warm up properly first. Mark out a small course with whatever's handy — cans, bottles, tape — clear the space, and wear supportive shoes.",
+    steps:["Start ready to move: knees soft, weight on the balls of your feet.","Speed up, then slow down under control before each turn. Sink your hips to brake, like squatting slightly.","Plant your outside foot and push off to change direction, keeping that knee pointing over your foot — never letting it fall inwards.","Add speed and sharper turns only as your control improves."],
+    tempo:"Short, sharp efforts with full rest between. Treat it like sprinting, not like a workout. Stop when your form gets messy.",
+    avoid:"Don't let your knee collapse inwards when you cut, and don't land stiff-legged. Slow down or shorten the course if control slips."},
+  rotate:{setup:"Stand ready to move — knees soft, tummy tight. Take the slack out of the resistance.",
+    steps:["Start the turn from your hips and belly, and let your arms follow them.","Turn smoothly, and let your back foot pivot as you go. That protects your knee — don't leave it planted while your body turns.","Move your arms and body as one piece. Don't just swing your arms while your hips stay put.","Come back to the start under control."],
+    tempo:"Turn with intent, then control the way back. Breathe out through the effort.",
+    avoid:"Don't twist from your lower back alone, and don't wrench it round. The power comes from your hips."},
+  general:{setup:"Get set up somewhere stable and comfortable, sitting or standing tall.",
+    steps:["Move through a range that stays pain-free, under control.","Keep the working area doing the job and let everything else stay relaxed.","Pause for a moment at the hardest point, if it feels controlled.","Come back slowly to the start."],
+    tempo:"Move smoothly at a controlled pace, and take longer coming back than going out. Breathe out on the effort.",
+    avoid:"Don't rush, don't hold your breath, and don't push into pain. Smooth and controlled wins."},
+  supine:{setup:"Lie on your back on something firm — a mat, a bed or the floor. Unless you've been told otherwise, bend the leg you're not using and put that foot flat, which takes the strain off your lower back.",
+    steps:["Gently tighten your tummy so your lower back stays comfortable against the floor.","Move the working leg or muscle slowly and deliberately through the range you've been given — or build up a steady squeeze and hold it.","Only go as far as stays pain-free and controlled. Early on, doing it well matters far more than how far you get.","Lower or let go slowly, then reset before the next rep."],
+    tempo:"About 2–3 seconds each way, or hold for the time you've been given. Breathe normally — never hold your breath.",
+    avoid:"Don't let your lower back arch up off the floor, and don't hold your breath. If you lose control, make the movement smaller."},
+  seated:{setup:"Sit tall towards the front of a sturdy chair that won't slide, feet flat and about hip-width — or with the working leg free to move. Sit up, don't slump back into it.",
+    steps:["Set yourself up: sit tall, shoulders relaxed, tummy gently tight.","Move the working joint slowly through the range you've been given — for example straightening or lifting your leg — or build up a steady hold.","Pause for a moment at the working end, if it feels controlled.","Lower slowly and reset for the next one."],
+    tempo:"About 2–3 seconds each way, or hold for the time you've been given. Breathe out on the effort and keep breathing.",
+    avoid:"Don't swing it up with momentum, don't slump, and don't push into sharp pain. Slow and controlled."},
+  standing:{setup:"Stand tall facing or beside something solid you can rest a hand on — a kitchen counter, a heavy table, a rail. Feet about hip-width, weight even, knees soft.",
+    steps:["Set yourself up: stand tall, tummy gently tight, shoulders relaxed, one or both hands resting lightly on the support.","Move the working leg — or lower and raise your whole body — slowly and deliberately through the range you've been given, or hold the position still.","Keep your standing leg strong and your hips level. Don't let one hip drop or lean your body to cheat the movement.","Come back to the start under control, staying tall the whole way."],
+    tempo:"About 2–3 seconds each way, or hold for the time you've been given. Keep breathing normally.",
+    avoid:"Don't cling to the support for dear life, and don't twist or lean to get the rep. Use just enough support to stay steady, and do less range if your form breaks down."},
+  pool:{setup:"Use a warm pool. Stand where the water comes up to about your chest, so it carries some of your weight, and stay within easy reach of the wall or a rail. Get in and out by the steps or ramp. Never exercise in a pool on your own.",
+    steps:["Find your balance, with a hand on the wall if you need it. Stand tall with your tummy gently tight.","Move slowly and deliberately. Water pushes back in every direction, so slow and steady is what builds the strength — fast just makes splashes.","Keep it pain-free, and grab the wall whenever your balance is challenged.","For anything in deeper water, wear a flotation belt and stay within the depth you're genuinely comfortable in."],
+    tempo:"Work for the reps or time you've been given. Move steadily against the water and breathe normally — don't hold your breath.",
+    avoid:"Don't go deeper than you're confident in, don't exercise alone, and get out if you feel cold, dizzy or unwell. Take care on wet, slippery pool edges."},
+
+  /* ---- Circulation ---- */
+  pump:{setup:"Sit or lie down with your legs out in front of you. If you can, prop the leg up on a pillow so your foot is higher than your hip — that helps the swelling drain downhill.",
+    steps:["Point your toes away from you, like a ballerina, as far as they'll comfortably go.","Then pull your toes back up towards your nose, as far as they'll go. You should feel your calf working.","Keep going slowly, one way then the other.","Do them little and often through the day. Every hour beats one big session."],
+    tempo:"Slow and full — about 2 seconds each way. Breathe normally.",
+    avoid:"Don't rush them and don't force through pain. If your calf becomes sore, swollen, hot or tight — especially on one side — stop and get it checked the same day."},
+
+  /* ---- Paediatric. The reader is a PARENT for the young bands and the young person
+     themselves from about 12, so the voice changes with the band. Before v158 all 657 of
+     these fell through to `general` and answered "how do I do tummy time?" with "set up in
+     a stable, comfortable position with good posture". ---- */
+  ped_handling:{setup:"Pick a calm moment when your baby is awake and settled, and not straight after a feed. Take off your watch and rings, and warm your hands first.",
+    steps:["Lay your baby on something firm, flat and safe. Never a sofa, a bed, or anywhere they could roll off.","Move slowly. Support the limb with your whole hand, above and below the joint — not with your fingertips.","Take it only as far as it goes easily, and stop the moment you feel it resist. You are not stretching it further; you're keeping what's there.","Talk or sing to them while you do it. If they cry or stiffen up, stop and try again later."],
+    tempo:"A few slow, gentle repeats. Little and often beats one long go — nappy changes make a natural reminder.",
+    avoid:"Never force a stretch, never do this on a soft surface, and never step away while they're up on a changing table. If it's hurting them, stop and ask your team."},
+  ped_milestone:{setup:"Pick a time when your baby is awake, fed and happy. Clear a firm, safe space on the floor — a play mat is ideal. A cot or a sofa is not.",
+    steps:["Get down on the floor with them. Your face is the most interesting toy they own — use it.","Put a toy just out of reach, in the direction you want them to move.","Let them try. Give the smallest bit of help that gets them there, then take it away again so they do the next bit themselves.","Stop while they're still enjoying it, not once they've had enough."],
+    tempo:"Short and often — a few minutes at a time, several times a day. Follow their lead, not the clock.",
+    avoid:"Never leave them alone on anything raised. Don't push on through crying — a fed-up baby learns nothing, and you'll both dread it tomorrow."},
+  ped_play:{setup:"Clear a safe space and move anything they could fall onto. Expect to join in — toddlers copy what you do, they don't follow instructions.",
+    steps:["Show them first. Do it yourself, and make it look like the best game in the world.","Give the game a name — 'giant steps', 'stepping stones', 'beat the timer'. A named game gets played again.","Count out loud together. The counting is what gets the repetitions in without anyone noticing.","Cheer every attempt, and stop while it's still fun."],
+    tempo:"Two or three minutes at a time, lots of times a day. Little and often always wins at this age.",
+    avoid:"Don't turn it into a battle. If they're not interested, try again in an hour — and stay close enough to catch them."},
+  ped_skill:{setup:"Find a clear, flat space. Show them what you want first — at this age watching beats being told.",
+    steps:["Do one slow demonstration, then let them try straight away. Don't explain it twice.","Give one instruction at a time. 'Watch me' works better than a list of corrections.","Make it a challenge they can win — 'can you do five?', 'can you beat the timer?'","Praise how hard they tried, not how well it went."],
+    tempo:"Five to ten focused minutes is a full session at this age. Mix up several different games rather than drilling one.",
+    avoid:"Don't correct every go. Children who feel clumsy stop moving, and that costs more than sloppy technique ever will. Fix one thing at a time."},
+  ped_train:{setup:"Warm up for five minutes first — a jog, a bike ride, some star jumps. Clear a space and get the band or low step out if the exercise needs one.",
+    steps:["Watch it done once, or read the steps through together, before the first go.","Practise it slowly with no weight at all until it looks the same every single time.","Do the number you've been given, resting properly between sets.","Add a band or a light weight only once the movement still looks neat when you're tired."],
+    tempo:"Slow and controlled — about 2 seconds each way. Breathe out on the hard part, and never hold your breath.",
+    avoid:"Don't add weight to paper over messy technique, and don't push through pain. A grown-up should be watching."},
+  ped_strength:{setup:"Warm up properly — five to ten minutes of easy movement, then a couple of light practice sets. Have someone experienced watching, especially with free weights.",
+    steps:["Learn the movement with just your body weight, or something very light, until it feels automatic.","Do your working sets at the reps you've been given, keeping every rep looking like the first.","End the set when your technique starts to slip — not when you physically can't do another one.","Add a small amount of weight only when the last rep looks as good as the first."],
+    tempo:"About 2 seconds down, 1 second up, unless you've been told otherwise. Breathe out on the effort — never hold your breath under a weight.",
+    avoid:"No maximum-effort single lifts and no bouncing the weight while you're still growing. If a bony point hurts — just below your kneecap, or the back of your heel — that's a growth plate, not a muscle. Ease off and get it looked at."}
 };
 function inferPattern(name){
   const l = name.toLowerCase();
@@ -3766,7 +3819,28 @@ const WHAT_ALT = {
         "An aquatic exercise done in chest-deep water, where the water carries most of your weight."],
   general:["A general conditioning exercise for the area.",
            "General conditioning work for the region.",
-           "A general strengthening and movement exercise for the area."]
+           "A general strengthening and movement exercise for the area."],
+  pump:["An ankle pump — the simplest exercise there is: pointing and flexing your foot to squeeze the calf and push blood back up the leg.",
+        "Pointing and flexing the ankle, over and over. It looks like nothing and does a great deal.",
+        "The point-and-flex drill that keeps blood moving while the rest of you is stuck still."],
+  ped_handling:["Parent-led handling — gentle positioning and movement done FOR your baby, not by them.",
+        "Something you do for your baby with your hands, slowly, while they lie somewhere safe.",
+        "Hands-on care rather than exercise: positioning, gentle movement, and a lot of patience."],
+  ped_milestone:["Milestone play — helping the next stage of your baby's movement arrive, through play rather than exercise.",
+        "Play with a purpose: the next thing your baby is nearly ready to do, rehearsed until it arrives.",
+        "Floor play aimed squarely at the milestone your baby is working on right now."],
+  ped_play:["A movement game — the toddler version of an exercise, because toddlers repeat what's fun and ignore what's prescribed.",
+        "An exercise wearing a fancy-dress costume. To your toddler it's a game; to their legs it's practice.",
+        "A game you play together that happens to be exactly the movement they need."],
+  ped_skill:["A fundamental movement skill — hopping, catching, balancing — practised as a game.",
+        "One of the building-block skills of childhood, drilled the only way it works at this age: by playing it.",
+        "A basic movement skill — the sort of thing children look clumsy at until suddenly they don't."],
+  ped_train:["Technique-first training for a school-age child — the movement learned properly before any weight is added.",
+        "Real training for a child: light or no load, and all the attention on doing it well.",
+        "A strengthening exercise scaled for a school-age body — practice first, load much later."],
+  ped_strength:["Supervised resistance training for a teenager — close to adult training, with the growing skeleton taken into account.",
+        "Grown-up strength training with two teenage caveats: technique before load, and no maximal lifts yet.",
+        "Proper resistance work for a teenager, coached and progressed with open growth plates in mind."]
 };
 const WHY_ALT = {
   squat:["Builds strength in the quads, glutes and whole leg for standing, stairs and lifting.",
@@ -3846,7 +3920,28 @@ const WHY_ALT = {
         "Buoyancy takes the load off while the water still resists you in every direction."],
   general:["Helps restore strength, movement and function.",
            "Contributes to overall strength, movement and function in the area.",
-           "Supports the return of strength and normal movement."]
+           "Supports the return of strength and normal movement."],
+  pump:["Your calf is a pump. Every squeeze pushes blood back towards your heart, which brings swelling down and lowers the risk of a clot while you're less mobile than usual.",
+        "Blood doesn't climb out of your leg on its own — the calf squeezes it upward. When you stop walking, that pump stops, so you do it by hand.",
+        "Keeps the circulation moving in a leg that isn't walking much yet. Cheap, safe, and it does more than it looks like it does."],
+  ped_handling:["Keeps joints and muscles supple while a newborn can't move much themselves, and stops stiffness setting in during the weeks that matter most.",
+        "A newborn can't stretch themselves. Doing it gently for them keeps the range they were born with.",
+        "Small, regular movements now prevent the tightness that is much harder to undo later."],
+  ped_milestone:["Babies build strength and control by practising the next thing they're nearly ready for. Rolling, sitting and crawling aren't taught — they're rehearsed, and this is the rehearsal.",
+        "Every milestone is built on the one before it. Time on the floor is what pays for the next one.",
+        "This is how babies get strong: reaching, rolling and pushing up, over and over, because something interesting is just out of reach."],
+  ped_play:["At this age the repetitions only happen if it's a game. The strength, balance and coordination arrive as a by-product of playing it enough times.",
+        "A toddler will do fifty of something fun and none of something asked. The game is the delivery mechanism.",
+        "Turning it into play is not a compromise — it's the only version a toddler will actually repeat."],
+  ped_skill:["These skills are the building blocks everything later stands on. Children who master them stay active; children who feel clumsy quietly stop moving, and that's harder to fix than any injury.",
+        "Hopping, catching and balancing now become confidence later. Confident children keep moving.",
+        "Get these right and every sport, game and playground afterwards is easier. Miss them and everything feels hard."],
+  ped_train:["Children do get stronger from training, but at this age the gains come from the nervous system learning the movement rather than from bigger muscles. That means good practice IS the training.",
+        "Strength at this age is a skill more than it is muscle — which is exactly why technique comes before load, not after it.",
+        "Learning the pattern well now is what makes it safe to load it later. It's also, on its own, what makes them stronger."],
+  ped_strength:["Properly supervised resistance training is safe and effective for teenagers — the old 'no weights until you're grown' advice doesn't hold up. What still applies is the growth plate: it's the weak link until it closes.",
+        "This works, and the evidence is clear it's safe when it's coached. The caution isn't about weights — it's about the growing skeleton underneath them.",
+        "Builds real strength for sport and daily life. Progress it on technique rather than on how much you can shift, and the growth plates stay out of trouble."]
 };
 
 /* What the implement IS, for the "what it is" line. */
@@ -3992,7 +4087,7 @@ const VARIANT_HOWTO = [
   [/quad set|\bvmo\b|straight-leg raise|\bslr\b/i, { step:"Tighten the thigh first and hold that tension throughout — the muscle switching on is the whole point, not the movement." }],
   [/\bpursed\b|diaphragm|belly breath/i, { step:"Breathe in through the nose for about 2 seconds, then out through pursed lips for about 4 — longer out than in." }],
   [/^tempo |\btempo (squat|deadlift|press|row|lunge)/i, { step:"Deliberately slow and controlled throughout — usually about 3 seconds down, 1 second up. Slowing it down is the load here, so you need less weight.", avoid:"Rushing the lower defeats the entire purpose of the variation." }],
-  [/\bdeep (squat|lunge|split|knee bend|hinge|dip|sit)\b/i,     { step:"Work into a deeper range than the standard version — go only as deep as you can control with your heels down and back neutral.", avoid:"Depth you can't control isn't depth. Build it over weeks, not in one session." }],
+  [/\bdeep (squat|lunge|split|knee bend|hinge|dip|sit)\b/i,     { step:"Go lower than the standard version — but only as low as you can control, with your heels staying down and your back keeping its normal shape.", avoid:"Depth you can't control isn't depth. Build it over weeks, not in one session." }],
   [/wall.*(squat|sit)|\bwall\b.*isometric/i, { set:"Stand with your back flat against a wall and walk your feet out.", step:"Slide down until your thighs are where prescribed, and hold — the challenge is time, not depth.", avoid:"Don't hold your breath, and come out of it if your knees start complaining." }],
   [/1\.5-rep/i,            { step:"Go all the way down, come up HALFWAY, go back down, then come all the way up — that's one rep. It doubles the time spent in the hardest part of the range.", avoid:"Expect to need much less weight than a normal set." }],
   [/\bpulse\b/i,          { step:"Stay in the bottom position and make small, controlled pulses rather than full reps." }],
@@ -4005,7 +4100,64 @@ const VARIANT_HOWTO = [
   [/\bbolster\b|over a bolster|towel roll/i, { set:"Put a rolled towel or bolster under the knee so it rests bent a little.", step:"Straighten only to where the leg is level with the roll — this trains the last few degrees, which is where most people lose their knee." }],
   [/\b3s hold\b|\bhold at the top\b|holding a counter/i, { step:"Hold at the end position for the full count, keeping the muscle switched on rather than resting on the joint." }],
   [/\bhourly\b|every hour/i, { step:"Little and often beats one long session — set an hourly reminder, do the set, move on." }],
-  [/\bankle pump\b|point-and-flex/i, { step:"Point your toes away, then pull them firmly back toward your shin. This drives the calf muscle pump that keeps blood moving.", avoid:"Nothing here should hurt — this one is about circulation, not effort." }]
+  [/\bankle pump\b|point-and-flex/i, { step:"Point your toes away, then pull them firmly back toward your shin. This drives the calf muscle pump that keeps blood moving.", avoid:"Nothing here should hurt — this one is about circulation, not effort." }],
+
+  /* ---- Paediatric movements. ----------------------------------------------
+     The paediatric PATTERNS are broad classes ("milestone play", "a movement game"), so on
+     their own they gave a parent asking "how do I do tummy time?" four sentences about
+     putting a toy just out of reach and never once said "lay your baby on their front".
+     A pattern can't fix that — the class really does cover thirty different movements. So
+     the specifics live here, the same way "Barbell squat" gets its bar setup.
+     ⚠ Regexes must not reach into the adult library: /rolling/ alone would match "Foam
+     rolling", /crawl/ alone matches "Bear crawl". Anchor on the full paediatric phrase. */
+  [/tummy time/i,                    { set:"Lay your baby on their front, with their arms forward and their elbows under or just ahead of their shoulders.", step:"Get down flat in front of them so they have to lift their head to find your face. That lift IS the exercise.", avoid:"Only ever while they're awake and you're watching them. Babies still sleep on their backs — every sleep, every time." }],
+  [/rolling (tummy-to-back|back-to-tummy)/i, { set:"Lay your baby down with plenty of clear space either side.", step:"Start the roll for them by gently guiding one hip or shoulder across, then pause and let them finish it themselves.", avoid:"Don't roll them all the way through. The bit they do unaided is the bit that teaches them." }],
+  [/supported sitting|independent sitting/i, { set:"Sit them on the floor with cushions around them and something soft behind.", step:"Put toys just off to one side so they have to shift their weight and prop on a hand to reach — that propping is what builds the balance.", avoid:"Floor only, never a raised surface, and stay within arm's reach the whole time." }],
+  [/\bcrawling\b|four-point rocking|pivoting in prone/i, { set:"Clear a run of floor and get down at the far end of it.", step:"Put the toy a body-length away, not right under their nose — far enough that they have to travel for it.", avoid:"Don't worry if they shuffle, commando-crawl or bum-shuffle instead. Lots of babies never crawl on hands and knees, and it doesn't hold them back." }],
+  [/pull-to-stand|controlled lowering from standing/i, { set:"Kneel by a low, solid surface — a sofa or a coffee table that won't tip.", step:"Put a toy on top so they pull themselves up to get it. Then teach the way down too: guide them to bend their knees and sit, rather than letting them topple backwards.", avoid:"Check what they're pulling on. Anything that can tip over — a side table, a bookcase — is the wrong thing to practise on." }],
+  [/cruising along the furniture/i,  { set:"Line up sofa, table and chairs so there's a continuous edge to travel along, with a soft floor underneath.", step:"Put a toy a little further along than they've gone before, so they have to sidestep to reach it.", avoid:"Make sure everything they're holding is heavy enough not to slide away." }],
+  [/assisted stepping|first steps practice/i, { set:"Stand or kneel behind them and hold at their hips or trunk, not by their hands above their head.", step:"Support their body, not their arms — holding hands up high does the balancing for them, so they never learn it.", avoid:"Don't march them along faster than they're steering. Let them set the pace and the direction." }],
+  [/passive .*range of motion|passive foot & ankle stretches/i, { step:"Move it slowly to where it first begins to resist, hold it there while you count to ten, then let it go slowly.", avoid:"You should never be pushing hard. If you're using effort, you've gone too far." }],
+  [/neck (side-bend|rotation) stretch/i, { set:"Lay your baby on their back and steady their chest and shoulder with one hand so they can't twist away from the stretch.", step:"With your other hand, guide their head slowly to the end of the easy range — ear towards the shoulder, or chin towards the shoulder — and hold it there while you count to ten.", avoid:"Never force it, and never do it if they're fighting you. Sing to them, and do it at nappy changes so it becomes routine rather than a battle." }],
+  [/walking practice|marching game|backward-walking game/i, { set:"Pick a clear, flat run with something soft to land on.", step:"Walk it with them rather than calling them to you — copying beats instructing at this age.", avoid:"Don't hold both hands above their head. Stay beside them and let them wobble; wobbling is how balance gets built." }],
+  [/stair climbing with a rail|stair descent|stairs with alternating feet/i, { set:"Use a real staircase with a rail, and stay BELOW them — on the way up and on the way down.", step:"Start with both feet landing on each step. Alternating feet comes later, usually around three or four.", avoid:"Never let them practise stairs unsupervised, and put the gate back afterwards." }],
+  [/kicking a (large|moving) ball/i, { set:"Use a big, light, slow ball. A football is too fast and too hard at this stage.", step:"Have them stand near a wall or hold your hand at first — kicking is a one-legged balance task before it's a kicking task.", avoid:"Don't line up a row of kicks with the same leg. Swap sides." }],
+  [/catching a (large|smaller) ball|throwing (a ball overhand|at a target)/i, { set:"Start with a large, soft ball and stand close — a metre or two.", step:"Throw it gently to their chest, arms out ready. Step back a little only once they're catching most of them.", avoid:"Don't throw it hard or fast to 'challenge' them. Missing repeatedly just teaches them they can't catch." }],
+  [/two-foot jumping|jumping (over a line|down from a low step|off a low step)/i, { set:"Find a soft, flat surface — grass, a mat, carpet. Not a hard floor.", step:"Ask for a quiet landing. 'Land like a cat, not like an elephant' does more for their knees than any instruction about technique.", avoid:"Small numbers, often. Jumping is high-impact, so stop before they get tired and sloppy." }],
+  [/hopping on one foot/i,           { set:"Stand beside them within reach, near a wall they can touch.", step:"Let them hold your hand or the wall for the first few. Take the support away one finger at a time.", avoid:"Both legs get a turn. Children will happily do fifty on their good side and none on the other." }],
+  [/skipping practice|galloping/i,   { set:"Give them a long clear run — a hallway, a garden, a hall.", step:"Break it up: gallop first (same foot always leading), then swap the lead foot, then put the two together. Skipping is two gallops stitched together.", avoid:"Don't expect it before about five. It's one of the last basic skills to arrive, and pushing it early just frustrates everyone." }],
+  [/heel-to-toe walk|balance-beam walk|walking along a line|stepping-stones/i, { set:"Use a line of tape on the floor, a plank on the grass, or the cracks in the pavement.", step:"Give them a spot on the wall ahead to look at. Looking at their feet is what makes them fall off.", avoid:"Stay alongside with a hand ready. Height adds nothing to the exercise but adds a lot to the fall." }],
+  [/bear-?(crawl|walk)|crab-?walk|frog jump|bunny hop|wheelbarrow walk|animal walk/i, { set:"Clear a stretch of floor and do it alongside them — badly, ideally. Being funnier than them keeps them going.", step:"Name the animal and make the noise. The sillier it is, the more repetitions you'll get out of them.", avoid:"Short bursts. These are harder than they look, and small arms tire fast." }],
+  [/tricycle|balance bike|push-along balance bike/i, { set:"Set the seat low enough that both feet sit flat on the ground.", step:"Let them walk it along first, then coast with their feet up for longer and longer. Pedals come after balance, not before it.", avoid:"Helmet on. And skip the stabilisers — they teach leaning the wrong way and have to be unlearned." }],
+  [/obstacle course|crawling through a tunnel|freeze-dance/i, { set:"Build it out of sofa cushions, chairs, boxes and washing baskets. It does not need to be equipment.", step:"Let them lead it, and change one thing each time so it stays interesting.", avoid:"Check the run for hard edges and corners before they start, not after." }],
+  [/beanbag balance/i,               { set:"Use a beanbag, a soft toy, or a folded flannel — anything that won't roll off.", step:"Standing still first, then a few steps, then along a line. Adding the walk is what makes it hard.", avoid:"If they're tipping their head back to balance it, it's too heavy. Use something lighter." }],
+  [/hopscotch/i,                     { set:"Chalk it on the path, or tape it on the floor.", step:"Two feet in the double squares, one foot in the singles. Slow and correct beats fast and hopping everywhere.", avoid:"On a hard surface, keep the numbers down — it's a lot of small impacts." }],
+  [/sit-to-stand (from a small chair|races)/i, { set:"Use a chair or step low enough that their feet reach the floor flat.", step:"Ask them to fold forward — 'nose over toes' — before they stand. That's what gets them up without pulling on the furniture.", avoid:"Don't let them push up off the arms if the point is their legs." }],
+  [/wall push-ups as a game|superhero prone hold|bridge 'tunnel' hold/i, { set:"Give it a story — pushing the wall over, flying like a superhero, making a tunnel for a toy car to go under.", step:"Count out loud together, and stop the count while they're still holding it well.", avoid:"Five good seconds beats twenty sagging ones. Stop when the shape goes." }],
+  [/tiptoe walking game|heel walking game/i, { set:"Pick a short run, and go alongside them doing it too.", step:"Give it a reason — being as tall as a giraffe, walking on hot sand. A reason gets you the length of the hallway; an instruction gets you three steps.", avoid:"If your child ALWAYS walks on their toes and can't put their heels down, mention it to your team — that's different from playing at it." }],
+  [/side-lying positioning/i,        { set:"Lay them on their side with a rolled towel behind their back to stop them rolling flat.", step:"Bring both hands together in front of their face where they can see them. Swap sides each time so one side doesn't get all the practice.", avoid:"For play only, while you're watching. Sleep is always flat on the back." }],
+  [/hands-to-midline play|banging and transferring toys|grasp-and-release play/i, { set:"Hold a toy right in the middle, level with their chest, about a forearm away.", step:"Wait. Give them time to bring both hands to it — getting the hands together in the middle is the skill you're after, not grabbing it fastest.", avoid:"Don't put the toy in their hand for them. The reach is the exercise." }],
+  [/visual tracking in midline/i,    { set:"Hold a high-contrast toy — black and white, or a face — about 25cm from their eyes.", step:"Move it slowly side to side and let their eyes and head follow. Slower than feels natural to you is about right.", avoid:"Stop if they look away or get glassy. Turning away is how a newborn says they've had enough." }],
+  [/supported upright holding|head control/i, { set:"Hold them upright against your chest with one hand spread across their upper back and the other ready at their head.", step:"Let their head take its own weight for a few seconds at a time, catching it when it drops.", avoid:"A newborn's head is heavy and their neck is weak. Never leave it unsupported for more than a moment." }],
+  [/positioning to encourage turning to the tight side/i, { set:"Work out which way is hard for them, then set the room up so everything interesting is on that side.", step:"Put the cot so the door is on their tight side, feed on the side that makes them turn that way, and talk to them from there.", avoid:"This one isn't a session — it's how you arrange the whole day. That's what makes it work." }],
+  [/carrying and handling in midline/i, { set:"Carry them with their head in line with their body rather than tipped to one side.", step:"Swap the arm you carry them on. Most of us have a favourite, and a baby carried the same way all day gets a favourite too.", avoid:"Long stretches in a car seat or bouncer hold them in one shape. Break it up with floor time." }],
+  [/prop-on-(forearms|hands)/i,      { set:"On their front, draw their elbows forward so they sit under or just ahead of their shoulders.", step:"Put a rolled towel under their chest, with their arms over the top, if their face keeps dropping to the floor. Take it away as they get stronger.", avoid:"If they're grinding their face into the mat, it's too hard — go back to your chest or a towel roll." }],
+  [/kicking play in lying|bringing feet to hands/i, { set:"Lay them on their back with a nappy off if you can, and something to kick at — a cushion, your hands, a play-gym bar.", step:"Give them something to push against. Kicking at nothing is boring; kicking something that moves or rattles gets fifty more kicks.", avoid:"Nothing here should be forced. You're inviting the kick, not doing it for them." }],
+  [/supported standing at a low table|independent standing balance/i, { set:"Stand them at a solid, low surface with toys spread across it, and stay behind them.", step:"Let them use the surface less and less — two hands, then one, then a fingertip, then a moment with none.", avoid:"Check the surface can't tip or slide. Bare feet grip better than socks on a wooden floor." }],
+  [/transitions from sitting to crawling|weight-shift in sitting|sitting rotation reach|reaching across the midline in sitting/i, { set:"Sit them on the floor with toys placed off to each side and slightly behind.", step:"Place the toy so they must turn and prop on one hand to get it. That twist-and-prop is exactly the move that becomes crawling.", avoid:"Alternate the side you put it on, or you'll build one very good half." }],
+  [/squat-to-stand from the floor|squatting to play|pick up a toy/i, { set:"Scatter toys on the floor and put the box to post them in up on a low table.", step:"Let them squat down to collect and stand up to post. They'll do thirty squats and call it tidying up.", avoid:"Nothing to correct here. However they get up and down is fine at this age." }],
+  [/bear-walk on hands and feet/i,   { set:"Clear a short stretch of floor.", step:"Hands and feet down, bottom in the air, and walk. Do it next to them — badly.", avoid:"A metre or two at a time. It's much harder than it looks." }],
+  [/pushing a stable walker toy|toy trolley/i, { set:"Use something weighted enough that it won't shoot away — a sturdy walker, or a box with books in it.", step:"Load it heavier if it runs away from them, lighter if they can't shift it. That weight is the setting you're adjusting.", avoid:"Not on a slope, and not on a rug that can rumple up in front of it." }],
+  /* ⚠ NOT a bare /climbing/ — that matched 24 adult "Machine stair climbing" entries and
+     told a grown-up on a stair machine to stay within catching distance. */
+  [/climbing on low playground equipment/i, { set:"Choose low equipment with a soft surface underneath, and stay within catching distance.", step:"Let them work out the route themselves. Climbing is a problem to solve, and solving it is most of the benefit.",  avoid:"Don't lift them onto anything they couldn't climb up by themselves — if they can't get up, they can't get down." }],
+  [/running practice|dancing and music/i, { set:"Somewhere open with a soft surface and nothing to run into.", step:"Chase them, or put music on and be sillier than they are. Neither of these needs instructions.", avoid:"Watch for tiredness — a tired toddler trips." }],
+  [/standing on one foot/i,          { set:"Beside a wall or your hand, on a firm floor.", step:"Give them something to do while they're up there — 'be a flamingo', 'can you count to five?'. Counting keeps them still much longer than balancing does.", avoid:"Both sides, every time." }],
+  [/star jumps|jump-and-freeze/i,    { set:"A soft, flat surface with space to swing their arms.", step:"Arms and legs out together, then back in together. Getting the arms and legs to agree is the actual skill — it takes a while.", avoid:"Small sets. Land soft." }],
+  [/rolling a ball (back and forth|under the foot)/i, { set:"Sit facing each other with legs apart, or sit them down with the ball under one foot.", step:"Roll it slowly and name what's happening — 'ready… go!'. The waiting and the turn-taking matter as much as the rolling.", avoid:"Use a ball big enough that it can't be swallowed and slow enough to be caught." }],
+  [/stacking and reaching up high|bubble-popping/i, { set:"Put the interesting thing just above their comfortable reach, so they have to stretch or come up on their toes.", step:"Height is the dial you're turning. Higher makes them reach, stretch and balance; lower just makes it easy.", avoid:"Nothing they can pull down onto themselves." }],
+  [/pulling socks on and off|carrying a light object while walking/i, { set:"Build it into the day — getting dressed, carrying their cup to the table.", step:"Give them the last step first: pull the sock off from the heel, carry the cup the last metre. Then hand them more of it as they get better.", avoid:"Allow far more time than it takes you to do it. Rushing is what makes everyone give up on this one." }],
+  [/stepping over small obstacles/i, { set:"Lay out a line of soft, low things — cushions, rolled towels, pool noodles.", step:"High enough that they have to lift a knee, low enough that landing on one doesn't hurt.", avoid:"Nothing hard or rolling. Books and toy cars are how this goes wrong." }]
 ];
 function explainVariants(name){
   const out = { set:[], steps:[], avoid:[] };
@@ -4091,9 +4243,30 @@ function movementExplain(name, pattern, regionArr){
      variant, then the modifier — so a "Barbell box squat — with 2s pause" no
      longer reads exactly like a bare "Squat". */
   const eq = explainEquip(name), vr = explainVariants(name), md = explainMods(name);
+  /* A paediatric pattern names the AGE BAND, not the movement — "ped_train" is thirty
+     different exercises. So its steps say how to COACH a child through a set, and on their
+     own they left "Bodyweight squat (technique)" without a word about how to squat. The
+     name still knows: infer the movement pattern from it and put those mechanics first,
+     with the band's coaching after. Only when the name resolves to a real movement —
+     "Tummy time" infers nothing, and rightly keeps the milestone steps alone. */
+  /* ⚠ ONLY the two older bands. A school-age child doing "Bodyweight squat (technique)" needs
+     the squat's actual mechanics, and the band's steps only say how to coach a set. But a
+     baby's "Neck side-bend stretch" is NOT an adult mobility drill with a smaller person
+     attached: merging both gave ten steps, half of them near-duplicates, in two different
+     voices — telling a parent to "ease to the first point of gentle stretch" AND to "support
+     the limb with your whole hand". For handling/milestone/play/skill the band's steps are
+     already the right instructions, in the right voice, to the right reader. */
+  let mech = [];
+  if(/^ped_(train|strength)$/.test(p)){
+    const mp = inferPattern(name);
+    if(mp && mp !== "general" && !/^ped_/.test(mp) && PATTERN_HOWTO[mp]) mech = PATTERN_HOWTO[mp].steps || [];
+  }
   const setup = [ht.setup, eq && eq.set, ...vr.set].filter(Boolean).join(" ");
+  /* When the mechanics lead, the band contributes coaching rather than a second set of
+     instructions — two is enough, and it keeps the list at a length someone will read. */
+  const bandSteps = mech.length ? (ht.steps || []).slice(0, 2) : (ht.steps || []);
   const steps = [`<b>Set up —</b> ${setup}`]
-    .concat(ht.steps || [], vr.steps, md.steps);
+    .concat(mech, bandSteps, vr.steps, md.steps).slice(0, 9);
   const stepHTML = `<ol class="howsteps">${steps.map(s=>`<li>${s}</li>`).join("")}</ol>`;
   const tempo = md.tempo || ht.tempo;                       // a modifier's tempo overrides the pattern's
   const avoid = [ht.avoid, eq && eq.avoid, ...vr.avoid, ...md.avoid].filter(Boolean).join(" ");
