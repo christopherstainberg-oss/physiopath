@@ -3279,7 +3279,33 @@ const CURATED_VIDEOS = {
      its title, "Serratus Push Up on Knees", names the movement. */
   "knee chest press":          { id:"Uo-GNl3Xpo8", ch:"MGHOrthopaedics" },
   "knee push-up":              { id:"Uo-GNl3Xpo8", ch:"MGHOrthopaedics" },
-  "push-up progression":       { id:"G_c3QztMZNQ", ch:"BESS — British Elbow & Shoulder Society" }
+  "push-up progression":       { id:"G_c3QztMZNQ", ch:"BESS — British Elbow & Shoulder Society" },
+  /* Fourth pass. */
+  "glute sets":                { id:"TPUcaCNKwnY", ch:"Visiting Nurse Association Health Group" },
+  "short-foot exercise":       { id:"m1lkcg8p-48", ch:"Singapore General Hospital" },
+  "short foot":                { id:"m1lkcg8p-48", ch:"Singapore General Hospital" },
+  "step-downs":                { id:"RgTKgtV1ltk", ch:"Emory Healthcare" },
+  "wall slides":               { id:"Eaj_NG5_hIo", ch:"BESS — British Elbow & Shoulder Society" },
+  "single-leg rdl":            { id:"WLTjewtzyyc", ch:"Pursuit Physical Therapy" },
+  "single-leg romanian deadlift": { id:"WLTjewtzyyc", ch:"Pursuit Physical Therapy" },
+  "toe yoga":                  { id:"SbQ2RYxbppE", ch:"Sharp HealthCare" },
+  "push-up plus":              { id:"7ISH0zz9XcM", ch:"Musculoskeletal Physiotherapy Australia" },
+  "serratus push-up":          { id:"7ISH0zz9XcM", ch:"Musculoskeletal Physiotherapy Australia" },
+  "toe scrunches":             { id:"3ekcuIDbQHQ", ch:"Southwest Foot and Ankle Centre" },
+  "towel scrunches":           { id:"3ekcuIDbQHQ", ch:"Southwest Foot and Ankle Centre" },
+  "scrunches":                 { id:"3ekcuIDbQHQ", ch:"Southwest Foot and Ankle Centre" },
+  "heel walks":                { id:"2t0-W_pQOu8", ch:"Physiotattva" },
+  "rotator holds":             { id:"8ugjLvoSC1A", ch:"INSYNC PHYSIO Vancouver" },
+  "isometric rotator holds":   { id:"8ugjLvoSC1A", ch:"INSYNC PHYSIO Vancouver" },
+  /* SYNONYMS onto videos already verified above. These are the SAME movement under the name
+     our protocols happen to use -- not new claims, so they need no new verification. This was
+     the single biggest win of the pass: ~615 prescriptions were falling through purely because
+     the key did not match the wording. */
+  "side-lying abduction":      { id:"g9FtnmsIYgI", ch:"Baptist Health" },              // its title IS "Side Lying Hip Abduction"
+  "wrist curl":                { id:"qNCbvUGYk3g", ch:"Midlands Orthopaedics & Neurosurgery" },  // a wrist curl IS resisted wrist flexion
+  "full-can raise":            { id:"JU8FTE-iHmU", ch:"UPMC" },                        // full-can raise = scaption
+  "range of motion with cane": { id:"JwRlLR6i9q4", ch:"MGHOrthopaedics" },             // its title IS "Shoulder Flexion with Cane"
+  "double-leg bridge":         { id:"PusbZuBgeug", ch:"University Orthopedics" }       // same movement as glute bridge
   /* Deliberately empty. Each was searched hard across multiple passes; NOT to be filled by
      lowering the bar. An exercise with no verified video simply shows none.
      - double-leg balance / weight shifts: institutions only publish these inside STROKE-framed
@@ -3297,16 +3323,37 @@ const CURATED_VIDEOS = {
        duplicate adds nothing.
      - ball catches: institutions describe it in protocols but never title a single-movement
        video for it.
+     - bent-over row: Nuffield Health (ZathOyxYZ3M) passes on publisher -- the UK's largest
+       healthcare charity -- but it also runs ~110 GYMS, and a barbell row almost certainly comes
+       from that arm. The publisher bar is a proxy for clinical accountability; when the payload
+       cannot tell you which arm produced it, the proxy has failed. Rejected, same rule that
+       rejected UCLA Recreation.
+     - hip range of motion: six query shapes, nothing institutional that names the movement. The
+       near-misses (Barnes-Jewish, UCLA Health) are post-arthroplasty compilations, not ROM demos.
+     - hammer curl / lateral bounds / hopping progression: bodybuilding and strength-coach
+       channels only, same structural absence as the other plyometrics.
      Category labels the protocols emit ("sport-specific loading", "maintenance program",
      "aerobic conditioning", "functional patterns") are not movements and never get a video. */
 };
+/* Our protocols and the generated library spell the same movement several ways, and an exact
+   key match threw that coverage away: "straight-leg raises" never matched "straight leg raise",
+   "double-leg bridges" never matched "double-leg bridge". Normalise BOTH sides -- hyphens to
+   spaces, trailing plural off words of 4+ chars -- so the wording stops mattering. Keys and
+   movements go through the same function, so "quad sets" -> "quad set" on both sides. */
+const vidNorm = t => String(t||"").toLowerCase()
+  .replace(/[-–—]/g, " ")
+  .replace(/\b(\w{3,})s\b/g, "$1")
+  .replace(/\s+/g, " ").trim();
+const CURATED_NORM = {};
+for(const [k, v] of Object.entries(CURATED_VIDEOS)) CURATED_NORM[vidNorm(k)] = v;
 /* Longest key first: "single-leg bridge" must not lose to "bridge"-style prefixes. */
-const CURATED_KEYS = Object.keys(CURATED_VIDEOS).sort((a,b)=>b.length-a.length);
+const CURATED_KEYS = Object.keys(CURATED_NORM).sort((a,b)=>b.length-a.length);
 function curatedVideoFor(name, pattern){
-  const m = videoMovement(name, pattern);
-  if(!m) return null;
-  if(CURATED_VIDEOS[m]) return CURATED_VIDEOS[m];
-  for(const k of CURATED_KEYS) if(m.includes(k)) return CURATED_VIDEOS[k];
+  const m0 = videoMovement(name, pattern);
+  if(!m0) return null;
+  const m = vidNorm(m0);
+  if(CURATED_NORM[m]) return CURATED_NORM[m];
+  for(const k of CURATED_KEYS) if(m.includes(k)) return CURATED_NORM[k];
   return null;
 }
 /* A generic video knows nothing about this user's precautions. If the engine has
