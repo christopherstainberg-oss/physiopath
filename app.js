@@ -247,9 +247,18 @@ const OTHER_SURGERY = { id:"other", name:"Recent surgery (general precautions)",
 
 /* Curated surgeries (hand-authored, high quality) + the generated 3000-procedure
    database (window.SURGERY_DB). Curated entries come first so their match wins auto-detect. */
-const SURGERIES = CURATED_SURGERIES.concat(
-  (window.SURGERY_DB||[]).filter(s=>!CURATED_SURGERIES.some(c=>c.id===s.id))
-);
+/* Was `const SURGERIES = CURATED_SURGERIES.concat(window.SURGERY_DB...)` — a MODULE-EVAL
+   read, which forced surgeries.js (3.8MB) to load before app.js could even parse. Now a
+   lazy accessor: it returns the 23 curated procedures immediately and folds in the 20,000
+   generated ones the moment the file lands, recomputing only when the count changes. */
+let _surgCache = null;
+function surgeries(){
+  const db = window.SURGERY_DB || [];
+  if(_surgCache && _surgCache.n === db.length) return _surgCache.list;
+  const list = CURATED_SURGERIES.concat(db.filter(s=>!CURATED_SURGERIES.some(c=>c.id===s.id)));
+  _surgCache = { n: db.length, list };
+  return list;
+}
 
 let _dsCache = { key:null, val:null };
 /* Memoised: on a MISS (a non-surgical diagnosis — the common case) the lookup below runs
@@ -267,11 +276,11 @@ function detectSurgery(){
 function _detectSurgeryUncached(){
   if(state.surgeryType && state.surgeryType!=="auto"){
     if(state.surgeryType==="other") return OTHER_SURGERY;
-    const s = SURGERIES.find(x=>x.id===state.surgeryType); if(s) return s;
+    const s = surgeries().find(x=>x.id===state.surgeryType); if(s) return s;
   }
   for(const c of selectedConditions()){
     const nm = c.name.toLowerCase();
-    const hit = SURGERIES.find(s=>s.match.test(nm));
+    const hit = surgeries().find(s=>s.match.test(nm));
     if(hit) return hit;
   }
   return state.surgery==="yes" ? OTHER_SURGERY : null;
@@ -317,6 +326,37 @@ function loadData(file){
   });
 }
 const MEDMAP = new Map();
+/* The catalogue is only needed once they go looking for their injury — and for a returning
+   user whose saved condIds must resolve. A first-time visitor answering History questions
+   does not need 9.3MB of conditions sitting in memory. */
+let _condP = null;
+function ensureConditions(){
+  if(_condP) return _condP;
+  return _condP = loadData("conditions.js").then(()=>{
+    if(window.CONDITIONS){
+      window.CONDITIONS.forEach(c=>CONMAP.set(c.id,c));
+      if($("#catCount")) $("#catCount").textContent = window.CONDITIONS.length.toLocaleString();
+      initSearch();
+    }
+    return true;
+  });
+}
+/* Everything generateProgram() touches: the exercise library, the timelines, the surgical
+   catalogue and the ADL practice set. Pulled in at Details — the step BEFORE Generate — so
+   it is there by the time it is needed, without blocking the first paint. */
+let _progP = null;
+function ensureProgramData(){
+  if(_progP) return _progP;
+  return _progP = Promise.all([
+    ensureConditions(),
+    loadData("exercises.js"), loadData("plans.js"),
+    loadData("surgery-plans.js"), loadData("adl-exercises.js"), loadData("surgeries.js")
+  ]).then(()=>{
+    _surgCache = null;                       // fold the generated catalogue in now it's here
+    if(window.EXERCISES && !libReady) window.EXERCISES.forEach(e=>EXMAP.set(e.id,e));
+    return true;
+  });
+}
 /* Pull a lazy dataset in and re-wire whatever depends on it. Safe to call often. */
 function ensureMedData(){
   return loadData("medications.js").then(()=>{
@@ -5533,7 +5573,9 @@ function goStep(n){
   window.scrollTo({top:0,behavior:"smooth"});
   if(n===0) syncOptSecs();                                   // reflect anything already answered
   if(n===1) initClinician();                                  // Clinician section (now right after History)
+  if(n===2) ensureConditions();       // the catalogue is only needed once they go looking
   if(n===3) ensureDetailsData();      // sports/activities only matter from Details on
+  if(n===3) ensureProgramData().then(renderPrecautions);      // re-render once the catalogue lands, or the picker is stuck at the 23 curated
   if(n===3) renderPrecautions();                              // Precautions card lives in Details — keep it current
   if(n===4 && state.program){ renderProgram(state.program); renderDriftNote(); }   // Program reflects precaution/detail/clinician + log changes
   if(n===5){                                                 // Journal — the daily return visit
@@ -5546,7 +5588,7 @@ function goStep(n){
   }
   if(n===6){ renderHealth(); renderDataWarn(); }              // Health & vitals
   if(n===7) initCoach();
-  if(n===8) initLibrary();
+  if(n===8) ensureProgramData().then(initLibrary);   // the library IS exercises.js
 }
 
 /* ---------- cardiac device detail (shown when Pacemaker/ICD is ticked) ---------- */
@@ -6111,6 +6153,12 @@ function renderSelected(){
   $("#toDetails").disabled = conds.length===0;
 }
 function runSearch(){
+  if(!window.CONDITIONS){                       // catalogue still in flight
+    const r = $("#condResults");
+    if(r) r.innerHTML = `<div class="moreinfo">Loading the condition catalogue…</div>`;
+    ensureConditions().then(runSearch);
+    return;
+  }
   const q=$("#condSearch").value.trim().toLowerCase();
   const toks=q.split(/\s+/).filter(Boolean);
   let list=window.CONDITIONS;
@@ -6232,7 +6280,7 @@ function initDetails(){
   $("#surgery").value=state.surgery; $("#fitness").value=state.fitness; $("#goal").value=state.goal;
   // surgery picker — searchable (3000+ procedures)
   $("#surgeryDate").value=state.surgeryDate||"";
-  if($("#surgCount")) $("#surgCount").textContent = SURGERIES.length.toLocaleString();
+  if($("#surgCount")) $("#surgCount").textContent = surgeries().length.toLocaleString();
   renderSurgeryPick();
   let sgt; const ss=$("#surgerySearch"); if(ss) ss.oninput=()=>{ clearTimeout(sgt); sgt=setTimeout(runSurgerySearch,120); };
   toggleSurgeryExtra(); updatePostopLabel();
@@ -6311,7 +6359,7 @@ function renderSurgeryPick(){
   const st=state.surgeryType||"auto";
   let label;
   if(st==="other") label=`Selected: <b>Other / not listed</b> — general post-op precautions`;
-  else if(st!=="auto"){ const s=SURGERIES.find(x=>x.id===st); label = s?`Selected: <b>${esc(s.name)}</b>`:`<b>Auto-detect</b> from your condition`; }
+  else if(st!=="auto"){ const s=surgeries().find(x=>x.id===st); label = s?`Selected: <b>${esc(s.name)}</b>`:`<b>Auto-detect</b> from your condition`; }
   else { const d=detectSurgery(); label = d?`Auto-detected: <b>${esc(d.name)}</b>`:`<b>Auto-detect</b> from your condition (none matched yet)`; }
   const reset = st!=="auto" ? `<button type="button" class="surgreset" id="surgReset">↺ auto-detect</button>` : "";
   const otherBtn = st!=="other" ? `<button type="button" class="surgreset" id="surgOther">＋ Other / not listed</button>` : "";
@@ -6324,7 +6372,7 @@ function runSurgerySearch(){
   const q=$("#surgerySearch").value.trim().toLowerCase(); const toks=q.split(/\s+/).filter(Boolean);
   if(!toks.length){ res.innerHTML=""; res.classList.add("hide"); return; }
   res.classList.remove("hide");
-  let list=SURGERIES.filter(s=>{ const hay=(s.name+" "+(s.region||"")+" "+(s.cat||"")).toLowerCase(); return toks.every(t=>hay.includes(t)); });
+  let list=surgeries().filter(s=>{ const hay=(s.name+" "+(s.region||"")+" "+(s.cat||"")).toLowerCase(); return toks.every(t=>hay.includes(t)); });
   const total=list.length; list=list.slice(0,40);
   const otherRow=`<div class="result" data-id="other"><span class="rn">Other / not listed<div class="rr">general post-op precautions</div></span><span class="add">+</span></div>`;
   if(!list.length){ res.innerHTML=`<div class="moreinfo">No matches — try a simpler term.</div>`+otherRow; }
@@ -6334,7 +6382,10 @@ function runSurgerySearch(){
   $$("#surgeryResults .result").forEach(r=>r.onclick=()=>setSurgery(r.dataset.id));
 }
 
-function doGenerate(){
+async function doGenerate(){
+  /* Belt and braces: goStep(3) pulls this in, but Generate is reachable from a restored
+     session and a half-loaded program is worse than a slow one. */
+  await ensureProgramData();
   if(!state.condIds.length){ toast("Pick at least one injury or condition first."); goStep(2); return; }
   if(state.weeks===null){ toast("Enter how many weeks ago it started."); return; }
   state.program=generateProgram(); save();
@@ -9050,7 +9101,12 @@ function renderExResults(){
 /* ---------- boot ---------- */
 document.addEventListener("DOMContentLoaded",()=>{
   load();
-  initHistory(); initOptSecs(); initMeds(); initSearch(); initDetails(); initProgress(); initDataCard(); initCoachSettings();
+  initHistory(); initOptSecs(); initMeds(); initDetails(); initProgress(); initDataCard(); initCoachSettings();
+  /* initSearch() moved into ensureConditions() — it reads window.CONDITIONS, which is no
+     longer here at boot. A RETURNING user's saved condIds can't resolve without the
+     catalogue, and a saved program needs the rest, so fetch what their state implies. */
+  if((state.condIds||[]).length) ensureConditions();
+  if(state.program || (state.condIds||[]).length) ensureProgramData();
   /* The app works offline; these links don't. Flag it rather than let the tap do nothing. */
   const syncOffline = () => document.body.classList.toggle("isoffline", !navigator.onLine);
   window.addEventListener("online", syncOffline); window.addEventListener("offline", syncOffline); syncOffline();

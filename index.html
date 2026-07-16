@@ -605,15 +605,13 @@
   <div class="credit">© Created by: Christopher Stainberg, BS, PTA - All Rights Reserved.</div>
 </main>
 
-<script src="data/conditions.js"></script>
+<!-- Only the rules engine and the ADL list load up front — everything else is fetched by
+     loadData() when the step that needs it is reached. 40,000 conditions took the boot
+     payload to 24.3MB; a first-time visitor was downloading the entire catalogue before
+     answering a single question. See ensureConditions() / ensureProgramData() in app.js. -->
 <script src="data/protocols.js"></script>
-<script src="data/exercises.js"></script>
 <!-- medications / sports / activities / coach-kb are fetched on demand by loadData() -->
-<script src="data/surgeries.js"></script>
-<script src="data/plans.js"></script>
-<script src="data/surgery-plans.js"></script>
 <script src="data/adls.js"></script>
-<script src="data/adl-exercises.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
