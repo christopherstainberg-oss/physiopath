@@ -8,7 +8,21 @@ on:
   workflow_dispatch:
 
 jobs:
+  # Run the headless safety suite first. It loads the REAL planning engine and
+  # asserts the invariants that must never regress (age gates, NWB, special
+  # precautions, clearance). A red suite blocks the image from shipping.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run safety suite
+        run: npm test
+
   build-and-push:
+    needs: test          # never publish an image that fails the safety suite
     runs-on: ubuntu-latest
     permissions:
       contents: read
