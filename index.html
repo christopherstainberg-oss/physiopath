@@ -370,23 +370,51 @@
   <!-- ============ STEP 6: PROGRESS ============ -->
   <section class="panel hide" id="panel-5">
     <div class="card">
-      <h2>Log today's session</h2>
-      <p class="hint">Track pain and sessions over time to see your trend. Stored on your device only.</p>
-      <div class="grid2">
-        <label class="field"><span class="lab">Pain today <span class="sub">0–10</span></span>
-          <div class="rangewrap"><input type="range" id="logPain" min="0" max="10" value="3" /><span class="rangeval" id="logPainVal">3</span></div>
-        </label>
-        <label class="field"><span class="lab">Sessions completed today</span>
-          <input type="number" id="logSessions" min="0" max="20" value="1" />
-        </label>
+      <h2 id="logHead">Today's journal</h2>
+      <p class="hint">A line a day is enough. It shapes your plan, and it's the part your
+        physio will actually want to read. Stored on your device only.</p>
+
+      <!-- Ask a human question before asking anyone to quantify their suffering to one
+           decimal place. The 0-10 scale still exists, underneath, as optional detail. -->
+      <div class="field">
+        <span class="lab">How did today go?</span>
+        <div class="moodrow" id="logMood" role="group" aria-label="How did today go?"></div>
       </div>
-      <label class="field"><span class="lab">How did it feel? <span class="sub">(optional)</span></span>
-        <input type="text" id="logNote" placeholder="e.g. easier than last week, calf tight after" />
+
+      <!-- The note is the point of a journal, so it leads and it gets a real prompt drawn
+           from this user's own answers rather than a blank box. -->
+      <label class="field"><span class="lab">In your words <span class="sub">(optional, but this is the bit worth keeping)</span></span>
+        <span class="jprompt" id="logPrompt"></span>
+        <textarea id="logNote" rows="3" placeholder="Anything you'd want to remember, or tell your physio."></textarea>
       </label>
+
+      <details class="optsec" id="logDetail">
+        <summary><span class="optsum">Add the numbers</span><span class="optbuy">→ drives your pain trend and plan</span></summary>
+        <div class="grid2">
+          <label class="field"><span class="lab">Pain <span class="sub">0–10</span></span>
+            <div class="rangewrap"><input type="range" id="logPain" min="0" max="10" value="3" /><span class="rangeval" id="logPainVal">3</span></div>
+          </label>
+          <label class="field"><span class="lab">Sessions done</span>
+            <input type="number" id="logSessions" min="0" max="20" value="1" inputmode="numeric" />
+          </label>
+        </div>
+      </details>
+
+      <div class="jdaterow">
+        <label class="jdate"><span>Entry for</span>
+          <!-- saveLogEntry used to hard-code today, so a missed day could never be caught up,
+               and #logToday was set once at init so a PWA left open past midnight showed one
+               date and saved to another. -->
+          <input type="date" id="logDate" />
+        </label>
+        <span class="jdatehint" id="logDateHint"></span>
+      </div>
+
       <div class="rowbtns">
         <span class="muted" id="logToday"></span>
-        <button class="btn primary" id="logBtn">Save today's entry</button>
+        <button class="btn primary" id="logBtn">Save entry</button>
       </div>
+      <div id="journalToday"></div>
     </div>
 
     <div class="card" id="progressSummaryCard">

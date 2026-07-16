@@ -296,7 +296,7 @@ const state = {
   medIds:[], medFilter:false, homeMode:false, customPrecautions:[], clinicianProtocols:[], clinPrecautionProtocol:"", clinicianGuided:false,
   medDoses:{}, weightBearing:{status:"",pct:"",lbs:"",side:"",limb:"le"}, devices:[],
   cardiacDevice:{type:"",icdRate:""}, specialPrecautions:[], planVariant:{}, progress:{},
-  log:[], chatHistory:[], apiKey:"", apiModel:"claude-opus-4-8"
+  log:[], logMood:"", chatHistory:[], apiKey:"", apiModel:"claude-opus-4-8"
 };
 const MED_FILTERABLE = ["fluoroquinolone","anticoagulant","antiplatelet","opioid","sedative","muscle_relaxant","gabapentinoid","antipsychotic"];
 /* ---------- on-demand data loading ----------
@@ -5463,7 +5463,14 @@ function goStep(n){
   if(n===3) ensureDetailsData();      // sports/activities only matter from Details on
   if(n===3) renderPrecautions();                              // Precautions card lives in Details — keep it current
   if(n===4 && state.program){ renderProgram(state.program); renderDriftNote(); }   // Program reflects precaution/detail/clinician + log changes
-  if(n===5){ renderProgress(); renderHealth(); renderDataWarn(); }
+  if(n===5){
+    /* initProgress() ran at BOOT, before they had a condition or ADLs, so the journal prompt
+       was computed against an empty state and stuck on the generic line. Refresh on entry —
+       this also rolls the date over if the app was left open past midnight. */
+    const _d = $("#logDate");
+    if(_d){ _d.max = todayISO(); if(!_d.value || _d.value > todayISO()) _d.value = todayISO(); loadLogDay(_d.value); }
+    renderProgress(); renderHealth(); renderDataWarn();
+  }
   if(n===6) initCoach();
   if(n===7) initLibrary();
 }
@@ -5868,7 +5875,7 @@ function adlSuggestionsCard(){
 /* The optional sections start closed, but a returning user must never think their
    answers were lost — open anything already filled and show what's in it. */
 function syncOptSecs(){
-  $$(".optsec").forEach(d => {
+  $$("#panel-0 .optsec").forEach(d => {          // History step only — panel-5 reuses .optsec for the journal
     const sum = d.querySelector("summary");
     const n = Array.from(d.querySelectorAll("input,select,textarea")).filter(el =>
       el.type === "checkbox" ? el.checked : String(el.value||"").trim() !== "").length
@@ -5883,7 +5890,7 @@ function syncOptSecs(){
   });
 }
 function initOptSecs(){
-  $$(".optsec").forEach(d => {
+  $$("#panel-0 .optsec").forEach(d => {          // History step only
     d.addEventListener("toggle", () => { d.dataset.touched = "1"; });
     d.addEventListener("change", syncOptSecs);
     d.addEventListener("input",  syncOptSecs);
@@ -6349,14 +6356,142 @@ function initDataCard(){
   renderDataWarn();
 }
 function initProgress(){
-  $("#logToday").textContent = "Entry for " + fmtDate(todayISO());
   $("#logPain").oninput = e=>$("#logPainVal").textContent=e.target.value;
   $("#logBtn").onclick = saveLogEntry;
+
+  const mr = $("#logMood");
+  if(mr){
+    mr.innerHTML = MOODS.map(m=>`<button type="button" class="moodbtn" data-m="${m.k}" aria-pressed="false" title="${esc(m.sub)}">
+      <span class="moodi" aria-hidden="true">${m.icon}</span><span class="moodl">${esc(m.label)}</span></button>`).join("");
+    mr.querySelectorAll(".moodbtn").forEach(b=>{
+      b.onclick = () => {
+        state.logMood = (state.logMood === b.dataset.m) ? "" : b.dataset.m;   // tap again to clear
+        syncMood(); save();
+      };
+    });
+  }
+  const dt = $("#logDate");
+  if(dt){
+    dt.max = todayISO();
+    dt.value = todayISO();
+    dt.onchange = () => loadLogDay(dt.value);
+  }
+  loadLogDay(todayISO());
   initHealth();
 }
+function syncMood(){
+  $$("#logMood .moodbtn").forEach(b=>{
+    const on = b.dataset.m === state.logMood;
+    b.classList.toggle("on", on);
+    b.setAttribute("aria-pressed", String(on));
+  });
+}
+/* Pull an existing entry back into the form so a re-visit edits rather than silently
+   overwrites, and so a caught-up day shows what is already there. */
+function loadLogDay(d){
+  const e = (state.log||[]).find(x=>x.date === d);
+  state.logMood = e ? (e.mood||"") : "";
+  if($("#logPain")){ $("#logPain").value = e ? e.pain : 3; $("#logPainVal").textContent = e ? e.pain : 3; }
+  if($("#logSessions")) $("#logSessions").value = e ? e.sessions : 1;
+  if($("#logNote")) $("#logNote").value = e ? (e.note||"") : "";
+  if($("#logPrompt")) $("#logPrompt").innerHTML = journalPrompt(d);
+  const hint = $("#logDateHint");
+  if(hint) hint.textContent = d === todayISO() ? "today" : (e ? "editing a past entry" : "catching up a missed day");
+  const head = $("#logHead");
+  if(head) head.textContent = d === todayISO() ? "Today's journal" : "Journal — " + fmtDate(d);
+  const lt = $("#logToday");
+  if(lt) lt.textContent = e ? "You already have an entry for this day" : "";
+  syncMood(); renderJournalToday();
+}
+/* =====================================================================
+   THE JOURNAL
+   This was a clinical data form wearing a friendly heading: a 0-10 slider, a
+   count, and a note that got WIPED on save. The note is the only place the user
+   says anything in their own words, and nothing read it -- it rendered as a
+   suffix ("2 sessions · my knee clicked on stairs") and stopped there. Not the
+   trend, not the plan, not Jeffery. The words are the point of a journal, so
+   here they lead, they persist, they get a prompt, and they reach the coach.
+   ===================================================================== */
+const MOODS = [
+  { k:"good",  icon:"🙂", label:"Good",  sub:"Better than usual" },
+  { k:"ok",    icon:"😐", label:"OK",    sub:"About normal" },
+  { k:"sore",  icon:"😣", label:"Sore",  sub:"Achy but manageable" },
+  { k:"rough", icon:"😞", label:"Rough", sub:"A bad day" }
+];
+const moodOf = k => MOODS.find(m => m.k === k) || null;
+
+/* A blank box is intimidating and gets skipped. The app already knows what to ask:
+   their hard ADLs, their phase criteria, their sport goal, what they wrote yesterday.
+   Rotate by day so it reads like something is paying attention. */
+function journalPrompt(dateISO){
+  /* Personal prompts WIN. Pooling them with the generic ones and picking uniformly meant a
+     user with a hard ADL, a sport goal and phase criteria still got "Anything you'd want to
+     remember?" most days — which is the blank box the prompt exists to replace. */
+  const personal = [];
+  const hard = (state.adls||[]).filter(a=>a.level>=1);
+  if(hard.length) personal.push(`You said <b>${esc(hard[0].name.toLowerCase())}</b> was hard — how was that today?`);
+  const it = state.program && state.program.items && state.program.items[0];
+  const ph = it && (it.phases||[]).find(x=>x.current);
+  if(ph && ph.criteria) personal.push(`To reach the next phase you need: <b>${esc(String(ph.criteria))}</b>. Any closer?`);
+  if((state.returnSports||[]).length) personal.push(`<b>${esc(state.returnSports[0])}</b> is the goal — did anything feel closer to it today?`);
+  if(ph && ph.title) personal.push(`You're in <b>${esc(ph.title)}</b>. What felt easier, and what didn't?`);
+  const prev = (state.log||[]).filter(e=>e.date < dateISO && e.note).slice(-1)[0];
+  if(prev) personal.push(`Last time you wrote: <i>“${esc(String(prev.note).slice(0,80))}”</i> — how's that now?`);
+  const generic = ["What felt easier today, and what did you avoid?",
+                   "Anything you'd want to remember, or tell your physio?",
+                   "How did today compare with yesterday?"];
+  const pool = personal.length ? personal : generic;
+  /* Deterministic per day: it must not reshuffle while they are typing. */
+  return pool[Math.abs(hashStr(dateISO)) % pool.length];
+}
+
+/* Streaks punish exactly the person who most needs to keep going: flares are part of
+   rehab, and a zeroed counter on a bad week reads as failure. Same information, kinder. */
+function loggedRecently(days){
+  const n = days || 14;
+  const cut = new Date(); cut.setDate(cut.getDate() - (n - 1));
+  const key = isoOf(cut);
+  const hit = new Set((state.log||[]).filter(e=>e.date >= key).map(e=>e.date)).size;
+  return { hit, of: n };
+}
+
+/* They just fed the engine — say what it did, or the daily ritual feels like homework. */
+function logImpactHTML(){
+  const bits = [];
+  const rp = recentPain();
+  if(rp) bits.push(`Your plan is now working from <b>${rp.mean}/10</b> — the average of your last ${rp.n} logged days, not the number you typed at intake.`);
+  const a = adherence();
+  if(a && a.status === "on-track") bits.push(`<b>${a.done}</b> sessions this week — that's your prescribed dose.`);
+  else if(a) bits.push(`<b>${a.done}</b> sessions this week against a target of ${a.min}${a.max!==a.min?`–${a.max}`:""}.`);
+  const d = planDrift();
+  if(d && d.length) bits.push(`Your plan and your log have drifted apart — there's a card on the Program step.`);
+  if(!bits.length) return "";
+  return `<div class="jimpact"><b>What this changed:</b> ${bits.join(" ")}</div>`;
+}
+
+/* Today's entry, read back as writing rather than swallowed into a table row. */
+function journalTodayHTML(){
+  const d = ($("#logDate") && $("#logDate").value) || todayISO();
+  const e = (state.log||[]).find(x=>x.date === d);
+  if(!e) return "";
+  const m = moodOf(e.mood);
+  return `<div class="jcard jtoday">
+    <div class="jtop"><span class="jdate2">${esc(fmtDate(e.date))}</span>
+      ${m?`<span class="jmood">${m.icon} ${esc(m.label)}</span>`:""}
+      <span class="jtag">${e.pain}/10</span>
+      <span class="jsess">${e.sessions} session${e.sessions===1?"":"s"}</span></div>
+    ${e.note?`<div class="jbody">${esc(e.note)}</div>`:`<div class="jbody jempty">No note for this day.</div>`}
+    <div class="jfoot">Saved. Edit above and save again to change it.</div>
+  </div>`;
+}
 function saveLogEntry(){
+  /* The date is chosen, not assumed — a journal you can't catch up in gets abandoned
+     after the first missed day, and the old code hard-coded todayISO(). */
+  const d = ($("#logDate") && $("#logDate").value) || todayISO();
+  if(d > todayISO()){ toast("That date is in the future."); return; }
   const entry = {
-    date: todayISO(),
+    date: d,
+    mood: state.logMood || "",
     pain: parseInt($("#logPain").value),
     sessions: Math.max(0, parseInt($("#logSessions").value)||0),
     note: $("#logNote").value.trim()
@@ -6364,11 +6499,17 @@ function saveLogEntry(){
   const i = state.log.findIndex(e=>e.date===entry.date);
   if(i>=0) state.log[i]=entry; else state.log.push(entry);
   state.log.sort((a,b)=>a.date<b.date?-1:1);
-  const wrote = save(); $("#logNote").value="";
-  renderProgress();
+  const wrote = save();
+  /* Deliberately NOT clearing the note: it is the thing they wrote, and wiping it
+     told them it was disposable. journalTodayHTML() reads it straight back. */
+  renderProgress(); renderJournalToday();
   syncPlanFromLog();
   if(!wrote) toast("⚠ Couldn't save - your browser storage is full or blocked.");
-  else toast(i>=0 ? "Updated today's entry." : "Saved. Keep it up! 💪");
+  else if(i>=0) toast("Updated your entry for " + fmtDate(d) + ".");
+  else toast(d===todayISO() ? "Saved today's entry." : "Saved — caught up " + fmtDate(d) + ".");
+}
+function renderJournalToday(){
+  const host = $("#journalToday"); if(host) host.innerHTML = journalTodayHTML() + logImpactHTML();
 }
 /* A new precaution (e.g. a logged hypertensive crisis) is a SAFETY change and applies at once.
    A pain shift only offers a rebuild, because rebuilding throws away the user's own edits. */
@@ -6398,7 +6539,7 @@ function renderDriftNote(){
   if(b) b.onclick = () => { state.program = generateProgram(); save(); renderProgram(state.program); renderDriftNote();
     toast("Plan updated from your log."); };
 }
-function deleteLog(date){ state.log=state.log.filter(e=>e.date!==date); save(); renderProgress(); }
+function deleteLog(date){ state.log=state.log.filter(e=>e.date!==date); save(); renderProgress(); renderJournalToday(); syncPlanFromLog(); }
 
 /* The plan asks for N sessions/week and nothing ever checked. sessionsText() returns prose,
    so there was no number to compare the log against — weeklyTarget() parses one out. */
@@ -6426,24 +6567,30 @@ function renderProgress(){
   const trendCls=_t.cls, trendTxt=_t.txt;
   const streak=computeStreak(log);
 
+  /* "Day streak: 0" lands hardest on the person having the worst week, which is exactly
+     backwards in rehab — flares are part of it. Same information, without the punishment. */
+  const rec = loggedRecently(14);
   body.innerHTML = `
     ${adherenceHTML()}
     <div class="progstats">
       <div class="stat"><div class="k">Entries</div><div class="v">${log.length}</div></div>
       <div class="stat"><div class="k">Sessions logged</div><div class="v">${totalSessions}</div></div>
-      <div class="stat"><div class="k">Current pain</div><div class="v">${last}/10</div></div>
-      <div class="stat"><div class="k">Day streak</div><div class="v">${streak}🔥</div></div>
+      <div class="stat"><div class="k">Recent pain</div><div class="v">${(recentPain()||{mean:last}).mean}/10</div></div>
+      <div class="stat"><div class="k">Logged</div><div class="v">${rec.hit}<span class="statsub">/${rec.of} days</span></div></div>
     </div>
-    <div style="margin:2px 0 6px"><span class="trendtag ${trendCls}">${trendTxt}</span></div>
+    <div class="progtrend"><span class="trendtag ${trendCls}">${trendTxt}</span>
+      ${streak>1?`<span class="streaksoft">${streak} in a row 🔥</span>`:""}</div>
     <div class="chartwrap">${painChartSVG(log)}</div>
-    <ul class="loglist">${
-      log.slice().reverse().map(e=>`<li class="logrow">
-        <span class="ld">${fmtDate(e.date)}</span>
-        <span class="lp">${e.pain}/10</span>
-        <span class="ln">${e.sessions} session${e.sessions===1?"":"s"}${e.note?" · "+esc(e.note):""}</span>
-        <span class="lx" data-date="${e.date}" title="Delete">✕</span>
-      </li>`).join("")
-    }</ul>`;
+    <div class="jlist">${
+      log.slice().reverse().map(e=>{ const m=moodOf(e.mood); return `<div class="jcard">
+        <div class="jtop"><span class="jdate2">${esc(fmtDate(e.date))}</span>
+          ${m?`<span class="jmood">${m.icon} ${esc(m.label)}</span>`:""}
+          <span class="jtag">${e.pain}/10</span>
+          <span class="jsess">${e.sessions} session${e.sessions===1?"":"s"}</span>
+          <button type="button" class="lx" data-date="${e.date}" title="Delete this entry" aria-label="Delete entry for ${esc(fmtDate(e.date))}">✕</button></div>
+        ${e.note?`<div class="jbody">${esc(e.note)}</div>`:""}
+      </div>`; }).join("")
+    }</div>`;
   $$("#progressBody .lx").forEach(x=>x.onclick=()=>{ if(confirm("Delete this entry?")) deleteLog(x.dataset.date); });
 }
 function computeStreak(log){
@@ -7873,6 +8020,12 @@ function buildCoachSystem(){
         computeStreak(state.log) > 1 && `${computeStreak(state.log)}-day streak`
       ].filter(Boolean).join("; ")
     : "nothing logged yet";
+  /* The single most useful sentence in this app is the one they typed ("my knee clicked
+     going downstairs"), and Jeffery could not see it — he got the averages and none of the
+     words. Newest first, capped so a long history can't crowd out the rest of the prompt. */
+  const _notes = (state.log||[]).filter(e=>e.note).slice(-6).reverse()
+    .map(e=>{ const m = moodOf(e.mood); return `${fmtDate(e.date)}${m?` (${m.label.toLowerCase()} day)`:""}: "${String(e.note).slice(0,160)}"`; });
+  const journalLine = _notes.length ? _notes.join(" | ") : "none written";
   const setupLine = [ state.equipment && `equipment: ${lbl(state.equipment)}`, state.timePerDay && lbl(state.timePerDay),
     state.workDemand && `work: ${lbl(state.workDemand)}`, state.moveConfidence && lbl(state.moveConfidence),
     state.priorEpisodes && lbl(state.priorEpisodes), state.homeMode && "Home mode is ON (household objects)" ]
@@ -7891,6 +8044,7 @@ USER CONTEXT
 - Medication considerations for exercise: ${medNoteLine}
 - Setup & capacity: ${setupLine}
 - What they are LOGGING (trust this over the intake pain figure): ${logLine}
+- THEIR OWN WORDS from the journal, newest first (quote these back when relevant — this is what they actually told you): ${journalLine}
 - Vitals entered: ${enteredVitals}
 - Heart-rate & exertion: ${hrLine}
 - Cardiac device: ${deviceLineHR}

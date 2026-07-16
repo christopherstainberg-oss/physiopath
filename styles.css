@@ -242,6 +242,45 @@ input[type=range]{flex:1;accent-color:var(--brand);height:30px}
 body.isoffline .vidlink{opacity:.45;pointer-events:none}
 body.isoffline .vidoff{display:inline}
 body.isoffline .vidnote{display:none}
+/* ---------- the journal ---------- */
+.moodrow{display:flex;flex-wrap:wrap;gap:8px}
+.moodbtn{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;
+  border:1px solid var(--line);background:var(--panel-2);color:var(--text);
+  border-radius:12px;padding:8px 14px;min-width:74px;min-height:56px;font-family:inherit;transition:.15s}
+.moodbtn:hover{border-color:var(--brand)}
+.moodbtn.on{border-color:var(--brand);background:var(--chip);box-shadow:inset 0 0 0 1px var(--brand)}
+.moodi{font-size:20px;line-height:1}
+.moodl{font-size:11.5px;font-weight:600}
+.jprompt{display:block;font-size:12.5px;line-height:1.5;color:var(--brand-ink);
+  background:var(--chip);border-left:3px solid var(--brand);border-radius:0 8px 8px 0;
+  padding:8px 10px;margin:0 0 8px}
+.jprompt i{opacity:.85}
+.jdaterow{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:12px 0 4px}
+.jdate{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600}
+.jdate input{width:auto;padding:8px 10px;font-size:14px}
+.jdatehint{font-size:12px;color:var(--muted);font-style:italic}
+.jimpact{margin-top:10px;padding:10px 12px;border-radius:10px;font-size:12.5px;line-height:1.55;
+  color:var(--muted);background:var(--chip);border:1px solid var(--line)}
+.jimpact b{color:var(--text)}
+/* entries read as writing, not as table rows */
+.jlist{display:flex;flex-direction:column;gap:10px;margin-top:14px}
+.jcard{border:1px solid var(--line);border-radius:12px;padding:11px 13px;background:var(--panel-2)}
+.jcard.jtoday{margin-top:12px;border-color:var(--brand-2);background:var(--bg)}
+.jtop{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:12px}
+.jdate2{font-weight:700;font-size:13px}
+.jmood{font-weight:600}
+.jtag{background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:1px 8px;font-variant-numeric:tabular-nums}
+.jsess{color:var(--muted)}
+.jtop .lx{margin-left:auto;background:none;border:0;color:var(--muted);cursor:pointer;
+  font-size:13px;line-height:1;padding:6px;min-width:30px;min-height:30px;border-radius:8px}
+.jtop .lx:hover{color:var(--danger);background:var(--chip)}
+.jbody{margin-top:7px;font-size:13.5px;line-height:1.55;white-space:pre-wrap;overflow-wrap:break-word}
+.jbody.jempty{color:var(--muted);font-style:italic}
+.jfoot{margin-top:7px;font-size:11.5px;color:var(--muted)}
+.progtrend{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:2px 0 6px}
+.streaksoft{font-size:12px;color:var(--muted)}
+.stat .statsub{font-size:12px;font-weight:600;color:var(--muted)}
+@media print{ .moodrow,.jdaterow,.jprompt,.jtop .lx,.jfoot{display:none!important} }
 /* optional-depth zone on the history step */
 .optzone{margin-top:22px;border-top:2px dashed var(--line);padding-top:18px}
 .optzonehead h3{margin:0 0 4px;font-size:15px;display:flex;align-items:center;gap:8px}
