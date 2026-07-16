@@ -3174,8 +3174,11 @@ function videoMovement(name, pattern){
    title and author_name (and errors for deleted/private videos). Nothing here
    was recalled or guessed.
    THE BAR IS THE PUBLISHER, NOT MY OPINION OF THE VIDEO. Only hospitals,
-   health systems, universities, NHS bodies and clinic groups are accepted,
-   because that is a property this file can actually check. It is NOT a claim
+   health systems, universities, NHS bodies, national medical bodies and
+   established clinic groups are accepted, because that is a property this file
+   can actually check. It must be HUMAN healthcare: a weight-shifting rehab
+   video cleared every other test and was published by "Somers Animal
+   Hospital". "Is it a hospital?" is not the whole question. It is NOT a claim
    that the demonstration has been reviewed — nothing here has watched it, and
    the UI says so.
    Why the bar is the publisher: search snippets asserted institutional
@@ -3242,15 +3245,60 @@ const CURATED_VIDEOS = {
   "tandem stance":             { id:"pAF0iMKMqZI", ch:"Activ Therapy Health Clinics" },
   "front raise":               { id:"EqKVG30q-L4", ch:"Pursuit Physical Therapy" },
   "prone y-t-w":               { id:"CFt3WjCBbpc", ch:"Peak Form Health Center" },
-  "prone y-t-w raises":        { id:"CFt3WjCBbpc", ch:"Peak Form Health Center" }
-  /* Deliberately still empty, and NOT to be filled by lowering the bar:
-     - double-leg balance: the American Heart Association video (STBFBCCMXIA) passes both bars,
-       but its title is "... – Post-stroke Exercise" and this movement is prescribed mostly to
-       ankle/knee patients, who would click through to a stroke video and reasonably think the
-       app had mis-linked. A search is more honest than a confusing match.
-     - gait training: only robotics vendors and trial literature exist at this bar.
-     - wrist curl: institutions call it "wrist flexion", which qNCbvUGYk3g already covers. A
-       duplicate entry would add nothing. */
+  "prone y-t-w raises":        { id:"CFt3WjCBbpc", ch:"Peak Form Health Center" },
+  /* Third pass — the most-prescribed movements that still had nothing. */
+  "single-leg stance progression": { id:"Z9_ThjKQyOg", ch:"Children's Hospital Colorado" },  // same demo as single-leg balance
+  "lateral band walks":        { id:"MZ1HbVflLUI", ch:"Atrius Health" },
+  "y-balance":                 { id:"wMBWuVH3s-s", ch:"Northamptonshire Healthcare NHS Foundation Trust" },
+  "star excursion":            { id:"wMBWuVH3s-s", ch:"Northamptonshire Healthcare NHS Foundation Trust" },
+  "bulgarian split squat":     { id:"GPhpkIWJeec", ch:"Orillia Sports Medicine and Rehabilitation" },
+  "bulgarian split squats":    { id:"GPhpkIWJeec", ch:"Orillia Sports Medicine and Rehabilitation" },
+  "deadlift":                  { id:"Vwvrp1-mCHw", ch:"Ohio State Wexner Medical Center" },
+  /* author_name is the bare handle "buckshospitals"; it is Buckinghamshire Healthcare NHS
+     Trust (Stoke Mandeville / Wycombe / Amersham). Display the institution, not the handle. */
+  "ankle range of motion":     { id:"LQDMDTJqUR0", ch:"Buckinghamshire Healthcare NHS Trust" },
+  "loaded carries":            { id:"xSrPDlft9sE", ch:"Champion Physical Therapy and Performance" },
+  "farmer's carry":            { id:"xSrPDlft9sE", ch:"Champion Physical Therapy and Performance" },
+  "tendon glides":             { id:"18NLhrMjvmQ", ch:"Baptist Health" },
+  "radial/ulnar deviation":    { id:"2Qcw24IVXDw", ch:"OrthoIndy" },
+  "radial deviation":          { id:"2Qcw24IVXDw", ch:"OrthoIndy" },
+  "ulnar deviation":           { id:"2Qcw24IVXDw", ch:"OrthoIndy" },
+  "wrist holds":               { id:"6J5MUqxUKkw", ch:"OrthoCarolina" },
+  "wrist isometrics":          { id:"6J5MUqxUKkw", ch:"OrthoCarolina" },
+  /* author_name is bare "Blue Ridge"; the author_url in the SAME verified payload is
+     @BlueRidgeHealthCare = UNC Health Blue Ridge (Morganton, NC). Payload-derived evidence,
+     not a search snippet — which is why this is accepted where the bare name was not. */
+  "grip strengthening":        { id:"iM-p8D1ErHg", ch:"UNC Health Blue Ridge" },
+  "soft-ball squeezes":        { id:"iM-p8D1ErHg", ch:"UNC Health Blue Ridge" },
+  "ball squeezes":             { id:"iM-p8D1ErHg", ch:"UNC Health Blue Ridge" },
+  "scapular protraction":      { id:"wAddpEKrH8w", ch:"Children's Hospital Colorado" },
+  "scapular retraction":       { id:"wAddpEKrH8w", ch:"Children's Hospital Colorado" },
+  "reverse curls":             { id:"6TtkRqPjmsg", ch:"OrthoIndy" },
+  /* "Husky Orthopaedics" is probably UW's orthopaedics department but could not be confirmed
+     first-party, and an inference is not a verification. Using MGH's unambiguous alternative:
+     its title, "Serratus Push Up on Knees", names the movement. */
+  "knee chest press":          { id:"Uo-GNl3Xpo8", ch:"MGHOrthopaedics" },
+  "knee push-up":              { id:"Uo-GNl3Xpo8", ch:"MGHOrthopaedics" },
+  "push-up progression":       { id:"G_c3QztMZNQ", ch:"BESS — British Elbow & Shoulder Society" }
+  /* Deliberately empty. Each was searched hard across multiple passes; NOT to be filled by
+     lowering the bar. An exercise with no verified video simply shows none.
+     - double-leg balance / weight shifts: institutions only publish these inside STROKE-framed
+       or falls-prevention compilations (AHA STBFBCCMXIA, National Stroke Association
+       mglfVFrK2ZI). This movement goes mostly to ankle/knee patients, who would click through
+       to a stroke video and reasonably think the app mis-linked.
+     - dynamic balance reach: closest was UCLA Recreation (hWotWdcKGpo) — a campus GYM
+       department, not a clinical body.
+     - agility & return-to-sport (box drill, 5-10-5 shuttle, deceleration, return-to-run,
+       tempo jogging): structurally absent. Published almost only by strength coaches, combine
+       -prep channels and equipment brands (SKLZ, IMG Academy).
+     - gait training: only robotics vendors and trial literature.
+     - wrist curl / wrist roller / rear-delt fly / overhead triceps extension: bodybuilding
+       -saturated. Institutions say "wrist flexion" (qNCbvUGYk3g already covers it); a
+       duplicate adds nothing.
+     - ball catches: institutions describe it in protocols but never title a single-movement
+       video for it.
+     Category labels the protocols emit ("sport-specific loading", "maintenance program",
+     "aerobic conditioning", "functional patterns") are not movements and never get a video. */
 };
 /* Longest key first: "single-leg bridge" must not lose to "bridge"-style prefixes. */
 const CURATED_KEYS = Object.keys(CURATED_VIDEOS).sort((a,b)=>b.length-a.length);
