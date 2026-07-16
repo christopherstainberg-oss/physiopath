@@ -1103,6 +1103,68 @@ footer b{color:var(--text)}
   .chatform .btn{flex:0 0 auto;white-space:nowrap}
 }
 
+/* railgroup labels are only shown in the desktop side-rail (below) */
+.railgroup{display:none}
+
+/* ---------- desktop (≥1024px): app shell — left rail + wide dashboard ----------
+   Purely additive: everything above is the mobile/tablet base case; this tier only
+   RE-LAYS-OUT for a wide viewport (the phone bottom-bar and 700–1024 top-bar are
+   untouched). Turns the 920px-centred column into a real app shell. */
+@media (min-width:1024px){
+  :root{ --rail:242px; --headerH:64px; --readw:920px; --dashw:1180px; }
+
+  body{
+    display:grid;
+    grid-template-columns:var(--rail) minmax(0,1fr);
+    grid-template-rows:auto 1fr;
+    grid-template-areas:"header header" "rail main";
+    min-height:100dvh;
+  }
+  header.app{ grid-area:header; height:var(--headerH); z-index:30 }
+
+  /* the step wizard becomes a vertical side-rail */
+  nav.steps{
+    grid-area:rail; align-self:start;
+    position:sticky; top:var(--headerH);
+    height:calc(100dvh - var(--headerH));
+    max-width:none; margin:0; gap:2px; overflow-y:auto;
+    flex-direction:column; align-items:stretch;
+    padding:14px 12px calc(14px + env(safe-area-inset-bottom));
+    border-right:1px solid var(--line); border-bottom:none;
+    background:linear-gradient(180deg,var(--panel),transparent);
+  }
+  .steps .step{
+    flex:0 0 auto; flex-direction:row; justify-content:flex-start;
+    gap:12px; min-width:0; min-height:0; padding:10px 12px;
+    border-bottom:none; border-radius:10px; text-align:left;
+  }
+  .steps .step span{ font-size:13.5px; font-weight:600 }
+  .steps .step:hover{ background:var(--chip); color:var(--text) }
+  .steps .step.active{ background:rgba(62,166,255,.12); border-bottom:none; color:var(--text) }
+  .steps .step.active span{ color:var(--brand-ink); font-weight:800 }
+
+  /* section headers inside the rail (Set up / Track & learn) */
+  .railgroup{
+    display:block; font-size:10.5px; font-weight:800; letter-spacing:.6px;
+    text-transform:uppercase; color:var(--muted); padding:15px 12px 5px;
+  }
+  .railgroup:first-child{ padding-top:2px }
+
+  /* content: a comfortable centred reading column by default … */
+  main.wrap{ grid-area:main; max-width:none; margin:0; padding:26px 30px 64px }
+  main.wrap > *{ max-width:var(--readw); margin-left:auto; margin-right:auto }
+
+  /* … but the Health step opens up into a multi-column dashboard, with the
+     tall labs card and the nav row spanning the full width. */
+  main.wrap > #panel-6{ max-width:var(--dashw); columns:2; column-gap:22px }
+  #panel-6 > .card{ break-inside:avoid; width:100%; margin:0 0 22px }
+  #panel-6 > .card:has(#labsBody), #panel-6 > .rowbtns{ column-span:all }
+  #panel-6 > .rowbtns{ margin-top:0 }
+
+  /* keep the sticky search bar clear of the taller desktop header */
+  .searchbar{ top:calc(var(--headerH) + 12px) }
+}
+
 @media print{
   header.app,.steps,.disclaimer,.no-print,footer,.searchbar{display:none!important}
   body{background:#fff;color:#000}
