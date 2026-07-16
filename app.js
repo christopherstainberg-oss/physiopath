@@ -3251,7 +3251,28 @@ const CURATED_VIDEOS = {
   "wrist range of motion":     { id:"qm87Fr21gI4", ch:"EmergeOrtho | Triad Region" },
   "forearm stretches":         { id:"mV-GxLMR95w", ch:"East Cheshire NHS Trust" },
   "shoulder flexion":          { id:"JwRlLR6i9q4", ch:"MGHOrthopaedics" },
-  "pronation":                 { id:"VV7zsl6LafM", ch:"Baptist Health" }
+  "pronation":                 { id:"VV7zsl6LafM", ch:"Baptist Health" },
+  /* Second pass, bar widened to include established specialty clinic groups. Five of these
+     turned out to be top-tier anyway -- the first pass simply had not found them. */
+  "wall sit":                  { id:"SofbDgyuOgo", ch:"MedStar Health" },
+  "wall squat":                { id:"SofbDgyuOgo", ch:"MedStar Health" },        // our name for the same movement
+  "single-leg squat":          { id:"hfEb7dJYZ0E", ch:"MGHOrthopaedics" },
+  "single-leg calf raises":    { id:"qPd73snQfUs", ch:"Hospital for Special Surgery" },
+  "elbow range of motion":     { id:"sOY3MvXh1Rg", ch:"Tan Tock Seng Hospital" },
+  /* Specialty clinic groups -- the widened tier. Each treats patients; none is a personal
+     brand, an education business or a device company. */
+  "tandem stance":             { id:"pAF0iMKMqZI", ch:"Activ Therapy Health Clinics" },
+  "front raise":               { id:"EqKVG30q-L4", ch:"Pursuit Physical Therapy" },
+  "prone y-t-w":               { id:"CFt3WjCBbpc", ch:"Peak Form Health Center" },
+  "prone y-t-w raises":        { id:"CFt3WjCBbpc", ch:"Peak Form Health Center" }
+  /* Deliberately still empty, and NOT to be filled by lowering the bar:
+     - double-leg balance: the American Heart Association video (STBFBCCMXIA) passes both bars,
+       but its title is "... – Post-stroke Exercise" and this movement is prescribed mostly to
+       ankle/knee patients, who would click through to a stroke video and reasonably think the
+       app had mis-linked. A search is more honest than a confusing match.
+     - gait training: only robotics vendors and trial literature exist at this bar.
+     - wrist curl: institutions call it "wrist flexion", which qNCbvUGYk3g already covers. A
+       duplicate entry would add nothing. */
 };
 /* Longest key first: "single-leg bridge" must not lose to "bridge"-style prefixes. */
 const CURATED_KEYS = Object.keys(CURATED_VIDEOS).sort((a,b)=>b.length-a.length);
