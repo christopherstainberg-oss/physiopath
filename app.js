@@ -6481,6 +6481,145 @@ function jefferyOpener(){
      somewhere else, whether the brace is actually being worn).
    Every closed option carries Jeffery's reply, so a tap opens the conversation instead of
    ending it. `more:true` nudges toward the note; the answer is never a dead end. */
+/* =====================================================================
+   THE REFLECTIVE SET — a counsellor's questions, in Jeffery's voice.
+   Adapted from a standard counselling question bank. Two deliberate departures
+   from the source list:
+
+   1. NO SESSION FRAME. The originals assume a contained 50-minute hour with a
+      trained person ("what brings you in today", "by our next session", "as a
+      result of therapy"). This is a journal opened at 11pm. Every one is
+      rewritten for someone writing alone, in Jeffery's register: warm,
+      specific, unhurried, never chirpy.
+
+   2. SOME ARE DELIBERATELY NOT HERE. The trauma, family-of-origin and
+      couples-work questions are excluded on purpose — "when was the first time
+      you felt this way", "how did your family handle emotions growing up",
+      "what patterns from your childhood show up in your relationships now",
+      "what are you still carrying from that experience", "what are you afraid
+      to say to them", "what role do you play in this conflict".
+      A counsellor asks those inside an hour they can hold, with a person who
+      can catch what surfaces and follow it up next week. An app asks at
+      bedtime, receives a disclosure, and shows a diary card. It can open that
+      door and cannot close it — and a knee-rehab tool has no business trying.
+      The strengths, values, solution-focused and CBT-style questions ARE here:
+      they are the ones that genuinely move rehab adherence and self-efficacy,
+      and they are safe to ask without a clinician in the room.
+   ===================================================================== */
+const JOURNAL_REFLECT = {
+  /* opening & rapport */
+  rapport: [
+    { t:"open", q:"What made you open this today?" },
+    { t:"open", q:"What would make today worth writing down?" },
+    { t:"open", q:"If you could sort one thing this week, what would it be?" },
+    { t:"open", q:"What's been on your mind lately — injury or otherwise?" },
+    { t:"open", q:"How are you doing right now, this minute? Not this month. Right now." },
+    { t:"open", q:"What's changed since the last time you wrote?" },
+    { t:"open", q:"What would you want me to understand about where you're at?" },
+    { t:"closed", q:"What would help most right now?", opts:[
+      { label:"Just to be heard", reply:"Then I'll shut up and read. Say whatever you like here — it doesn't have to be tidy, and nobody's marking it.", more:true },
+      { label:"Help me think it through", reply:"Alright. Lay it out — what's the actual knot in it?", more:true },
+      { label:"Distract me", reply:"Fair enough. Then don't write about the injury at all today. What else is going on?", more:true }
+    ]}
+  ],
+  /* feelings — kept at the surface, and leaning on the somatic ones, which is where a
+     rehab tool has something honest to offer: pain and mood live in the same body. */
+  feelings: [
+    { t:"open", q:"Where do you feel that, physically? People carry this stuff in odd places." },
+    { t:"open", q:"If that feeling had a voice, what would it be saying?" },
+    { t:"open", q:"What usually helps it pass?" },
+    { t:"open", q:"Is there a part of you that sees this differently? Both can be true." },
+    { t:"closed", q:"How heavy does it feel today?", opts:[
+      { label:"Light", reply:"Good. Worth noticing those days properly — they're the ones you forget by next week." },
+      { label:"Middling", reply:"The honest middle. That's where most of this lives.", more:true },
+      { label:"Heavy", reply:"Then today's a heavy one, and saying so is the useful bit. It doesn't have to mean anything more than that.", more:true }
+    ]}
+  ],
+  /* thinking & patterns — CBT-flavoured, and pointed at the catastrophising that
+     genuinely shows up in rehab ("I'll never run again") rather than at anything deeper. */
+  thinking: [
+    { t:"open", q:"What's the story you're telling yourself about this recovery?" },
+    { t:"open", q:"Is there another way to read this situation?" },
+    { t:"open", q:"What actual evidence have you got that that thought is true?" },
+    { t:"open", q:"If a mate said that to you about their injury, what would you tell them?" },
+    { t:"open", q:"What's the worst that could realistically happen — and could you handle it?" },
+    { t:"open", q:"What's a fairer way to put that?" },
+    { t:"open", q:"Is that thought doing anything useful for you right now?" },
+    { t:"open", q:"Anything you notice repeating — same thought, same week, same wall?" },
+    { t:"open", q:"You've thought this before, I'd bet. What happened last time?" }
+  ],
+  /* values & meaning — minus the legacy question, which is a lot to put to someone
+     halfway through a knee rehab on a Tuesday. */
+  values: [
+    { t:"open", q:"What matters most to you — the thing you'd protect first?" },
+    { t:"open", q:"What would this year look like if it lined up with that?" },
+    { t:"open", q:"What gives your days meaning at the moment?" },
+    { t:"open", q:"If you knew you couldn't fail at this, what would you do differently?" },
+    { t:"open", q:"What are you not willing to compromise on?" },
+    { t:"open", q:"What would the version of you who's got this handled do today?" }
+  ],
+  /* strengths & resources — the highest-value set here. Rehab is largely a self-efficacy
+     problem, and these are the questions that move it. */
+  strengths: [
+    { t:"open", q:"You've got through hard things before. What worked then?" },
+    { t:"open", q:"What's got you this far? Name it — it'll be useful again." },
+    { t:"open", q:"What are you proudest of in how you've handled this?" },
+    { t:"open", q:"What's working well right now? Genuinely — don't skip past it." },
+    { t:"open", q:"What have you got in your corner that you haven't used yet?" },
+    { t:"open", q:"When have you come back from something like this before?" },
+    { t:"open", q:"What does being resilient actually look like for you? Not the poster version." },
+    { t:"closed", q:"Have you got someone in your corner at the moment?", opts:[
+      { label:"Yes", reply:"Good. That's one of the better predictors of how this goes, and it's the one people never put on the chart." },
+      { label:"Sort of", reply:"Sort of is common and it wears thin over months. Anyone you could ask for something specific?", more:true },
+      { label:"Not really", reply:"That's a hard thing to type. Long rehab is isolating in a way people don't warn you about, and it's not a character flaw. I'm here daily — but I'm an app, and a real person is worth the effort.", more:true }
+    ]}
+  ],
+  /* decision-making & change — the adherence engine, essentially. */
+  change: [
+    { t:"open", q:"What's actually stopping you? Be honest, no one's reading over your shoulder." },
+    { t:"open", q:"What would need to be true for you to feel ready?" },
+    { t:"open", q:"What's it costing you to leave things as they are?" },
+    { t:"open", q:"What's one small thing you could do this week? Small. Genuinely small." },
+    { t:"open", q:"Is there something you're getting out of staying stuck? There usually is, and it's not a criticism." },
+    { t:"open", q:"If it were easy, what would you pick?" },
+    { t:"open", q:"What's your gut saying? Not your physio, not me — you." },
+    { t:"open", q:"What would you regret more: trying, or not trying?" },
+    { t:"closed", q:"Ready to change something this week?", opts:[
+      { label:"Yes", reply:"Then make it smaller than feels impressive. Small and done beats ambitious and abandoned — that's the whole trick.", more:true },
+      { label:"Not yet", reply:"That's a real answer, and readiness isn't willpower — it arrives when it arrives. What would have to shift first?", more:true }
+    ]}
+  ],
+  /* future-focused, including the miracle question, which is a solution-focused staple
+     and works well here. */
+  ahead: [
+    { t:"open", q:"What does “sorted” look like to you? Be specific." },
+    { t:"open", q:"Say you woke up tomorrow and this was all fixed — what's the first thing you'd notice?" },
+    { t:"open", q:"Where do you want to be a year from now?" },
+    { t:"open", q:"What's one thing you'd like to be different by this time next week?" },
+    { t:"open", q:"What would it take for you to feel at peace with how this went?" },
+    { t:"open", q:"What are you hoping comes out of all this effort?" }
+  ],
+  /* looking back — at THIS injury, deliberately. The originals reach into old memories
+     and old wounds; these stop at the thing they came here for. */
+  lookback: [
+    { t:"open", q:"What have you learned about yourself through this injury?" },
+    { t:"open", q:"How has this changed how you see things?" },
+    { t:"open", q:"How did you cope in the early days of it? Give yourself some credit." },
+    { t:"open", q:"What would you say to yourself the week this happened?" },
+    { t:"open", q:"What would being properly over this look like?" }
+  ],
+  /* closing & reflection — reframed from "this session" to "today", because that is
+     what it actually is. */
+  closing: [
+    { t:"open", q:"One thing worth taking from today?" },
+    { t:"open", q:"Anything you haven't written down that feels important?" },
+    { t:"closed", q:"Feeling any different than when you sat down?", opts:[
+      { label:"Better", reply:"Writing does that more often than people expect. That's most of why this page exists." },
+      { label:"Same", reply:"That's fine. Not every entry has to do something — some are just the record.", more:true },
+      { label:"Worse", reply:"Sorry — that happens when you actually look at it properly. It usually settles. If it doesn't, that's worth telling someone who isn't an app.", more:true }
+    ]}
+  ]
+};
 const JOURNAL_QS = {
   rehab: [
     { t:"open", q:"What did your body let you do today that it wouldn't have a month ago?" },
@@ -6541,13 +6680,33 @@ const JOURNAL_QS = {
     ]}
   ]
 };
-/* Alternate rehab / life by day so it doesn't become an interrogation about one knee, and
+/* The reflective set joins the rotation, flattened. Weighted so the injury still leads —
+   this is a rehab journal, not a counselling app wearing one as a coat. Roughly: half the
+   days about the injury, a third reflective, the rest general life. */
+JOURNAL_QS.reflect = Object.values(JOURNAL_REFLECT).reduce((a,b)=>a.concat(b), []);
+const JOURNAL_POOLS = ["rehab","rehab","rehab","reflect","reflect","life"];
+/* Alternate the topic by day so it doesn't become an interrogation about one knee, and
    alternate open / closed so there is always a low-effort way in on a bad day. */
+/* hashStr is a rolling polynomial hash (h = h*31 + c) and its LOW BITS barely move between
+   similar strings, which matters because every key here is a date. Two consequences bit:
+   - Deriving the topic from h%6 and the type from h%2 locks them together, so the "life"
+     pool (index 5, odd) could only ever ask OPEN questions.
+   - Salting with a suffix does NOT fix it: hashStr(d+"|type") == hashStr(d)*31^5 + C, and
+     31^5 is ODD, so the parity is STILL determined by hashStr(d). 31 of 82 questions were
+     unreachable across 4,000 simulated days.
+   Avalanche the hash first, then take independent slices of the mixed value. */
+const mix32 = x => {
+  x = x | 0;
+  x ^= x >>> 16; x = Math.imul(x, 0x7feb352d);
+  x ^= x >>> 15; x = Math.imul(x, 0x846ca68b);
+  x ^= x >>> 16;
+  return x >>> 0;
+};
 function jefferyQuestion(dateISO){
   const d = dateISO || todayISO();
-  const h = Math.abs(hashStr(d));
-  const pool = (h % 3 === 0) ? JOURNAL_QS.life : JOURNAL_QS.rehab;   // ~1 day in 3 is a life question
-  const want = (h % 2 === 0) ? "closed" : "open";                    // ~half are a single tap
+  const h = mix32(hashStr(d));
+  const pool = JOURNAL_QS[JOURNAL_POOLS[h % JOURNAL_POOLS.length]];
+  const want = ((h >>> 12) & 1) ? "open" : "closed";                 // an independent bit of the mixed hash
   let use = pool.filter(x => x.t === want);
   /* Personal questions built from THEIR data (hard ADL, phase criteria, sport goal, last
      entry) join the OPEN rotation — a question only they would be asked beats a good
@@ -6557,7 +6716,7 @@ function jefferyQuestion(dateISO){
     if(personal.length) use = personal.concat(use);
   }
   if(!use.length) use = pool;
-  return use[Math.abs(hashStr(d + "|" + want)) % use.length];
+  return use[mix32(h ^ 0x9e3779b9) % use.length];               // a third independent slice
 }
 function personalOpenQs(){
   const out = [];
