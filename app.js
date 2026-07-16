@@ -3146,7 +3146,7 @@ const VID_JARGON = [[/\brom\b/gi, "range of motion"], [/\bAAROM\b/gi, "assisted 
 /* After cleaning, a query made only of these words names no movement. */
 const VID_FILLER = /\b(range of motion|exercise|exercises|work|working|activity|injury|injured|area|movement|the|a|an|around|all|direction|directions|and|with|as|tolerated|progression|training|drill|drills|side|both|affected|limb)\b/gi;
 
-function videoQuery(name, pattern){
+function videoMovement(name, pattern){
   let q = String(name||"")
     .replace(VID_STRIP_TAIL, "")
     .replace(VID_STRIP_PARENS, "")
@@ -3168,9 +3168,16 @@ function videoQuery(name, pattern){
   while(VID_LEAD.test(q)) q = q.replace(VID_LEAD, "");        // "gentle progressive hip rom" -> "hip rom"
   for(const [re, to] of VID_JARGON) q = q.replace(re, to);
   q = q.replace(/\s+/g, " ").trim();
+  /* movement-only; the qualifier is added by videoQuery */
   /* Nothing but prescription language left ("gentle ROM around the injury") -> no movement
      to search for, so offer no link rather than a useless one. */
   if(q.replace(VID_FILLER, "").replace(/[^a-z0-9]/g, "").length < 3) return null;
+  return q;
+}
+/* The search query is the movement plus a clinical qualifier. */
+function videoQuery(name, pattern){
+  let q = videoMovement(name, pattern);
+  if(!q) return null;
   /* Don't repeat a word the name already has: "eyes-closed single-leg balance" +
      "balance training physical therapy" searched for "balance balance training". */
   const have = new Set(q.split(/[^a-z0-9]+/).filter(Boolean));
@@ -3181,6 +3188,79 @@ function videoQuery(name, pattern){
 function videoSearchURL(name, pattern){
   const q = videoQuery(name, pattern);
   return q ? "https://www.youtube.com/results?search_query=" + encodeURIComponent(q) : null;
+}
+/* ---------------------------------------------------------------------
+   CURATED, VERIFIED DEMONSTRATIONS — institutional publishers only.
+   Every id below was found via search and then confirmed by fetching
+   https://www.youtube.com/oembed?url=...&format=json , which returns the real
+   title and author_name (and errors for deleted/private videos). Nothing here
+   was recalled or guessed.
+   THE BAR IS THE PUBLISHER, NOT MY OPINION OF THE VIDEO. Only hospitals,
+   health systems, universities, NHS bodies and clinic groups are accepted,
+   because that is a property this file can actually check. It is NOT a claim
+   that the demonstration has been reviewed — nothing here has watched it, and
+   the UI says so.
+   Why the bar is the publisher: search snippets asserted institutional
+   provenance THREE times that oEmbed contradicted — one claimed "produced by
+   Hampshire Hospitals NHS Foundation Trust", another advertised an
+   institutional-looking pendulum video actually published by a personal brand,
+   a third credited "Christie Clinic" for an individual's upload. And the top
+   hit for "single leg squat physiotherapy" is published by "Vivid Photo
+   Visual", a video production company. Titles and snippets lie; author_name
+   does not.
+   Links rot silently. VIDEO_VERIFIED stamps when this set was last confirmed —
+   re-run the oEmbed check periodically and drop anything that errors.
+   --------------------------------------------------------------------- */
+const VIDEO_VERIFIED = "July 2026";
+const CURATED_VIDEOS = {
+  /* knee & hip */
+  "quad sets":                 { id:"t8OcF4ADaDY", ch:"Piedmont Healthcare" },
+  "short arc quad":            { id:"RGqKrP7lG0w", ch:"Piedmont Healthcare" },
+  "straight leg raise":        { id:"J6JgHgVNrZ8", ch:"MGHOrthopaedics" },
+  "heel slides":               { id:"Bz0wSFRjH2c", ch:"Michigan Medicine" },
+  "glute bridge":              { id:"PusbZuBgeug", ch:"University Orthopedics" },
+  "single-leg bridge":         { id:"p-XVfkvtUPY", ch:"UCSF Orthopaedic Surgery" },
+  "clamshell":                 { id:"jF6iE0shJKk", ch:"TSAOG Orthopaedics & Spine" },
+  "sit-to-stand":              { id:"5yxfzyzEzBY", ch:"Royal Free London NHS Foundation Trust" },
+  "step-ups":                  { id:"1hiWQ7pehjQ", ch:"Mayo Clinic" },
+  "standing hip extension":    { id:"OaUMKUEoFQ4", ch:"NHS inform" },
+  "mini squat":                { id:"X8XutSsocx4", ch:"Visiting Nurse Association Health Group" },
+  "hip abduction":             { id:"g9FtnmsIYgI", ch:"Baptist Health" },
+  "terminal knee extension":   { id:"UmM40QNd6bA", ch:"Visiting Nurse Association Health Group" },
+  "hamstring curl":            { id:"Fadu_1dGVbE", ch:"Penn State Health" },
+  /* ankle, foot & balance */
+  "ankle pumps":               { id:"n6HI30C00Bk", ch:"Visiting Nurse Association Health Group" },
+  "double-leg calf raises":    { id:"k8ipHzKeAkQ", ch:"Children's Hospital Colorado" },
+  "ankle alphabet":            { id:"dpfkCmhtg6I", ch:"Baptist Health" },
+  "single-leg balance":        { id:"Z9_ThjKQyOg", ch:"Children's Hospital Colorado" },
+  "heel raises":               { id:"jbh9Wzt2Lfk", ch:"Visiting Nurse Association Health Group" },
+  "toe raises":                { id:"jbh9Wzt2Lfk", ch:"Visiting Nurse Association Health Group" },
+  "ankle dorsiflexion stretch":{ id:"I37yHrxjQyk", ch:"MyMichiganHealth" },
+  "calf stretch":              { id:"DcnlrEs986s", ch:"NHS inform" },
+  "balance training":          { id:"cr_QY-fehdc", ch:"Ohio State Wexner Medical Center" },
+  "hop-and-stick":             { id:"I9FuUUPT0vE", ch:"Children's Hospital Colorado" },
+  /* shoulder, elbow & wrist */
+  "pendulum swings":           { id:"zY5nq68IxwA", ch:"University Orthopedics" },
+  "scapular squeezes":         { id:"9tJTdqUXW14", ch:"Adventist Health Columbia Gorge" },
+  "scapular rows":             { id:"KqAKQ9LR1l0", ch:"MultiCare Health System" },
+  "external rotation":         { id:"BcwPmwyyPww", ch:"Ohio State Wexner Medical Center" },
+  "internal rotation":         { id:"0IOLRTdvzSM", ch:"Children's Hospital Colorado" },
+  "scaption":                  { id:"JU8FTE-iHmU", ch:"UPMC" },
+  "wrist extension":           { id:"qNCbvUGYk3g", ch:"Midlands Orthopaedics & Neurosurgery" },
+  "wrist flexion":             { id:"qNCbvUGYk3g", ch:"Midlands Orthopaedics & Neurosurgery" },
+  "wrist range of motion":     { id:"qm87Fr21gI4", ch:"EmergeOrtho | Triad Region" },
+  "forearm stretches":         { id:"mV-GxLMR95w", ch:"East Cheshire NHS Trust" },
+  "shoulder flexion":          { id:"JwRlLR6i9q4", ch:"MGHOrthopaedics" },
+  "pronation":                 { id:"VV7zsl6LafM", ch:"Baptist Health" }
+};
+/* Longest key first: "single-leg bridge" must not lose to "bridge"-style prefixes. */
+const CURATED_KEYS = Object.keys(CURATED_VIDEOS).sort((a,b)=>b.length-a.length);
+function curatedVideoFor(name, pattern){
+  const m = videoMovement(name, pattern);
+  if(!m) return null;
+  if(CURATED_VIDEOS[m]) return CURATED_VIDEOS[m];
+  for(const k of CURATED_KEYS) if(m.includes(k)) return CURATED_VIDEOS[k];
+  return null;
 }
 /* A generic video knows nothing about this user's precautions. If the engine has
    reshaped or removed a whole class of movement for them, say so ON the link —
@@ -3199,8 +3279,17 @@ function videoCaveat(){
 function videoLinkHTML(name, pattern){
   const url = videoSearchURL(name, pattern);
   if(!url) return "";                       // no movement to search for — say nothing
+  const cur = curatedVideoFor(name, pattern);
+  /* A curated link NAMES its publisher, because that is the only thing that was actually
+     checked. A search link promises nothing and says so. Never imply the video was reviewed. */
+  const main = cur
+    ? `<a class="vidlink vidcur" href="https://www.youtube.com/watch?v=${esc(cur.id)}" target="_blank" rel="noopener noreferrer nofollow">▶ Watch how <span class="vidext">↗</span></a>
+       <span class="vidsrc">from <b>${esc(cur.ch)}</b> <span class="vidver">· link checked ${esc(VIDEO_VERIFIED)}</span></span>
+       <a class="vidmore" href="${esc(url)}" target="_blank" rel="noopener noreferrer nofollow">other videos ↗</a>`
+    : `<a class="vidlink" href="${esc(url)}" target="_blank" rel="noopener noreferrer nofollow">▶ Find a video <span class="vidext">↗</span></a>
+       <span class="vidsrc">opens a YouTube search — nothing here is vetted</span>`;
   return `<div class="vidrow no-print">
-    <a class="vidlink" href="${esc(url)}" target="_blank" rel="noopener noreferrer nofollow">▶ Watch how <span class="vidext">↗</span></a>
+    ${main}
     <span class="vidnote">${esc(videoCaveat())}</span>
     <span class="vidoff">You're offline — this needs a connection.</span>
   </div>`;
