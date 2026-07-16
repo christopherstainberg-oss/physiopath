@@ -532,7 +532,7 @@ const PED_SETS = [
   cue:"Supervised, technique before load. Build reps and quality before weight — and no max-effort singles until you're skeletally mature and your technique is solid.",
   items:[
   {n:"Goblet squat (technique-first)",     reg:["Knee","Hip"],     t:["weight_bearing"], a:[12,18], d:"3×8–12", diff:2},
-  {n:"Barbell back squat (supervised)",    reg:["Knee","Hip"],     t:["weight_bearing"], a:[14,18], d:"3×6–10", diff:3},
+  {n:"Barbell back squat (supervised)",    reg:["Knee","Hip"],     t:["weight_bearing"], a:[13,18], d:"3×6–10", diff:3},
   {n:"Romanian deadlift (light, technique)", reg:["Hip","Spine","Core"], t:["weight_bearing"], a:[13,18], d:"3×8–10", diff:3},
   {n:"Split squat",                        reg:["Knee","Hip"],     t:["weight_bearing","balance"], a:[12,18], d:"3×8–10 each", diff:2},
   {n:"Bulgarian split squat",              reg:["Knee","Hip"],     t:["weight_bearing","balance"], a:[13,18], d:"3×8 each", diff:3},
@@ -554,7 +554,7 @@ const PED_SETS = [
   {n:"Incline push-up",                    reg:["Shoulder","Core"], t:["weight_bearing"], a:[12,18], d:"3×10–12", diff:1},
   {n:"Inverted row",                       reg:["Scapula/Upper back"], t:[],    a:[12,18], d:"3×8–12", diff:2},
   {n:"Band or cable row",                  reg:["Scapula/Upper back"], t:[],    a:[12,18], d:"3×12", diff:1},
-  {n:"Overhead press (light, technique)",  reg:["Shoulder"],       t:["overhead"], a:[14,18], d:"3×8–10", diff:3},
+  {n:"Overhead press (light, technique)",  reg:["Shoulder"],       t:["overhead"], a:[13,18], d:"3×8–10", diff:3},
   {n:"Band external rotation",             reg:["Shoulder"],       t:[],        a:[12,18], d:"3×12 each", diff:1},
   {n:"Prone Y-T-W raises",                 reg:["Scapula/Upper back","Shoulder"], t:["prone"], a:[12,18], d:"3×10 each", diff:2},
   {n:"Face pull",                          reg:["Scapula/Upper back","Shoulder"], t:[], a:[13,18], d:"3×12–15", diff:2},

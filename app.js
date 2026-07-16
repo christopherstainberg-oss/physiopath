@@ -1208,19 +1208,29 @@ const isChildUser  = () => userAgeYears() < 18;
    school-age child does these exactly as an adult does; a toddler cannot follow them. */
 const PED_SAFE_PAT = new Set(["pump","supine","seated","standing","pool","breathing","mobility","isometric"]);
 const PED_HEAVY_EQ = /^(Barbell|Kettlebell|Machine|Sandbag|Cable|Suspension|Med-ball|Dumbbell)/i;
-/* Floors for the adult library. Youth resistance training is safe and effective when it is
-   supervised and technique-led (NSCA position statement 2009; International Consensus,
-   BJSM 2014) — so this is not "no weights until 16", which the evidence contradicts. It is:
-   free-weight barbell/machine work from the adolescent years with coaching, bodyweight and
-   band work earlier, and maximal or ballistic lifting not at all until skeletal maturity. */
+/* Floors for the adult library — the paediatric one declares its own. See the ordering note
+   inside: 14 is maximal/ballistic effort, 13 is coached free weights, 12 is difficulty-3
+   bodyweight, 6 is age-neutral therapeutic work. */
 function exAgeMin(e){
   if(e._am !== undefined) return e._am;
   let v;
   if(e.aMin != null) v = e.aMin;                                        // paediatric library: it declares its own
   else {
     const t = e.tags || [];
-    if(PED_HEAVY_EQ.test(e.equipment || "")) v = 14;
-    else if(t.includes("high_intensity") || e.difficulty >= 4) v = 14;  // ballistic / maximal — skeletal maturity
+    /* ⚠ ORDER IS THE POINT. The ballistic/maximal test MUST come before the equipment test:
+       575 heavy-equipment movements are ALSO difficulty-4 (161 barbell ones — "Barbell
+       single-leg Romanian deadlift", "Machine Nordic (eccentric) hamstring curl"), so with
+       equipment checked first they'd inherit the free-weight floor and land at 13. These are
+       two different claims and only one of them is about the bar:
+         14 — maximal and ballistic effort. This is the line the evidence actually draws, and
+              it is about the skeleton, not the kit: the growth plate is the weak link until
+              it fuses, so max-effort and ballistic work waits for maturity + competence.
+         13 — coached free weights and machines. Supervised, technique-led resistance training
+              is safe and effective well before this (NSCA 2009; Consensus BJSM 2014); age is
+              not really the gate here, supervision and technique are, so this floor is a
+              proxy for "old enough to be coached through a barbell lift" and nothing more. */
+    if(t.includes("high_intensity") || e.difficulty >= 4) v = 14;
+    else if(PED_HEAVY_EQ.test(e.equipment || "")) v = 13;
     else if(e.difficulty === 3) v = 12;
     else if(PED_SAFE_PAT.has(e.pattern) && e.difficulty <= 2 && !t.includes("impact")) v = 6;
     else v = 12;
@@ -1248,7 +1258,10 @@ const isPediatricEx = e => !!e && (Array.isArray(e.tags) ? e.tags.includes("pedi
    13-year-old's protocol kept a drill the library would have refused them. Same movement,
    two answers, decided by which layer it happened to arrive through. */
 const PROTO_AGE_RULES = [
-  [/barbell|kettlebell|machine|smith|sled|sandbag|cable|leg press|lat pull|bench press|olympic|clean|snatch|\b1rm\b|max(imal)? (lift|effort)|nordic|bound|depth (jump|drop)|pro-agility|5-10-5|t-drill|shuttle/i, 14],
+  /* Maximal / ballistic FIRST, and above the equipment row — same reason as exAgeMin(): the
+     two are different claims, and a barbell Nordic is caught by the effort, not the bar. */
+  [/olympic|clean|snatch|\b1rm\b|max(imal)? (lift|effort)|nordic|bound|depth (jump|drop)|pro-agility|5-10-5|t-drill|shuttle/i, 14],
+  [/barbell|kettlebell|machine|smith|sled|sandbag|cable|leg press|lat pull|bench press/i, 13],
   [/pistol|sprint|plyo|carioca|cutting|change of direction|a-skip|deceleration/i, 13],
   [/eccentric|deficit|weighted|loaded|goblet|bulgarian|copenhagen|single-leg romanian|hop-and-stick|drop-and-stick|box jump|agility/i, 12],
   [/quad set|glute set|ankle pump|heel slide|pendulum|passive|isometric|stretch|breathing|diaphragm|range of motion|\brom\b|mobility|positioning|elevation|compression|tummy time|play/i, 4],
