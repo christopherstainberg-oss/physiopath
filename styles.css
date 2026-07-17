@@ -572,6 +572,14 @@ body.isoffline .vidnote{display:none}
 .msg.bot{background:var(--panel-2);border:1px solid var(--line);border-top-left-radius:4px;align-self:flex-start}
 .msg.user{background:linear-gradient(135deg,var(--brand),#2b8ce0);color:#04121f;border-top-right-radius:4px;align-self:flex-end;font-weight:500}
 .msg.bot .src{display:block;margin-top:8px;color:var(--muted);font-size:11px}
+/* rendered markdown inside a coach reply (mdLite) */
+.msg ul,.msg ol{margin:6px 0;padding-left:20px}
+.msg li{margin:2px 0}
+.msg code{background:var(--chip);border-radius:5px;padding:1px 5px;font-size:.92em}
+.msg .mdh{font-weight:800;margin:8px 0 2px}
+.msg .mdh1{font-size:1.08em}
+.msgcopy{display:inline-block;margin-top:8px;font-size:11px;font-weight:600;color:var(--muted);background:transparent;border:1px solid var(--line);border-radius:8px;padding:3px 9px;cursor:pointer;font-family:inherit}
+.msgcopy:hover{border-color:var(--brand);color:var(--text)}
 .chatform{display:flex;gap:8px;margin-top:12px}
 .chatform input{flex:1}
 .suggests{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
