@@ -499,21 +499,16 @@
   </section>
 
   <section class="panel hide" id="panel-6">
-    <nav class="hsubnav no-print" aria-label="Jump to a health section">
-      <a href="#hrMonitorCard">⌚ Monitor</a>
-      <a href="#vitalsLogCard">📈 Vitals</a>
-      <a href="#labsCard">🧪 Labs</a>
-      <a href="#riskCard">❤️ Risk</a>
-      <a href="#dataCard">💾 Data</a>
-      <a href="#otherRiskCard">⚠️ Other</a>
-    </nav>
-    <div class="card" id="hrMonitorCard">
-      <h2>⌚ Smartwatch / heart-rate monitor</h2>
+    <details class="card collapsecard" id="hrMonitorCard">
+      <summary class="collapsesum"><h2>⌚ Smartwatch / heart-rate monitor</h2><span class="collapsehint">tap to expand</span><span class="collapsechev" aria-hidden="true">▾</span></summary>
+      <div class="collapsebody">
       <div id="hrMonitorOut"></div>
-    </div>
+      </div>
+    </details>
 
-    <div class="card" id="vitalsLogCard">
-      <h2>Vitals log &amp; trend</h2>
+    <details class="card collapsecard" id="vitalsLogCard">
+      <summary class="collapsesum"><h2>Vitals log &amp; trend</h2><span class="collapsehint">tap to expand</span><span class="collapsechev" aria-hidden="true">▾</span></summary>
+      <div class="collapsebody">
       <p class="hint">Record your vitals over time to see the trend across consecutive readings. Stored on your device only.</p>
       <div class="grid3">
         <label class="subfield"><span>Date</span><input type="date" id="vlDate" /></label>
@@ -527,10 +522,12 @@
       </div>
       <div class="rowbtns"><span></span><button class="btn primary" id="vlSave">Save vitals entry</button></div>
       <div id="vitalsLogBody"></div>
-    </div>
+      </div>
+    </details>
 
-    <div class="card" id="labsCard">
-      <h2>Lab Values &amp; Reference Ranges</h2>
+    <details class="card collapsecard" id="labsCard">
+      <summary class="collapsesum"><h2>Lab Values &amp; Reference Ranges</h2><span class="collapsehint">tap to expand</span><span class="collapsechev" aria-hidden="true">▾</span></summary>
+      <div class="collapsebody">
       <p class="hint">Enter your latest results and adjust the reference range if your lab or clinician uses a different one.
         <b style="color:var(--brand-2)">Green</b> = within range, <b style="color:var(--danger)">red</b> = out of range with tips to improve it.
         Educational only — reference ranges vary by lab; your clinician's ranges take precedence.</p>
@@ -541,7 +538,8 @@
       </div>
       <div id="labImport" class="no-print"></div>
       <div id="labsBody"></div>
-    </div>
+      </div>
+    </details>
 
     <div class="card" id="riskCard">
       <h2>Health Risk Assessment</h2>
@@ -549,8 +547,9 @@
       <div id="riskBody"></div>
     </div>
 
-    <div class="card" id="dataCard">
-      <h2>💾 Back up your data</h2>
+    <details class="card collapsecard" id="dataCard">
+      <summary class="collapsesum"><h2>💾 Back up your data</h2><span class="collapsehint">tap to expand</span><span class="collapsechev" aria-hidden="true">▾</span></summary>
+      <div class="collapsebody">
       <p class="hint">Everything you've entered lives <b>only in this browser</b> — nothing is uploaded.
         That protects your privacy, but it also means clearing your browsing data, or switching phone,
         erases your whole history. Download a backup now and again; your API key is never included.</p>
@@ -560,18 +559,16 @@
         <input type="file" id="importFile" accept="application/json,.json" hidden />
       </div>
       <div class="datawarn" id="dataWarn"></div>
-    </div>
+      </div>
+    </details>
 
-    <div class="card" id="otherRiskCard">
-      <h2>🔎 Other Health Risks to Be Aware Of</h2>
+    <details class="card collapsecard" id="otherRiskCard">
+      <summary class="collapsesum"><h2>🔎 Other Health Risks to Be Aware Of</h2><span class="collapsehint">tap to expand</span><span class="collapsechev" aria-hidden="true">▾</span></summary>
+      <div class="collapsebody">
       <p class="hint">A clinical read of your labs and vitals grouped into risk areas — 🫀 Metabolic, 🔴 Hematology, 🧁 Nutrition, 🦋 Thyroid, 🦴 Bone, 🩹 Thrombosis, 🔥 Inflammation &amp; Infection, 🌸 Reproductive &amp; Hormonal, and 🎗️ Oncology-marker awareness. Each appears once you enter relevant values. Educational only — not a diagnosis.</p>
       <div id="otherRiskBody"></div>
-    </div>
-
-    <div class="rowbtns no-print">
-      <button class="btn ghost" data-goto="5">← Back to journal</button>
-      <button class="btn primary" data-goto="7">Ask Jeffery →</button>
-    </div>
+      </div>
+    </details>
   </section>
 
   <!-- ============ STEP 7: COACH ============ -->

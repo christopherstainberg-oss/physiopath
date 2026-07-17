@@ -1114,16 +1114,6 @@ details.labdomain[open]>summary.labdh::before{transform:rotate(90deg)}
 .hdrctx b{color:var(--text);font-weight:700}
 .hdrctx .sep{opacity:.5;margin:0 8px}
 
-/* in-step quick-nav for the (tall) Health step — sticky on phones, static on desktop.
-   top clears the real mobile header: a 44px .icon-btn + 12+12 padding = 68px (border-box),
-   so the pills sit flush under it instead of tucking ~14px behind it while scrolling. */
-.hsubnav{position:sticky;top:calc(68px + env(safe-area-inset-top));z-index:6;
-  display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 14px;padding:8px 0;background:var(--bg)}
-.hsubnav a{font-size:12.5px;font-weight:600;color:var(--muted);text-decoration:none;
-  border:1px solid var(--line);background:var(--panel-2);border-radius:999px;padding:6px 12px;white-space:nowrap}
-.hsubnav a:hover{border-color:var(--brand);color:var(--text)}
-#panel-6 .card{scroll-margin-top:118px}
-
 /* railgroup labels are only shown in the desktop side-rail (below) */
 .railgroup{display:none}
 
@@ -1131,7 +1121,7 @@ details.labdomain[open]>summary.labdh::before{transform:rotate(90deg)}
    Purely additive: everything above is the phone base case; the ≤700px bottom-bar is
    untouched. This tier RE-LAYS-OUT the same markup into a real app shell. */
 @media (min-width:768px){
-  :root{ --rail:210px; --headerH:64px; --readw:920px; --dashw:1180px; }
+  :root{ --rail:210px; --headerH:64px; --readw:920px; }
 
   body{
     display:grid;
@@ -1174,16 +1164,9 @@ details.labdomain[open]>summary.labdh::before{transform:rotate(90deg)}
   main.wrap{ grid-area:main; max-width:none; margin:0; padding:22px 22px 60px }
   main.wrap > *{ max-width:var(--readw); margin-left:auto; margin-right:auto }
 
-  /* … the Health step opens into a dashboard. Row-major GRID, not a `columns` masonry
-     flow: the newspaper flow filled down column 1 then column 2, which reordered the
-     Risk / Data / Other cards out of the quick-nav's order. A grid places cards
-     left→right, top→bottom in DOM (= nav) order. One column here; two at ≥1024 (below).
-     `align-items:start` lets a short card keep its natural height instead of stretching
-     to the taller card beside it — the cost is a gap under the shorter one (masonry
-     packs tighter but reorders, which is the bug we're fixing). */
-  main.wrap > #panel-6{ max-width:var(--dashw); display:grid; grid-template-columns:1fr;
-    gap:22px; align-items:start }
-  #panel-6 > *{ margin:0 }
+  /* The Health step is a single reading column like every other step (it used to be a
+     wide two-column dashboard). Its cards collapse (see index.html) so the section stays
+     short and scannable — one column, no multi-column layout to reorder. */
 
   /* Library results flow into responsive columns within the reading width */
   #exResults{ display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
@@ -1195,9 +1178,8 @@ details.labdomain[open]>summary.labdh::before{transform:rotate(90deg)}
   /* light visual hierarchy: the backup / data utility card recedes vs primary content */
   #dataCard{ box-shadow:none; background:var(--panel-2) }
 
-  /* header shows the current condition; the Health quick-nav is static (dashboard is short) */
+  /* header shows the current condition on desktop */
   .hdrctx{ display:block }
-  #panel-6 > .hsubnav{ position:static; margin:0 }
 }
 
 /* larger screens: a wider rail and a little more breathing room */
@@ -1207,13 +1189,6 @@ details.labdomain[open]>summary.labdh::before{transform:rotate(90deg)}
   .steps .step{ gap:12px; padding:10px 12px }
   .steps .step span{ font-size:13.5px }
   .railgroup{ font-size:10.5px; padding:15px 12px 5px }
-
-  /* two-column dashboard; the labs card, quick-nav and footer buttons span both tracks.
-     repeat(2,…) keeps the count fixed so `grid-column:1/-1` resolves unambiguously. */
-  main.wrap > #panel-6{ grid-template-columns:repeat(2, minmax(0,1fr)) }
-  #panel-6 > .hsubnav,
-  #panel-6 > .card:has(#labsBody),
-  #panel-6 > .rowbtns{ grid-column:1 / -1 }
 }
 
 @media print{
