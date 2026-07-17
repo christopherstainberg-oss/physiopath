@@ -830,6 +830,10 @@ details.preccontrols-wrap[open]>summary.preccontrols-sum::before{content:"▾ "}
 .clindatef>span{display:block;font-size:12.5px;font-weight:600;margin-bottom:4px}
 .clinmeta{margin:2px 0 0;font-style:italic}
 .clinstale{margin-top:6px}
+.clinrecon{margin-top:4px}
+.appsuggesthead{margin:16px 0 8px;font-size:13.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px}
+.appsuggesthead b{color:var(--text)}
+.appsuggesthead .sub{color:var(--muted);font-weight:400}
 .clinpreview:not(:empty){border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--panel-2);font-size:13px}
 .clinprevhead{font-weight:700;margin-bottom:6px;color:var(--brand-2)}
 .clinprevph{color:var(--muted);margin:2px 0}

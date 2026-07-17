@@ -655,6 +655,18 @@ function renderProgram(prog){
   html += pedGuidanceCard();      // child only; age reshapes everything below it, so it says so first
   html += safetyNotesCard(prog);  // already collapsed by default — safety notes before the plan
 
+  // ── Clinician's plan LEADS (audit 1/3): when the user gave us a clinician protocol or precaution,
+  //    their orders govern — show the protocol first, flag that it takes precedence, and label the
+  //    auto-generated plan below as secondary/educational.
+  const _hasClin = (state.clinicianProtocols||[]).length>0;
+  const _hasClinPrec = !!(state.clinPrecautionProtocol||"").trim();
+  if(_hasClin || _hasClinPrec)
+    html += `<div class="banner info clinrecon">🩺 <b>Your clinician's guidance comes first.</b> Where their orders differ from the app's suggestions below, follow your clinician.</div>`;
+  if(_hasClin){
+    html += clinicianProtocolCards();     // clinician protocol(s) lead, shown verbatim (added in the Clinician step)
+    html += `<div class="appsuggesthead"><b>App suggestions</b> <span class="sub">— educational, secondary to your clinician's plan above</span></div>`;
+  }
+
   prog.items.forEach((item, ci)=>{
     html += `<div class="card"><h2>${esc(item.name)}</h2>
       <p class="hint">${esc(conditionExplain(item, prog.track))}</p>
@@ -697,7 +709,6 @@ function renderProgram(prog){
     html += `<div class="redflags"><b>⚠ When to get it checked:</b> ${esc(item.redflags)}</div></div>`;
   });
 
-  html += clinicianProtocolCards();     // any saved physician protocols, shown verbatim (added in the Clinician step)
   // ── Reference — collapsed by default (need-to-know first). The "why this plan", return goals,
   //    daily-task suggestions, home mode, and the vitals / risk / medication considerations: all
   //    valuable on demand, none of them what the user opened the Program to see today.
