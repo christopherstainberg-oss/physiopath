@@ -27,6 +27,7 @@
   </div>
   <div class="hdrctx" id="hdrContext" aria-live="polite"></div>
   <div class="grow"></div>
+  <button class="icon-btn no-print hide" id="shareBtn" title="Share your plan" aria-label="Share your plan">📤</button>
   <button class="icon-btn no-print" id="printBtn" title="Print / Save PDF" aria-label="Print or save as PDF">🖨</button>
   <button class="icon-btn no-print" id="resetBtn" title="Start over" aria-label="Start over">↺</button>
 </header>
@@ -502,14 +503,14 @@
   <section class="panel hide" id="panel-6">
     <h2 class="sr-only">Health &amp; vitals</h2>
     <details class="card collapsecard" id="hrMonitorCard">
-      <summary class="collapsesum"><h2>⌚ Smartwatch / heart-rate monitor</h2><span class="collapsehint">Expand</span><span class="collapsechev" aria-hidden="true">▾</span></summary>
+      <summary class="collapsesum"><h2><span aria-hidden="true">⌚</span> Smartwatch / heart-rate monitor</h2><span class="collapsehint">Expand</span><span class="collapsechev" aria-hidden="true">▾</span></summary>
       <div class="collapsebody">
       <div id="hrMonitorOut"></div>
       </div>
     </details>
 
     <details class="card collapsecard" id="vitalsLogCard">
-      <summary class="collapsesum"><h2>📈 Vitals log &amp; trend</h2><span class="collapsehint">Expand</span><span class="collapsechev" aria-hidden="true">▾</span></summary>
+      <summary class="collapsesum"><h2><span aria-hidden="true">📈</span> Vitals log &amp; trend</h2><span class="collapsehint">Expand</span><span class="collapsechev" aria-hidden="true">▾</span></summary>
       <div class="collapsebody">
       <p class="hint">Record your vitals over time to see the trend across consecutive readings. Stored on your device only.</p>
       <div class="grid3">
@@ -528,7 +529,7 @@
     </details>
 
     <details class="card collapsecard" id="labsCard">
-      <summary class="collapsesum"><h2>🧪 Lab Values &amp; Reference Ranges</h2><span class="collapsehint">Expand</span><span class="collapsechev" aria-hidden="true">▾</span></summary>
+      <summary class="collapsesum"><h2><span aria-hidden="true">🧪</span> Lab Values &amp; Reference Ranges</h2><span class="collapsehint">Expand</span><span class="collapsechev" aria-hidden="true">▾</span></summary>
       <div class="collapsebody">
       <p class="hint">Enter your latest results and adjust the reference range if your lab or clinician uses a different one.
         <b style="color:var(--brand-2)">Green</b> = within range, <b style="color:var(--danger)">red</b> = out of range with tips to improve it.
@@ -544,7 +545,7 @@
     </details>
 
     <details class="card collapsecard" id="riskCard">
-      <summary class="collapsesum"><h2>❤️ Health Risk Assessment</h2><span class="collapsehint">Expand</span><span class="collapsechev" aria-hidden="true">▾</span></summary>
+      <summary class="collapsesum"><h2><span aria-hidden="true">❤️</span> Health Risk Assessment</h2><span class="collapsehint">Expand</span><span class="collapsechev" aria-hidden="true">▾</span></summary>
       <div class="collapsebody">
       <p class="hint">Educational estimates for cardiac, stroke, liver, kidney and digestive health, from the vitals, labs and history you entered. Not a diagnosis or a validated risk score.</p>
       <div id="riskBody"></div>
@@ -552,7 +553,7 @@
     </details>
 
     <details class="card collapsecard" id="dataCard">
-      <summary class="collapsesum"><h2>💾 Back up your data</h2><span class="collapsehint">Expand</span><span class="collapsechev" aria-hidden="true">▾</span></summary>
+      <summary class="collapsesum"><h2><span aria-hidden="true">💾</span> Back up your data</h2><span class="collapsehint">Expand</span><span class="collapsechev" aria-hidden="true">▾</span></summary>
       <div class="collapsebody">
       <p class="hint">Everything you've entered lives <b>only in this browser</b> — nothing is uploaded.
         That protects your privacy, but it also means clearing your browsing data, or switching phone,
@@ -567,7 +568,7 @@
     </details>
 
     <details class="card collapsecard" id="otherRiskCard">
-      <summary class="collapsesum"><h2>🔎 Other Health Risks to Be Aware Of</h2><span class="collapsehint">Expand</span><span class="collapsechev" aria-hidden="true">▾</span></summary>
+      <summary class="collapsesum"><h2><span aria-hidden="true">🔎</span> Other Health Risks to Be Aware Of</h2><span class="collapsehint">Expand</span><span class="collapsechev" aria-hidden="true">▾</span></summary>
       <div class="collapsebody">
       <p class="hint">A clinical read of your labs and vitals grouped into risk areas — 🫀 Metabolic, 🔴 Hematology, 🧁 Nutrition, 🦋 Thyroid, 🦴 Bone, 🩹 Thrombosis, 🔥 Inflammation &amp; Infection, 🌸 Reproductive &amp; Hormonal, and 🎗️ Oncology-marker awareness. Each appears once you enter relevant values. Educational only — not a diagnosis.</p>
       <div id="otherRiskBody"></div>

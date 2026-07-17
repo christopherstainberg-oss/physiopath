@@ -874,6 +874,8 @@ footer b{color:var(--text)}
   border-radius:12px;padding:12px 18px;box-shadow:var(--shadow);font-size:14px;z-index:50;max-width:92%}
 .toast-update{display:flex;align-items:center;gap:10px}
 .toast .updbtn{padding:6px 12px;font-size:13px;white-space:nowrap}
+.toastbtn{margin-left:14px;padding:5px 12px;font-size:13px;font-weight:700;border:1px solid var(--brand);background:transparent;color:var(--brand-ink);border-radius:8px;cursor:pointer;font-family:inherit;vertical-align:middle}
+.toastbtn:hover{background:var(--chip)}
 
 /* searchable surgery picker */
 .surgpick{font-size:12.5px;margin-top:8px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;line-height:1.5}
