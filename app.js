@@ -330,7 +330,7 @@ const state = {
   vitalsLog:[], labs:{}, labHist:{},
   screen:{}, falls:"", aid:"", smoking:"", alcohol:"", sleep:"", stress:"", waterConfidence:"", adls:[],
   equipment:"", timePerDay:"", workDemand:"", priorEpisodes:"", moveConfidence:"", pregStage:"", footSensation:"",
-  medIds:[], medFilter:false, homeMode:false, customPrecautions:[], clinicianProtocols:[], clinPrecautionProtocol:"", clinicianGuided:false, selfGuided:false,
+  medIds:[], medFilter:false, homeMode:false, customPrecautions:[], clinicianProtocols:[], clinPrecautionProtocol:"", clinParams:{hr:{min:"",max:""},sbp:{min:"",max:""},dbp:{min:"",max:""},spo2:{min:"",max:""},hrEx:{max:""}}, clinicianGuided:false, selfGuided:false,
   medDoses:{}, weightBearing:{status:"",pct:"",lbs:"",side:"",limb:"le"}, devices:[],
   cardiacDevice:{type:"",icdRate:""}, specialPrecautions:[], planVariant:{}, progress:{}, measures:{},
   log:[], logMood:"", logDone:[], logTpl:"blank", photoNoted:false,
@@ -637,6 +637,64 @@ function hrZones(){
   return { hrmax, rest: useHRR?rest:null, zones, deviceCap: cap };
 }
 
+/* ── Telemetry targets ─────────────────────────────────────────────────────────────────────
+   Evidence-based RESTING-vitals target ranges (ACC/AHA 2017 BP categories; AHA resting-HR;
+   ACSM/AACVPR). Used to colour-code the Health vitals and as the fallback when a clinician
+   hasn't prescribed a per-user range. A clinician can override any of these in the Clinician
+   step (state.clinParams). Educational targets — not a diagnosis or a validated risk score. */
+const VITAL_TARGETS = {
+  hr:   { label:"Heart rate",   unit:"bpm",  field:"restHR", min:60, max:100 },  // AHA resting 60–100
+  sbp:  { label:"Systolic BP",  unit:"mmHg", field:"sbp",    min:90, max:130 },  // <120 normal, ≥130 elevated, <90 low
+  dbp:  { label:"Diastolic BP", unit:"mmHg", field:"dbp",    min:60, max:85  },  // <80 normal
+  spo2: { label:"SpO₂",         unit:"%",    field:"spo2",   min:95, max:100 }   // ≥95 normal; <90 hypoxaemia
+};
+/* ACSM relative-contraindication "don't start / hold" thresholds for RESTING values. */
+const VITAL_HOLD = { sbp:180, dbp:110, spo2:90 };
+/* Effective target for a vital: the clinician's prescribed range if set, else the evidence-based
+   default. `prescribed` marks a clinician override (drives the stronger program note + wording). */
+function clinRange(key){
+  const d = VITAL_TARGETS[key] || {};
+  const c = ((state.clinParams||{})[key]) || {};
+  const has = x => x!=="" && x!=null && !isNaN(+x);
+  return { min: has(c.min)?+c.min:d.min, max: has(c.max)?+c.max:d.max,
+           prescribed: has(c.min)||has(c.max), label:d.label, unit:d.unit };
+}
+/* Classify a single vital value against its effective target → in / low / high / none. */
+function evalVital(key, value){
+  const v = vnum(value), r = clinRange(key);
+  if(v==null) return { status:"none", value:null, ...r };
+  let status = "in";
+  if(r.min!=null && v < r.min) status = "low";
+  else if(r.max!=null && v > r.max) status = "high";
+  return { status, value:v, ...r };
+}
+/* Clinical context for telemetry-driven guidance. cardiac = the engine's own cardiopulmonary
+   detector + a cardiac device + sternal (open-heart-surgery) precautions; neuro = the neuro
+   history flags. Both stay conservative — they only ever add caution, never intensity. */
+function cardiacContext(){
+  const sp = new Set([...(state.specialPrecautions||[]), ...(typeof impliedSpecialPrecautionKeys==="function"?impliedSpecialPrecautionKeys():[])]);
+  return someCardioPulm() || hasCardiacDevice() || sp.has("sternal");
+}
+function neuroContext(){
+  return (state.flags||[]).some(f=>["balance_risk","neuropathy","neuro_condition","seizure"].includes(f));
+}
+/* Evidence-based, CONSERVATIVE program notes from telemetry + cardiac/neuro context (concatenated
+   into prog.notes). Out-of-prescribed-range resting vitals and cardiac/neuro status only ever make
+   the plan safer — ease off, monitor, seek review — never harder. */
+function telemetryNotes(){
+  const notes = [], lv = latestVitals();
+  ["sbp","dbp","hr","spo2"].forEach(key=>{
+    const r = clinRange(key); if(!r.prescribed) return;                 // only clinician-prescribed ranges add a note
+    const ev = evalVital(key, lv[VITAL_TARGETS[key].field]);
+    if(ev.status==="high") notes.push(`Latest ${r.label} ${ev.value}${r.unit} is above your clinician's prescribed range (${r.min}–${r.max}${r.unit}) — ease off, recheck, and follow your clinician's guidance.`);
+    else if(ev.status==="low") notes.push(`Latest ${r.label} ${ev.value}${r.unit} is below your clinician's prescribed range (${r.min}–${r.max}${r.unit}) — ease off, recheck, and follow your clinician's guidance.`);
+  });
+  const hrEx = ((state.clinParams||{}).hrEx||{}).max;
+  if(hrEx!=="" && hrEx!=null && !isNaN(+hrEx)) notes.push(`Keep your exercise heart rate under your clinician's prescribed ceiling of ${+hrEx} bpm — slow down or rest if you approach it.`);
+  if(cardiacContext()) notes.push(`Cardiac status: work at an effort where you can still talk (RPE ~11–13), monitor your heart rate, blood pressure and SpO₂, and STOP for chest pain or pressure, unusual breathlessness, palpitations, a cold sweat or dizziness. Progress only when your clinician agrees.`);
+  if(neuroContext()) notes.push(`Neurological status: don't hold your breath or strain (avoid Valsalva); change position slowly (blood-pressure swings are common) and monitor your blood pressure. STOP for a sudden severe headache, a sharp rise in blood pressure, new weakness or numbness, or vision changes.`);
+  return notes;
+}
 // Objective-data-derived engine flags (baked into the program through gatherFlags).
 function vitalFlags(){
   /* latestVitals(), NOT state.vitals. hrZones() was migrated to the logged reading and this,
@@ -3368,7 +3426,7 @@ function generateProgram(){
     sessions: (primaryPlan && primaryPlan.freq) ? primaryPlan.freq : sessionsText(track),
     load:loadGuidance(),
     builtFrom: { pain: effectivePain().v, flags: flags.slice().sort().join(",") },   // so planDrift() can tell when it goes stale
-    flags, notes:[...new Set(window.notesForFlags(flags).concat(R.notes))], clearance:clearanceNeeded(flags),
+    flags, notes:[...new Set(window.notesForFlags(flags).concat(R.notes).concat(telemetryNotes()))], clearance:clearanceNeeded(flags),
     supervision:displaySupervision(flags, clearanceNeeded(flags)), items,
     removed:Array.from(removedAll, ([n,tag])=>({n,tag}))
   };
@@ -5342,7 +5400,9 @@ function parseClinProtocol(text){
     if(!d) d = "as prescribed";
     cur.ex.push({ n, d, c });
   }
-  return { phases: phases.filter(p=>p.ex.length) };
+  // Keep phases that carry a goal/criteria even with no exercise lines (e.g. "Phase 4: return to
+  // sport — MD clearance") — those milestone phases are clinically meaningful, not noise to drop.
+  return { phases: phases.filter(p=>p.ex.length || (p.goal && p.goal.trim())) };
 }
 const CLIN_EXAMPLE = `Phase 1: Protection (weeks 0-2) — goal: control swelling, restore full extension
 - Quad sets — 3×10 — lock the knee straight
@@ -5356,17 +5416,37 @@ Phase 3: Return to function (weeks 7-12)
 - Step-downs — 3×10 each — control, no knee collapse
 - Single-leg balance + reach — 3×8 each`;
 /* Editable starter auto-loaded into the clinician form for a clinician-guided session. */
-const CLIN_STARTER = `Phase 1: Protection (weeks 0-2) — goal: protect, control swelling, restore motion
-- Quad sets — 3×10 — hold 5s
-- Ankle pumps — 3×20
-- Heel slides — 3×15
-Phase 2: Early strength (weeks 3-6) — goal: normalise gait, build strength
-- Mini squats — 3×12 — pain-free range
-- Standing hip abduction — 3×12 each
-- Stationary bike — 10 min
-Phase 3: Return to function (weeks 7-12) — goal: full strength & control
-- Step-ups — 3×10 each
-- Single-leg balance — 3×30s each`;
+const CLIN_STARTER = `Phase 1: Early / protection (weeks 0–2) — goal: protect, control pain & swelling, restore motion
+- Exercise name — 3×10 — cue or notes (replace these with the protocol)
+- Exercise name — 3×15
+Phase 2: Strengthen (weeks 3–6) — goal: build strength, normalise movement
+- Exercise name — 3×12
+- Exercise name — 10 min
+Phase 3: Return to function (weeks 7–12) — goal: restore full strength & control
+- Exercise name — 3×10 each
+- Exercise name — 3×30s each`;
+/* Staleness reminder for a saved clinician protocol: if its review date has passed, or enough
+   weeks have elapsed since it was given to be past its last phase, gently prompt a clinician
+   check-in. Uses the real date (todayISO) — advisory only, never blocks anything. */
+function maxPhaseWeek(pr){
+  let mx=0;
+  (pr.phases||[]).forEach(ph=>{ const m=String(ph.weeks||"").match(/\d+/g); if(m) m.forEach(n=>{ mx=Math.max(mx,+n); }); });
+  return mx;
+}
+function clinStaleNote(pr){
+  const today=todayISO();
+  if(pr.reviewDate && pr.reviewDate < today)
+    return `<div class="banner warn clinstale">⏰ <b>Review date passed</b> (${esc(pr.reviewDate)}) — check with your clinician before progressing further.</div>`;
+  if(pr.dateGiven && pr.dateGiven <= today){
+    const wks=Math.floor((Date.parse(today)-Date.parse(pr.dateGiven))/604800000);   // ms per week
+    const mx=maxPhaseWeek(pr);
+    if(mx && wks>mx)
+      return `<div class="banner warn clinstale">⏰ <b>${wks} weeks</b> since this protocol was given — past its last phase (week ${mx}). Check with your clinician about next steps.</div>`;
+    if(!mx && wks>=12)
+      return `<div class="banner warn clinstale">⏰ <b>${wks} weeks</b> since this protocol was given — it may be worth checking in with your clinician.</div>`;
+  }
+  return "";
+}
 function clinicianProtocolCards(){
   const list = state.clinicianProtocols || [];
   return list.map((pr,i)=>{
@@ -5381,13 +5461,16 @@ function clinicianProtocolCards(){
           ${ph.goal?`<div class="goal">${esc(ph.goal)}</div>`:""}</div>
           <div class="caret" aria-hidden="true">▾</div>
         </div>
-        <div class="body"><ul class="exlist">${rows}</ul></div></div>`;
+        <div class="body">${rows ? `<ul class="exlist">${rows}</ul>` : `<p class="hint" style="margin:6px 0 0">Milestone / criteria phase — no exercises listed here.</p>`}</div></div>`;
     }).join("");
+    const meta = [pr.procedure?`for ${esc(pr.procedure)}`:"", pr.dateGiven?`given ${esc(pr.dateGiven)}`:"", pr.reviewDate?`review ${esc(pr.reviewDate)}`:""].filter(Boolean).join(" · ");
     return `<div class="card clincard">
       <h2>🩺 ${esc(pr.name)} <span class="clinbadge">Clinician-provided</span>
         <button class="clindel no-print" data-idx="${i}" title="Remove this protocol">✕</button></h2>
       ${pr.source?`<p class="hint">Source: ${esc(pr.source)}.</p>`:""}
-      <div class="banner info" style="margin-top:4px"><b>Shown exactly as you entered it.</b> This is your clinician's protocol — the app's automatic exercise-safety filtering is <b>not</b> applied to it. Follow your clinician's own guidance and dosing.</div>
+      ${meta?`<p class="hint clinmeta">${meta}</p>`:""}
+      ${clinStaleNote(pr)}
+      <div class="banner info" style="margin-top:4px"><b>Shown exactly as you entered it.</b> This is your clinician's protocol — the app's automatic exercise-safety filtering is <b>not</b> applied, and it isn't cross-checked against the health history you entered. Your clinician has the full picture; follow their guidance and dosing.</div>
       ${phases}
     </div>`;
   }).join("");
@@ -5395,7 +5478,7 @@ function clinicianProtocolCards(){
 /* ---- Clinician section (step 4): exercise protocol + precaution protocol inputs ---- */
 function initClinician(){
   const host = $("#clinicianOut"); if(!host) return;
-  host.innerHTML = clinicianIntroCard() + clinicianFormCard() + clinPrecautionCard() + clinicianAddedSummary();
+  host.innerHTML = clinicianIntroCard() + clinicianFormCard() + clinPrecautionCard() + clinParamsCard() + clinicianAddedSummary();
   wireClinician();
   // clinician-guided session → auto-populate an editable starter protocol whenever the form is empty
   // and nothing's been added yet (so it survives navigating away and back before adding).
@@ -5453,10 +5536,17 @@ function clinicianIntroCard(){
 }
 function clinPrecautionCard(){
   const v = state.clinPrecautionProtocol || "";
+  const wbCur = (state.weightBearing||{}).status || "";
+  const wbOpts = WB_ORDER.map(k=>`<option value="${k}"${k===wbCur?" selected":""}>${WB_STATUS[k].abbr} — ${esc(WB_STATUS[k].label)}</option>`).join("");
   return `<div class="card clinformcard no-print">
     <h2>🛡️ Clinician precaution protocol</h2>
-    <p class="hint">Add precaution or activity-restriction orders in your own words (e.g. weight-bearing details, ROM limits, brace wear, sternal/spinal precautions, "no resisted knee extension 0–45° for 6 weeks"). This is shown verbatim in the <b>Precautions area</b> alongside the app's precautions.</p>
-    <textarea id="clinPrecText" rows="5" placeholder="e.g. PWB 50% left leg × 6 weeks · ROM 0–90° knee flexion · hinged brace locked 0–30° · no open-chain knee extension 0–40°">${esc(v)}</textarea>
+    <p class="hint">Add precaution or activity-restriction orders (e.g. weight-bearing, ROM limits, brace wear, sternal/spinal precautions). Anything in the box below is shown verbatim in the <b>Precautions area</b> alongside the app's precautions.</p>
+    <div class="clinwbrow">
+      <label class="clinwblab" for="clinWbSelect"><b>🦵 Weight-bearing order</b> <span class="sub">— the one precaution that actually limits which exercises the app suggests</span></label>
+      <select id="clinWbSelect"><option value="">— not set —</option>${wbOpts}</select>
+    </div>
+    <p class="hint clinwbhint">Setting this <b>constrains the plan</b> (the auto-program regenerates to match). The free-text box below is shown <b>verbatim</b> for everything else — to have ROM / brace / special precautions shape the plan too, set them as structured limits in <b>Details ▸ Precautions</b>.</p>
+    <textarea id="clinPrecText" rows="5" placeholder="e.g. ROM 0–90° knee flexion · hinged brace locked 0–30° · no open-chain knee extension 0–40°">${esc(v)}</textarea>
     <div class="clinbtns"><button class="btn primary" id="clinPrecSave" type="button">Save precaution protocol</button>
       ${v?`<button class="btn ghost" id="clinPrecClear" type="button">Clear</button>`:""}</div>
   </div>`;
@@ -5475,6 +5565,17 @@ function wireClinician(){
   const clinEx = $("#clinicianOut #clinExample"); if(clinEx) clinEx.onclick = fillClinExample;
   const clinText = $("#clinicianOut #clinText"); if(clinText){ clinText.oninput = updateClinPreview; updateClinPreview(); }
   const precSave = $("#clinicianOut #clinPrecSave"); if(precSave) precSave.onclick = saveClinPrecaution;
+  const cpSave = $("#clinicianOut #cpSave"); if(cpSave) cpSave.onclick = saveClinParams;
+  const cpClear = $("#clinicianOut #cpClear"); if(cpClear) cpClear.onclick = clearClinParams;
+  // Weight-bearing order set from the Clinician step reuses the same state + engine path as the
+  // Details precautions console (setWeightBearingStatus → afterPrecautionChange regenerates the
+  // plan), so a clinician's NWB/PWB order genuinely tightens the auto-program — no engine change.
+  const clinWb = $("#clinicianOut #clinWbSelect"); if(clinWb) clinWb.onchange = ()=>{
+    const val = clinWb.value;
+    if(val){ setWeightBearingStatus(val); }
+    else { const wb = state.weightBearing = state.weightBearing||{}; wb.status=""; wb.pct=""; wb.lbs=""; save(); afterPrecautionChange(true); toast("Weight-bearing order cleared."); }
+    initClinician();
+  };
   const precClear = $("#clinicianOut #clinPrecClear"); if(precClear) precClear.onclick = ()=>{ state.clinPrecautionProtocol=""; save(); initClinician(); renderPrecautions(); toast("Precaution protocol cleared."); };
   $$("#clinicianOut .clindel2").forEach(b=>b.onclick=()=>removeClinProtocol(+b.dataset.idx));
 }
@@ -5485,6 +5586,49 @@ function saveClinPrecaution(){
   initClinician();                                      // refresh the summary
   toast(state.clinPrecautionProtocol ? "Precaution protocol saved — see the Precautions area." : "Precaution protocol cleared.");
 }
+/* Clinician "Parameters" card (collapsed): prescribe telemetry target RANGES (HR, exercise-HR
+   ceiling, systolic/diastolic BP, SpO₂). Blank fields fall back to the evidence-based VITAL_TARGETS
+   defaults (shown as placeholders). Saved to state.clinParams; drives the Health colour-coding and
+   the conservative telemetryNotes() in the program. */
+function clinParamsCard(){
+  const p = state.clinParams || {};
+  const gv = (k,b)=>{ const c=p[k]||{}; const x=c[b]; return (x==null?"":x); };
+  const inp = (id,v,ph)=>`<input type="number" id="${id}" value="${esc(String(v))}" placeholder="${ph}" inputmode="numeric" min="0" />`;
+  const anySet = ["hr","sbp","dbp","spo2"].some(k=>{const c=p[k]||{}; return (c.min!==""&&c.min!=null)||(c.max!==""&&c.max!=null);}) || (((p.hrEx||{}).max||"")!=="");
+  return `<details class="card clinformcard collapsecard no-print"${anySet?" open":""}>
+    <summary class="collapsesum"><h2>📊 Prescribed parameters <span class="clinbadge">telemetry targets</span></h2><span class="collapsehint">Expand</span><span class="collapsechev" aria-hidden="true">▾</span></summary>
+    <div class="collapsebody">
+    <p class="hint">Prescribe target ranges for the patient's telemetry — these <b>colour-code the Health vitals</b>, flag out-of-range readings, and feed conservative guidance into the program. Blank = the evidence-based default (shown as the placeholder).</p>
+    <div class="clinparamgrid">
+      <div class="clinparamrow"><span class="cplab">❤️ Heart rate <span class="sub">bpm</span></span>${inp("cpHrMin",gv("hr","min"),"60")}<span class="cpdash">–</span>${inp("cpHrMax",gv("hr","max"),"100")}</div>
+      <div class="clinparamrow"><span class="cplab">🏃 Exercise HR ceiling <span class="sub">bpm</span></span>${inp("cpHrEx",gv("hrEx","max"),"e.g. 120")}</div>
+      <div class="clinparamrow"><span class="cplab">🩸 Systolic BP <span class="sub">mmHg</span></span>${inp("cpSbpMin",gv("sbp","min"),"90")}<span class="cpdash">–</span>${inp("cpSbpMax",gv("sbp","max"),"130")}</div>
+      <div class="clinparamrow"><span class="cplab">🩸 Diastolic BP <span class="sub">mmHg</span></span>${inp("cpDbpMin",gv("dbp","min"),"60")}<span class="cpdash">–</span>${inp("cpDbpMax",gv("dbp","max"),"85")}</div>
+      <div class="clinparamrow"><span class="cplab">🫁 SpO₂ <span class="sub">%</span></span>${inp("cpSpo2Min",gv("spo2","min"),"95")}<span class="cpdash">–</span>${inp("cpSpo2Max",gv("spo2","max"),"100")}</div>
+    </div>
+    <div class="clinbtns"><button class="btn primary" id="cpSave" type="button">Save parameters</button><button class="btn ghost" id="cpClear" type="button">Reset to defaults</button></div>
+    <p class="hint" style="margin-top:6px">Defaults are general adult targets (ACC/AHA, ACSM). SpO₂ floors differ in COPD — set a lower min if prescribed. Educational, not a diagnosis.</p>
+    </div>
+  </details>`;
+}
+function saveClinParams(){
+  const val = id => { const el=$("#clinicianOut #"+id); return el ? el.value.trim() : ""; };
+  const rng = (a,b)=>({ min: val(a), max: val(b) });
+  state.clinParams = { hr:rng("cpHrMin","cpHrMax"), sbp:rng("cpSbpMin","cpSbpMax"), dbp:rng("cpDbpMin","cpDbpMax"), spo2:rng("cpSpo2Min","cpSpo2Max"), hrEx:{ max: val("cpHrEx") } };
+  save();
+  if(state.program){ state.program = generateProgram(); save(); }   // prescribed ranges change the program notes
+  initClinician();
+  if(typeof renderTelemetry==="function") renderTelemetry();         // reflect immediately in Health
+  toast("Prescribed parameters saved — reflected in Health and your program notes.");
+}
+function clearClinParams(){
+  state.clinParams = { hr:{min:"",max:""}, sbp:{min:"",max:""}, dbp:{min:"",max:""}, spo2:{min:"",max:""}, hrEx:{max:""} };
+  save();
+  if(state.program){ state.program = generateProgram(); save(); }
+  initClinician();
+  if(typeof renderTelemetry==="function") renderTelemetry();
+  toast("Parameters reset to the evidence-based defaults.");
+}
 function clinicianFormCard(){
   return `<div class="card clinformcard no-print">
     <h2>🩺 Add a clinician / physician exercise protocol</h2>
@@ -5492,6 +5636,11 @@ function clinicianFormCard(){
     <div class="clinform">
       <input type="text" id="clinName" placeholder="Protocol name — e.g. Dr. Lee · ACL reconstruction" />
       <input type="text" id="clinSource" placeholder="Clinician / clinic / source (optional)" />
+      <input type="text" id="clinProcedure" placeholder="Procedure / diagnosis it's for (optional) — e.g. ACL reconstruction, R rotator-cuff repair" />
+      <div class="clindates">
+        <label class="clindatef"><span>Date given <span class="sub">(optional)</span></span><input type="date" id="clinDateGiven" /></label>
+        <label class="clindatef"><span>Review / next appt <span class="sub">(optional)</span></span><input type="date" id="clinReview" /></label>
+      </div>
       <textarea id="clinText" rows="8" placeholder="Paste or type the protocol, one exercise per line. Example:&#10;Phase 1: Protection (weeks 0-2) — goal: control swelling&#10;- Quad sets — 3×10 — lock the knee straight&#10;- Heel slides — 3×15&#10;Phase 2: Strength (weeks 3-6)&#10;- Mini squats — 3×12&#10;- Leg press — 3×10"></textarea>
       <div class="clinpreview" id="clinPreview"></div>
       <div class="clinbtns">
@@ -5509,7 +5658,7 @@ function updateClinPreview(){
   if(!p.phases.length){ box.innerHTML = ""; return; }
   const total = p.phases.reduce((s,ph)=>s+ph.ex.length,0);
   box.innerHTML = `<div class="clinprevhead">Preview — ${p.phases.length} phase${p.phases.length>1?"s":""}, ${total} exercise${total>1?"s":""}:</div>` +
-    p.phases.map(ph=>`<div class="clinprevph">• <b>${esc(ph.title)}</b>${ph.weeks?` <span class="clinprevn">· ${esc(ph.weeks)}</span>`:""} <span class="clinprevn">(${ph.ex.length})</span></div>`).join("");
+    p.phases.map(ph=>`<div class="clinprevph">• <b>${esc(ph.title)}</b>${ph.weeks?` <span class="clinprevn">· ${esc(ph.weeks)}</span>`:""} <span class="clinprevn">(${ph.ex.length||"criteria"})</span></div>`).join("");
 }
 function fillClinExample(){
   const t = $("#clinicianOut #clinText"), n = $("#clinicianOut #clinName");
@@ -5520,9 +5669,12 @@ function fillClinExample(){
 function addClinProtocol(){
   const name = ($("#clinicianOut #clinName").value||"").trim();
   const source = ($("#clinicianOut #clinSource").value||"").trim();
+  const procedure = ($("#clinicianOut #clinProcedure").value||"").trim();
+  const dateGiven = ($("#clinicianOut #clinDateGiven").value||"").trim();
+  const reviewDate = ($("#clinicianOut #clinReview").value||"").trim();
   const parsed = parseClinProtocol($("#clinicianOut #clinText").value);
   if(!parsed.phases.length){ toast("Add at least one exercise line first."); return; }
-  (state.clinicianProtocols = state.clinicianProtocols || []).push({ name: name || "Clinician protocol", source, phases: parsed.phases });
+  (state.clinicianProtocols = state.clinicianProtocols || []).push({ name: name || "Clinician protocol", source, procedure, dateGiven, reviewDate, phases: parsed.phases });
   save();
   if(state.program) renderProgram(state.program);   // added protocol shows in the (hidden) program
   initClinician();                                   // refresh the section (clears the form, updates summary)
@@ -5929,6 +6081,18 @@ function renderProgram(prog){
   html += pedGuidanceCard();      // child only; age reshapes everything below it, so it says so first
   html += safetyNotesCard(prog);  // already collapsed by default — safety notes before the plan
 
+  // ── Clinician's plan LEADS (audit 1/3): when the user gave us a clinician protocol or precaution,
+  //    their orders govern — show the protocol first, flag that it takes precedence, and label the
+  //    auto-generated plan below as secondary/educational.
+  const _hasClin = (state.clinicianProtocols||[]).length>0;
+  const _hasClinPrec = !!(state.clinPrecautionProtocol||"").trim();
+  if(_hasClin || _hasClinPrec)
+    html += `<div class="banner info clinrecon">🩺 <b>Your clinician's guidance comes first.</b> Where their orders differ from the app's suggestions below, follow your clinician.</div>`;
+  if(_hasClin){
+    html += clinicianProtocolCards();     // clinician protocol(s) lead, shown verbatim (added in the Clinician step)
+    html += `<div class="appsuggesthead"><b>App suggestions</b> <span class="sub">— educational, secondary to your clinician's plan above</span></div>`;
+  }
+
   prog.items.forEach((item, ci)=>{
     html += `<div class="card"><h2>${esc(item.name)}</h2>
       <p class="hint">${esc(conditionExplain(item, prog.track))}</p>
@@ -5971,7 +6135,6 @@ function renderProgram(prog){
     html += `<div class="redflags"><b>⚠ When to get it checked:</b> ${esc(item.redflags)}</div></div>`;
   });
 
-  html += clinicianProtocolCards();     // any saved physician protocols, shown verbatim (added in the Clinician step)
   // ── Reference — collapsed by default (need-to-know first). The "why this plan", return goals,
   //    daily-task suggestions, home mode, and the vitals / risk / medication considerations: all
   //    valuable on demand, none of them what the user opened the Program to see today.
@@ -10417,7 +10580,38 @@ function syncHealthCards(){
     card._autoSynced = true;
   });
 }
-function renderHealth(){ renderHRMonitor(); renderVitalsLog(); renderLabs(); renderMeasures(); renderRisks(); syncHealthCards(); }
+/* Evidence-based one-line advice for an out-of-range telemetry reading (educational, conservative). */
+function telAdvice(key,dir){
+  if(key==="spo2"&&dir==="low") return "Rest and recheck; below ~90% at rest, don't exercise until assessed — supplemental O₂ may be needed (COPD floors can be lower if your clinician prescribed one).";
+  if((key==="sbp"||key==="dbp")&&dir==="high") return "Rest and recheck; don't start exercise with resting BP above ~180/110 (ACSM) — consult your clinician.";
+  if((key==="sbp"||key==="dbp")&&dir==="low") return "Rise slowly and watch for lightheadedness.";
+  if(key==="hr"&&dir==="high") return "Recheck at rest; if it stays high or comes with symptoms, see a clinician.";
+  if(key==="hr"&&dir==="low") return "Often fine if you're fit; flag any dizziness or fainting.";
+  return "Recheck and follow your clinician's guidance.";
+}
+/* Telemetry-vs-target card (Health): latest reading for each parameter against its effective range
+   (clinician-prescribed if set, else the evidence-based default), colour-coded in/out with feedback. */
+function renderTelemetry(){
+  const el = $("#telemetryBody"); if(!el) return;
+  const lv = latestVitals();
+  const rows = [["hr","restHR","❤️","Heart rate"],["sbp","sbp","🩸","Systolic BP"],["dbp","dbp","🩸","Diastolic BP"],["spo2","spo2","🫁","SpO₂"]].map(([key,field,icon,label])=>{
+    const ev = evalVital(key, lv[field]);
+    const cls = ev.status==="in" ? "vrange-in" : (ev.status==="none" ? "vrange-none" : "vrange-out");
+    const badge = ev.status==="in" ? "✓ In range" : ev.status==="low" ? "▼ Below range" : ev.status==="high" ? "▲ Above range" : "— no reading";
+    const rangeTxt = `${ev.min!=null?ev.min:"–"}–${ev.max!=null?ev.max:"–"} ${ev.unit}`;
+    const valTxt = ev.value!=null ? `${ev.value} ${ev.unit}` : "—";
+    const dir = ev.status==="low"||ev.status==="high" ? ev.status : "";
+    const fb = dir ? `<div class="telfb">${esc(label)} ${ev.value}${ev.unit} is ${dir==="low"?"below":"above"} the ${ev.prescribed?"prescribed":"target"} range (${rangeTxt}). ${esc(telAdvice(key,dir))}</div>` : "";
+    return `<div class="telrow ${cls}"><span class="telicon" aria-hidden="true">${icon}</span><span class="tellabel">${esc(label)}</span><span class="telval">${esc(valTxt)}</span><span class="telrange">target ${esc(rangeTxt)}${ev.prescribed?' <span class="telrx">Rx</span>':""}</span><span class="telbadge ${cls}">${badge}</span>${fb}</div>`;
+  }).join("");
+  const hrEx = ((state.clinParams||{}).hrEx||{}).max;
+  const hrExRow = (hrEx!==""&&hrEx!=null) ? `<div class="telrow vrange-none"><span class="telicon" aria-hidden="true">🏃</span><span class="tellabel">Exercise HR ceiling</span><span class="telval">&lt; ${esc(String(hrEx))} bpm</span><span class="telrange">prescribed <span class="telrx">Rx</span></span><span class="telbadge vrange-none">keep under</span></div>` : "";
+  const anyRx = ["hr","sbp","dbp","spo2"].some(k=>clinRange(k).prescribed) || (hrEx!==""&&hrEx!=null);
+  el.innerHTML = `<p class="hint">Your latest reading vs its ${anyRx?"prescribed / ":""}target range — <b class="tinok">green</b> in range, <b class="tinbad">red</b> out of range. ${anyRx?'<b>Rx</b> marks a range your clinician prescribed.':'No clinician range set — showing evidence-based defaults. A clinician can prescribe per-user targets in the Clinician step.'}</p>
+    <div class="telgrid">${rows}${hrExRow}</div>
+    <div class="redflags" style="margin-top:10px"><b>Educational only.</b> These are general adult targets unless your clinician set them; readings vary with movement, posture and the device. Act on symptoms and your clinician's advice, not the numbers alone.</div>`;
+}
+function renderHealth(){ renderHRMonitor(); renderVitalsLog(); renderTelemetry(); renderLabs(); renderMeasures(); renderRisks(); syncHealthCards(); }
 /* OBJ-1: the recovery-measurements trend (the values captured in the Program's "Ready to progress?"). */
 function measureDef(key){
   for(const set of Object.values(MEASURE_SETS)){ const g = set.find(x=>x.key===key); if(g) return g; }

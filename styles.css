@@ -825,6 +825,40 @@ details.preccontrols-wrap[open]>summary.preccontrols-sum::before{content:"▾ "}
 .clinformcard{border-style:dashed}
 .clinform{display:flex;flex-direction:column;gap:10px;margin-top:6px}
 .clinform textarea{min-height:160px;font-family:inherit;line-height:1.5}
+.clindates{display:flex;gap:10px;flex-wrap:wrap}
+.clindatef{flex:1;min-width:150px}
+.clindatef>span{display:block;font-size:12.5px;font-weight:600;margin-bottom:4px}
+.clinmeta{margin:2px 0 0;font-style:italic}
+.clinstale{margin-top:6px}
+.clinrecon{margin-top:4px}
+.appsuggesthead{margin:16px 0 8px;font-size:13.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px}
+.appsuggesthead b{color:var(--text)}
+.appsuggesthead .sub{color:var(--muted);font-weight:400}
+.clinwbrow{display:flex;flex-direction:column;gap:6px;margin:10px 0 4px}
+.clinwblab{font-size:13px}
+.clinwbhint{margin-top:4px}
+.clinparamgrid{display:flex;flex-direction:column;gap:8px;margin:8px 0}
+.clinparamrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cplab{flex:1;min-width:160px;font-size:13px;font-weight:600}
+.clinparamrow input[type=number]{width:76px}
+.cpdash{color:var(--muted)}
+.telgrid{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.telrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;border:1px solid var(--line);border-left-width:4px;border-radius:10px;padding:8px 11px;background:var(--panel-2)}
+.telrow.vrange-in{border-left-color:rgba(92,225,166,.7)}
+.telrow.vrange-out{border-left-color:rgba(255,107,107,.75)}
+.telrow.vrange-none{border-left-color:var(--line)}
+.telicon{font-size:16px}
+.tellabel{font-weight:600;font-size:13px;flex:1;min-width:110px}
+.telval{font-weight:700;font-variant-numeric:tabular-nums}
+.telrange{font-size:12px;color:var(--muted)}
+.telrx{font-size:10px;font-weight:800;color:#04121f;background:var(--brand-2);border-radius:999px;padding:1px 6px;margin-left:4px}
+.telbadge{font-size:11px;font-weight:700;border-radius:999px;padding:2px 9px}
+.telbadge.vrange-in{background:rgba(92,225,166,.18);color:#5ce1a6}
+.telbadge.vrange-out{background:rgba(255,107,107,.16);color:#ff8a8a}
+.telbadge.vrange-none{background:var(--chip);color:var(--muted)}
+.telfb{flex-basis:100%;font-size:12.5px;color:var(--muted);margin-top:2px}
+.tinok{color:#5ce1a6}
+.tinbad{color:#ff8a8a}
 .clinpreview:not(:empty){border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--panel-2);font-size:13px}
 .clinprevhead{font-weight:700;margin-bottom:6px;color:var(--brand-2)}
 .clinprevph{color:var(--muted);margin:2px 0}
