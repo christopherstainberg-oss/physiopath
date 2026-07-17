@@ -7058,12 +7058,19 @@ function runSurgerySearch(){
 
 async function doGenerate(){
   /* Belt and braces: goStep(3) pulls this in, but Generate is reachable from a restored
-     session and a half-loaded program is worse than a slow one. */
-  await ensureProgramData();
-  if(!state.condIds.length){ toast("Pick at least one injury or condition first."); goStep(2); return; }
-  if(state.weeks===null){ toast("Enter how many weeks ago it started."); return; }
-  state.program=generateProgram(); save();
-  renderProgram(state.program); goStep(4);
+     session and a half-loaded program is worse than a slow one. On a first run / slow network
+     ensureProgramData() pulls ~15MB, so the button gets a busy state instead of looking dead. */
+  const btn=$("#generateBtn"); const label=btn?btn.textContent:"";
+  if(btn){ btn.disabled=true; btn.setAttribute("aria-busy","true"); btn.textContent="Building your program…"; }
+  try{
+    await ensureProgramData();
+    if(!state.condIds.length){ toast("Pick at least one injury or condition first."); goStep(2); return; }
+    if(state.weeks===null){ toast("Enter how many weeks ago it started."); return; }
+    state.program=generateProgram(); save();
+    renderProgram(state.program); goStep(4);
+  } finally {
+    if(btn){ btn.disabled=false; btn.removeAttribute("aria-busy"); btn.textContent=label; }
+  }
 }
 /* Panels only render when they are visited, so printing from the Program step emitted
    "No entries yet - log your first session above." over a month of real logs, plus an empty
