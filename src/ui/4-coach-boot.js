@@ -1385,7 +1385,7 @@ function buildCoachSystem(){
   const p = state.program;
   const precautions = (p ? p.notes : window.notesForFlags(gatherFlags())).join(" | ") || "none flagged";
   const prog = p ? `${p.totalWeeks}-week ${p.track} program; supervision ${p.supervision}; clearance needed: ${p.clearance}` : "not generated yet";
-  const v = state.vitals||{};
+  const v = latestVitals();   // #1 (audit): the newest LOGGED reading, not the stale intake baseline (matches the safety gate)
   const enteredVitals = [v.restHR&&`resting HR ${v.restHR} bpm`, (v.sbp&&v.dbp)&&`BP ${v.sbp}/${v.dbp}`, v.spo2&&`SpO₂ ${v.spo2}%`, v.rr&&`RR ${v.rr}/min`, bmiCalc(v.height,v.weight)!=null&&`BMI ${bmiCalc(v.height,v.weight)}`].filter(Boolean).join(", ") || "none entered";
   const hz = hrZones();
   const hrLine = hz ? `max HR ≈ ${hz.hrmax} bpm (Tanaka), moderate zone ${fmtRange(hz.zones.moderate)} bpm; recommended effort ${borgTarget().label}${onBetaBlocker()?"; on a beta-blocker, so HR targets are unreliable — advise RPE/talk-test":""}` : `age not set — advise Borg RPE ${borgTarget().label}`;
@@ -1478,6 +1478,39 @@ function buildCoachSystem(){
     state.priorEpisodes && lbl(state.priorEpisodes), state.homeMode && "Home mode is ON (household objects)" ]
     .filter(Boolean).join(", ") || "not specified";
 
+  /* #2 (audit): the clinician's prescribed telemetry targets + the latest reading's in/out status,
+     so Jeffery is consistent with the Health "Telemetry vs target range" card. */
+  const _telParts = [["hr","restHR","HR"],["sbp","sbp","systolic BP"],["dbp","dbp","diastolic BP"],["spo2","spo2","SpO₂"]].map(([k,fld,lbl])=>{
+    const r = clinRange(k); if(!r.prescribed) return null;
+    const ev = evalVital(k, v[fld]);
+    return `${lbl} ${r.min}–${r.max}${r.unit}${ev.status!=="none"?` (latest ${ev.value}${r.unit} — ${ev.status==="in"?"in range":ev.status==="low"?"BELOW range":"ABOVE range"})`:""}`;
+  }).filter(Boolean);
+  const _hrEx = ((state.clinParams||{}).hrEx||{}).max;
+  if(_hrEx!==""&&_hrEx!=null) _telParts.push(`exercise HR ceiling ${_hrEx} bpm`);
+  const telemetryLine = _telParts.length ? _telParts.join("; ")+" — honour these (set in the Clinician step)" : "none prescribed (Health uses evidence-based default ranges)";
+  /* #3 (audit): the clinician's OWN protocol/precaution, which now LEADS the program — so Jeffery
+     defers to it rather than contradicting the plan on the user's screen. */
+  const _clinProt = state.clinicianProtocols||[];
+  const _clinPrec = (state.clinPrecautionProtocol||"").trim();
+  const clinicianLine = (_clinProt.length || _clinPrec)
+    ? `${_clinProt.length?`${_clinProt.length} clinician exercise protocol(s): ${_clinProt.map(pr=>`"${pr.name}"${pr.procedure?` for ${pr.procedure}`:""} (${pr.phases.length} phase${pr.phases.length>1?"s":""})`).join(", ")} — these LEAD the program and GOVERN; defer to them over the app's own suggestions. `:""}${_clinPrec?`Clinician precaution order (verbatim, MUST respect): "${_clinPrec}".`:""}`.trim()
+    : "none — the program is app-generated";
+  /* #4 (audit): the OBJECTIVE advance gate + the log-based progression signal, so Jeffery speaks to
+     measured readiness ("range/strength met, pain gate not — hold"), not just the criteria prose. */
+  const _gate = it0 ? gateStatus(it0) : null;
+  const _sig = progressionSignal();
+  let gateLine;
+  if(!p) gateLine = "not generated yet";
+  else if(!_gate || !_gate.items.length) gateLine = "no objective measure set for this region";
+  else {
+    const anyMeasured = _gate.items.some(x=>x.pct!=null || x.detail==="confirmed");
+    const measured = anyMeasured ? _gate.items.map(x=>`${x.g.label} ${x.detail}${x.met?" ✓":""}`).join("; ")
+      : "no objective measures logged yet (recorded in \"Ready to progress?\")";
+    const overall = _gate.ready ? "objective advance criteria MET — clear to progress if the phase allows"
+      : _gate.measurableMet ? "range/strength met but the pain gate isn't — hold"
+      : anyMeasured ? "not all advance criteria met yet — hold" : "";
+    gateLine = `${measured}${overall?`. ${overall}`:""}${_sig?`. Log-based signal: ${_sig.rec.toUpperCase()} — ${_sig.why}`:""}`;
+  }
   return `You are Jeffery, PhysioPath's AI rehabilitation specialist — an educational assistant giving general, evidence-informed physical-rehabilitation guidance. You are an AI, not a licensed clinician, and must not diagnose or replace in-person care.
 
 USER CONTEXT
@@ -1486,6 +1519,7 @@ USER CONTEXT
 - Program: ${prog}
 - Rehab plan in effect: ${planLine}
 - Where they are RIGHT NOW: ${phaseLine}
+- Advance gate (objective measures + log signal — use this over guesswork about readiness): ${gateLine}
 - Their current phase's prescribed exercises (refer to these by number if asked): ${exLine}
 - Which of those they ACTUALLY tick off: ${doneLine}
 - Age group: ${pedLine}
@@ -1495,7 +1529,8 @@ USER CONTEXT
 - What they are LOGGING (trust this over the intake pain figure): ${logLine}
 - THEIR OWN WORDS from the journal, newest first (quote these back when relevant — this is what they actually told you): ${journalLine}
 - EARLIER JOURNAL ENTRIES, oldest first — their back catalogue: ${archiveLine}
-- Vitals entered: ${enteredVitals}
+- Vitals (latest logged, not intake): ${enteredVitals}
+- Clinician-prescribed telemetry targets: ${telemetryLine}
 - Heart-rate & exertion: ${hrLine}
 - Cardiac device: ${deviceLineHR}
 - Lifestyle & function: ${lifestyle}
@@ -1504,6 +1539,7 @@ USER CONTEXT
 - Return-to goals: ${goals}
 - Weight-bearing order: ${wbLine}; braces/orthoses/prostheses: ${deviceLine}
 - Surgical-site precautions active: ${spLine}
+- Clinician's OWN plan (leads the program — defer to it, don't contradict it): ${clinicianLine}
 - Out-of-range labs entered: ${abnormalLabs}
 - Educational risk areas (not diagnostic): ${riskAreas}
 - Personalized precautions (MUST respect): ${precautions}
