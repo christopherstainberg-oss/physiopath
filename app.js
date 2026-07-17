@@ -4329,6 +4329,10 @@ function movementExplain(name, pattern, regionArr){
     avoid ? `<div class="howmeta howavoid"><b>⚠ Avoid:</b> ${avoid}</div>` : "",
     notes ? `<div class="howmeta"><b>Note:</b> ${notes}</div>` : ""
   ].join("");
+  /* ⚠ SECURITY INVARIANT: every fragment interpolated below (steps/tempo/avoid/notes/whatLine/
+     whyLine) is a FIXED internal string selected by matching the exercise `name`; the raw name is
+     never echoed into the HTML. If a helper is ever changed to echo a matched substring of the
+     name, esc() it there — the name can be a custom/clinician-supplied value. */
   return `<b>What it is:</b> ${whatLine}${target}`
     + `<div class="howhead"><b>How to do it</b></div>${stepHTML}${meta}`
     + `<div class="howwhy"><b>Why it helps:</b> ${whyLine}</div>`
@@ -5557,20 +5561,20 @@ function renderProgram(prog){
   const _ph = prog.items[0] && prog.items[0].phases;
   const _pi = prog.items[0] && prog.items[0].planPhase;
   const trackBadge = (_pl && _ph && _pi >= 0)
-    ? `<span class="badge chronic">Phase ${_pi+1} of ${_ph.length} · weeks ${_ph[_pi].weekStart}–${_ph[_pi].weekEnd}</span>`
+    ? `<span class="badge chronic">Phase ${_pi+1} of ${_ph.length} · weeks ${esc(_ph[_pi].weekStart)}–${esc(_ph[_pi].weekEnd)}</span>`
     : (prog.track==="acute"
         ? `<span class="badge acute">Acute track · 0–6 wks</span>`
         : `<span class="badge chronic">Chronic track · 6+ wks</span>`);
   const supMap = {self:["Self-guided OK","self"],supervised:["Clinician-supervised advised","supervised"],clinical:["Medical clearance required","clinical"]};
-  const [supTxt,supCls] = supMap[prog.supervision];
+  const [supTxt,supCls] = supMap[prog.supervision] || supMap.self;   // tolerate a stale/invalid supervision on a persisted program
 
   let html = `<div class="card">
-    <h2>Your ${prog.totalWeeks}-week program ${trackBadge}</h2>
+    <h2>Your ${esc(prog.totalWeeks)}-week program ${trackBadge}</h2>
     <p class="hint">Built for ${esc(String(state.weeks))} week(s) in, pain ${state.painRest}/10 at rest and ${state.painMove}/10 on movement${state.surgery==="yes"?", post-surgical":""}.
       ${state.goal?`Goal: <b>${esc(state.goal)}</b>.`:""}</p>
     <div class="summary">
-      <div class="stat"><div class="k">Length</div><div class="v">${prog.totalWeeks} wks</div></div>
-      <div class="stat"><div class="k">Frequency</div><div class="v" style="font-size:14px">${prog.sessions}</div></div>
+      <div class="stat"><div class="k">Length</div><div class="v">${esc(prog.totalWeeks)} wks</div></div>
+      <div class="stat"><div class="k">Frequency</div><div class="v" style="font-size:14px">${esc(prog.sessions)}</div></div>
       <div class="stat"><div class="k">Conditions</div><div class="v">${prog.items.length}</div></div>
       <div class="stat"><div class="k">Supervision</div><div class="v" style="font-size:13px"><span class="sup ${supCls}">${supTxt}</span></div></div>
     </div>`;
@@ -5633,7 +5637,7 @@ function renderProgram(prog){
       html += `<div class="phase ${open}${ph.current?" nowphase":""}">
         <div class="head" role="button" tabindex="0" aria-expanded="${open?"true":"false"}" onclick="togglePhase(this,'${key}')" onkeydown="phaseHeadKey(event,this,'${key}')">
           <div class="pnum">${i+1}</div>
-          <div><div class="ptitle">${ph.current?`<span class="nowpill">📍 you are here</span> `:""}${esc(ph.title)} <span class="pweeks">· Weeks ${ph.weekStart}–${ph.weekEnd}</span></div>
+          <div><div class="ptitle">${ph.current?`<span class="nowpill">📍 you are here</span> `:""}${esc(ph.title)} <span class="pweeks">· Weeks ${esc(ph.weekStart)}–${esc(ph.weekEnd)}</span></div>
           <div class="goal">${esc(ph.goal)}</div></div>
           <div class="caret" aria-hidden="true">▾</div>
         </div>
@@ -10181,7 +10185,26 @@ function renderExResults(){
 }
 
 /* ---------- boot ---------- */
+/* A parseable-but-stale saved state must never white-screen the app with no way out.
+   The boot body runs inside try/catch → a recovery UI (data stays saved); the persisted
+   program renders in its own guard so a bad shape can't abort the rest of boot. */
+function bootFail(err){
+  try{ console.error("PhysioPath boot error:", err); }catch(_){}
+  try{
+    document.body.innerHTML =
+      '<div style="max-width:34rem;margin:14vh auto;padding:0 20px;font:16px/1.5 sans-serif;text-align:center">'
+      + '<div style="font-size:40px">🩹</div>'
+      + '<h1 style="font-size:20px;margin:.4em 0">PhysioPath hit a snag starting up</h1>'
+      + '<p>Your saved data is still on this device. Try reloading; if it keeps failing, reset the app.</p>'
+      + '<p><button id="_ppReload" style="padding:10px 16px;margin:4px;border-radius:10px;border:1px solid #888;background:transparent;color:inherit;cursor:pointer;font:inherit">Reload</button>'
+      + '<button id="_ppReset" style="padding:10px 16px;margin:4px;border-radius:10px;border:1px solid #888;background:transparent;color:inherit;cursor:pointer;font:inherit">Reset the app</button></p></div>';
+    var r=document.getElementById("_ppReload"); if(r) r.onclick=function(){ location.reload(); };
+    var x=document.getElementById("_ppReset"); if(x) x.onclick=function(){ if(confirm("Reset erases everything saved on this device. Continue?")){ try{ localStorage.removeItem("physiopath"); }catch(_){}; location.reload(); } };
+  }catch(_){}
+}
+window.addEventListener("unhandledrejection", e=>{ try{ console.error("Unhandled promise rejection:", e && e.reason); }catch(_){} });
 document.addEventListener("DOMContentLoaded",()=>{
+ try{
   load();
   initHistory(); initOptSecs(); initMeds(); initDetails(); initProgress(); initDataCard(); initCoachSettings();
   /* initSearch() moved into ensureConditions() — it reads window.CONDITIONS, which is no
@@ -10224,11 +10247,12 @@ document.addEventListener("DOMContentLoaded",()=>{
     if(coachOnline()) askClaude(v);
     else setTimeout(()=>{ const a=coachAnswer(v); addMsg(a,"bot"); pushTurn("assistant", a); },220);
   });
-  if(state.program) renderProgram(state.program);
+  if(state.program){ try{ renderProgram(state.program); }catch(err){ console.error("Discarding an unreadable saved program:", err); state.program=null; save(); } }
   // PWA app-shortcut routing (?go=coach|library|build|progress)
   /* ?go= shortcuts. "progress" kept as an alias so any installed PWA shortcut or saved link
      still lands somewhere sensible after the Journal took index 5. */
   const goMap={ build:2, details:3, clinician:1, program:4, journal:5, progress:6, health:6, coach:7, library:8 };
   const go=new URLSearchParams(location.search).get("go");
   goStep(go && goMap[go]!=null ? goMap[go] : (state.step||0));
+ }catch(err){ bootFail(err); }
 });

@@ -4,6 +4,7 @@
   "private": true,
   "description": "PhysioPath — personalized, contraindication-aware injury recovery programs (MSK, neuro, cardiac, pulmonary) as an installable PWA.",
   "type": "module",
+  "engines": { "node": ">=22" },
   "scripts": {
     "gen:conditions": "node scripts/generate-conditions.mjs",
     "gen:exercises": "node scripts/generate-exercises.mjs",
