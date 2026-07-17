@@ -330,7 +330,7 @@ const state = {
   vitalsLog:[], labs:{}, labHist:{},
   screen:{}, falls:"", aid:"", smoking:"", alcohol:"", sleep:"", stress:"", waterConfidence:"", adls:[],
   equipment:"", timePerDay:"", workDemand:"", priorEpisodes:"", moveConfidence:"", pregStage:"", footSensation:"",
-  medIds:[], medFilter:false, homeMode:false, customPrecautions:[], clinicianProtocols:[], clinPrecautionProtocol:"", clinicianGuided:false, selfGuided:false,
+  medIds:[], medFilter:false, homeMode:false, customPrecautions:[], clinicianProtocols:[], clinPrecautionProtocol:"", clinParams:{hr:{min:"",max:""},sbp:{min:"",max:""},dbp:{min:"",max:""},spo2:{min:"",max:""},hrEx:{max:""}}, clinicianGuided:false, selfGuided:false,
   medDoses:{}, weightBearing:{status:"",pct:"",lbs:"",side:"",limb:"le"}, devices:[],
   cardiacDevice:{type:"",icdRate:""}, specialPrecautions:[], planVariant:{}, progress:{}, measures:{},
   log:[], logMood:"", logDone:[], logTpl:"blank", photoNoted:false,
@@ -637,6 +637,64 @@ function hrZones(){
   return { hrmax, rest: useHRR?rest:null, zones, deviceCap: cap };
 }
 
+/* ── Telemetry targets ─────────────────────────────────────────────────────────────────────
+   Evidence-based RESTING-vitals target ranges (ACC/AHA 2017 BP categories; AHA resting-HR;
+   ACSM/AACVPR). Used to colour-code the Health vitals and as the fallback when a clinician
+   hasn't prescribed a per-user range. A clinician can override any of these in the Clinician
+   step (state.clinParams). Educational targets — not a diagnosis or a validated risk score. */
+const VITAL_TARGETS = {
+  hr:   { label:"Heart rate",   unit:"bpm",  field:"restHR", min:60, max:100 },  // AHA resting 60–100
+  sbp:  { label:"Systolic BP",  unit:"mmHg", field:"sbp",    min:90, max:130 },  // <120 normal, ≥130 elevated, <90 low
+  dbp:  { label:"Diastolic BP", unit:"mmHg", field:"dbp",    min:60, max:85  },  // <80 normal
+  spo2: { label:"SpO₂",         unit:"%",    field:"spo2",   min:95, max:100 }   // ≥95 normal; <90 hypoxaemia
+};
+/* ACSM relative-contraindication "don't start / hold" thresholds for RESTING values. */
+const VITAL_HOLD = { sbp:180, dbp:110, spo2:90 };
+/* Effective target for a vital: the clinician's prescribed range if set, else the evidence-based
+   default. `prescribed` marks a clinician override (drives the stronger program note + wording). */
+function clinRange(key){
+  const d = VITAL_TARGETS[key] || {};
+  const c = ((state.clinParams||{})[key]) || {};
+  const has = x => x!=="" && x!=null && !isNaN(+x);
+  return { min: has(c.min)?+c.min:d.min, max: has(c.max)?+c.max:d.max,
+           prescribed: has(c.min)||has(c.max), label:d.label, unit:d.unit };
+}
+/* Classify a single vital value against its effective target → in / low / high / none. */
+function evalVital(key, value){
+  const v = vnum(value), r = clinRange(key);
+  if(v==null) return { status:"none", value:null, ...r };
+  let status = "in";
+  if(r.min!=null && v < r.min) status = "low";
+  else if(r.max!=null && v > r.max) status = "high";
+  return { status, value:v, ...r };
+}
+/* Clinical context for telemetry-driven guidance. cardiac = the engine's own cardiopulmonary
+   detector + a cardiac device + sternal (open-heart-surgery) precautions; neuro = the neuro
+   history flags. Both stay conservative — they only ever add caution, never intensity. */
+function cardiacContext(){
+  const sp = new Set([...(state.specialPrecautions||[]), ...(typeof impliedSpecialPrecautionKeys==="function"?impliedSpecialPrecautionKeys():[])]);
+  return someCardioPulm() || hasCardiacDevice() || sp.has("sternal");
+}
+function neuroContext(){
+  return (state.flags||[]).some(f=>["balance_risk","neuropathy","neuro_condition","seizure"].includes(f));
+}
+/* Evidence-based, CONSERVATIVE program notes from telemetry + cardiac/neuro context (concatenated
+   into prog.notes). Out-of-prescribed-range resting vitals and cardiac/neuro status only ever make
+   the plan safer — ease off, monitor, seek review — never harder. */
+function telemetryNotes(){
+  const notes = [], lv = latestVitals();
+  ["sbp","dbp","hr","spo2"].forEach(key=>{
+    const r = clinRange(key); if(!r.prescribed) return;                 // only clinician-prescribed ranges add a note
+    const ev = evalVital(key, lv[VITAL_TARGETS[key].field]);
+    if(ev.status==="high") notes.push(`Latest ${r.label} ${ev.value}${r.unit} is above your clinician's prescribed range (${r.min}–${r.max}${r.unit}) — ease off, recheck, and follow your clinician's guidance.`);
+    else if(ev.status==="low") notes.push(`Latest ${r.label} ${ev.value}${r.unit} is below your clinician's prescribed range (${r.min}–${r.max}${r.unit}) — ease off, recheck, and follow your clinician's guidance.`);
+  });
+  const hrEx = ((state.clinParams||{}).hrEx||{}).max;
+  if(hrEx!=="" && hrEx!=null && !isNaN(+hrEx)) notes.push(`Keep your exercise heart rate under your clinician's prescribed ceiling of ${+hrEx} bpm — slow down or rest if you approach it.`);
+  if(cardiacContext()) notes.push(`Cardiac status: work at an effort where you can still talk (RPE ~11–13), monitor your heart rate, blood pressure and SpO₂, and STOP for chest pain or pressure, unusual breathlessness, palpitations, a cold sweat or dizziness. Progress only when your clinician agrees.`);
+  if(neuroContext()) notes.push(`Neurological status: don't hold your breath or strain (avoid Valsalva); change position slowly (blood-pressure swings are common) and monitor your blood pressure. STOP for a sudden severe headache, a sharp rise in blood pressure, new weakness or numbness, or vision changes.`);
+  return notes;
+}
 // Objective-data-derived engine flags (baked into the program through gatherFlags).
 function vitalFlags(){
   /* latestVitals(), NOT state.vitals. hrZones() was migrated to the logged reading and this,
@@ -3368,7 +3426,7 @@ function generateProgram(){
     sessions: (primaryPlan && primaryPlan.freq) ? primaryPlan.freq : sessionsText(track),
     load:loadGuidance(),
     builtFrom: { pain: effectivePain().v, flags: flags.slice().sort().join(",") },   // so planDrift() can tell when it goes stale
-    flags, notes:[...new Set(window.notesForFlags(flags).concat(R.notes))], clearance:clearanceNeeded(flags),
+    flags, notes:[...new Set(window.notesForFlags(flags).concat(R.notes).concat(telemetryNotes()))], clearance:clearanceNeeded(flags),
     supervision:displaySupervision(flags, clearanceNeeded(flags)), items,
     removed:Array.from(removedAll, ([n,tag])=>({n,tag}))
   };
