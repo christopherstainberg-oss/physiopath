@@ -455,6 +455,12 @@
           <label class="field"><span class="lab">Sessions done</span>
             <input type="number" id="logSessions" min="0" max="20" value="1" inputmode="numeric" />
           </label>
+          <label class="field"><span class="lab">How hard was today? <span class="sub">0 easy – 10 max effort</span></span>
+            <div class="rangewrap"><input type="range" id="logEffort" min="0" max="10" value="5" /><span class="rangeval" id="logEffortVal">5</span></div>
+          </label>
+          <label class="field"><span class="lab">Sets completed? <span class="sub">drives “add load” vs “hold”</span></span>
+            <select id="logSets"><option value="">—</option><option value="all">All of them</option><option value="most">Most</option><option value="few">Only a few</option></select>
+          </label>
         </div>
       </details>
 

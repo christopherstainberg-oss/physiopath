@@ -3195,6 +3195,20 @@ const LOADING_LADDER = {
    flare, consolidate when they're behind on sessions, and only give the green light when things
    are settled AND consistent. Returns null when there isn't enough logged data to make the call,
    so the nudge falls back to the time-based one. */
+/* OBJ-2: how the last few sessions FELT — effort (0-10) and set completion — so progression can
+   respond to "breezing through" vs "grinding it out", not just pain. Null until a session's logged. */
+function recentEffort(){
+  const es = (state.log||[]).filter(e => isFinite(Number(e.effort)) || e.sets).slice(-4);
+  if(!es.length) return null;
+  const effs = es.map(e=>Number(e.effort)).filter(isFinite);
+  const setScore = { all:2, most:1, few:0 };
+  const sets = es.map(e=>setScore[e.sets]).filter(v=>v!=null);
+  return {
+    avgEffort: effs.length ? effs.reduce((a,b)=>a+b,0)/effs.length : null,
+    avgSets:   sets.length ? sets.reduce((a,b)=>a+b,0)/sets.length : null,
+    n: es.length,
+  };
+}
 function progressionSignal(){
   const log = (state.log || []).filter(e => isFinite(Number(e.pain)));
   if(log.length < 2) return null;                    // too little to base a call on — stay time-based
@@ -3207,8 +3221,15 @@ function progressionSignal(){
     return { rec:"hold", why:`You're logging around ${(+ep.v).toFixed(1)}/10 right now — keep this week light and don't progress until it eases.` };
   if(adh && adh.status === "behind")
     return { rec:"hold", why:"You've logged fewer sessions than the plan asks — consolidate at this level before adding anything; the consistency is what earns the next step." };
-  if((trend.cls === "trend-down" || trend.cls === "trend-flat") && ep.v <= 4 && (!adh || adh.status === "on-track"))
-    return { rec:"advance", why:`Your logs are settled (${trend.txt}) and you're keeping up — you're clear to progress as the phase allows.` };
+  const eff = recentEffort();
+  if(eff && ((eff.avgEffort != null && eff.avgEffort >= 8) || (eff.avgSets != null && eff.avgSets < 1)))
+    return { rec:"hold", why:"Your recent sessions are feeling hard, or you're not finishing the sets — hold at this level and let it consolidate before adding load." };
+  if((trend.cls === "trend-down" || trend.cls === "trend-flat") && ep.v <= 4 && (!adh || adh.status === "on-track")){
+    const easy = eff && eff.avgEffort != null && eff.avgEffort <= 4 && (eff.avgSets == null || eff.avgSets >= 1.5);
+    return { rec:"advance", why: easy
+      ? "You're breezing through — settled pain, sessions feeling easy, and sets completed. Time to add load: one more set, a little heavier, or a slower tempo."
+      : `Your logs are settled (${trend.txt}) and you're keeping up — you're clear to progress as the phase allows.` };
+  }
   return null;
 }
 /* Where in the current phase the person is, and the one thing to change THIS week. Prefers the
@@ -7586,6 +7607,7 @@ function initDataCard(){
 }
 function initProgress(){
   $("#logPain").oninput = e=>$("#logPainVal").textContent=e.target.value;
+  { const le=$("#logEffort"); if(le) le.oninput = e=>{ const v=$("#logEffortVal"); if(v) v.textContent=e.target.value; }; }
   $("#logBtn").onclick = saveLogEntry;
 
   const mr = $("#logMood");
@@ -7696,6 +7718,8 @@ function loadLogDay(d){
   state.logDone = (e && Array.isArray(e.done)) ? e.done.slice() : [];   // before renderLogEx reads it
   if($("#logPain")){ $("#logPain").value = e ? e.pain : 3; $("#logPainVal").textContent = e ? e.pain : 3; }
   if($("#logSessions")) $("#logSessions").value = e ? e.sessions : 1;
+  if($("#logEffort")){ const v = (e && e.effort!=null) ? e.effort : 5; $("#logEffort").value = v; if($("#logEffortVal")) $("#logEffortVal").textContent = v; }
+  if($("#logSets")) $("#logSets").value = (e && e.sets) || "";
   if($("#logNote")) $("#logNote").value = e ? (e.note||"") : "";
   /* Don't stack two questions. When Jeffery asks an OPEN question his card is the prompt,
      so the note stays quiet; when he asks a CLOSED one (a tap), the written prompt
@@ -8778,6 +8802,8 @@ function collectEntry(d){
     mood: state.logMood || "",
     pain: parseInt($("#logPain").value),
     sessions: Math.max(0, parseInt($("#logSessions").value)||0),
+    effort: $("#logEffort") ? parseInt($("#logEffort").value) : null,
+    sets: ($("#logSets") && $("#logSets").value) || "",
     note: $("#logNote").value.trim(),
     t: (prev && prev.t) || now,          // first written — never overwritten
     edited: now

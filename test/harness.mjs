@@ -49,7 +49,7 @@ const SEAM = `
   detectPlan, detectFocus, getProtocol: window.getProtocol,
   gateStatus, measuresFor, measureRegionKey, measurePct, latestMeasure, MEASURE_SETS,
   planFloored, currentPlanPhase, weekPhaseOf,
-  tissueClass, thisWeekFocus, LOADING_LADDER, progressionSignal,
+  tissueClass, thisWeekFocus, LOADING_LADDER, progressionSignal, recentEffort,
   SPECIAL_PRECAUTIONS, CONTRA_RULES: window.CONTRA_RULES,
   PROTOCOLS: window.PROTOCOLS, PROTOCOL_ALIAS: window.PROTOCOL_ALIAS,
   selectedConditions, CONMAP, EXMAP,

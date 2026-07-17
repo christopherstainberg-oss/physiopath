@@ -5,7 +5,7 @@
        Bump SHELL_VERSION whenever any of those change — i.e. most commits. Old shells are purged.
      - DATA:  the big lazy-loaded data files, cached on first use and KEPT across shell bumps.
        Bump DATA_VERSION ONLY when a generated data file's *content* actually changes (rare). */
-const SHELL_VERSION = "v182";
+const SHELL_VERSION = "v183";
 const DATA_VERSION  = "v1";
 const SHELL_CACHE = "physiopath-shell-" + SHELL_VERSION;
 const DATA_CACHE  = "physiopath-data-"  + DATA_VERSION;
