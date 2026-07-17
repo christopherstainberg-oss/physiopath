@@ -2984,16 +2984,31 @@ function weekPhaseOf(plan){
   for(let i=0;i<plan.ph.length;i++){ if(wk >= plan.ph[i][1] && wk < plan.ph[i][2]) return i; }
   return wk >= plan.ph[plan.ph.length-1][2] ? plan.ph.length-1 : 0;
 }
-/* Where the user actually is. You advance only when you've met the criteria AND
-   the tissue has had time — so whichever is further behind wins. Without a
-   self-report we fall back to the calendar. */
+/* Does this plan have a HARD biological time-floor? Graft revascularisation, bone union and
+   tendon-to-bone healing genuinely can't be rushed by feeling strong — for those the calendar
+   must CAP advancement. Load-driven conditions (tendinopathy, non-op sprains, PFPS, back pain,
+   frozen shoulder) have no such floor, so meeting the criteria should ADVANCE you, early or late.
+   An explicit `plan.floor` wins; otherwise post-op and named healing plans default to floored. */
+function planFloored(plan){
+  if(!plan) return false;
+  if(typeof plan.floor === "boolean") return plan.floor;
+  if(plan.postop) return true;
+  return /fracture|stress reaction|\brupture|reconstruction|\brepair\b|fusion|arthrodesis|osteotomy|\bgraft|union\b|replacement|arthroplasty/i
+    .test((plan.label||"") + " " + (plan.note||""));
+}
+/* Where the user actually is. Without a self-report we fall back to the calendar. With one, the
+   rule now depends on whether the tissue has a biological floor: a floored plan is CAPPED by the
+   calendar (criteria can only hold you back, never outrun graft/bone healing), while a capacity-
+   driven plan is DRIVEN by the criteria (meeting them advances you even ahead of the calendar, and
+   being behind still holds you at the criteria phase). */
 function currentPlanPhase(plan){
   if(!plan) return -1;
   const wp = weekPhaseOf(plan);
   const rep = criteriaMet(plan);
   if(!rep.some(Boolean)) return wp;
   const cp = Math.min(criteriaPhase(plan), plan.ph.length-1);
-  return wp < 0 ? cp : Math.min(cp, wp);
+  if(wp < 0) return cp;
+  return planFloored(plan) ? Math.min(cp, wp) : cp;
 }
 /* Region-blind age-matched fill. Only runs when a child's phase would otherwise be nearly
    empty, and only ever ADDS — every other gate (contraindications, devices, weight-bearing)
