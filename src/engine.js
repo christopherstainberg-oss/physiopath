@@ -473,15 +473,29 @@ function isPediatric(c){ return /^paediatric/i.test(c.region||"") || PED_RE.test
 
 /* ---------- persistence ---------- */
 const DEFAULT_STATE = JSON.parse(JSON.stringify(state));   // snapshot before load() mutates it
-/* Fixed-shape nested objects. A plain Object.assign replaces these WHOLESALE, so a save
-   written before a field existed came back missing it -- and String(undefined) is the
-   string "undefined", which sails through the `!==""` guard in wbSummary() and renders
-   "Partial weight-bearing (PWB) - 50% - ~undefined lbs" on a loading instruction. */
-const NESTED_KEYS = ["parq","vitals","weightBearing","cardiacDevice"];
+const STATE_VERSION = 1;   // bump + add a migrateState() case when a saved-state shape changes
+const isPlainObj = v => v!=null && typeof v==="object" && !Array.isArray(v);
+/* Fixed-shape nested objects are deep-merged with their defaults on load — a plain
+   Object.assign replaces them WHOLESALE, so a save written before a sub-field existed came
+   back missing it, and String(undefined)==="undefined" then rendered e.g. "~undefined lbs".
+   The list is DERIVED from DEFAULT_STATE's shape (every plain-object top-level key) rather than
+   hand-maintained, so a new fixed-shape field can't be forgotten. Keys whose default is an
+   empty map (labs, screen, medDoses…) merge to a harmless identity; `program` is null by
+   default, so it is (correctly) loaded wholesale. */
+const NESTED_KEYS = Object.keys(DEFAULT_STATE).filter(k => isPlainObj(DEFAULT_STATE[k]));
 let _saveFailed = false, _loadCorrupt = false;
 function save(){
-  try{ localStorage.setItem("physiopath", JSON.stringify(state)); return true; }
+  try{ state._v = STATE_VERSION; localStorage.setItem("physiopath", JSON.stringify(state)); return true; }
   catch(e){ console.warn("save failed:", e); _saveFailed = true; return false; }   // quota, or Safari private mode
+}
+/* Fix up an old save's SHAPE before it merges into state. Runs oldest-first; add a case per
+   STATE_VERSION bump (rename/move fields here). Missing sub-fields are already handled by the
+   deep-merge below, so a version with no structural change needs no case. Keep it pure. */
+function migrateState(s){
+  // const from = typeof s._v === "number" ? s._v : 1;
+  // if(from < 2){ /* … move / rename fields on `s` … */ }
+  s._v = STATE_VERSION;
+  return s;
 }
 function load(){
   const raw = localStorage.getItem("physiopath");
@@ -495,9 +509,10 @@ function load(){
     console.warn("saved data was unreadable; parked a copy under physiopath.corrupt.*", e);
     return;
   }
-  if(!s) return;
+  if(!isPlainObj(s)) return;   // a JSON array / string / number is not a valid saved state
+  migrateState(s);
   for(const k of NESTED_KEYS)
-    if(s[k] && typeof s[k]==="object" && !Array.isArray(s[k])) s[k] = Object.assign({}, DEFAULT_STATE[k], s[k]);
+    if(isPlainObj(s[k])) s[k] = Object.assign({}, DEFAULT_STATE[k], s[k]);
   Object.assign(state, s);
 }
 
