@@ -1,7 +1,7 @@
 /* AUTO-ASSEMBLED — do not edit app.js directly. Edit src/engine.js (History /
-   flags / age gates / planning) or src/ui.js (rendering / coach / journal /
-   wizard / boot), then run `npm run assemble`. The two files share one global
-   scope and one `state`; this file is the banner + the two halves concatenated. */
+   flags / age gates / planning) or the src/ui/*.js parts (rendering / coach /
+   journal / wizard / boot), then run `npm run assemble`. All parts share one
+   global scope and one `state`; this file is the banner + the parts concatenated. */
 /* =====================================================================
    PhysioPath — application logic
    Flow: Medical history → Injury selection → Details → Program → Coach
