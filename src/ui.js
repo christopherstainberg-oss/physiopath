@@ -3053,10 +3053,42 @@ function importJournal(file){
 function addMsg(text, who){
   const div=document.createElement("div"); div.className="msg "+who;
   div.innerHTML=mdLite(text);
-  if(who==="bot") div.innerHTML+=`<span class="src">Educational guidance · not a substitute for a clinician</span>`;
+  if(who==="bot"){
+    div.innerHTML+=`<span class="src">Educational guidance · not a substitute for a clinician</span>`;
+    const btn=document.createElement("button"); btn.type="button"; btn.className="msgcopy no-print";
+    btn.textContent="⧉ Copy"; btn.setAttribute("aria-label","Copy this answer");
+    btn.onclick=()=>{ const p=(navigator.clipboard&&navigator.clipboard.writeText)?navigator.clipboard.writeText(text):Promise.reject();
+      p.then(()=>{ btn.textContent="✓ Copied"; setTimeout(()=>{ btn.textContent="⧉ Copy"; },1500); }).catch(()=>toast("Couldn't copy to the clipboard.")); };
+    div.appendChild(btn);
+  }
   $("#chatlog").appendChild(div); $("#chatlog").scrollTop=$("#chatlog").scrollHeight;
 }
-const mdLite = t => esc(t).replace(/\*\*(.+?)\*\*/g,"<b>$1</b>").replace(/\*(.+?)\*/g,"<i>$1</i>").replace(/\n/g,"<br>");
+/* Lightweight markdown -> HTML for coach replies. esc() FIRST (so any real HTML in the text
+   is inert), then apply markup to the escaped string. Handles the shapes Claude actually emits
+   — bold/italic/inline-code, bullet & numbered lists, and #/##/### headings — which the old
+   bold/italic-only version rendered as literal `-` / `#` characters (the system prompt asks
+   for exactly those). */
+function mdInline(s){
+  return s.replace(/`([^`]+)`/g,'<code>$1</code>')
+          .replace(/\*\*(.+?)\*\*/g,"<b>$1</b>")
+          .replace(/\*(.+?)\*/g,"<i>$1</i>");
+}
+function mdLite(t){
+  const lines = esc(t).split("\n");
+  let html = "", list = null, buf = [];
+  const flush = () => { if(buf.length){ html += `<${list}>`+buf.map(li=>`<li>${mdInline(li)}</li>`).join("")+`</${list}>`; buf=[]; list=null; } };
+  for(const line of lines){
+    let m;
+    if((m = line.match(/^\s*[-*]\s+(.+)$/))){ if(list!=="ul"){ flush(); list="ul"; } buf.push(m[1]); continue; }
+    if((m = line.match(/^\s*\d+[.)]\s+(.+)$/))){ if(list!=="ol"){ flush(); list="ol"; } buf.push(m[1]); continue; }
+    flush();
+    if((m = line.match(/^\s*(#{1,3})\s+(.+)$/))){ html += `<div class="mdh mdh${m[1].length}">${mdInline(m[2])}</div>`; continue; }
+    if(line.trim()===""){ html += "<br>"; continue; }
+    html += mdInline(line) + "<br>";
+  }
+  flush();
+  return html.replace(/(<br>)+$/,"");
+}
 const SUGGESTED_BASE = ["Should I use ice or heat?","How much pain is normal?","What's my target heart rate?","What should I avoid with my condition?","When should I see a doctor?","How often should I train?","How many sets and reps?","How do I progress an exercise?","What is DOMS / muscle soreness?","Is pool or water exercise good for me?","How do I return to sport safely?","What should I eat to heal faster?","How do I read my HRV?","How do I prevent flare-ups?","Can I exercise at home with no equipment?"];
 /* Suggested chips — condition/feature-aware, so the most relevant ones come first. */
 function suggestedQuestions(){
@@ -6965,8 +6997,7 @@ function addTyping(){
 async function askClaude(q){
   /* The user turn is pushed by the submit handler — pushing again here would duplicate it. */
   const typing=addTyping();
-  try{
-    const res = await fetch("https://api.anthropic.com/v1/messages",{
+  const callAPI = () => fetch("https://api.anthropic.com/v1/messages",{
       method:"POST",
       headers:{
         "content-type":"application/json",
@@ -6981,6 +7012,17 @@ async function askClaude(q){
         messages: chatWindow(10)          // must begin on a user turn or the API 400s
       })
     });
+  try{
+    let res = await callAPI();
+    /* A 429 (rate limit) is not a failure — one polite backoff+retry (honouring Retry-After)
+       before downgrading, so a paying user isn't silently dropped to the offline KB. */
+    if(res.status===429){
+      const ra = parseInt(res.headers.get("retry-after")||"",10);
+      const waitMs = Math.min((Number.isFinite(ra)&&ra>0 ? ra : 4) * 1000, 8000);
+      typing.textContent = "rate limited — retrying…";
+      await new Promise(r=>setTimeout(r, waitMs));
+      res = await callAPI();
+    }
     typing.remove();
     if(!res.ok){
       let msg="HTTP "+res.status;
