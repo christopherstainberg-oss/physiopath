@@ -643,14 +643,16 @@ const LAB_DOMAINS = [
   { key:"hepatic",      label:"🩺 Hepatic (liver) panel" },
   { key:"cbc",          label:"🩸 Complete blood count (CBC)" },
   { key:"iron",         label:"🧲 Iron studies" },
-  { key:"thyroid",      label:"🦋 Thyroid & endocrine" },
-  { key:"reproductive", label:"🧬 Reproductive & sex hormones" },
   { key:"vitamins",     label:"💊 Vitamins & nutrition" },
   { key:"inflammation", label:"🔥 Inflammatory & immune markers" },
-  { key:"coagulation",  label:"🩹 Coagulation (clotting)" },
-  { key:"tumor",        label:"🎗️ Tumor markers" },
-  { key:"gastro",       label:"🍽️ Gastrointestinal & pancreatic" },
-  { key:"bloodgas",     label:"🫧 Arterial blood gas" }
+  // --- advanced / specialist panels: behind one disclosure. A rehab tool shouldn't confront
+  //     everyone with thyroid, sex hormones, tumour markers, blood gas and clotting fields. ---
+  { key:"thyroid",      label:"🦋 Thyroid & endocrine", adv:true },
+  { key:"reproductive", label:"🧬 Reproductive & sex hormones", adv:true },
+  { key:"coagulation",  label:"🩹 Coagulation (clotting)", adv:true },
+  { key:"tumor",        label:"🎗️ Tumor markers", adv:true },
+  { key:"gastro",       label:"🍽️ Gastrointestinal & pancreatic", adv:true },
+  { key:"bloodgas",     label:"🫧 Arterial blood gas", adv:true }
 ];
 function labStatusVal(lab, value){
   const v=vnum(value); if(v==null) return "none";
@@ -705,13 +707,19 @@ function refreshLabRow(id){
 function renderLabs(){
   const el=$("#labsBody"); if(!el) return;
   if(!labsSeeded){ if(LAB_DOMAINS[0]) openLabDomains.add(LAB_DOMAINS[0].key); labsSeeded=true; }
-  el.innerHTML = LAB_DOMAINS.map(d=>{
+  const domHTML = d => {
     const domLabs=LABS.filter(l=>l.domain===d.key);
     const rows=domLabs.map(labRowHTML).join("");
     const open=openLabDomains.has(d.key)?" open":"";
     return `<details class="labdomain"${open} data-domain="${d.key}"><summary class="labdh">${esc(d.label)}<span class="labdcount">${domLabs.length}</span></summary>${rows}</details>`;
-  }).join("");
-  $$("#labsBody > .labdomain").forEach(dt=>dt.addEventListener("toggle",()=>{
+  };
+  const core = LAB_DOMAINS.filter(d=>!d.adv), adv = LAB_DOMAINS.filter(d=>d.adv);
+  const advCount = adv.reduce((n,d)=>n + LABS.filter(l=>l.domain===d.key).length, 0);
+  el.innerHTML = core.map(domHTML).join("")
+    + (adv.length ? `<details class="labadv"><summary class="labadvh"><span>🔬 Advanced / specialist labs</span><span class="labdcount">${advCount}</span></summary>
+        <p class="hint" style="margin:8px 2px 4px">Thyroid, reproductive hormones, coagulation, tumour markers, blood gas and GI/pancreatic panels — for anyone with specialist bloodwork. Most people won't need these.</p>
+        ${adv.map(domHTML).join("")}</details>` : "");
+  $$("#labsBody .labdomain").forEach(dt=>dt.addEventListener("toggle",()=>{
     dt.open ? openLabDomains.add(dt.dataset.domain) : openLabDomains.delete(dt.dataset.domain);
   }));
   $$("#labsBody .labval").forEach(inp=>inp.oninput=()=>{ const id=inp.dataset.lab; (state.labs[id]=state.labs[id]||{}).v=inp.value.trim(); save(); refreshLabRow(id); renderRisks(); });
@@ -1100,9 +1108,10 @@ function computeRisks(){
 }
 function renderRisks(){
   const el=$("#riskBody"); if(!el) return;
-  const risks=computeRisks();
+  const risks=computeRisks(), areas=computeRiskAreas();
+  const dual = areas.length>0;   // labs/vitals entered → show BOTH groups under the one card, each labelled
   const lvlTxt={low:"Lower",moderate:"Moderate",high:"Higher"}, lvlCls={low:"risk-low",moderate:"risk-mod",high:"risk-high"};
-  el.innerHTML = risks.map(r=>{
+  const scored = risks.map(r=>{
     const cls=lvlCls[r.level];
     const facts = r.factors.length
       ? `<ul class="riskfactors">${r.factors.map(f=>`<li>${esc(f)}</li>`).join("")}</ul>`
@@ -1112,8 +1121,20 @@ function renderRisks(){
       ${facts}
       <p class="risknote">${esc(r.note)}</p>
     </div>`;
-  }).join("") + `<div class="redflags" style="margin-top:12px"><b>Educational only — not a diagnosis or a validated risk score.</b> These estimates use general thresholds and only the values you entered. Discuss any concerns, and any abnormal labs, with your doctor.</div>`;
-  renderOtherRisks();   // keep the cross-cutting "other risks" card in sync on every risk refresh
+  }).join("");
+  const aTxt={normal:"No flags",info:"Note",moderate:"Review",high:"Abnormal"}, aCls={normal:"risk-low",info:"risk-info",moderate:"risk-mod",high:"risk-high"};
+  const areaCards = areas.map(a=>{
+    const cls=aCls[a.level]||"risk-info";
+    return `<div class="riskcard ${cls}">
+      <div class="riskhead"><span class="ricon">${a.icon}</span><span class="rtitle">${esc(a.title)}</span><span class="rlevel ${cls}">${aTxt[a.level]||"Note"}</span></div>
+      <ul class="riskfindings">${a.findings.map(x=>`<li class="rf-${x.lv||'info'}">${esc(x.t)}</li>`).join("")}</ul>
+      <p class="risknote">${esc(a.note)}</p>
+    </div>`;
+  }).join("");
+  el.innerHTML =
+    (dual ? `<div class="risksub">Cardiovascular &amp; organ risk</div>` : "") + scored +
+    (dual ? `<div class="risksub">Lab &amp; vital risk areas</div>` + areaCards : "") +
+    `<div class="redflags" style="margin-top:12px"><b>Educational only — not a diagnosis or a validated risk score.</b> These estimates use general adult thresholds and only the values you entered; some vary by sex, age and lab. Discuss any concerns, and any abnormal labs, with your doctor.</div>`;
 }
 
 /* Health Risk Areas — clinically-grouped lab interpretation (metabolic, hematology, nutrition,
@@ -1244,20 +1265,8 @@ function computeRiskAreas(){
 
   return areas;
 }
-function renderOtherRisks(){
-  const el=$("#otherRiskBody"); if(!el) return;
-  const areas=computeRiskAreas();
-  if(!areas.length){ el.innerHTML=`<div class="empty" style="padding:20px 10px"><div class="big">🧪</div><div>Enter vitals and labs above and these risk areas — Metabolic, Hematology, Nutrition, Thyroid, Bone, Thrombosis, Inflammation & Infection, Reproductive & Hormonal, and Oncology-marker awareness — populate automatically.</div></div>`; return; }
-  const lvlTxt={normal:"No flags",info:"Note",moderate:"Review",high:"Abnormal"}, lvlCls={normal:"risk-low",info:"risk-info",moderate:"risk-mod",high:"risk-high"};
-  el.innerHTML = areas.map(a=>{
-    const cls=lvlCls[a.level]||"risk-info";
-    return `<div class="riskcard ${cls}">
-      <div class="riskhead"><span class="ricon">${a.icon}</span><span class="rtitle">${esc(a.title)}</span><span class="rlevel ${cls}">${lvlTxt[a.level]||"Note"}</span></div>
-      <ul class="riskfindings">${a.findings.map(x=>`<li class="rf-${x.lv||'info'}">${esc(x.t)}</li>`).join("")}</ul>
-      <p class="risknote">${esc(a.note)}</p>
-    </div>`;
-  }).join("") + `<div class="redflags" style="margin-top:12px"><b>Educational only — not a diagnosis.</b> These interpretations use general adult thresholds and only the values you entered; some vary by sex, age and lab. Discuss anything relevant with your clinician.</div>`;
-}
+/* renderOtherRisks was merged into renderRisks — computeRiskAreas now renders inside the single
+   "What Your Numbers Suggest" card (#riskBody), so there is no separate #otherRiskBody host. */
 
 /* Auto-open the data-ENTRY Health cards (Vitals log, Labs) when they already hold data, and
    show a count in the summary — so a returning user discovers their logged data instead of a

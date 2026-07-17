@@ -563,15 +563,10 @@ function renderProgram(prog){
   const [supTxt,supCls] = supMap[prog.supervision] || supMap.self;   // tolerate a stale/invalid supervision on a persisted program
 
   let html = `<div class="card">
-    <h2>Your ${esc(prog.totalWeeks)}-week program ${trackBadge}</h2>
+    <h2>Your ${esc(prog.totalWeeks)}-week program</h2>
     <p class="hint">Built for ${esc(String(state.weeks))} week(s) in, pain ${state.painRest}/10 at rest and ${state.painMove}/10 on movement${state.surgery==="yes"?", post-surgical":""}.
       ${state.goal?`Goal: <b>${esc(state.goal)}</b>.`:""}</p>
-    <div class="summary">
-      <div class="stat"><div class="k">Length</div><div class="v">${esc(prog.totalWeeks)} wks</div></div>
-      <div class="stat"><div class="k">Frequency</div><div class="v" style="font-size:14px">${esc(prog.sessions)}</div></div>
-      <div class="stat"><div class="k">Conditions</div><div class="v">${prog.items.length}</div></div>
-      <div class="stat"><div class="k">Supervision</div><div class="v" style="font-size:13px"><span class="sup ${supCls}">${supTxt}</span></div></div>
-    </div>`;
+    <div class="progmeta"><span><b>${esc(prog.totalWeeks)}</b> weeks</span><span class="pmsep">·</span><span>${esc(prog.sessions)}</span><span class="pmsep">·</span><span class="sup ${supCls}">${supTxt}</span></div>`;
 
   if(prog.clearance){
     html += `<div class="banner clear"><b>⚠ Get medical clearance before starting.</b> Based on your history and/or condition,
@@ -588,9 +583,7 @@ function renderProgram(prog){
       esc([...new Set(prog.removed.map(r=>TAG_LABEL[r.tag]||r.tag))].join(", ")) +
       ` and substituted safer options where needed.</div>`;
   }
-  html += `<div class="banner info no-print"><b>✎ Make it yours.</b> On any exercise: tap <b>⟳ Rotate</b> to swap it for the next option, or <b>⇄ Swap…</b> to choose from a list.
-    For a whole phase: <b>🔄 Rotate all exercises</b> or <b>↩ Reset to recommended</b>. Everything stays within your precautions and is saved automatically.</div>`;
-  html += `</div>`;
+  html += `</div>`;   // (the "✎ Make it yours" instructional banner was removed — the per-exercise ⟳ Rotate / ⇄ Swap buttons and phase tools already say it, in context)
 
   // render-time medication filtering (hide high-risk exercises; fully reversible)
   const mflags = medExerciseFlags();
@@ -604,15 +597,12 @@ function renderProgram(prog){
     if(homeSwap(e).home) homeAdapted++;
   })));
 
-  html += whyThisPlanCard(prog);
-  html += returnGoalsCard();
-  html += adlSuggestionsCard();
-  html += homeCard(homeAdapted);
-  html += pedGuidanceCard();      // age reshapes everything below it, so it says so first
-  html += safetyNotesCard(prog);
-  html += riskAwarenessCard(prog);
-  html += vitalsCard(prog);
-  html += medicationCard(medHiddenTotal);
+  // Lead with the PLAN. Only the safety framing stays above the exercises — pediatric guidance (age
+  // reshapes everything) and the collapsed Safety-notes card. Clearance + personalized precautions are
+  // already in the summary above. Everything else is reference and moves BELOW the plan, collapsed, so
+  // today's exercises are the first thing after the summary — not the tenth card down.
+  html += pedGuidanceCard();      // child only; age reshapes everything below it, so it says so first
+  html += safetyNotesCard(prog);  // already collapsed by default — safety notes before the plan
 
   prog.items.forEach((item, ci)=>{
     html += `<div class="card"><h2>${esc(item.name)}</h2>
@@ -657,6 +647,12 @@ function renderProgram(prog){
   });
 
   html += clinicianProtocolCards();     // any saved physician protocols, shown verbatim (added in the Clinician step)
+  // ── Reference — collapsed by default (need-to-know first). The "why this plan", return goals,
+  //    daily-task suggestions, home mode, and the vitals / risk / medication considerations: all
+  //    valuable on demand, none of them what the user opened the Program to see today.
+  const refCards = whyThisPlanCard(prog) + returnGoalsCard() + adlSuggestionsCard()
+    + homeCard(homeAdapted) + riskAwarenessCard(prog) + vitalsCard(prog) + medicationCard(medHiddenTotal);
+  if(refCards.trim()) html += `<details class="refgroup"><summary class="refsum"><span class="reftitle">📁 More about your plan</span><span class="refhint">why it looks like this · goals · home mode · vitals · meds</span><span class="refchev" aria-hidden="true">▾</span></summary><div class="refbody">${refCards}</div></details>`;
   html += suggestionsCard(prog);
   out.innerHTML = html;
   wireProgram();
@@ -1301,13 +1297,29 @@ function startNewChat(ask){
 ===================================================================== */
 /* Show the current condition in the header (desktop) so the user always sees which plan
    they're in. Falls back to the generated program if the catalogue isn't loaded yet. */
+const NAV_LABELS = ["History","Clinician","Injury","Details","Program","Journal","Health","Jeffery","Library"];
+/* Persistent locator: phase · where you are · your condition — so "where am I" is answered in one
+   line on every surface, mobile included (the mobile bottom bar shows the tabs but not the phase). */
 function updateHeaderContext(){
   const el=$("#hdrContext"); if(!el) return;
+  const n = Number(state.step)||0;
   const names=(typeof selectedConditions==="function"?selectedConditions():[]).map(c=>c.name);
   const primary = names[0] || (state.program&&state.program.items&&state.program.items[0]&&state.program.items[0].name) || "";
-  el.innerHTML = primary
-    ? `<b>${esc(primary)}</b>${names.length>1?` <span class="sep">·</span> +${names.length-1} more`:""}`
-    : "";
+  const bits = [`<span class="hdrphase">${n<=4?"Set up":"Your tools"}</span>`, `<b>${esc(NAV_LABELS[n]||"")}</b>`];
+  if(primary) bits.push(`${esc(primary)}${names.length>1?` +${names.length-1}`:""}`);
+  el.innerHTML = bits.join(`<span class="sep">·</span>`);
+}
+/* Honest "done": a step earns a check only when its real milestone is met — not just because the
+   user navigated past it (the old positional rule marked History "done" from the Library tab). */
+function stepDone(i){
+  switch(i){
+    case 0: return !!(String(state.age||"").length || (state.flags||[]).length || (state.condIds||[]).length);
+    case 1: return (state.clinicianProtocols||[]).length>0 || !!state.clinPrecautionProtocol || !!state.selfGuided;
+    case 2: return (state.condIds||[]).length>0;
+    case 3: return state.weeks!=null && state.weeks!=="";
+    case 4: return !!state.program;
+    default: return false;   // the hub tools (Journal/Health/Jeffery/Library) aren't "completed"
+  }
 }
 function goStep(n){
   state.step=n; save();
@@ -1316,7 +1328,7 @@ function goStep(n){
   const behavior = reduce ? "auto" : "smooth";
   const panels=$$(".panel");
   panels.forEach((p,i)=>p.classList.toggle("hide", i!==n));
-  $$(".step").forEach((s,i)=>{ const on=i===n; s.classList.toggle("active", on); s.classList.toggle("done", i<n);
+  $$(".step").forEach((s,i)=>{ const on=i===n; s.classList.toggle("active", on); s.classList.toggle("done", stepDone(i));
     if(on) s.setAttribute("aria-current","step"); else s.removeAttribute("aria-current"); });
   const act=document.querySelector(".step.active");        // keep the active step visible in the scrollable nav
   if(act&&act.scrollIntoView) try{ act.scrollIntoView({inline:"center",block:"nearest",behavior}); }catch(e){}
@@ -1636,6 +1648,26 @@ function adlFocusPlan(flags){
 }
 /* Condition card header: the real rehab timeline this plan follows, and where
    the user currently sits on it. */
+/* One horizontal phase timeline per condition — the single orientation that replaces the scattered
+   position indicators (the summary track badge and the "you're around week N, phase Y of Z" prose).
+   done ✓ · current ● · upcoming, each with its real week window, plus one position line. */
+function phaseTimelineHTML(item){
+  const p = item && item.plan; if(!p || !item.phases || !item.phases.length) return "";
+  const ph = item.phases;
+  const cur = item.planPhase>=0 ? item.planPhase : 0;
+  const w = weeksPostOp();
+  const curWk = Number(w!=null ? w : state.weeks);
+  const nodes = ph.map((x,i)=>{
+    const st = i<cur ? "done" : i===cur ? "current" : "upcoming";
+    const mark = i<cur ? "✓ " : i===cur ? "● " : "";
+    return `<div class="ptchip ${st}"><span class="ptn">${mark}Phase ${i+1}</span><span class="ptw">wk ${esc(x.weekStart)}–${esc(x.weekEnd)}</span></div>`;
+  }).join("");
+  const cp = ph[cur];
+  const len = cp ? Math.max(1, Number(cp.weekEnd)-Number(cp.weekStart)) : 1;
+  const wip = (cp && isFinite(curWk)) ? Math.min(len, Math.max(1, Math.round(curWk-Number(cp.weekStart))+1)) : null;
+  const pos = cp ? `📍 <b>Phase ${cur+1} of ${ph.length}</b> · ${esc(cp.title)}${wip?` — week ${wip} of ${len} in this phase`:""}` : "";
+  return `<div class="phasetl"><div class="ptrail">${nodes}</div>${pos?`<div class="ptpos">${pos}</div>`:""}</div>`;
+}
 function planLineHTML(item){
   const p = item && item.plan; if(!p) return "";
   const w = weeksPostOp();
@@ -1660,7 +1692,8 @@ function planLineHTML(item){
     ${p.variant&&p.variant.sub?`<div class="planvarsub"><b>${esc(p.variant.label)}</b> — ${esc(p.variant.sub)}</div>`:""}` : "";
   return `<div class="planline">
     <div class="planhead">📋 <b>Following the ${esc(p.label)} timeline — about ${p.total} weeks${months}</b></div>
-    <div class="plannote">${esc(p.note)}${at}</div>
+    ${phaseTimelineHTML(item)}
+    <div class="plannote">${esc(p.note)}</div>
     ${chips}
     ${progressReportHTML(item)}
     <div class="planfoot">Phases below use the real week windows for this injury. Progress on the <b>criteria</b>, not the dates — and your surgeon's or therapist's own protocol always comes first.</div>

@@ -100,15 +100,29 @@ details.collapsecard[open]>summary .collapsechev{transform:rotate(180deg)}
 details.collapsecard[open]>summary .collapsehint{display:none}
 .collapsebadge{font-size:11px;font-weight:800;color:var(--danger);background:rgba(255,107,107,.14);border-radius:999px;padding:2px 9px;white-space:nowrap}
 .collapsebody{margin-top:12px}
+/* Reference group on the Program — folds the secondary cards below the plan (need-to-know first) */
+details.refgroup{margin:14px 0;border:1px solid var(--line);border-radius:14px;background:var(--panel-2)}
+details.refgroup>summary.refsum{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 18px}
+details.refgroup>summary.refsum::-webkit-details-marker{display:none}
+.reftitle{font-weight:700;font-size:15px}
+.refhint{font-size:12px;color:var(--muted);flex:1 1 auto}
+.refchev{color:var(--muted)}
+details.refgroup[open]>summary .refchev{transform:rotate(180deg)}
+details.refgroup[open]>summary .refhint{display:none}
+.refbody{padding:2px 12px 8px}
+.refbody>.card:first-child{margin-top:0}
 /* count badge in a Health card summary ("12 readings") — surfaces logged data on a collapsed card */
 .hcardcount{margin-left:8px;font-size:11px;font-weight:700;color:var(--brand-ink);background:var(--chip);border-radius:999px;padding:1px 9px;white-space:nowrap}
-@media print{ details.collapsecard>.collapsebody{display:block!important} .collapsechev,.collapsehint{display:none!important} }
+@media print{ details.collapsecard>.collapsebody, details.refgroup>.refbody{display:block!important} .collapsechev,.collapsehint,.refchev,.refhint{display:none!important} }
 .hint{color:var(--muted);font-size:13.5px;margin:0 0 16px}
 .field{display:block;margin-bottom:14px}
 .field .lab{display:block;font-weight:600;font-size:13.5px;margin-bottom:6px}
 .field .sub{color:var(--muted);font-weight:400;font-size:12.5px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 @media(max-width:560px){.grid2{grid-template-columns:1fr}}
+.retgroup{border:1px solid var(--line);border-radius:12px;padding:12px 14px 4px;margin:2px 0 6px;background:var(--panel-2)}
+.retgrouphd{font-weight:700;font-size:13.5px;margin-bottom:10px}
+.retgrouphd .sub{color:var(--muted);font-weight:400;font-size:12.5px}
 input[type=text],input[type=number],select,textarea{width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--text);
   border-radius:10px;padding:12px;font-size:16px;font-family:inherit}
 textarea{resize:vertical;min-height:64px}
@@ -122,6 +136,8 @@ input[type=range]{flex:1;accent-color:var(--brand);height:30px}
   font-weight:600;cursor:pointer;font-size:15px;font-family:inherit;transition:.15s}
 .btn:hover{border-color:var(--brand)}
 .btn.primary{background:linear-gradient(135deg,var(--brand),#2b8ce0);border-color:transparent;color:#04121f}
+/* the one generative action in the wizard — differentiated from plain page-turns */
+.btn.primary.generate{font-weight:800;box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 22%, transparent)}
 .btn.ghost{background:transparent}
 .btn:disabled{opacity:.5;cursor:not-allowed}
 
@@ -185,6 +201,10 @@ input[type=range]{flex:1;accent-color:var(--brand);height:30px}
 
 /* program */
 .summary{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+/* compact one-line program meta (replaces the 4-box stat grid above the exercises) */
+.progmeta{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;margin:10px 0 8px;font-size:13.5px;color:var(--muted)}
+.progmeta b{color:var(--text);font-weight:750;font-size:15px}
+.progmeta .pmsep{opacity:.4}
 .stat{background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:10px 14px;flex:1;min-width:110px}
 .stat .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
 .stat .v{font-size:18px;font-weight:800;margin-top:2px}
@@ -206,6 +226,18 @@ input[type=range]{flex:1;accent-color:var(--brand);height:30px}
   padding:10px 12px;margin:0 0 12px;font-size:13px;line-height:1.55}
 .planhead{color:var(--brand-ink);margin-bottom:4px}
 .plannote{color:var(--text)}
+/* horizontal phase timeline — the single position indicator (replaces the track badge + week prose) */
+.phasetl{margin:10px 0}
+.ptrail{display:flex;flex-wrap:wrap;gap:6px}
+.ptchip{flex:1 1 auto;min-width:82px;border:1px solid var(--line);border-radius:9px;padding:7px 9px;display:flex;flex-direction:column;gap:1px;background:var(--panel)}
+.ptchip.done{border-color:color-mix(in srgb,var(--ok,#37c98b) 42%,var(--line))}
+.ptchip.current{border-color:var(--ok,#37c98b);background:color-mix(in srgb,var(--ok,#37c98b) 11%, transparent)}
+.ptchip.upcoming{opacity:.65}
+.ptchip .ptn{font-size:12px;font-weight:700;color:var(--muted)}
+.ptchip.current .ptn{color:var(--text)}
+.ptchip .ptw{font-size:10.5px;color:var(--muted);opacity:.85;font-variant-numeric:tabular-nums}
+.ptpos{margin-top:9px;font-size:13px;color:var(--muted)}
+.ptpos b{color:var(--text)}
 .planfoot{color:var(--muted);font-size:12px;margin-top:6px}
 .planvars{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:9px}
 .planvarlbl{font-size:11.5px;font-weight:700;color:var(--muted);margin-right:2px}
@@ -724,6 +756,13 @@ svg.chart .dot{fill:var(--brand)}
 /* weight-bearing & device controls */
 .preccontrols{display:flex;flex-direction:column;gap:14px;margin:12px 0 4px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--panel-2)}
 .preclab{display:block;font-weight:700;font-size:13.5px;margin-bottom:7px}
+/* Collapse the manual weight-bearing/device/precaution PICKERS by default — a non-surgical user
+   shouldn't scroll a clinician console; applied + auto-suggested precautions still show outside it. */
+details.preccontrols-wrap{margin:8px 0}
+details.preccontrols-wrap>summary.preccontrols-sum{list-style:none;cursor:pointer;font-weight:650;font-size:13.5px;color:var(--muted);padding:8px 2px}
+details.preccontrols-wrap>summary.preccontrols-sum::-webkit-details-marker{display:none}
+details.preccontrols-wrap>summary.preccontrols-sum::before{content:"▸ ";color:var(--muted)}
+details.preccontrols-wrap[open]>summary.preccontrols-sum::before{content:"▾ "}
 .wbctrl select,.devctrl select{width:100%}
 .wbdesc{font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:8px}
 .wbamt{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
@@ -1055,6 +1094,12 @@ details.labdomain>summary.labdh::-webkit-details-marker{display:none}
 details.labdomain>summary.labdh::before{content:"▸";color:var(--muted);font-size:11px;transition:transform .15s}
 details.labdomain[open]>summary.labdh::before{transform:rotate(90deg)}
 .labdcount{margin-left:auto;font-size:11px;font-weight:700;color:var(--muted);background:var(--chip);border-radius:999px;padding:1px 9px}
+/* Advanced / specialist lab panels — one disclosure, so the default view is the rehab-relevant labs */
+details.labadv{margin-top:14px;border:1px dashed var(--line);border-radius:11px;background:var(--panel-2);padding:0 14px}
+details.labadv>summary.labadvh{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding:13px 2px;font-weight:700;font-size:14px}
+details.labadv>summary.labadvh::-webkit-details-marker{display:none}
+details.labadv>summary.labadvh::before{content:"▸";color:var(--muted);font-size:11px}
+details.labadv[open]>summary.labadvh::before{content:"▾"}
 .labrow{padding:10px 0;border-bottom:1px solid var(--line)}
 .labrow:last-child{border-bottom:none}
 .labname{font-size:13.5px;font-weight:600;margin-bottom:6px}
@@ -1086,6 +1131,8 @@ details.labdomain[open]>summary.labdh::before{transform:rotate(90deg)}
 .riskcard.risk-mod{border-color:rgba(255,204,87,.5)}
 .riskcard.risk-high{border-color:rgba(255,107,107,.55)}
 .riskcard.risk-info{border-color:rgba(62,166,255,.4)}
+.risksub{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin:16px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--line)}
+.risksub:first-child{margin-top:2px}
 .rlevel.risk-info{background:rgba(62,166,255,.16);color:var(--brand)}
 .riskhead{display:flex;align-items:center;gap:8px}
 .ricon{font-size:18px}
@@ -1167,6 +1214,7 @@ details.labdomain[open]>summary.labdh::before{transform:rotate(90deg)}
 .hdrctx:empty{display:none!important}
 .hdrctx b{color:var(--text);font-weight:700}
 .hdrctx .sep{opacity:.5;margin:0 8px}
+.hdrphase{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--panel-2);padding:1px 6px;border-radius:5px}
 
 /* railgroup labels are only shown in the desktop side-rail (below) */
 .railgroup{display:none}
