@@ -60,6 +60,28 @@ Phase 2: Strengthen (weeks 3–6) — goal: build strength, normalise movement
 Phase 3: Return to function (weeks 7–12) — goal: restore full strength & control
 - Exercise name — 3×10 each
 - Exercise name — 3×30s each`;
+/* Staleness reminder for a saved clinician protocol: if its review date has passed, or enough
+   weeks have elapsed since it was given to be past its last phase, gently prompt a clinician
+   check-in. Uses the real date (todayISO) — advisory only, never blocks anything. */
+function maxPhaseWeek(pr){
+  let mx=0;
+  (pr.phases||[]).forEach(ph=>{ const m=String(ph.weeks||"").match(/\d+/g); if(m) m.forEach(n=>{ mx=Math.max(mx,+n); }); });
+  return mx;
+}
+function clinStaleNote(pr){
+  const today=todayISO();
+  if(pr.reviewDate && pr.reviewDate < today)
+    return `<div class="banner warn clinstale">⏰ <b>Review date passed</b> (${esc(pr.reviewDate)}) — check with your clinician before progressing further.</div>`;
+  if(pr.dateGiven && pr.dateGiven <= today){
+    const wks=Math.floor((Date.parse(today)-Date.parse(pr.dateGiven))/604800000);   // ms per week
+    const mx=maxPhaseWeek(pr);
+    if(mx && wks>mx)
+      return `<div class="banner warn clinstale">⏰ <b>${wks} weeks</b> since this protocol was given — past its last phase (week ${mx}). Check with your clinician about next steps.</div>`;
+    if(!mx && wks>=12)
+      return `<div class="banner warn clinstale">⏰ <b>${wks} weeks</b> since this protocol was given — it may be worth checking in with your clinician.</div>`;
+  }
+  return "";
+}
 function clinicianProtocolCards(){
   const list = state.clinicianProtocols || [];
   return list.map((pr,i)=>{
@@ -76,10 +98,13 @@ function clinicianProtocolCards(){
         </div>
         <div class="body">${rows ? `<ul class="exlist">${rows}</ul>` : `<p class="hint" style="margin:6px 0 0">Milestone / criteria phase — no exercises listed here.</p>`}</div></div>`;
     }).join("");
+    const meta = [pr.procedure?`for ${esc(pr.procedure)}`:"", pr.dateGiven?`given ${esc(pr.dateGiven)}`:"", pr.reviewDate?`review ${esc(pr.reviewDate)}`:""].filter(Boolean).join(" · ");
     return `<div class="card clincard">
       <h2>🩺 ${esc(pr.name)} <span class="clinbadge">Clinician-provided</span>
         <button class="clindel no-print" data-idx="${i}" title="Remove this protocol">✕</button></h2>
       ${pr.source?`<p class="hint">Source: ${esc(pr.source)}.</p>`:""}
+      ${meta?`<p class="hint clinmeta">${meta}</p>`:""}
+      ${clinStaleNote(pr)}
       <div class="banner info" style="margin-top:4px"><b>Shown exactly as you entered it.</b> This is your clinician's protocol — the app's automatic exercise-safety filtering is <b>not</b> applied, and it isn't cross-checked against the health history you entered. Your clinician has the full picture; follow their guidance and dosing.</div>
       ${phases}
     </div>`;
@@ -185,6 +210,11 @@ function clinicianFormCard(){
     <div class="clinform">
       <input type="text" id="clinName" placeholder="Protocol name — e.g. Dr. Lee · ACL reconstruction" />
       <input type="text" id="clinSource" placeholder="Clinician / clinic / source (optional)" />
+      <input type="text" id="clinProcedure" placeholder="Procedure / diagnosis it's for (optional) — e.g. ACL reconstruction, R rotator-cuff repair" />
+      <div class="clindates">
+        <label class="clindatef"><span>Date given <span class="sub">(optional)</span></span><input type="date" id="clinDateGiven" /></label>
+        <label class="clindatef"><span>Review / next appt <span class="sub">(optional)</span></span><input type="date" id="clinReview" /></label>
+      </div>
       <textarea id="clinText" rows="8" placeholder="Paste or type the protocol, one exercise per line. Example:&#10;Phase 1: Protection (weeks 0-2) — goal: control swelling&#10;- Quad sets — 3×10 — lock the knee straight&#10;- Heel slides — 3×15&#10;Phase 2: Strength (weeks 3-6)&#10;- Mini squats — 3×12&#10;- Leg press — 3×10"></textarea>
       <div class="clinpreview" id="clinPreview"></div>
       <div class="clinbtns">
@@ -213,9 +243,12 @@ function fillClinExample(){
 function addClinProtocol(){
   const name = ($("#clinicianOut #clinName").value||"").trim();
   const source = ($("#clinicianOut #clinSource").value||"").trim();
+  const procedure = ($("#clinicianOut #clinProcedure").value||"").trim();
+  const dateGiven = ($("#clinicianOut #clinDateGiven").value||"").trim();
+  const reviewDate = ($("#clinicianOut #clinReview").value||"").trim();
   const parsed = parseClinProtocol($("#clinicianOut #clinText").value);
   if(!parsed.phases.length){ toast("Add at least one exercise line first."); return; }
-  (state.clinicianProtocols = state.clinicianProtocols || []).push({ name: name || "Clinician protocol", source, phases: parsed.phases });
+  (state.clinicianProtocols = state.clinicianProtocols || []).push({ name: name || "Clinician protocol", source, procedure, dateGiven, reviewDate, phases: parsed.phases });
   save();
   if(state.program) renderProgram(state.program);   // added protocol shows in the (hidden) program
   initClinician();                                   // refresh the section (clears the form, updates summary)

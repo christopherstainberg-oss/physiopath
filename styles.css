@@ -825,6 +825,11 @@ details.preccontrols-wrap[open]>summary.preccontrols-sum::before{content:"▾ "}
 .clinformcard{border-style:dashed}
 .clinform{display:flex;flex-direction:column;gap:10px;margin-top:6px}
 .clinform textarea{min-height:160px;font-family:inherit;line-height:1.5}
+.clindates{display:flex;gap:10px;flex-wrap:wrap}
+.clindatef{flex:1;min-width:150px}
+.clindatef>span{display:block;font-size:12.5px;font-weight:600;margin-bottom:4px}
+.clinmeta{margin:2px 0 0;font-style:italic}
+.clinstale{margin-top:6px}
 .clinpreview:not(:empty){border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--panel-2);font-size:13px}
 .clinprevhead{font-weight:700;margin-bottom:6px;color:var(--brand-2)}
 .clinprevph{color:var(--muted);margin:2px 0}
