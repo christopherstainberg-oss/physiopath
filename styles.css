@@ -1174,12 +1174,16 @@ details.labdomain[open]>summary.labdh::before{transform:rotate(90deg)}
   main.wrap{ grid-area:main; max-width:none; margin:0; padding:22px 22px 60px }
   main.wrap > *{ max-width:var(--readw); margin-left:auto; margin-right:auto }
 
-  /* … the Health step opens into a dashboard: responsive columns (2-up when there's
-     room, 1-up on a narrow tablet), the tall labs card + nav spanning full width. */
-  main.wrap > #panel-6{ max-width:var(--dashw); columns:2 340px; column-gap:22px }
-  #panel-6 > .card{ break-inside:avoid; width:100%; margin:0 0 22px }
-  #panel-6 > .card:has(#labsBody), #panel-6 > .rowbtns{ column-span:all }
-  #panel-6 > .rowbtns{ margin-top:0 }
+  /* … the Health step opens into a dashboard. Row-major GRID, not a `columns` masonry
+     flow: the newspaper flow filled down column 1 then column 2, which reordered the
+     Risk / Data / Other cards out of the quick-nav's order. A grid places cards
+     left→right, top→bottom in DOM (= nav) order. One column here; two at ≥1024 (below).
+     `align-items:start` lets a short card keep its natural height instead of stretching
+     to the taller card beside it — the cost is a gap under the shorter one (masonry
+     packs tighter but reorders, which is the bug we're fixing). */
+  main.wrap > #panel-6{ max-width:var(--dashw); display:grid; grid-template-columns:1fr;
+    gap:22px; align-items:start }
+  #panel-6 > *{ margin:0 }
 
   /* Library results flow into responsive columns within the reading width */
   #exResults{ display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
@@ -1193,7 +1197,7 @@ details.labdomain[open]>summary.labdh::before{transform:rotate(90deg)}
 
   /* header shows the current condition; the Health quick-nav is static (dashboard is short) */
   .hdrctx{ display:block }
-  #panel-6 > .hsubnav{ position:static; column-span:all; margin:0 0 2px }
+  #panel-6 > .hsubnav{ position:static; margin:0 }
 }
 
 /* larger screens: a wider rail and a little more breathing room */
@@ -1203,6 +1207,13 @@ details.labdomain[open]>summary.labdh::before{transform:rotate(90deg)}
   .steps .step{ gap:12px; padding:10px 12px }
   .steps .step span{ font-size:13.5px }
   .railgroup{ font-size:10.5px; padding:15px 12px 5px }
+
+  /* two-column dashboard; the labs card, quick-nav and footer buttons span both tracks.
+     repeat(2,…) keeps the count fixed so `grid-column:1/-1` resolves unambiguously. */
+  main.wrap > #panel-6{ grid-template-columns:repeat(2, minmax(0,1fr)) }
+  #panel-6 > .hsubnav,
+  #panel-6 > .card:has(#labsBody),
+  #panel-6 > .rowbtns{ grid-column:1 / -1 }
 }
 
 @media print{
