@@ -113,7 +113,7 @@ function clinicianProtocolCards(){
 /* ---- Clinician section (step 4): exercise protocol + precaution protocol inputs ---- */
 function initClinician(){
   const host = $("#clinicianOut"); if(!host) return;
-  host.innerHTML = clinicianIntroCard() + clinicianFormCard() + clinPrecautionCard() + clinicianAddedSummary();
+  host.innerHTML = clinicianIntroCard() + clinicianFormCard() + clinPrecautionCard() + clinParamsCard() + clinicianAddedSummary();
   wireClinician();
   // clinician-guided session → auto-populate an editable starter protocol whenever the form is empty
   // and nothing's been added yet (so it survives navigating away and back before adding).
@@ -200,6 +200,8 @@ function wireClinician(){
   const clinEx = $("#clinicianOut #clinExample"); if(clinEx) clinEx.onclick = fillClinExample;
   const clinText = $("#clinicianOut #clinText"); if(clinText){ clinText.oninput = updateClinPreview; updateClinPreview(); }
   const precSave = $("#clinicianOut #clinPrecSave"); if(precSave) precSave.onclick = saveClinPrecaution;
+  const cpSave = $("#clinicianOut #cpSave"); if(cpSave) cpSave.onclick = saveClinParams;
+  const cpClear = $("#clinicianOut #cpClear"); if(cpClear) cpClear.onclick = clearClinParams;
   // Weight-bearing order set from the Clinician step reuses the same state + engine path as the
   // Details precautions console (setWeightBearingStatus → afterPrecautionChange regenerates the
   // plan), so a clinician's NWB/PWB order genuinely tightens the auto-program — no engine change.
@@ -218,6 +220,49 @@ function saveClinPrecaution(){
   renderPrecautions();                                  // show it in the Precautions area
   initClinician();                                      // refresh the summary
   toast(state.clinPrecautionProtocol ? "Precaution protocol saved — see the Precautions area." : "Precaution protocol cleared.");
+}
+/* Clinician "Parameters" card (collapsed): prescribe telemetry target RANGES (HR, exercise-HR
+   ceiling, systolic/diastolic BP, SpO₂). Blank fields fall back to the evidence-based VITAL_TARGETS
+   defaults (shown as placeholders). Saved to state.clinParams; drives the Health colour-coding and
+   the conservative telemetryNotes() in the program. */
+function clinParamsCard(){
+  const p = state.clinParams || {};
+  const gv = (k,b)=>{ const c=p[k]||{}; const x=c[b]; return (x==null?"":x); };
+  const inp = (id,v,ph)=>`<input type="number" id="${id}" value="${esc(String(v))}" placeholder="${ph}" inputmode="numeric" min="0" />`;
+  const anySet = ["hr","sbp","dbp","spo2"].some(k=>{const c=p[k]||{}; return (c.min!==""&&c.min!=null)||(c.max!==""&&c.max!=null);}) || (((p.hrEx||{}).max||"")!=="");
+  return `<details class="card clinformcard collapsecard no-print"${anySet?" open":""}>
+    <summary class="collapsesum"><h2>📊 Prescribed parameters <span class="clinbadge">telemetry targets</span></h2><span class="collapsehint">Expand</span><span class="collapsechev" aria-hidden="true">▾</span></summary>
+    <div class="collapsebody">
+    <p class="hint">Prescribe target ranges for the patient's telemetry — these <b>colour-code the Health vitals</b>, flag out-of-range readings, and feed conservative guidance into the program. Blank = the evidence-based default (shown as the placeholder).</p>
+    <div class="clinparamgrid">
+      <div class="clinparamrow"><span class="cplab">❤️ Heart rate <span class="sub">bpm</span></span>${inp("cpHrMin",gv("hr","min"),"60")}<span class="cpdash">–</span>${inp("cpHrMax",gv("hr","max"),"100")}</div>
+      <div class="clinparamrow"><span class="cplab">🏃 Exercise HR ceiling <span class="sub">bpm</span></span>${inp("cpHrEx",gv("hrEx","max"),"e.g. 120")}</div>
+      <div class="clinparamrow"><span class="cplab">🩸 Systolic BP <span class="sub">mmHg</span></span>${inp("cpSbpMin",gv("sbp","min"),"90")}<span class="cpdash">–</span>${inp("cpSbpMax",gv("sbp","max"),"130")}</div>
+      <div class="clinparamrow"><span class="cplab">🩸 Diastolic BP <span class="sub">mmHg</span></span>${inp("cpDbpMin",gv("dbp","min"),"60")}<span class="cpdash">–</span>${inp("cpDbpMax",gv("dbp","max"),"85")}</div>
+      <div class="clinparamrow"><span class="cplab">🫁 SpO₂ <span class="sub">%</span></span>${inp("cpSpo2Min",gv("spo2","min"),"95")}<span class="cpdash">–</span>${inp("cpSpo2Max",gv("spo2","max"),"100")}</div>
+    </div>
+    <div class="clinbtns"><button class="btn primary" id="cpSave" type="button">Save parameters</button><button class="btn ghost" id="cpClear" type="button">Reset to defaults</button></div>
+    <p class="hint" style="margin-top:6px">Defaults are general adult targets (ACC/AHA, ACSM). SpO₂ floors differ in COPD — set a lower min if prescribed. Educational, not a diagnosis.</p>
+    </div>
+  </details>`;
+}
+function saveClinParams(){
+  const val = id => { const el=$("#clinicianOut #"+id); return el ? el.value.trim() : ""; };
+  const rng = (a,b)=>({ min: val(a), max: val(b) });
+  state.clinParams = { hr:rng("cpHrMin","cpHrMax"), sbp:rng("cpSbpMin","cpSbpMax"), dbp:rng("cpDbpMin","cpDbpMax"), spo2:rng("cpSpo2Min","cpSpo2Max"), hrEx:{ max: val("cpHrEx") } };
+  save();
+  if(state.program){ state.program = generateProgram(); save(); }   // prescribed ranges change the program notes
+  initClinician();
+  if(typeof renderTelemetry==="function") renderTelemetry();         // reflect immediately in Health
+  toast("Prescribed parameters saved — reflected in Health and your program notes.");
+}
+function clearClinParams(){
+  state.clinParams = { hr:{min:"",max:""}, sbp:{min:"",max:""}, dbp:{min:"",max:""}, spo2:{min:"",max:""}, hrEx:{max:""} };
+  save();
+  if(state.program){ state.program = generateProgram(); save(); }
+  initClinician();
+  if(typeof renderTelemetry==="function") renderTelemetry();
+  toast("Parameters reset to the evidence-based defaults.");
 }
 function clinicianFormCard(){
   return `<div class="card clinformcard no-print">
