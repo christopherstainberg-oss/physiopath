@@ -1352,11 +1352,14 @@ function openSwap(btn){
     } else {
       const disp = o => state.homeMode ? homeSwap(o) : o;   // show options in home terms when Home mode is on
       box.innerHTML = `<div class="swaphint">Tap an exercise to replace <b>${esc(disp(ph.ex[ei]).n)}</b>:</div>` +
-        opts.map((o,oi)=>{ const d=disp(o); return `<div class="swapopt" data-oi="${oi}"><span class="en">${d.home?"🏠 ":""}${esc(d.n)}</span><span class="ed">${esc(d.d)}</span>${o.warn?`<span class="exwarn">⚠ modify</span>`:""}</div>`; }).join("");
-      box.querySelectorAll(".swapopt").forEach(op=>op.onclick=()=>{
-        openPhases.add(ci+"-"+pi);
-        state.program.items[ci].phases[pi].ex[ei] = opts[+op.dataset.oi];
-        save(); renderProgram(state.program); toast("Exercise swapped.");
+        opts.map((o,oi)=>{ const d=disp(o); return `<div class="swapopt" role="option" tabindex="0" data-oi="${oi}"><span class="en">${d.home?"🏠 ":""}${esc(d.n)}</span><span class="ed">${esc(d.d)}</span>${o.warn?`<span class="exwarn">⚠ modify</span>`:""}</div>`; }).join("");
+      box.querySelectorAll(".swapopt").forEach(op=>{
+        op.onclick=()=>{
+          openPhases.add(ci+"-"+pi);
+          state.program.items[ci].phases[pi].ex[ei] = opts[+op.dataset.oi];
+          save(); renderProgram(state.program); toast("Exercise swapped.");
+        };
+        op.onkeydown=e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); op.click(); } };
       });
     }
     box.dataset.filled="1";
@@ -1534,7 +1537,7 @@ function precStatus(w){
 }
 function precRowHTML(t, w, idx){
   const [cls,label] = precStatus(w);
-  const del = (idx!=null) ? `<span class="precdel no-print" data-idx="${idx}" title="Remove">✕</span>` : "";
+  const del = (idx!=null) ? `<button type="button" class="precdel no-print" data-idx="${idx}" aria-label="Remove">✕</button>` : "";
   const mine = (idx!=null) ? `<span class="precmine">yours</span> ` : "";
   return `<li class="precrow ${cls}"><span class="prec-t">${mine}${esc(t)}</span><span class="prec-w">${label}</span>${del}</li>`;
 }
@@ -1787,7 +1790,7 @@ function surgicalReminderCard(){
   const devRows = devices.map((d,i)=>{
       const r = DEVICE_RESTRICT[d.name];
       const explain = r && r.note ? `<li class="precrow spwhat"><span class="prec-t">ⓘ <b>What this is:</b> ${esc(r.note)}</span></li>` : "";
-      return `<li class="precrow devrow"><span class="prec-t">🦿 <b>${esc(d.name)}</b> — ${esc(d.note||"")}</span><span class="precdel devdel no-print" data-devidx="${i}" title="Remove">✕</span></li>${explain}`;
+      return `<li class="precrow devrow"><span class="prec-t">🦿 <b>${esc(d.name)}</b> — ${esc(d.note||"")}</span><button type="button" class="precdel devdel no-print" data-devidx="${i}" aria-label="Remove">✕</button></li>${explain}`;
     }).join("");
   const spRows = activeSpecialPrecautions().map(p=>{
       const what = `<li class="precrow spwhat"><span class="prec-t">${p.icon} <b>${esc(p.label)} — what they are:</b> ${esc(p.what)}</span></li>`;
@@ -3776,7 +3779,7 @@ function runSearch(){
   let list=window.CONDITIONS;
   if(domainFilter==="pediatric") list=list.filter(isPediatric);
   else if(domainFilter!=="all") list=list.filter(c=>c.domain===domainFilter);
-  if(toks.length) list=list.filter(c=>{ const hay=(c.name+" "+c.region+" "+(c.synonyms||[]).join(" ")).toLowerCase();
+  if(toks.length) list=list.filter(c=>{ const hay=c._hay||(c._hay=(c.name+" "+c.region+" "+(c.synonyms||[]).join(" ")).toLowerCase());
     return toks.every(t=>hay.includes(t)); });
   const total=list.length; list=list.slice(0,60);
   const dotColor={msk:"var(--msk)",neuro:"var(--neuro)",cardiac:"var(--cardiac)",pulmonary:"var(--pulm)"};
@@ -3888,7 +3891,7 @@ function runMedSearch(){
   const q=$("#medSearch").value.trim().toLowerCase(); const toks=q.split(/\s+/).filter(Boolean);
   if(!toks.length){ res.innerHTML=""; res.classList.add("hide"); return; }
   res.classList.remove("hide");
-  let list=window.MEDICATIONS.filter(m=>{ const hay=(m.name+" "+m.generic+" "+m.cls).toLowerCase(); return toks.every(t=>hay.includes(t)); });
+  let list=window.MEDICATIONS.filter(m=>{ const hay=m._hay||(m._hay=(m.name+" "+m.generic+" "+m.cls).toLowerCase()); return toks.every(t=>hay.includes(t)); });
   const total=list.length; list=list.slice(0,40);
   if(!list.length){ res.innerHTML=`<div class="moreinfo">No matches — try the generic or brand name.</div>`; return; }
   res.innerHTML = list.map(m=>{ const picked=state.medIds.includes(m.id);
@@ -3961,7 +3964,7 @@ function setupAutocomplete(inputId, resultsId, chipsId, data, stateKey, opts){
   if(!input || !results || !chips) return;
   const list = () => (state[stateKey] = state[stateKey] || []);
   const draw = () => {
-    chips.innerHTML = list().map((v,i)=>`<span class="selchip">${esc(v)} <span class="x" data-i="${i}" title="Remove">✕</span></span>`).join("");
+    chips.innerHTML = list().map((v,i)=>`<span class="selchip">${esc(v)} <button type="button" class="x" data-i="${i}" aria-label="Remove ${esc(v)}">✕</button></span>`).join("");
     chips.querySelectorAll(".x").forEach(x=>x.onclick=()=>{ list().splice(+x.dataset.i,1); save(); if(opts.onChange) opts.onChange(); draw(); });
   };
   const add = (val) => {
@@ -4021,7 +4024,7 @@ function runSurgerySearch(){
   const q=$("#surgerySearch").value.trim().toLowerCase(); const toks=q.split(/\s+/).filter(Boolean);
   if(!toks.length){ res.innerHTML=""; res.classList.add("hide"); return; }
   res.classList.remove("hide");
-  let list=surgeries().filter(s=>{ const hay=(s.name+" "+(s.region||"")+" "+(s.cat||"")).toLowerCase(); return toks.every(t=>hay.includes(t)); });
+  let list=surgeries().filter(s=>{ const hay=s._hay||(s._hay=(s.name+" "+(s.region||"")+" "+(s.cat||"")).toLowerCase()); return toks.every(t=>hay.includes(t)); });
   const total=list.length; list=list.slice(0,40);
   const otherRow=`<div class="result" data-id="other"><span class="rn">Other / not listed<div class="rr">general post-op precautions</div></span><span class="add">+</span></div>`;
   if(!list.length){ res.innerHTML=`<div class="moreinfo">No matches — try a simpler term.</div>`+otherRow; }

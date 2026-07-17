@@ -68,7 +68,7 @@ header.app{display:flex;align-items:center;gap:12px;
 .logo{width:40px;height:40px;border-radius:11px;flex:0 0 auto;background:linear-gradient(135deg,var(--brand),var(--brand-2));
   display:grid;place-items:center;color:#04121f;font-weight:800;font-size:20px;box-shadow:var(--shadow)}
 .brand{min-width:0}
-.brandname{font-size:18px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brandname{margin:0;font-size:18px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .brandsub{font-size:12px;color:var(--muted);margin-top:-2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* the tagline doesn't fit beside the controls on phones — show just the name there */
 @media(max-width:480px){.brandsub{display:none}}
@@ -169,7 +169,7 @@ input[type=range]{flex:1;accent-color:var(--brand);height:30px}
 .moreinfo{text-align:center;color:var(--muted);font-size:12.5px;padding:10px}
 .selected{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 4px}
 .selchip{display:flex;align-items:center;gap:8px;background:var(--panel-2);border:1px solid var(--brand);border-radius:999px;padding:7px 8px 7px 13px;font-size:13.5px}
-.selchip .x{cursor:pointer;width:20px;height:20px;border-radius:50%;background:var(--line);display:grid;place-items:center;font-size:13px}
+.selchip .x{cursor:pointer;width:20px;height:20px;border-radius:50%;background:var(--line);display:grid;place-items:center;font-size:13px;border:0;padding:0;color:inherit;font-family:inherit}
 .selchip .sup{font-size:10px;font-weight:800;padding:1px 6px;border-radius:999px;text-transform:uppercase}
 .sup.clinical{background:rgba(255,107,107,.2);color:var(--danger)}
 .sup.supervised{background:rgba(255,204,87,.2);color:var(--warn)}
@@ -722,7 +722,7 @@ svg.chart .dot{fill:var(--brand)}
 .medcard-dose{color:var(--muted);font-weight:500;font-size:12.5px}
 .precmine{display:inline-block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;
   color:var(--brand);background:rgba(62,166,255,.14);border-radius:999px;padding:1px 7px;margin-right:6px;vertical-align:1px}
-.precdel{cursor:pointer;color:var(--muted);width:22px;flex:0 0 auto;text-align:center;border-radius:50%;font-size:12px}
+.precdel{cursor:pointer;color:var(--muted);width:22px;flex:0 0 auto;text-align:center;border-radius:50%;font-size:12px;border:0;background:none;padding:0;font-family:inherit;line-height:1.6}
 .precdel:hover{background:var(--line);color:var(--danger)}
 .surgcard.plain{border-color:var(--line)}
 .surgcard.plain h2{color:var(--text)}
