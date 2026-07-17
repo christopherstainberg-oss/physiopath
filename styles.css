@@ -1104,12 +1104,16 @@ details.labdomain[open]>summary.labdh::before{transform:rotate(90deg)}
     background:var(--panel);border-top:1px solid var(--line);
     box-shadow:0 -6px 22px rgba(0,0,0,.18);
     -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+    scroll-snap-type:x proximity;scrollbar-width:none;   /* overflow-x:auto is inherited from the base rule */
   }
-  .step{flex:1;min-width:0;min-height:50px;padding:5px 1px;gap:3px;border-bottom:none;border-radius:10px}
+  .steps::-webkit-scrollbar{display:none}                /* the peeking tabs at the edges are the scroll affordance */
+  /* Tabs size to their LABEL and scroll horizontally, instead of squeezing 9 into the width with
+     an unreadable ellipsis. goStep() centres the active one (scrollIntoView inline:center). */
+  .step{flex:0 0 auto;min-width:60px;min-height:50px;padding:5px 10px;gap:3px;border-bottom:none;border-radius:10px;scroll-snap-align:center}
   .step i{width:23px;height:23px;font-size:12px}
-  .step span{font-size:10px;line-height:1.1;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .step span{font-size:11px;line-height:1.1;white-space:nowrap}   /* full label, no ellipsis */
   .step.active{color:var(--brand);border-bottom:none;background:rgba(62,166,255,.10)}
-  .step.active span{color:var(--brand)}
+  .step.active span{color:var(--brand);font-weight:800}
 
   /* keep content (and the footer) clear of the fixed bar + honor side notches */
   .wrap{padding-left:calc(16px + env(safe-area-inset-left));padding-right:calc(16px + env(safe-area-inset-right));

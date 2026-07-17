@@ -10608,6 +10608,10 @@ document.addEventListener("DOMContentLoaded",()=>{
   // when self-guided is on. Either way the Clinician step stays reachable from the steps bar and
   // from Injury's "← Back", so a self-guided user can always double back for a clinician's help.
   const histNext = $("#historyNext"); if(histNext) histNext.onclick=()=>goStep(state.selfGuided ? 2 : 1);
+  // Injury → back MIRRORS the forward skip: a self-guided user reached Injury straight from History
+  // (Next skipped the Clinician step), so their "← Back" must return to History (0), not a Clinician
+  // step they never saw. Everyone else arrived via Clinician (1), so they go back there.
+  const injBack = $("#injuryBack"); if(injBack) injBack.onclick=()=>goStep(state.selfGuided ? 0 : 1);
   // Clinician-guided and self-guided are opposites — ticking one clears the other so the state
   // can never claim both "a clinician is setting this up" and "I'm doing it myself".
   const cg = $("#q_clinicianGuided"); if(cg) cg.onchange=()=>{ state.clinicianGuided=cg.checked; if(cg.checked) state.selfGuided=false; save(); syncSessionMode(); };
