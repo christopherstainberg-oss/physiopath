@@ -1297,13 +1297,29 @@ function startNewChat(ask){
 ===================================================================== */
 /* Show the current condition in the header (desktop) so the user always sees which plan
    they're in. Falls back to the generated program if the catalogue isn't loaded yet. */
+const NAV_LABELS = ["History","Clinician","Injury","Details","Program","Journal","Health","Jeffery","Library"];
+/* Persistent locator: phase · where you are · your condition — so "where am I" is answered in one
+   line on every surface, mobile included (the mobile bottom bar shows the tabs but not the phase). */
 function updateHeaderContext(){
   const el=$("#hdrContext"); if(!el) return;
+  const n = Number(state.step)||0;
   const names=(typeof selectedConditions==="function"?selectedConditions():[]).map(c=>c.name);
   const primary = names[0] || (state.program&&state.program.items&&state.program.items[0]&&state.program.items[0].name) || "";
-  el.innerHTML = primary
-    ? `<b>${esc(primary)}</b>${names.length>1?` <span class="sep">·</span> +${names.length-1} more`:""}`
-    : "";
+  const bits = [`<span class="hdrphase">${n<=4?"Set up":"Your tools"}</span>`, `<b>${esc(NAV_LABELS[n]||"")}</b>`];
+  if(primary) bits.push(`${esc(primary)}${names.length>1?` +${names.length-1}`:""}`);
+  el.innerHTML = bits.join(`<span class="sep">·</span>`);
+}
+/* Honest "done": a step earns a check only when its real milestone is met — not just because the
+   user navigated past it (the old positional rule marked History "done" from the Library tab). */
+function stepDone(i){
+  switch(i){
+    case 0: return !!(String(state.age||"").length || (state.flags||[]).length || (state.condIds||[]).length);
+    case 1: return (state.clinicianProtocols||[]).length>0 || !!state.clinPrecautionProtocol || !!state.selfGuided;
+    case 2: return (state.condIds||[]).length>0;
+    case 3: return state.weeks!=null && state.weeks!=="";
+    case 4: return !!state.program;
+    default: return false;   // the hub tools (Journal/Health/Jeffery/Library) aren't "completed"
+  }
 }
 function goStep(n){
   state.step=n; save();
@@ -1312,7 +1328,7 @@ function goStep(n){
   const behavior = reduce ? "auto" : "smooth";
   const panels=$$(".panel");
   panels.forEach((p,i)=>p.classList.toggle("hide", i!==n));
-  $$(".step").forEach((s,i)=>{ const on=i===n; s.classList.toggle("active", on); s.classList.toggle("done", i<n);
+  $$(".step").forEach((s,i)=>{ const on=i===n; s.classList.toggle("active", on); s.classList.toggle("done", stepDone(i));
     if(on) s.setAttribute("aria-current","step"); else s.removeAttribute("aria-current"); });
   const act=document.querySelector(".step.active");        // keep the active step visible in the scrollable nav
   if(act&&act.scrollIntoView) try{ act.scrollIntoView({inline:"center",block:"nearest",behavior}); }catch(e){}
