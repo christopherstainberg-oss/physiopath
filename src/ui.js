@@ -6858,7 +6858,31 @@ function renderOtherRisks(){
   }).join("") + `<div class="redflags" style="margin-top:12px"><b>Educational only — not a diagnosis.</b> These interpretations use general adult thresholds and only the values you entered; some vary by sex, age and lab. Discuss anything relevant with your clinician.</div>`;
 }
 
-function renderHealth(){ renderHRMonitor(); renderVitalsLog(); renderLabs(); renderRisks(); }
+/* Auto-open the data-ENTRY Health cards (Vitals log, Labs) when they already hold data, and
+   show a count in the summary — so a returning user discovers their logged data instead of a
+   wall of collapsed "report" headers. Fresh/empty cards stay collapsed (the all-collapsed
+   default is preserved); once opened this session the user's manual collapse is respected.
+   The read-only interpretation cards (Risk / Other / Data backup) stay collapsed. */
+function healthCardCount(id){
+  if(id==="vitalsLogCard") return (state.vitalsLog||[]).length;
+  if(id==="labsCard") return Object.values(state.labs||{}).filter(l=>l && l.v!=="" && l.v!=null).length;
+  return 0;
+}
+function syncHealthCards(){
+  [["vitalsLogCard","reading"],["labsCard","value"]].forEach(([id,noun])=>{
+    const card=document.getElementById(id); if(!card) return;
+    const sum=card.querySelector("summary.collapsesum"); if(!sum) return;
+    const n=healthCardCount(id);
+    let badge=sum.querySelector(".hcardcount");
+    if(n>0){
+      if(!badge){ badge=document.createElement("span"); badge.className="hcardcount"; const h=sum.querySelector("h2"); if(h) h.after(badge); else sum.appendChild(badge); }
+      badge.textContent = n+" "+noun+(n===1?"":"s");
+      if(!card._autoSynced) card.open = true;   // open populated cards the first time this session
+    } else if(badge){ badge.remove(); }
+    card._autoSynced = true;
+  });
+}
+function renderHealth(){ renderHRMonitor(); renderVitalsLog(); renderLabs(); renderRisks(); syncHealthCards(); }
 function initHealth(){
   const d=$("#vlDate"); if(d && !d.value) d.value=todayISO();
   const sv=$("#vlSave"); if(sv) sv.onclick=saveVitalsEntry;
