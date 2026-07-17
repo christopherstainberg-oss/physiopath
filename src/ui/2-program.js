@@ -637,7 +637,7 @@ function renderProgram(prog){
           ${ph.restrict?`<div class="planrestrict"><b>⚠ At this stage:</b> ${esc(ph.restrict)}</div>`:""}
           ${tw?`<div class="thisweek"><div class="twk"><b>📅 This week</b> · week ${tw.wip} of ${tw.len} in this phase</div>
             <div class="twrung">${esc(tw.rung)}</div>
-            <div class="twnudge">${esc(tw.nudge)}</div></div>`:""}
+            <div class="twnudge tw-${tw.signal||"time"}">${tw.signal==="hold"?"⏸ ":tw.signal==="advance"?"✅ ":""}${esc(tw.nudge)}</div></div>`:""}
           <ul class="exlist">${rows}</ul>
           <div class="phasetools no-print">
             <span class="phasetoolslbl">Whole phase:</span>

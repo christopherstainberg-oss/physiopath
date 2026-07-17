@@ -3062,7 +3062,29 @@ const LOADING_LADDER = {
     "Build capacity — heavier, more functional loading toward your goal.",
     "Return to full activity — the demands of your sport, work or life." ],
 };
-/* Where in the current phase the person is, and the one thing to change THIS week.
+/* Response-based override for the weekly nudge. The plan is time-based, but what someone is
+   actually LOGGING should hold them back or clear them on — auto-regress on a rising trend or a
+   flare, consolidate when they're behind on sessions, and only give the green light when things
+   are settled AND consistent. Returns null when there isn't enough logged data to make the call,
+   so the nudge falls back to the time-based one. */
+function progressionSignal(){
+  const log = (state.log || []).filter(e => isFinite(Number(e.pain)));
+  if(log.length < 2) return null;                    // too little to base a call on — stay time-based
+  const trend = painTrend(state.log || []);
+  const ep = effectivePain();
+  const adh = adherence();
+  if(trend.cls === "trend-up")
+    return { rec:"hold", why:"Your recent logs show pain trending up — hold at this level (or ease back a step) this week rather than adding load, and let it settle first." };
+  if(ep.v >= 7)
+    return { rec:"hold", why:`You're logging around ${(+ep.v).toFixed(1)}/10 right now — keep this week light and don't progress until it eases.` };
+  if(adh && adh.status === "behind")
+    return { rec:"hold", why:"You've logged fewer sessions than the plan asks — consolidate at this level before adding anything; the consistency is what earns the next step." };
+  if((trend.cls === "trend-down" || trend.cls === "trend-flat") && ep.v <= 4 && (!adh || adh.status === "on-track"))
+    return { rec:"advance", why:`Your logs are settled (${trend.txt}) and you're keeping up — you're clear to progress as the phase allows.` };
+  return null;
+}
+/* Where in the current phase the person is, and the one thing to change THIS week. Prefers the
+   response-based signal from what they're logging, and falls back to time-based guidance.
    Returns null when there's no matched plan phase to resolve against. */
 function thisWeekFocus(item){
   if(!item || !item.phases || !(item.planPhase >= 0)) return null;
@@ -3075,12 +3097,13 @@ function thisWeekFocus(item){
   const len   = Math.max(1, end - start);
   const wip   = Math.min(len, Math.max(1, Math.round(cur - start) + 1));   // 1-based week-in-phase
   const rung  = (LOADING_LADDER[tissueClass(item)] || LOADING_LADDER.general)[Math.min(3, item.planPhase)];
-  const nudge = wip <= 1
+  const timeNudge = wip <= 1
     ? "Start of this phase — establish tolerance at this level before adding anything."
     : wip >= len
     ? "End of this phase — if it's controlled and next-morning symptoms are settled, you're ready to progress to the next phase."
     : "Nudge it up this week — one more set, slightly heavier, or a slower tempo. No more than ~10% up from last week, and only if the last step settled well.";
-  return { wip, len, rung, nudge, tissue: tissueClass(item) };
+  const sig = progressionSignal();
+  return { wip, len, rung, nudge: sig ? sig.why : timeNudge, tissue: tissueClass(item), signal: sig ? sig.rec : null };
 }
 function currentPlanPhase(plan){
   if(!plan) return -1;

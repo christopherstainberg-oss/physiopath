@@ -47,7 +47,7 @@ const SEAM = `
   save, load, migrateState, DEFAULT_STATE, STATE_VERSION, parseAnthropicSSE,
   exAgeMin, exAgeMax, exAgeOk, adaptForAge, protoAgeMin, PROTO_AGE_RULES, isPediatric, phaseTarget,
   detectPlan, detectFocus, getProtocol: window.getProtocol,
-  tissueClass, thisWeekFocus, LOADING_LADDER,
+  tissueClass, thisWeekFocus, LOADING_LADDER, progressionSignal,
   SPECIAL_PRECAUTIONS, CONTRA_RULES: window.CONTRA_RULES,
   PROTOCOLS: window.PROTOCOLS, PROTOCOL_ALIAS: window.PROTOCOL_ALIAS,
   selectedConditions, CONMAP, EXMAP,
