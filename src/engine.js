@@ -544,12 +544,21 @@ function gatherFlags(){
   if(Number(state.age) >= 75) f.add("balance_risk");
   if(state.surgery === "yes") f.add("recent_surgery");
   selectedConditions().forEach(c => (c.autoFlags||[]).forEach(x=>f.add(x)));
+  // Safety net, independent of the per-condition data: conditions the catalogue routes to a generic
+  // LOADING plan but which actually need OFFLOADING + clearance (the bone/joint can collapse under load).
+  selectedConditions().forEach(c => {
+    const n = (c.name||"").toLowerCase();
+    if(/neuroarthropath|charcot (foot|joint|ankle)/.test(n)){ f.add("critical_offload"); f.add("neuropathy"); f.add("balance_risk"); }  // NB: not Charcot-Marie-Tooth (a neuropathy, no collapse risk)
+    else if(/avascular necrosis|osteonecrosis|\bavn\b/.test(n)
+            && /hip|femoral|femur|knee|condyle|talus|ankle|tibial|navicular|lunate|scaphoid|\bhead\b/.test(n)) f.add("critical_offload");
+  });
   const surg = detectSurgery(); if(surg && surg.autoFlags) surg.autoFlags.forEach(x=>f.add(x));
   vitalFlags().forEach(x=>f.add(x));
   labFlags().forEach(x=>f.add(x));   // bloods now shape the plan, not just the risk cards
   wbFlags().forEach(x=>f.add(x));
   deviceFlags().forEach(x=>f.add(x));
   specialPrecautionFlags().forEach(x=>f.add(x));
+  medExerciseFlags().forEach(x=>f.add(x));   // high-risk medications now shape the BUILT plan, not an opt-in render filter
   const sc = state.screen||{};
   if(Object.values(sc).some(Boolean)) f.add("red_flags");
   if(sc.cauda) f.add("red_flags_urgent");
@@ -571,10 +580,11 @@ function gatherFlags(){
   if(["reduced","absent"].includes(state.footSensation)){ f.add("neuropathy"); f.add("balance_risk"); }
   return Array.from(f);
 }
-/* Medication-derived engine flags — applied at RENDER time only (so toggling is
-   reversible and never discards manual edits). Empty unless the toggle is on. */
+/* Medication-derived engine flags for the three HIGH-CONSEQUENCE classes (fluoroquinolone →
+   tendon rupture, anticoagulant/antiplatelet → bleeding, sedating → falls). These are hard
+   contraindications: they now fold into gatherFlags() so the plan is BUILT safely, rather than
+   sitting behind an opt-in render toggle that left the DEFAULT plan unsafe. */
 function medExerciseFlags(){
-  if(!state.medFilter) return [];
   const mf = new Set(selectedMeds().flatMap(m=>m.flags||[]));
   const out = [];
   if(mf.has("fluoroquinolone")) out.push("fluoroquinolone");

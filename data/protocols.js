@@ -1097,6 +1097,8 @@
       note:"Balance/falls risk: do all balance and standing work beside a sturdy rail, counter, or in a corner, ideally with someone nearby. Progress difficulty slowly." },
     neuropathy: { avoid:[], caution:[T.balance,T.impact,T.wb],
       note:"Reduced sensation: inspect your feet/hands before and after exercise, wear protective footwear, and use support for balance since you may not feel your position well." },
+    critical_offload: { avoid:[T.impact], caution:[T.wb,T.highInt,T.balance], clearance:true,
+      note:"This condition — such as Charcot neuroarthropathy or avascular necrosis / osteonecrosis of a weight-bearing joint — needs PROTECTED weight-bearing and specialist guidance: the bone or joint can collapse under load. Get assessed before loading it, and follow the offloading and weight-bearing limits your specialist sets." },
     dvt: { avoid:[T.highInt], caution:[T.aerobic],
       clearance:true,
       note:"Clot history / blood thinners: get clearance before vigorous exercise. Seek urgent care for new calf pain/swelling/warmth or sudden breathlessness or chest pain." },

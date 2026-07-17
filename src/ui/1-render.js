@@ -1324,13 +1324,8 @@ function wireProgram(){
   $$("#programOut .addexbox").forEach(box=>{               // re-open + refill any pickers the user left open
     if(openAddBoxes.has(box.dataset.ci+"-"+box.dataset.pi)){ fillAddExercise(box, +box.dataset.ci, +box.dataset.pi); box.classList.remove("hide"); }
   });
-  const mf = $("#programOut #medFilterToggle");
-  if(mf) mf.onchange = ()=>{
-    state.medFilter = mf.checked; save();
-    renderProgram(state.program);   // render-time only — no regeneration, edits kept
-    toast(mf.checked ? "Medication safety filtering ON — high-risk exercises hidden (your edits are kept)."
-                     : "Medication safety filtering OFF — all exercises shown.");
-  };
+  // (the medication-filter toggle was removed — high-risk med precautions now apply automatically
+  //  at build time via gatherFlags(), like every other contraindication.)
   const hm = $("#programOut #homeModeToggle");
   if(hm) hm.onchange = ()=>{
     state.homeMode = hm.checked; save();
