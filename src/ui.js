@@ -1303,7 +1303,7 @@ let labsSeeded = false;
 function collapsibleCard(id, cls, titleHTML, bodyHTML, badgeHTML){
   const open = openCards.has(id) ? " open" : "";
   return `<details class="card ${cls} collapsecard" data-card="${esc(id)}"${open}>
-    <summary class="collapsesum"><h2>${titleHTML}</h2>${badgeHTML||""}<span class="collapsehint">tap to expand</span><span class="collapsechev" aria-hidden="true">▾</span></summary>
+    <summary class="collapsesum"><h2>${titleHTML}</h2>${badgeHTML||""}<span class="collapsehint">Expand</span><span class="collapsechev" aria-hidden="true">▾</span></summary>
     <div class="collapsebody">${bodyHTML}</div>
   </details>`;
 }

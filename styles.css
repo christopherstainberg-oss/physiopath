@@ -17,7 +17,7 @@
    carry dark text (.btn.primary, .planvar.on). Darkening them for light mode would fix the
    text and break the buttons, so text usages get their own ink tokens. In dark mode the ink
    IS the accent; light mode overrides only the ink. */
-:root{ --brand-ink:var(--brand); --accent-ink:var(--brand-2); --ped-ink:var(--ped);
+:root{ --brand-ink:var(--brand); --accent-ink:var(--brand-2); --ped-ink:var(--ped); --chronic-ink:var(--chronic);
   /* Same dual-purpose problem as --brand: these hues colour TEXT (warnings, domain
      tags, risk pills) AND fill tinted backgrounds. In dark mode the ink IS the accent;
      light mode overrides only the ink so the safety-critical text meets WCAG AA. */
@@ -27,7 +27,7 @@
   :root{--bg:#eef3f8;--panel:#fff;--panel-2:#f2f6fb;--line:#d7e2ee;--text:#132030;--muted:#5b6c80;--shadow:0 6px 16px rgba(20,40,70,.09);
     /* the dark-mode accents measured 2.59:1 and 1.64:1 on white -- both fail WCAG AA (4.5:1),
        and --brand-2 was the colour of the cardiac-device heart-rate limit text. */
-    --brand-ink:#0b5fa8; --accent-ink:#0a6e4a; --chip:#e4ecf6; --ped-ink:#a32b6b;
+    --brand-ink:#0b5fa8; --accent-ink:#0a6e4a; --chip:#e4ecf6; --ped-ink:#a32b6b; --chronic-ink:#6d28d9;
     /* darkened so warning/tag/pill TEXT clears 4.5:1 on white and on its .1 tint
        (the urgent red-flag line and the clearance banner are the load-bearing ones) */
     --warn-ink:#8a5a00; --danger-ink:#b3261d; --acute-ink:#9a4a12;
@@ -96,7 +96,7 @@ details.collapsecard>summary.collapsesum::-webkit-details-marker{display:none}
 details.collapsecard>summary.collapsesum h2{margin:0;flex:1 1 auto}
 .collapsechev{color:var(--muted);font-size:15px;transition:transform .18s;flex:0 0 auto}
 details.collapsecard[open]>summary .collapsechev{transform:rotate(180deg)}
-.collapsehint{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;opacity:.72}
+.collapsehint{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
 details.collapsecard[open]>summary .collapsehint{display:none}
 .collapsebadge{font-size:11px;font-weight:800;color:var(--danger);background:rgba(255,107,107,.14);border-radius:999px;padding:2px 9px;white-space:nowrap}
 .collapsebody{margin-top:12px}
@@ -179,7 +179,7 @@ input[type=range]{flex:1;accent-color:var(--brand);height:30px}
 .acuteLabel{margin-top:8px;font-size:13px}
 .badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700}
 .badge.acute{background:rgba(255,138,92,.16);color:var(--acute-ink);border:1px solid rgba(255,138,92,.4)}
-.badge.chronic{background:rgba(157,123,255,.16);color:var(--chronic);border:1px solid rgba(157,123,255,.4)}
+.badge.chronic{background:rgba(157,123,255,.16);color:var(--chronic-ink);border:1px solid rgba(157,123,255,.4)}
 
 /* program */
 .summary{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
@@ -622,10 +622,10 @@ svg.chart .dot{fill:var(--brand)}
 .exrow .er{font-size:11.5px;color:var(--muted);font-weight:400;display:block;margin-top:2px}
 .exrow .ed{font-size:12.5px;color:var(--muted);white-space:nowrap}
 .diffpill{flex:0 0 auto;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:999px;text-transform:uppercase;letter-spacing:.3px}
-.d1{background:rgba(92,225,166,.16);color:var(--brand-2)}
-.d2{background:rgba(62,166,255,.16);color:var(--brand)}
-.d3{background:rgba(255,204,87,.16);color:var(--warn)}
-.d4{background:rgba(255,138,92,.16);color:var(--acute)}
+.d1{background:rgba(92,225,166,.16);color:var(--accent-ink)}
+.d2{background:rgba(62,166,255,.16);color:var(--brand-ink)}
+.d3{background:rgba(255,204,87,.16);color:var(--warn-ink)}
+.d4{background:rgba(255,138,92,.16);color:var(--acute-ink)}
 .exrow .exwarn{color:var(--warn-ink);font-size:11px;display:block;margin-top:2px}
 #exRegion,#exDiff{width:auto;flex:1;min-width:120px}
 
