@@ -2024,7 +2024,6 @@ function runSearch(){
 }
 function initSearch(){
   window.CONDITIONS.forEach(c=>CONMAP.set(c.id,c));
-  $("#catCount").textContent=window.CONDITIONS.length;
   let t; const cs=$("#condSearch");
   cs.oninput=()=>{ clearTimeout(t); t=setTimeout(runSearch,120); };
   /* Enter picked nothing and ArrowDown went nowhere: the input was a dead end for anyone
@@ -2132,7 +2131,6 @@ function initDetails(){
   $("#surgery").value=state.surgery; $("#fitness").value=state.fitness; $("#goal").value=state.goal;
   // surgery picker — searchable (3000+ procedures)
   $("#surgeryDate").value=state.surgeryDate||"";
-  if($("#surgCount")) $("#surgCount").textContent = surgeries().length.toLocaleString();
   renderSurgeryPick();
   let sgt; const ss=$("#surgerySearch"); if(ss) ss.oninput=()=>{ clearTimeout(sgt); sgt=setTimeout(runSurgerySearch,120); };
   toggleSurgeryExtra(); updatePostopLabel();

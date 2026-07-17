@@ -1605,7 +1605,6 @@ const EXMAP = new Map();
 let libReady = false;
 function initLibrary(){
   if(!window.EXERCISES) return;
-  $("#exCount").textContent = window.EXERCISES.length;
   if(!libReady){
     libReady = true;
     window.EXERCISES.forEach(e=>EXMAP.set(e.id,e));

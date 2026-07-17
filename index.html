@@ -232,7 +232,7 @@
       <details class="optsec" data-opt="meds">
         <summary><span class="optsum">Medications</span><span class="optbuy">→ flags exercise interactions</span></summary>
       <div class="field">
-        <span class="lab">Medications <span class="sub">(optional — search 10,000+; flags exercise considerations)</span></span>
+        <span class="lab">Medications <span class="sub">(optional — search for yours; flags exercise considerations)</span></span>
         <input type="text" id="medSearch" aria-label="Search medications" placeholder="Search e.g. ‘metoprolol’, ‘Eliquis’, ‘prednisone’, ‘gabapentin’…" autocomplete="off" />
         <div class="selected" id="selectedMeds"></div>
         <div class="results medresults hide" id="medResults"></div>
@@ -270,9 +270,8 @@
   <section class="panel hide" id="panel-2">
     <div class="card">
       <h2>Find your injury or condition</h2>
-      <p class="hint">Search our catalog of <b id="catCount">25,000</b> conditions across
-        <span class="tag msk">musculoskeletal</span> <span class="tag neuro">neurological</span>
-        <span class="tag cardiac">cardiac</span> <span class="tag pulm">pulmonary</span> <span class="tag ped">paediatric&nbsp;0–18</span>. Pick one or more.</p>
+      <p class="hint">Search across <span class="tag msk">musculoskeletal</span> <span class="tag neuro">neurological</span>
+        <span class="tag cardiac">cardiac</span> <span class="tag pulm">pulmonary</span> <span class="tag ped">paediatric&nbsp;0–18</span> conditions. Pick one or more.</p>
 
       <div class="searchbar">
         <input type="text" id="condSearch" aria-label="Search injuries and conditions" placeholder="Search e.g. ‘rotator cuff’, ‘ACL’, ‘COPD’, ‘stroke’, ‘low back’…" autocomplete="off" />
@@ -314,7 +313,7 @@
 
       <div id="surgeryExtra" class="hide">
         <div class="grid2">
-          <label class="field"><span class="lab">Which surgery? <span class="sub">(auto-detected, or search <b id="surgCount">20,000</b>+ procedures)</span></span>
+          <label class="field"><span class="lab">Which surgery? <span class="sub">(auto-detected, or search for yours)</span></span>
             <input type="text" id="surgerySearch" placeholder="Search e.g. ‘ACL’, ‘rotator cuff’, ‘hip replacement’, ‘CABG’…" autocomplete="off" />
             <div class="surgpick" id="surgeryPick"></div>
             <div class="results surgresults hide" id="surgeryResults"></div>
@@ -345,14 +344,14 @@
           <input type="text" id="goal" placeholder="e.g. return to running, lift my kids pain-free" />
         </label>
         <div class="grid2">
-          <label class="field"><span class="lab">Specific activities <span class="sub">(type to search 10,000+, add as many as you like)</span></span>
+          <label class="field"><span class="lab">Specific activities <span class="sub">(type to search, add as many as you like)</span></span>
             <div class="acwrap">
               <input type="text" id="activitySearch" placeholder="e.g. gardening, lifting my kids, climbing stairs…" autocomplete="off" />
               <div class="results acresults hide" id="activityResults"></div>
             </div>
             <div class="chips" id="activityChips"></div>
           </label>
-          <label class="field"><span class="lab">A sport <span class="sub">(tailors your late-phase plan · search 10,000+)</span></span>
+          <label class="field"><span class="lab">A sport <span class="sub">(tailors your late-phase plan · type to search)</span></span>
             <div class="acwrap">
               <input type="text" id="sportSearch" placeholder="e.g. basketball, running (marathon), tennis…" autocomplete="off" />
               <div class="results acresults hide" id="sportResults"></div>
@@ -636,7 +635,7 @@
   <section class="panel hide" id="panel-8">
     <div class="card">
       <h2>Exercise library</h2>
-      <p class="hint">Browse <b id="exCount">5000</b> exercises and variations (load, tempo, stance,
+      <p class="hint">Browse exercises and variations (load, tempo, stance,
         surface, equipment). Filter by body area and level. <span id="exSafeNote"></span></p>
       <div class="searchbar">
         <input type="text" id="exSearch" aria-label="Search the exercise library" placeholder="Search e.g. ‘single-leg squat’, ‘band row’, ‘balance’, ‘eccentric’…" autocomplete="off" />

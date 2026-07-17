@@ -361,7 +361,6 @@ function ensureConditions(){
   return _condP = loadData("conditions.js").then(()=>{
     if(window.CONDITIONS){
       window.CONDITIONS.forEach(c=>CONMAP.set(c.id,c));
-      if($("#catCount")) $("#catCount").textContent = window.CONDITIONS.length.toLocaleString();
       initSearch();
     }
     return true;
