@@ -61,7 +61,8 @@
     <div class="card">
       <h2>Medical history</h2>
       <p class="hint">We ask this <b>first</b> so your program respects any medical precautions
-        (contraindications). Nothing is uploaded — it stays on your device.</p>
+        (contraindications). Nothing is uploaded — it stays on your device. <b>Nothing here is required</b> —
+        skip anything that doesn't apply and continue whenever you're ready; the more you share, the safer your plan.</p>
 
       <!-- Two sides of one question: who's setting this up? They're mutually exclusive
            (ticking one clears the other) so the state can never say both. Leaving both
@@ -264,7 +265,7 @@
     <div id="clinicianOut"></div>
     <div class="rowbtns">
       <button class="btn ghost" data-goto="0">← Back</button>
-      <button class="btn primary" id="clinToProgram">Next: Clinician-Injury →</button>
+      <button class="btn primary" id="clinToProgram">Next: choose your injury →</button>
     </div>
   </section>
 
@@ -292,8 +293,8 @@
       <div class="results" id="condResults" role="listbox" aria-label="Matching injuries and conditions"></div>
 
       <div class="rowbtns">
-        <button class="btn ghost" data-goto="1">← Back</button>
-        <button class="btn primary" data-goto="3" id="toDetails">Next: Injury-Details →</button>
+        <button class="btn ghost" id="injuryBack">← Back</button>
+        <button class="btn primary" data-goto="3" id="toDetails">Next: your details →</button>
       </div>
     </div>
   </section>
