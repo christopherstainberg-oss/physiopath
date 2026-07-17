@@ -35,7 +35,9 @@ function parseClinProtocol(text){
     if(!d) d = "as prescribed";
     cur.ex.push({ n, d, c });
   }
-  return { phases: phases.filter(p=>p.ex.length) };
+  // Keep phases that carry a goal/criteria even with no exercise lines (e.g. "Phase 4: return to
+  // sport — MD clearance") — those milestone phases are clinically meaningful, not noise to drop.
+  return { phases: phases.filter(p=>p.ex.length || (p.goal && p.goal.trim())) };
 }
 const CLIN_EXAMPLE = `Phase 1: Protection (weeks 0-2) — goal: control swelling, restore full extension
 - Quad sets — 3×10 — lock the knee straight
@@ -49,17 +51,15 @@ Phase 3: Return to function (weeks 7-12)
 - Step-downs — 3×10 each — control, no knee collapse
 - Single-leg balance + reach — 3×8 each`;
 /* Editable starter auto-loaded into the clinician form for a clinician-guided session. */
-const CLIN_STARTER = `Phase 1: Protection (weeks 0-2) — goal: protect, control swelling, restore motion
-- Quad sets — 3×10 — hold 5s
-- Ankle pumps — 3×20
-- Heel slides — 3×15
-Phase 2: Early strength (weeks 3-6) — goal: normalise gait, build strength
-- Mini squats — 3×12 — pain-free range
-- Standing hip abduction — 3×12 each
-- Stationary bike — 10 min
-Phase 3: Return to function (weeks 7-12) — goal: full strength & control
-- Step-ups — 3×10 each
-- Single-leg balance — 3×30s each`;
+const CLIN_STARTER = `Phase 1: Early / protection (weeks 0–2) — goal: protect, control pain & swelling, restore motion
+- Exercise name — 3×10 — cue or notes (replace these with the protocol)
+- Exercise name — 3×15
+Phase 2: Strengthen (weeks 3–6) — goal: build strength, normalise movement
+- Exercise name — 3×12
+- Exercise name — 10 min
+Phase 3: Return to function (weeks 7–12) — goal: restore full strength & control
+- Exercise name — 3×10 each
+- Exercise name — 3×30s each`;
 function clinicianProtocolCards(){
   const list = state.clinicianProtocols || [];
   return list.map((pr,i)=>{
@@ -74,13 +74,13 @@ function clinicianProtocolCards(){
           ${ph.goal?`<div class="goal">${esc(ph.goal)}</div>`:""}</div>
           <div class="caret" aria-hidden="true">▾</div>
         </div>
-        <div class="body"><ul class="exlist">${rows}</ul></div></div>`;
+        <div class="body">${rows ? `<ul class="exlist">${rows}</ul>` : `<p class="hint" style="margin:6px 0 0">Milestone / criteria phase — no exercises listed here.</p>`}</div></div>`;
     }).join("");
     return `<div class="card clincard">
       <h2>🩺 ${esc(pr.name)} <span class="clinbadge">Clinician-provided</span>
         <button class="clindel no-print" data-idx="${i}" title="Remove this protocol">✕</button></h2>
       ${pr.source?`<p class="hint">Source: ${esc(pr.source)}.</p>`:""}
-      <div class="banner info" style="margin-top:4px"><b>Shown exactly as you entered it.</b> This is your clinician's protocol — the app's automatic exercise-safety filtering is <b>not</b> applied to it. Follow your clinician's own guidance and dosing.</div>
+      <div class="banner info" style="margin-top:4px"><b>Shown exactly as you entered it.</b> This is your clinician's protocol — the app's automatic exercise-safety filtering is <b>not</b> applied, and it isn't cross-checked against the health history you entered. Your clinician has the full picture; follow their guidance and dosing.</div>
       ${phases}
     </div>`;
   }).join("");
@@ -202,7 +202,7 @@ function updateClinPreview(){
   if(!p.phases.length){ box.innerHTML = ""; return; }
   const total = p.phases.reduce((s,ph)=>s+ph.ex.length,0);
   box.innerHTML = `<div class="clinprevhead">Preview — ${p.phases.length} phase${p.phases.length>1?"s":""}, ${total} exercise${total>1?"s":""}:</div>` +
-    p.phases.map(ph=>`<div class="clinprevph">• <b>${esc(ph.title)}</b>${ph.weeks?` <span class="clinprevn">· ${esc(ph.weeks)}</span>`:""} <span class="clinprevn">(${ph.ex.length})</span></div>`).join("");
+    p.phases.map(ph=>`<div class="clinprevph">• <b>${esc(ph.title)}</b>${ph.weeks?` <span class="clinprevn">· ${esc(ph.weeks)}</span>`:""} <span class="clinprevn">(${ph.ex.length||"criteria"})</span></div>`).join("");
 }
 function fillClinExample(){
   const t = $("#clinicianOut #clinText"), n = $("#clinicianOut #clinName");
