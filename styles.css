@@ -741,6 +741,13 @@ svg.chart .dot{fill:var(--brand)}
 /* weight-bearing & device controls */
 .preccontrols{display:flex;flex-direction:column;gap:14px;margin:12px 0 4px;padding:12px;border:1px solid var(--line);border-radius:12px;background:var(--panel-2)}
 .preclab{display:block;font-weight:700;font-size:13.5px;margin-bottom:7px}
+/* Collapse the manual weight-bearing/device/precaution PICKERS by default — a non-surgical user
+   shouldn't scroll a clinician console; applied + auto-suggested precautions still show outside it. */
+details.preccontrols-wrap{margin:8px 0}
+details.preccontrols-wrap>summary.preccontrols-sum{list-style:none;cursor:pointer;font-weight:650;font-size:13.5px;color:var(--muted);padding:8px 2px}
+details.preccontrols-wrap>summary.preccontrols-sum::-webkit-details-marker{display:none}
+details.preccontrols-wrap>summary.preccontrols-sum::before{content:"▸ ";color:var(--muted)}
+details.preccontrols-wrap[open]>summary.preccontrols-sum::before{content:"▾ "}
 .wbctrl select,.devctrl select{width:100%}
 .wbdesc{font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:8px}
 .wbamt{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
