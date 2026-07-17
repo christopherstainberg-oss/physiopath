@@ -5205,7 +5205,7 @@ function surgicalReminderCard(){
   return `<div class="card surgcard${surg?"":" plain"}">
     <h2>${title}</h2>
     ${head}
-    <div class="preccontrols no-print">${wbControl}${devControl}${spControl}</div>
+    <details class="preccontrols-wrap no-print"${(surg||wbInfo||devices.length||spActive.size||spImplied.size)?" open":""}><summary class="preccontrols-sum">⚙️ Set weight-bearing, braces &amp; surgical-site orders <span class="sub">— most non-surgical users can skip this</span></summary><div class="preccontrols">${wbControl}${devControl}${spControl}</div></details>
     ${suggestedWbHTML()}
     ${suggestedDevicesCard()}
     ${list}${timeline}${addCtrl}${disclaimer}
