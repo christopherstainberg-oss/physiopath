@@ -1292,7 +1292,38 @@ function syncHealthCards(){
     card._autoSynced = true;
   });
 }
-function renderHealth(){ renderHRMonitor(); renderVitalsLog(); renderLabs(); renderMeasures(); renderRisks(); syncHealthCards(); }
+/* Evidence-based one-line advice for an out-of-range telemetry reading (educational, conservative). */
+function telAdvice(key,dir){
+  if(key==="spo2"&&dir==="low") return "Rest and recheck; below ~90% at rest, don't exercise until assessed — supplemental O₂ may be needed (COPD floors can be lower if your clinician prescribed one).";
+  if((key==="sbp"||key==="dbp")&&dir==="high") return "Rest and recheck; don't start exercise with resting BP above ~180/110 (ACSM) — consult your clinician.";
+  if((key==="sbp"||key==="dbp")&&dir==="low") return "Rise slowly and watch for lightheadedness.";
+  if(key==="hr"&&dir==="high") return "Recheck at rest; if it stays high or comes with symptoms, see a clinician.";
+  if(key==="hr"&&dir==="low") return "Often fine if you're fit; flag any dizziness or fainting.";
+  return "Recheck and follow your clinician's guidance.";
+}
+/* Telemetry-vs-target card (Health): latest reading for each parameter against its effective range
+   (clinician-prescribed if set, else the evidence-based default), colour-coded in/out with feedback. */
+function renderTelemetry(){
+  const el = $("#telemetryBody"); if(!el) return;
+  const lv = latestVitals();
+  const rows = [["hr","restHR","❤️","Heart rate"],["sbp","sbp","🩸","Systolic BP"],["dbp","dbp","🩸","Diastolic BP"],["spo2","spo2","🫁","SpO₂"]].map(([key,field,icon,label])=>{
+    const ev = evalVital(key, lv[field]);
+    const cls = ev.status==="in" ? "vrange-in" : (ev.status==="none" ? "vrange-none" : "vrange-out");
+    const badge = ev.status==="in" ? "✓ In range" : ev.status==="low" ? "▼ Below range" : ev.status==="high" ? "▲ Above range" : "— no reading";
+    const rangeTxt = `${ev.min!=null?ev.min:"–"}–${ev.max!=null?ev.max:"–"} ${ev.unit}`;
+    const valTxt = ev.value!=null ? `${ev.value} ${ev.unit}` : "—";
+    const dir = ev.status==="low"||ev.status==="high" ? ev.status : "";
+    const fb = dir ? `<div class="telfb">${esc(label)} ${ev.value}${ev.unit} is ${dir==="low"?"below":"above"} the ${ev.prescribed?"prescribed":"target"} range (${rangeTxt}). ${esc(telAdvice(key,dir))}</div>` : "";
+    return `<div class="telrow ${cls}"><span class="telicon" aria-hidden="true">${icon}</span><span class="tellabel">${esc(label)}</span><span class="telval">${esc(valTxt)}</span><span class="telrange">target ${esc(rangeTxt)}${ev.prescribed?' <span class="telrx">Rx</span>':""}</span><span class="telbadge ${cls}">${badge}</span>${fb}</div>`;
+  }).join("");
+  const hrEx = ((state.clinParams||{}).hrEx||{}).max;
+  const hrExRow = (hrEx!==""&&hrEx!=null) ? `<div class="telrow vrange-none"><span class="telicon" aria-hidden="true">🏃</span><span class="tellabel">Exercise HR ceiling</span><span class="telval">&lt; ${esc(String(hrEx))} bpm</span><span class="telrange">prescribed <span class="telrx">Rx</span></span><span class="telbadge vrange-none">keep under</span></div>` : "";
+  const anyRx = ["hr","sbp","dbp","spo2"].some(k=>clinRange(k).prescribed) || (hrEx!==""&&hrEx!=null);
+  el.innerHTML = `<p class="hint">Your latest reading vs its ${anyRx?"prescribed / ":""}target range — <b class="tinok">green</b> in range, <b class="tinbad">red</b> out of range. ${anyRx?'<b>Rx</b> marks a range your clinician prescribed.':'No clinician range set — showing evidence-based defaults. A clinician can prescribe per-user targets in the Clinician step.'}</p>
+    <div class="telgrid">${rows}${hrExRow}</div>
+    <div class="redflags" style="margin-top:10px"><b>Educational only.</b> These are general adult targets unless your clinician set them; readings vary with movement, posture and the device. Act on symptoms and your clinician's advice, not the numbers alone.</div>`;
+}
+function renderHealth(){ renderHRMonitor(); renderVitalsLog(); renderTelemetry(); renderLabs(); renderMeasures(); renderRisks(); syncHealthCards(); }
 /* OBJ-1: the recovery-measurements trend (the values captured in the Program's "Ready to progress?"). */
 function measureDef(key){
   for(const set of Object.values(MEASURE_SETS)){ const g = set.find(x=>x.key===key); if(g) return g; }
