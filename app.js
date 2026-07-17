@@ -332,7 +332,7 @@ const state = {
   equipment:"", timePerDay:"", workDemand:"", priorEpisodes:"", moveConfidence:"", pregStage:"", footSensation:"",
   medIds:[], medFilter:false, homeMode:false, customPrecautions:[], clinicianProtocols:[], clinPrecautionProtocol:"", clinicianGuided:false, selfGuided:false,
   medDoses:{}, weightBearing:{status:"",pct:"",lbs:"",side:"",limb:"le"}, devices:[],
-  cardiacDevice:{type:"",icdRate:""}, specialPrecautions:[], planVariant:{}, progress:{},
+  cardiacDevice:{type:"",icdRate:""}, specialPrecautions:[], planVariant:{}, progress:{}, measures:{},
   log:[], logMood:"", logDone:[], logTpl:"blank", photoNoted:false,
   jjThread:[], chatHistory:[], apiKey:"", apiModel:"claude-opus-4-8"
 };
@@ -3049,6 +3049,73 @@ function setCriteriaMet(label, idx, on){
   state.program = generateProgram(); save();
   renderProgram(state.program);
 }
+/* ---------- objective progression gates (OBJ-1) ----------
+   Turn phase-advance criteria from a self-tick into something MEASURED: enter the affected side and
+   the other side, the app computes a symmetry %, and a phase only clears when the measurable gates
+   are met AND the logged pain supports it. Region-derived and deliberately at-home-measurable —
+   a tape measure, a count of reps, a "does it go as straight as the other side". */
+const MEASURE_SETS = {
+  knee: [
+    { key:"knee_flex", label:"Knee bend (flexion)",                    kind:"ratio", unit:"°", target:0.90, hint:"How far each knee bends" },
+    { key:"knee_ext",  label:"Full straightening (extension)",         kind:"tick",            target:1,    hint:"The knee goes as straight as the other side" },
+    { key:"knee_sls",  label:"Single-leg sit-to-stands / heel-raises", kind:"count",           target:0.90, hint:"Reps each side before form breaks" },
+  ],
+  hip: [
+    { key:"hip_flex",   label:"Hip bend (flexion)",         kind:"ratio", unit:"°", target:0.90, hint:"vs the other hip" },
+    { key:"hip_stance", label:"Single-leg stance time",     kind:"count", unit:"s", target:0.90, hint:"Seconds balanced each side" },
+    { key:"hip_sts",    label:"Single-leg sit-to-stands",   kind:"count",           target:0.90, hint:"Reps each side" },
+  ],
+  shoulder: [
+    { key:"sh_flex", label:"Overhead reach (flexion)",  kind:"ratio", unit:"°", target:0.90, hint:"How high each arm lifts" },
+    { key:"sh_er",   label:"External rotation",         kind:"ratio", unit:"°", target:0.90, hint:"Elbow at side, turning out" },
+  ],
+  ankle: [
+    { key:"ank_df",  label:"Ankle dorsiflexion (knee-to-wall)", kind:"ratio", unit:"cm", target:0.90, hint:"Distance from the wall each side" },
+    { key:"ank_slr", label:"Single-leg heel-raises",            kind:"count",            target:0.90, hint:"Reps each side" },
+  ],
+  general: [
+    { key:"gen_rom", label:"Movement range vs the other side",     kind:"ratio", target:0.90, hint:"The main limited movement, measured each side" },
+    { key:"gen_str", label:"Strength / function vs the other side", kind:"count", target:0.90, hint:"A key exercise's reps, each side" },
+  ],
+};
+function measureRegionKey(item){
+  const r = (((item && item.region) || "") + " " + ((item && item.name) || "")).toLowerCase();
+  if(/knee|\bacl\b|\bpcl\b|\bmcl\b|patell|meniscus/.test(r)) return "knee";
+  if(/\bhip\b|groin|gluteal/.test(r))                        return "hip";
+  if(/shoulder|scapul|rotator cuff|\bcuff\b/.test(r))        return "shoulder";
+  if(/ankle|foot|calf|achilles|plantar/.test(r))             return "ankle";
+  return "general";
+}
+function measuresFor(item){ return MEASURE_SETS[measureRegionKey(item)] || MEASURE_SETS.general; }
+function latestMeasure(key){ const h = (state.measures||{})[key]; return (h && h.length) ? h[h.length-1] : null; }
+/* Symmetry as a % of the other side, capped at 100 (past parity isn't "more ready"). */
+function measurePct(m){
+  if(!m) return null;
+  const a = Number(m.aff), o = Number(m.oth);
+  if(!isFinite(a) || !isFinite(o) || o <= 0) return null;
+  return Math.round(Math.min(a / o, 1) * 100);
+}
+/* The pain/swelling guard: the logged trend can block advancement even when the numbers are there. */
+function measurePainOk(){
+  const ep = effectivePain();
+  const trend = (state.log||[]).length ? painTrend(state.log) : null;
+  if(trend && trend.cls === "trend-up") return { ok:false, why:`your logged pain is trending up (${trend.txt}) — let it settle before progressing` };
+  if(ep.v >= 5)                          return { ok:false, why:`you're logging around ${(+ep.v).toFixed(1)}/10 — settle it below ~4 first` };
+  return { ok:true, why:`pain ${(+ep.v).toFixed(1)}/10, settled` };
+}
+/* Evaluate every gate for a condition's current phase → whether the phase is ready to clear. */
+function gateStatus(item){
+  const items = measuresFor(item).map(g => {
+    const m = latestMeasure(g.key);
+    if(g.kind === "tick"){ const met = !!(m && Number(m.aff) >= 1); return { g, met, pct:null, detail: met ? "confirmed" : "not yet" }; }
+    const pct = measurePct(m);
+    const met = pct != null && pct >= Math.round(g.target * 100);
+    return { g, met, pct, detail: pct != null ? `${pct}% of the other side` : "not measured yet" };
+  });
+  const measurableMet = items.length > 0 && items.every(x => x.met);
+  const pain = measurePainOk();
+  return { items, measurableMet, pain, ready: measurableMet && pain.ok };
+}
 function weekPhaseOf(plan){
   const w = weeksPostOp();
   const wk = Number(w != null ? w : state.weeks);
@@ -4615,6 +4682,13 @@ function wireProgram(){
   }));
   $$("#programOut .planvar").forEach(b=>b.onclick=()=>setPlanVariant(b.dataset.plan, b.dataset.v));
   $$("#programOut .progchk").forEach(b=>b.onchange=()=>setCriteriaMet(b.dataset.plan, +b.dataset.i, b.checked));
+  // OBJ-1 objective gates: measurable pairs (affected/other), tick gates, and the advance button
+  $$("#programOut .gateinputs input[data-side]").forEach(inp=>inp.onchange=()=>{
+    const box = inp.closest(".gateinputs");
+    logMeasure(inp.dataset.measure, box.querySelector('input[data-side="aff"]').value, box.querySelector('input[data-side="oth"]').value);
+  });
+  $$("#programOut .gatetick input[data-measure]").forEach(inp=>inp.onchange=()=>logMeasure(inp.dataset.measure, inp.checked?1:0, 1));
+  $$("#programOut .advancebtn").forEach(b=>b.onclick=()=>advancePhaseIfReady(b.dataset.advance, +b.dataset.phase));
   $$("#programOut .rotatebtn").forEach(b=>b.onclick=()=>rotateExercise(+b.dataset.ci, +b.dataset.pi, +b.dataset.ei));
   $$("#programOut .swapbtn").forEach(b=>b.onclick=()=>openSwap(b));
   $$("#programOut .rerollbtn").forEach(b=>b.onclick=()=>rerollPhase(+b.dataset.ci, +b.dataset.pi));
@@ -5863,6 +5937,7 @@ function renderProgram(prog){
           </div>
           <div class="addexbox hide no-print" data-ci="${ci}" data-pi="${i}"></div>
           <div class="freq"><b>Advance to the next phase when:</b> ${esc(ph.criteria || "this phase feels controlled and symptoms are low & stable")}. The weeks are a guide, not a rule.</div>
+          ${ph.current && item.plan ? readyToProgressHTML(item) : ""}
         </div></div>`;
     });
     html += `<div class="redflags"><b>⚠ When to get it checked:</b> ${esc(item.redflags)}</div></div>`;
@@ -5872,6 +5947,61 @@ function renderProgram(prog){
   html += suggestionsCard(prog);
   out.innerHTML = html;
   wireProgram();
+}
+
+/* ---------- OBJ-1: the "Ready to progress?" gate panel (current phase only) ----------
+   Measured phase-advance: enter both sides, the app computes a symmetry %, and the phase clears
+   only when the gates are met AND the logged pain supports it (criteria-driven, not the calendar). */
+function readyToProgressHTML(item){
+  const gs = gateStatus(item);
+  const val = (key,side)=>{ const m = latestMeasure(key); return (m && m[side]!=null && m[side]!=="") ? esc(String(m[side])) : ""; };
+  const rows = gs.items.map(x=>{
+    const g = x.g;
+    const input = g.kind==="tick"
+      ? `<label class="gatetick"><input type="checkbox" data-measure="${g.key}"${x.met?" checked":""}/> <span>Yes — matches the other side</span></label>`
+      : `<div class="gateinputs">
+           <label class="gatein">Affected <input type="number" inputmode="decimal" min="0" data-measure="${g.key}" data-side="aff" value="${val(g.key,"aff")}"/></label>
+           <label class="gatein">Other side <input type="number" inputmode="decimal" min="0" data-measure="${g.key}" data-side="oth" value="${val(g.key,"oth")}"/></label>
+           ${g.unit?`<span class="gateunit">${esc(g.unit)}</span>`:""}
+         </div>`;
+    return `<li class="gaterow${x.met?" met":""}">
+      <div class="gatetop"><span class="gatename">${esc(g.label)}</span><span class="gatestat">${x.met?"✓":"◦"} ${esc(x.detail)}</span></div>
+      <div class="gatehint">${esc(g.hint)}${g.kind!=="tick"?` · target ≥${Math.round(g.target*100)}% of the other side`:""}</div>
+      ${input}
+    </li>`;
+  }).join("");
+  const label = item.plan ? item.plan.label : "";
+  const phase = item.planPhase>=0 ? item.planPhase : 0;
+  let foot;
+  if(gs.ready)
+    foot = `<button class="advancebtn" data-advance="${esc(label)}" data-phase="${phase}">✓ I've met these — advance to the next phase →</button>`;
+  else if(gs.measurableMet && !gs.pain.ok)
+    foot = `<div class="gatehold">⏸ Your measurements are there — but ${esc(gs.pain.why)}.</div>`;
+  else
+    foot = `<div class="gatefoot">Enter both sides to see where you're up to. Pain check: ${esc(gs.pain.why)}.</div>`;
+  return `<div class="readypanel">
+    <div class="rphead"><b>🎯 Ready to progress?</b> This phase advances when these are met and your logged pain supports it — measured, not just the calendar.</div>
+    <ul class="gatelist">${rows}</ul>${foot}</div>`;
+}
+function logMeasure(key, aff, oth){
+  state.measures = state.measures || {};
+  const h = state.measures[key] = state.measures[key] || [];
+  const num = v => (v==="" || v==null) ? null : Number(v);
+  const entry = { d: todayISO(), aff: num(aff), oth: num(oth) };
+  const last = h[h.length-1];
+  if(last && last.d === entry.d) h[h.length-1] = entry; else h.push(entry);   // one entry per day — same-day edits overwrite
+  save();
+  renderProgram(state.program);
+}
+function advancePhaseIfReady(label, phase){
+  const item = ((state.program && state.program.items) || []).find(it=>it.plan && it.plan.label===label);
+  if(item && gateStatus(item).ready){
+    setCriteriaMet(label, phase, true);   // marks the phase done → currentPlanPhase advances → re-renders
+    toast("Great — criteria met, you've moved to the next phase.");
+  } else {
+    renderProgram(state.program);
+    toast("Not quite yet — check the measurements and your logged pain.");
+  }
 }
 
 /* ---------------------------------------------------------------------
@@ -10203,7 +10333,31 @@ function syncHealthCards(){
     card._autoSynced = true;
   });
 }
-function renderHealth(){ renderHRMonitor(); renderVitalsLog(); renderLabs(); renderRisks(); syncHealthCards(); }
+function renderHealth(){ renderHRMonitor(); renderVitalsLog(); renderLabs(); renderMeasures(); renderRisks(); syncHealthCards(); }
+/* OBJ-1: the recovery-measurements trend (the values captured in the Program's "Ready to progress?"). */
+function measureDef(key){
+  for(const set of Object.values(MEASURE_SETS)){ const g = set.find(x=>x.key===key); if(g) return g; }
+  return { key, label:key, kind:"ratio" };
+}
+function renderMeasures(){
+  const host = $("#measuresBody"); if(!host) return;
+  const m = state.measures || {};
+  const keys = Object.keys(m).filter(k=>(m[k]||[]).length);
+  if(!keys.length){ host.innerHTML = `<p class="hint muted">Nothing recorded yet — when you're in a program, record range and strength in <b>Ready to progress?</b> and each measure will trend here.</p>`; return; }
+  host.innerHTML = keys.map(k=>{
+    const g = measureDef(k), hist = m[k];
+    const latest = hist[hist.length-1];
+    const now = g.kind==="tick" ? (Number(latest.aff)>=1?"confirmed ✓":"not yet")
+              : (measurePct(latest)!=null ? measurePct(latest)+"% of the other side" : "—");
+    const rows = hist.slice(-8).map(e=>{
+      const detail = g.kind==="tick" ? (Number(e.aff)>=1?"confirmed":"—")
+                   : `${esc(String(e.aff))} / ${esc(String(e.oth))}${g.unit?" "+esc(g.unit):""}`;
+      const pct = g.kind==="tick" ? "" : (measurePct(e)!=null ? measurePct(e)+"%" : "");
+      return `<div class="mtrendrow"><span class="mtd">${esc(e.d)}</span><span class="mtv">${detail}</span><span class="mtp">${esc(pct)}</span></div>`;
+    }).join("");
+    return `<div class="mcard"><div class="mchead"><b>${esc(g.label)}</b><span class="mcnow">${esc(now)}</span></div><div class="mtrend">${rows}</div></div>`;
+  }).join("");
+}
 function initHealth(){
   const d=$("#vlDate"); if(d && !d.value) d.value=todayISO();
   const sv=$("#vlSave"); if(sv) sv.onclick=saveVitalsEntry;

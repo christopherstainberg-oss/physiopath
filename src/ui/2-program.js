@@ -650,6 +650,7 @@ function renderProgram(prog){
           </div>
           <div class="addexbox hide no-print" data-ci="${ci}" data-pi="${i}"></div>
           <div class="freq"><b>Advance to the next phase when:</b> ${esc(ph.criteria || "this phase feels controlled and symptoms are low & stable")}. The weeks are a guide, not a rule.</div>
+          ${ph.current && item.plan ? readyToProgressHTML(item) : ""}
         </div></div>`;
     });
     html += `<div class="redflags"><b>⚠ When to get it checked:</b> ${esc(item.redflags)}</div></div>`;
@@ -659,6 +660,61 @@ function renderProgram(prog){
   html += suggestionsCard(prog);
   out.innerHTML = html;
   wireProgram();
+}
+
+/* ---------- OBJ-1: the "Ready to progress?" gate panel (current phase only) ----------
+   Measured phase-advance: enter both sides, the app computes a symmetry %, and the phase clears
+   only when the gates are met AND the logged pain supports it (criteria-driven, not the calendar). */
+function readyToProgressHTML(item){
+  const gs = gateStatus(item);
+  const val = (key,side)=>{ const m = latestMeasure(key); return (m && m[side]!=null && m[side]!=="") ? esc(String(m[side])) : ""; };
+  const rows = gs.items.map(x=>{
+    const g = x.g;
+    const input = g.kind==="tick"
+      ? `<label class="gatetick"><input type="checkbox" data-measure="${g.key}"${x.met?" checked":""}/> <span>Yes — matches the other side</span></label>`
+      : `<div class="gateinputs">
+           <label class="gatein">Affected <input type="number" inputmode="decimal" min="0" data-measure="${g.key}" data-side="aff" value="${val(g.key,"aff")}"/></label>
+           <label class="gatein">Other side <input type="number" inputmode="decimal" min="0" data-measure="${g.key}" data-side="oth" value="${val(g.key,"oth")}"/></label>
+           ${g.unit?`<span class="gateunit">${esc(g.unit)}</span>`:""}
+         </div>`;
+    return `<li class="gaterow${x.met?" met":""}">
+      <div class="gatetop"><span class="gatename">${esc(g.label)}</span><span class="gatestat">${x.met?"✓":"◦"} ${esc(x.detail)}</span></div>
+      <div class="gatehint">${esc(g.hint)}${g.kind!=="tick"?` · target ≥${Math.round(g.target*100)}% of the other side`:""}</div>
+      ${input}
+    </li>`;
+  }).join("");
+  const label = item.plan ? item.plan.label : "";
+  const phase = item.planPhase>=0 ? item.planPhase : 0;
+  let foot;
+  if(gs.ready)
+    foot = `<button class="advancebtn" data-advance="${esc(label)}" data-phase="${phase}">✓ I've met these — advance to the next phase →</button>`;
+  else if(gs.measurableMet && !gs.pain.ok)
+    foot = `<div class="gatehold">⏸ Your measurements are there — but ${esc(gs.pain.why)}.</div>`;
+  else
+    foot = `<div class="gatefoot">Enter both sides to see where you're up to. Pain check: ${esc(gs.pain.why)}.</div>`;
+  return `<div class="readypanel">
+    <div class="rphead"><b>🎯 Ready to progress?</b> This phase advances when these are met and your logged pain supports it — measured, not just the calendar.</div>
+    <ul class="gatelist">${rows}</ul>${foot}</div>`;
+}
+function logMeasure(key, aff, oth){
+  state.measures = state.measures || {};
+  const h = state.measures[key] = state.measures[key] || [];
+  const num = v => (v==="" || v==null) ? null : Number(v);
+  const entry = { d: todayISO(), aff: num(aff), oth: num(oth) };
+  const last = h[h.length-1];
+  if(last && last.d === entry.d) h[h.length-1] = entry; else h.push(entry);   // one entry per day — same-day edits overwrite
+  save();
+  renderProgram(state.program);
+}
+function advancePhaseIfReady(label, phase){
+  const item = ((state.program && state.program.items) || []).find(it=>it.plan && it.plan.label===label);
+  if(item && gateStatus(item).ready){
+    setCriteriaMet(label, phase, true);   // marks the phase done → currentPlanPhase advances → re-renders
+    toast("Great — criteria met, you've moved to the next phase.");
+  } else {
+    renderProgram(state.program);
+    toast("Not quite yet — check the measurements and your logged pain.");
+  }
 }
 
 /* ---------------------------------------------------------------------

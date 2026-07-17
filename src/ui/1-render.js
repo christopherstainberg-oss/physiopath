@@ -1314,6 +1314,13 @@ function wireProgram(){
   }));
   $$("#programOut .planvar").forEach(b=>b.onclick=()=>setPlanVariant(b.dataset.plan, b.dataset.v));
   $$("#programOut .progchk").forEach(b=>b.onchange=()=>setCriteriaMet(b.dataset.plan, +b.dataset.i, b.checked));
+  // OBJ-1 objective gates: measurable pairs (affected/other), tick gates, and the advance button
+  $$("#programOut .gateinputs input[data-side]").forEach(inp=>inp.onchange=()=>{
+    const box = inp.closest(".gateinputs");
+    logMeasure(inp.dataset.measure, box.querySelector('input[data-side="aff"]').value, box.querySelector('input[data-side="oth"]').value);
+  });
+  $$("#programOut .gatetick input[data-measure]").forEach(inp=>inp.onchange=()=>logMeasure(inp.dataset.measure, inp.checked?1:0, 1));
+  $$("#programOut .advancebtn").forEach(b=>b.onclick=()=>advancePhaseIfReady(b.dataset.advance, +b.dataset.phase));
   $$("#programOut .rotatebtn").forEach(b=>b.onclick=()=>rotateExercise(+b.dataset.ci, +b.dataset.pi, +b.dataset.ei));
   $$("#programOut .swapbtn").forEach(b=>b.onclick=()=>openSwap(b));
   $$("#programOut .rerollbtn").forEach(b=>b.onclick=()=>rerollPhase(+b.dataset.ci, +b.dataset.pi));
