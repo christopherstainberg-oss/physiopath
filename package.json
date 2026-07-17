@@ -18,5 +18,8 @@
     "test:smoke": "node test/smoke.mjs",
     "check:drift": "node scripts/build.mjs && node scripts/check-drift.mjs"
   },
+  "devDependencies": {
+    "esbuild": "^0.24.0"
+  },
   "license": "MIT"
 }

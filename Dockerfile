@@ -3,8 +3,11 @@
 # ---------- build stage: regenerate catalog/exercises/icons + assemble dist/ ----------
 FROM node:22-alpine AS build
 WORKDIR /app
-# No runtime dependencies — the generators use only Node built-ins.
+# Build-time only: esbuild (a devDependency) minifies app.js/styles.css during the build.
+# The generators and the served runtime use only Node built-ins — the nginx image has no
+# runtime dependencies. (If you commit package-lock.json, switch `npm install` to `npm ci`.)
 COPY package.json ./
+RUN npm install --no-audit --no-fund
 COPY scripts ./scripts
 COPY src ./src
 COPY data ./data
