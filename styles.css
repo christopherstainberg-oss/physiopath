@@ -100,6 +100,8 @@ details.collapsecard[open]>summary .collapsechev{transform:rotate(180deg)}
 details.collapsecard[open]>summary .collapsehint{display:none}
 .collapsebadge{font-size:11px;font-weight:800;color:var(--danger);background:rgba(255,107,107,.14);border-radius:999px;padding:2px 9px;white-space:nowrap}
 .collapsebody{margin-top:12px}
+/* count badge in a Health card summary ("12 readings") — surfaces logged data on a collapsed card */
+.hcardcount{margin-left:8px;font-size:11px;font-weight:700;color:var(--brand-ink);background:var(--chip);border-radius:999px;padding:1px 9px;white-space:nowrap}
 @media print{ details.collapsecard>.collapsebody{display:block!important} .collapsechev,.collapsehint{display:none!important} }
 .hint{color:var(--muted);font-size:13.5px;margin:0 0 16px}
 .field{display:block;margin-bottom:14px}
