@@ -3053,17 +3053,20 @@ function importJournal(file){
 }
 
 /* ---------- chat UI ---------- */
+/* The bot-message footer + copy button, shared by addMsg and the streaming path so a streamed
+   answer ends up identical to a non-streamed one. `text` is the RAW answer (copied verbatim). */
+function attachBotExtras(div, text){
+  div.innerHTML += `<span class="src">Educational guidance · not a substitute for a clinician</span>`;
+  const btn=document.createElement("button"); btn.type="button"; btn.className="msgcopy no-print";
+  btn.textContent="⧉ Copy"; btn.setAttribute("aria-label","Copy this answer");
+  btn.onclick=()=>{ const p=(navigator.clipboard&&navigator.clipboard.writeText)?navigator.clipboard.writeText(text):Promise.reject();
+    p.then(()=>{ btn.textContent="✓ Copied"; setTimeout(()=>{ btn.textContent="⧉ Copy"; },1500); }).catch(()=>toast("Couldn't copy to the clipboard.")); };
+  div.appendChild(btn);
+}
 function addMsg(text, who){
   const div=document.createElement("div"); div.className="msg "+who;
   div.innerHTML=mdLite(text);
-  if(who==="bot"){
-    div.innerHTML+=`<span class="src">Educational guidance · not a substitute for a clinician</span>`;
-    const btn=document.createElement("button"); btn.type="button"; btn.className="msgcopy no-print";
-    btn.textContent="⧉ Copy"; btn.setAttribute("aria-label","Copy this answer");
-    btn.onclick=()=>{ const p=(navigator.clipboard&&navigator.clipboard.writeText)?navigator.clipboard.writeText(text):Promise.reject();
-      p.then(()=>{ btn.textContent="✓ Copied"; setTimeout(()=>{ btn.textContent="⧉ Copy"; },1500); }).catch(()=>toast("Couldn't copy to the clipboard.")); };
-    div.appendChild(btn);
-  }
+  if(who==="bot") attachBotExtras(div, text);
   $("#chatlog").appendChild(div); $("#chatlog").scrollTop=$("#chatlog").scrollHeight;
 }
 /* Lightweight markdown -> HTML for coach replies. esc() FIRST (so any real HTML in the text
@@ -7082,6 +7085,22 @@ function addTyping(){
   const div=document.createElement("div"); div.className="msg bot typing"; div.textContent="thinking…";
   $("#chatlog").appendChild(div); $("#chatlog").scrollTop=$("#chatlog").scrollHeight; return div;
 }
+/* Parse an Anthropic streaming SSE payload → the assembled assistant text + stop_reason.
+   PURE and unit-tested (test/coach-stream.test.mjs). The live loop feeds it the GROWING buffer,
+   so an incomplete trailing event (a network chunk that split mid-event) simply doesn't parse
+   yet and turns up on the next read. Accumulates text_delta and reads the message_delta stop. */
+function parseAnthropicSSE(sse){
+  let text="", stop=null;
+  for(const block of String(sse).split("\n\n")){
+    const line = block.split("\n").find(l=>l.startsWith("data:"));
+    if(!line) continue;
+    let ev; try{ ev = JSON.parse(line.slice(5).trim()); }catch(_){ continue; }
+    if(ev.type==="content_block_delta" && ev.delta && ev.delta.type==="text_delta") text += ev.delta.text;
+    else if(ev.type==="message_delta" && ev.delta && ev.delta.stop_reason) stop = ev.delta.stop_reason;
+    else if(ev.type==="error" && ev.error && ev.error.message) throw new Error(ev.error.message);
+  }
+  return { text, stop };
+}
 async function askClaude(q){
   /* The user turn is pushed by the submit handler — pushing again here would duplicate it. */
   const typing=addTyping();
@@ -7096,10 +7115,12 @@ async function askClaude(q){
       body:JSON.stringify({
         model: state.apiModel || "claude-opus-4-8",
         max_tokens: 4000,          // 1100 truncated mid-answer on anything with sets/reps detail
+        stream: true,              // stream the answer so it renders as it is written, not after a long wait
         system: buildCoachSystem(),
         messages: chatWindow(10)          // must begin on a user turn or the API 400s
       })
     });
+  let streamDiv=null;
   try{
     let res = await callAPI();
     /* A 429 (rate limit) is not a failure — one polite backoff+retry (honouring Retry-After)
@@ -7111,25 +7132,46 @@ async function askClaude(q){
       await new Promise(r=>setTimeout(r, waitMs));
       res = await callAPI();
     }
-    typing.remove();
     if(!res.ok){
       let msg="HTTP "+res.status;
       try{ const j=await res.json(); if(j.error&&j.error.message) msg=j.error.message; }catch(e){}
       throw new Error(msg);
     }
-    const data=await res.json();
-    let text=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n").trim();
-    /* Nothing read stop_reason, so a capped reply stopped mid-sentence and still got the
-       "Educational guidance" footer appended as though it had finished. */
-    if(text && (data.stop_reason==="max_tokens" || data.stop_reason==="max_length"))
-      text += "\n\n*(cut off — that hit the length limit. Ask me to continue, or for a shorter answer.)*";
-    if(!text) text = data.stop_reason==="refusal"
+    typing.remove();
+    /* The bubble is created empty and grows as deltas arrive; on completion it gets the same
+       footer + copy button as a non-streamed answer (attachBotExtras), so they end up identical. */
+    streamDiv=document.createElement("div"); streamDiv.className="msg bot";
+    $("#chatlog").appendChild(streamDiv);
+    let full="", stop=null;
+    const reader = res.body && res.body.getReader ? res.body.getReader() : null;
+    if(reader){
+      const dec=new TextDecoder(); let buf="", last="";
+      for(;;){
+        const {done, value} = await reader.read();
+        if(done) break;
+        buf += dec.decode(value, {stream:true});
+        const p = parseAnthropicSSE(buf);
+        if(p.text!==last){ last=p.text; streamDiv.innerHTML=mdLite(p.text); $("#chatlog").scrollTop=$("#chatlog").scrollHeight; }
+      }
+      const p = parseAnthropicSSE(buf); full=p.text; stop=p.stop;
+    } else {
+      /* No streamable body (e.g. an old browser) — fall back to a single JSON read. */
+      const data=await res.json();
+      full=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n"); stop=data.stop_reason;
+    }
+    full=(full||"").trim();
+    /* Read stop_reason so a capped reply isn't dressed up as a finished one. */
+    if(full && (stop==="max_tokens" || stop==="max_length"))
+      full += "\n\n*(cut off — that hit the length limit. Ask me to continue, or for a shorter answer.)*";
+    if(!full) full = stop==="refusal"
       ? "I wasn't able to answer that one. Try rephrasing it — or if it's about your specific case, ask your clinician."
       : "(no reply)";
-    pushTurn("assistant", text);
-    addMsg(text,"bot");
+    streamDiv.innerHTML=mdLite(full); attachBotExtras(streamDiv, full);
+    $("#chatlog").scrollTop=$("#chatlog").scrollHeight;
+    pushTurn("assistant", full);
   }catch(err){
     typing.remove();
+    if(streamDiv){ streamDiv.remove(); streamDiv=null; }   // drop any partial stream before the fallback
     /* Keep the user's turn: it is rendered, so dropping it would desync the transcript from
        the history and lose it on reload. Record the fallback as the assistant turn so the
        pairing stays valid for the next request. */
