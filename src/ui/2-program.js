@@ -412,18 +412,15 @@ function medicationCard(medHiddenTotal){
     ? `<ul class="notelist">${flags.map(f=>`<li>${MED_EFFECT[f]}</li>`).join("")}</ul>`
     : `<p class="hint">No specific exercise considerations flagged for these — but always tell your clinician what you take.</p>`;
   const canFilter = meds.some(m=>(m.flags||[]).some(f=>MED_FILTERABLE.includes(f)));
-  const toggle = canFilter ? `<label class="medfilter no-print">
-      <input type="checkbox" id="medFilterToggle" ${state.medFilter?"checked":""} />
-      <span><b>Apply medication safety filtering to my plan</b> — hide high-impact, tendon-loading, contact, and balance exercises for high-risk medicines (fluoroquinolone antibiotics, blood thinners, sedating medicines). Off by default, fully reversible, and it keeps any exercises you've changed. A clinician's judgement still applies.</span>
-    </label>` : "";
-  const active = (state.medFilter && canFilter) ? `<div class="banner load" style="margin:12px 0 0"><b>🔒 Medication safety filtering is ON.</b> ${
-      medHiddenTotal>0 ? `${medHiddenTotal} higher-risk exercise${medHiddenTotal===1?"":"s"} hidden from your plan.` : "No exercises needed hiding."
-    } ${esc(window.notesForFlags(medExerciseFlags()).join(" "))}</div>` : "";
+  // The high-risk classes (tendon-rupture, bleeding, sedation) are applied to the plan automatically
+  // now, like every other contraindication — there's no opt-in, because you can't safely opt out of a
+  // safety filter. Say so, and surface which precautions are active.
+  const active = canFilter ? `<div class="banner load" style="margin:12px 0 0"><b>🔒 Medication safety precautions are applied automatically.</b> Higher-risk exercises (high-impact, tendon-loading, contact, balance) are adjusted for your medicines. ${esc(window.notesForFlags(medExerciseFlags()).join(" "))} A clinician's judgement still applies.</div>` : "";
   return `<div class="card medcard">
     <h2>💊 Medication considerations for exercise</h2>
     <p class="hint">Based on your medications (${list}). These are <b>general considerations</b>, not prescribing advice — your prescriber and pharmacist are the authority on your medicines.</p>
     ${body}
-    ${toggle}${active}
+    ${active}
   </div>`;
 }
 
@@ -541,6 +538,12 @@ function riskAwarenessCard(prog){
 /* ---------- render program ---------- */
 function renderProgram(prog){
   const out = $("#programOut");
+  // Cauda-equina / urgent red flag: withhold the whole program behind the urgent-care gate. A
+  // suspected emergency must not be handed an exercise plan — the rule's own text says "do not exercise".
+  if(gatherFlags().includes("red_flags_urgent")){
+    out.innerHTML = `<div class="card"><div class="banner clear"><b>⛔ Seek urgent medical care now.</b> You flagged symptoms — loss of bladder/bowel control, or numbness around the groin/saddle — that can signal a medical emergency such as cauda equina syndrome. <b>Do not exercise.</b> Your program is withheld until you've been assessed. If you ticked that by mistake, untick it in the History step.</div></div>`;
+    return;
+  }
   if(!prog || !prog.items.length){
     out.innerHTML = `<div class="card empty"><div class="big">🗓️</div><div>No program yet — complete the earlier steps and generate.</div></div>`;
     return;
