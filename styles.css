@@ -122,6 +122,8 @@ input[type=range]{flex:1;accent-color:var(--brand);height:30px}
   font-weight:600;cursor:pointer;font-size:15px;font-family:inherit;transition:.15s}
 .btn:hover{border-color:var(--brand)}
 .btn.primary{background:linear-gradient(135deg,var(--brand),#2b8ce0);border-color:transparent;color:#04121f}
+/* the one generative action in the wizard — differentiated from plain page-turns */
+.btn.primary.generate{font-weight:800;box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 22%, transparent)}
 .btn.ghost{background:transparent}
 .btn:disabled{opacity:.5;cursor:not-allowed}
 
@@ -1167,6 +1169,7 @@ details.labdomain[open]>summary.labdh::before{transform:rotate(90deg)}
 .hdrctx:empty{display:none!important}
 .hdrctx b{color:var(--text);font-weight:700}
 .hdrctx .sep{opacity:.5;margin:0 8px}
+.hdrphase{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--panel-2);padding:1px 6px;border-radius:5px}
 
 /* railgroup labels are only shown in the desktop side-rail (below) */
 .railgroup{display:none}
