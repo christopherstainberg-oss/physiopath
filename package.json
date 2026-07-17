@@ -15,7 +15,8 @@
     "serve": "node scripts/assemble-app.mjs && node scripts/serve.mjs",
     "dev": "node scripts/assemble-app.mjs && node scripts/serve.mjs",
     "test": "node test/index.mjs",
-    "test:smoke": "node test/smoke.mjs"
+    "test:smoke": "node test/smoke.mjs",
+    "check:drift": "node scripts/build.mjs && node scripts/check-drift.mjs"
   },
   "license": "MIT"
 }

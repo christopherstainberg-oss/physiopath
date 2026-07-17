@@ -20,6 +20,12 @@ jobs:
           node-version: 22
       - name: Run safety suite
         run: npm test
+      # The image regenerates every data file at build time (Dockerfile → npm run build),
+      # but the safety suite above tests the COMMITTED data. This gate closes that gap:
+      # regenerate here (disposable checkout) and fail if anything drifts from what's committed,
+      # so "tested" and "shipped" can never diverge (e.g. a generator edited without regenerating).
+      - name: Data-drift guard — committed data must match a fresh regeneration
+        run: npm run check:drift
 
   build-and-push:
     needs: test          # never publish an image that fails the safety suite
