@@ -1292,6 +1292,10 @@ function phaseHeadKey(ev, head, key){
 /* Collapsible card (auto-collapsed by default). `openCards` remembers, within
    the session, which ones the user expanded so re-renders don't re-close them. */
 const openCards = new Set();
+/* Which Lab-Values domains are expanded — they collapse so the Health step isn't one
+   giant scroll. Seeded to the first domain on first render, then user-controlled. */
+const openLabDomains = new Set();
+let labsSeeded = false;
 function collapsibleCard(id, cls, titleHTML, bodyHTML, badgeHTML){
   const open = openCards.has(id) ? " open" : "";
   return `<details class="card ${cls} collapsecard" data-card="${esc(id)}"${open}>
@@ -3107,6 +3111,16 @@ function startNewChat(ask){
 /* =====================================================================
    WIZARD / NAV
 ===================================================================== */
+/* Show the current condition in the header (desktop) so the user always sees which plan
+   they're in. Falls back to the generated program if the catalogue isn't loaded yet. */
+function updateHeaderContext(){
+  const el=$("#hdrContext"); if(!el) return;
+  const names=(typeof selectedConditions==="function"?selectedConditions():[]).map(c=>c.name);
+  const primary = names[0] || (state.program&&state.program.items&&state.program.items[0]&&state.program.items[0].name) || "";
+  el.innerHTML = primary
+    ? `<b>${esc(primary)}</b>${names.length>1?` <span class="sep">·</span> +${names.length-1} more`:""}`
+    : "";
+}
 function goStep(n){
   state.step=n; save();
   // Honour reduced-motion for the JS scrolls (the CSS killswitch can't reach a JS `behavior`).
@@ -3143,6 +3157,7 @@ function goStep(n){
   if(n===6){ renderHealth(); renderDataWarn(); }              // Health & vitals
   if(n===7) initCoach();
   if(n===8) ensureProgramData().then(initLibrary);   // the library IS exercises.js
+  updateHeaderContext();
 }
 
 /* ---------- cardiac device detail (shown when Pacemaker/ICD is ticked) ---------- */
@@ -3710,6 +3725,7 @@ function renderSelected(){
     <span class="x" data-id="${c.id}">✕</span></span>`).join("");
   $$("#selectedConds .x").forEach(x=>x.onclick=()=>{ state.condIds=state.condIds.filter(i=>i!==x.dataset.id); save(); renderSelected(); runSearch(); });
   $("#toDetails").disabled = conds.length===0;
+  updateHeaderContext();
 }
 function runSearch(){
   if(!window.CONDITIONS){                       // catalogue still in flight
@@ -6202,10 +6218,16 @@ function refreshLabRow(id){
 }
 function renderLabs(){
   const el=$("#labsBody"); if(!el) return;
+  if(!labsSeeded){ if(LAB_DOMAINS[0]) openLabDomains.add(LAB_DOMAINS[0].key); labsSeeded=true; }
   el.innerHTML = LAB_DOMAINS.map(d=>{
-    const rows=LABS.filter(l=>l.domain===d.key).map(labRowHTML).join("");
-    return `<div class="labdomain"><h3 class="labdh">${esc(d.label)}</h3>${rows}</div>`;
+    const domLabs=LABS.filter(l=>l.domain===d.key);
+    const rows=domLabs.map(labRowHTML).join("");
+    const open=openLabDomains.has(d.key)?" open":"";
+    return `<details class="labdomain"${open} data-domain="${d.key}"><summary class="labdh">${esc(d.label)}<span class="labdcount">${domLabs.length}</span></summary>${rows}</details>`;
   }).join("");
+  $$("#labsBody > .labdomain").forEach(dt=>dt.addEventListener("toggle",()=>{
+    dt.open ? openLabDomains.add(dt.dataset.domain) : openLabDomains.delete(dt.dataset.domain);
+  }));
   $$("#labsBody .labval").forEach(inp=>inp.oninput=()=>{ const id=inp.dataset.lab; (state.labs[id]=state.labs[id]||{}).v=inp.value.trim(); save(); refreshLabRow(id); renderRisks(); });
   $$("#labsBody .labt").forEach(inp=>inp.oninput=()=>{ const id=inp.dataset.lab; (state.labs[id]=state.labs[id]||{})[inp.dataset.b]=inp.value.trim(); save(); refreshLabRow(id); renderRisks(); });
 }

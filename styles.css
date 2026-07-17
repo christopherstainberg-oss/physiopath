@@ -2,7 +2,7 @@
   --bg:#0f1720;--panel:#16212e;--panel-2:#1d2b3a;--line:#294055;--text:#e8eef5;--muted:#9fb2c6;
   --brand:#3ea6ff;--brand-2:#5ce1a6;--acute:#ff8a5c;--chronic:#9d7bff;--warn:#ffcc57;--danger:#ff6b6b;
   --msk:#3ea6ff;--neuro:#9d7bff;--cardiac:#ff6b6b;--pulm:#5ce1a6;--ped:#ff8ac0;
-  --radius:14px;--shadow:0 8px 30px rgba(0,0,0,.35);
+  --radius:14px;--shadow:0 6px 18px rgba(0,0,0,.28);
   --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   /* Anything the USER wrote is set in serif — their words should not look like our UI. */
   --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
@@ -24,7 +24,7 @@
   --warn-ink:var(--warn); --danger-ink:var(--danger); --acute-ink:var(--acute);
   --msk-ink:var(--msk); --neuro-ink:var(--neuro); --cardiac-ink:var(--cardiac); --pulm-ink:var(--pulm); }
 @media (prefers-color-scheme: light){
-  :root{--bg:#eef3f8;--panel:#fff;--panel-2:#f2f6fb;--line:#d7e2ee;--text:#132030;--muted:#5b6c80;--shadow:0 8px 30px rgba(20,40,70,.10);
+  :root{--bg:#eef3f8;--panel:#fff;--panel-2:#f2f6fb;--line:#d7e2ee;--text:#132030;--muted:#5b6c80;--shadow:0 6px 16px rgba(20,40,70,.09);
     /* the dark-mode accents measured 2.59:1 and 1.64:1 on white -- both fail WCAG AA (4.5:1),
        and --brand-2 was the colour of the cardiac-device heart-rate limit text. */
     --brand-ink:#0b5fa8; --accent-ink:#0a6e4a; --chip:#e4ecf6; --ped-ink:#a32b6b;
@@ -124,8 +124,7 @@ input[type=range]{flex:1;accent-color:var(--brand);height:30px}
 .btn:disabled{opacity:.5;cursor:not-allowed}
 
 /* checkboxes */
-.checks{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-@media(max-width:560px){.checks{grid-template-columns:1fr}}
+.checks{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:8px}
 .histgroup{margin:0 0 14px}
 .histgrouplab{font-size:11.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);margin:2px 0 7px}
 .cardiacdev{border:1px solid rgba(255,107,107,.35);border-radius:12px;padding:13px 14px;background:rgba(255,107,107,.06)}
@@ -569,7 +568,7 @@ body.isoffline .vidnote{display:none}
 
 /* chat */
 .chatlog{display:flex;flex-direction:column;gap:10px;max-height:52vh;max-height:52dvh;overflow-y:auto;padding:4px}
-.msg{max-width:88%;padding:11px 14px;border-radius:14px;font-size:14px;white-space:pre-wrap}
+.msg{max-width:min(88%,62ch);padding:11px 14px;border-radius:14px;font-size:14px;white-space:pre-wrap}
 .msg.bot{background:var(--panel-2);border:1px solid var(--line);border-top-left-radius:4px;align-self:flex-start}
 .msg.user{background:linear-gradient(135deg,var(--brand),#2b8ce0);color:#04121f;border-top-right-radius:4px;align-self:flex-end;font-weight:500}
 .msg.bot .src{display:block;margin-top:8px;color:var(--muted);font-size:11px}
@@ -911,9 +910,8 @@ footer b{color:var(--text)}
 .screenwarn b{color:inherit}
 
 /* vital signs, max heart rate & Borg RPE */
-.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-@media(max-width:620px){.grid3{grid-template-columns:1fr 1fr}}
-@media(max-width:400px){.grid3{grid-template-columns:1fr}}
+/* fluid: fills 1→4 columns by available width instead of snapping at fixed breakpoints */
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:10px}
 .subfield{display:flex;flex-direction:column;gap:5px;font-size:12.5px;margin:0}
 .subfield>span{color:var(--text);font-weight:600}
 .subfield i{font-style:normal;color:var(--muted);font-weight:400}
@@ -1001,6 +999,12 @@ footer b{color:var(--text)}
 
 .labdomain{margin:0 0 6px}
 .labdh{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:14px 0 4px;font-weight:800}
+/* lab domains collapse so the Health step isn't one giant scroll */
+details.labdomain>summary.labdh{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding:8px 0;margin:6px 0 2px}
+details.labdomain>summary.labdh::-webkit-details-marker{display:none}
+details.labdomain>summary.labdh::before{content:"▸";color:var(--muted);font-size:11px;transition:transform .15s}
+details.labdomain[open]>summary.labdh::before{transform:rotate(90deg)}
+.labdcount{margin-left:auto;font-size:11px;font-weight:700;color:var(--muted);background:var(--chip);border-radius:999px;padding:1px 9px}
 .labrow{padding:10px 0;border-bottom:1px solid var(--line)}
 .labrow:last-child{border-bottom:none}
 .labname{font-size:13.5px;font-weight:600;margin-bottom:6px}
@@ -1101,6 +1105,104 @@ footer b{color:var(--text)}
   .rowbtns .btn{width:100%}
   .rowbtns > span:empty{display:none}
   .chatform .btn{flex:0 0 auto;white-space:nowrap}
+}
+
+/* current-condition context in the header (shown on desktop — mobile has no room) */
+.hdrctx{display:none;min-width:0;margin-left:2px;font-size:12.5px;color:var(--muted);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hdrctx:empty{display:none!important}
+.hdrctx b{color:var(--text);font-weight:700}
+.hdrctx .sep{opacity:.5;margin:0 8px}
+
+/* in-step quick-nav for the (tall) Health step — sticky on phones, static on desktop.
+   top clears the real mobile header: a 44px .icon-btn + 12+12 padding = 68px (border-box),
+   so the pills sit flush under it instead of tucking ~14px behind it while scrolling. */
+.hsubnav{position:sticky;top:calc(68px + env(safe-area-inset-top));z-index:6;
+  display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 14px;padding:8px 0;background:var(--bg)}
+.hsubnav a{font-size:12.5px;font-weight:600;color:var(--muted);text-decoration:none;
+  border:1px solid var(--line);background:var(--panel-2);border-radius:999px;padding:6px 12px;white-space:nowrap}
+.hsubnav a:hover{border-color:var(--brand);color:var(--text)}
+#panel-6 .card{scroll-margin-top:118px}
+
+/* railgroup labels are only shown in the desktop side-rail (below) */
+.railgroup{display:none}
+
+/* ---------- app shell — left rail + wide dashboard (tablets & up, ≥768px) ----------
+   Purely additive: everything above is the phone base case; the ≤700px bottom-bar is
+   untouched. This tier RE-LAYS-OUT the same markup into a real app shell. */
+@media (min-width:768px){
+  :root{ --rail:210px; --headerH:64px; --readw:920px; --dashw:1180px; }
+
+  body{
+    display:grid;
+    grid-template-columns:var(--rail) minmax(0,1fr);
+    grid-template-rows:auto 1fr;
+    grid-template-areas:"header header" "rail main";
+    min-height:100dvh;
+  }
+  header.app{ grid-area:header; height:var(--headerH); z-index:30 }
+
+  /* the step wizard becomes a vertical side-rail */
+  nav.steps{
+    grid-area:rail; align-self:start;
+    position:sticky; top:var(--headerH);
+    height:calc(100dvh - var(--headerH));
+    max-width:none; margin:0; gap:2px; overflow-y:auto;
+    flex-direction:column; align-items:stretch;
+    padding:14px 10px calc(14px + env(safe-area-inset-bottom));
+    border-right:1px solid var(--line); border-bottom:none;
+    background:linear-gradient(180deg,var(--panel),transparent);
+  }
+  .steps .step{
+    flex:0 0 auto; flex-direction:row; justify-content:flex-start;
+    gap:11px; min-width:0; min-height:0; padding:10px 11px;
+    border-bottom:none; border-radius:10px; text-align:left;
+  }
+  .steps .step span{ font-size:13px; font-weight:600 }
+  .steps .step:hover{ background:var(--chip); color:var(--text) }
+  .steps .step.active{ background:rgba(62,166,255,.12); border-bottom:none; color:var(--text) }
+  .steps .step.active span{ color:var(--brand-ink); font-weight:800 }
+
+  /* section headers inside the rail (Set up / Track & learn) */
+  .railgroup{
+    display:block; font-size:10px; font-weight:800; letter-spacing:.6px;
+    text-transform:uppercase; color:var(--muted); padding:14px 11px 5px;
+  }
+  .railgroup:first-child{ padding-top:2px }
+
+  /* content: a comfortable centred reading column by default … */
+  main.wrap{ grid-area:main; max-width:none; margin:0; padding:22px 22px 60px }
+  main.wrap > *{ max-width:var(--readw); margin-left:auto; margin-right:auto }
+
+  /* … the Health step opens into a dashboard: responsive columns (2-up when there's
+     room, 1-up on a narrow tablet), the tall labs card + nav spanning full width. */
+  main.wrap > #panel-6{ max-width:var(--dashw); columns:2 340px; column-gap:22px }
+  #panel-6 > .card{ break-inside:avoid; width:100%; margin:0 0 22px }
+  #panel-6 > .card:has(#labsBody), #panel-6 > .rowbtns{ column-span:all }
+  #panel-6 > .rowbtns{ margin-top:0 }
+
+  /* Library results flow into responsive columns within the reading width */
+  #exResults{ display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+    gap:0 22px; align-content:start }
+
+  /* keep the sticky search bar clear of the header */
+  .searchbar{ top:calc(var(--headerH) + 12px) }
+
+  /* light visual hierarchy: the backup / data utility card recedes vs primary content */
+  #dataCard{ box-shadow:none; background:var(--panel-2) }
+
+  /* header shows the current condition; the Health quick-nav is static (dashboard is short) */
+  .hdrctx{ display:block }
+  #panel-6 > .hsubnav{ position:static; column-span:all; margin:0 0 2px }
+}
+
+/* larger screens: a wider rail and a little more breathing room */
+@media (min-width:1024px){
+  :root{ --rail:242px }
+  main.wrap{ padding:26px 30px 64px }
+  .steps .step{ gap:12px; padding:10px 12px }
+  .steps .step span{ font-size:13.5px }
+  .railgroup{ font-size:10.5px; padding:15px 12px 5px }
 }
 
 @media print{

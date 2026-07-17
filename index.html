@@ -24,6 +24,7 @@
     <div class="brandname" role="heading" aria-level="1">PhysioPath</div>
     <div class="brandsub">Personalized Injury Recovery</div>
   </div>
+  <div class="hdrctx" id="hdrContext" aria-live="polite"></div>
   <div class="grow"></div>
   <button class="icon-btn no-print" id="printBtn" title="Print / Save PDF" aria-label="Print or save as PDF">🖨</button>
   <button class="icon-btn no-print" id="resetBtn" title="Start over" aria-label="Start over">↺</button>
@@ -31,10 +32,12 @@
 
 <!-- step progress -->
 <nav class="steps no-print" id="steps" aria-label="Setup progress">
+  <div class="railgroup" aria-hidden="true">Set up</div>
   <button class="step" data-step="0"><i>1</i><span>History</span></button>
   <button class="step" data-step="1"><i>2</i><span>Clinician</span></button>
   <button class="step" data-step="2"><i>3</i><span>Injury</span></button>
   <button class="step" data-step="3"><i>4</i><span>Details</span></button>
+  <div class="railgroup" aria-hidden="true">Track &amp; learn</div>
   <button class="step" data-step="4"><i>5</i><span>Program</span></button>
   <button class="step" data-step="5"><i>6</i><span>Journal</span></button>
   <button class="step" data-step="6"><i>7</i><span>Health</span></button>
@@ -496,12 +499,20 @@
   </section>
 
   <section class="panel hide" id="panel-6">
+    <nav class="hsubnav no-print" aria-label="Jump to a health section">
+      <a href="#hrMonitorCard">⌚ Monitor</a>
+      <a href="#vitalsLogCard">📈 Vitals</a>
+      <a href="#labsCard">🧪 Labs</a>
+      <a href="#riskCard">❤️ Risk</a>
+      <a href="#dataCard">💾 Data</a>
+      <a href="#otherRiskCard">⚠️ Other</a>
+    </nav>
     <div class="card" id="hrMonitorCard">
       <h2>⌚ Smartwatch / heart-rate monitor</h2>
       <div id="hrMonitorOut"></div>
     </div>
 
-    <div class="card">
+    <div class="card" id="vitalsLogCard">
       <h2>Vitals log &amp; trend</h2>
       <p class="hint">Record your vitals over time to see the trend across consecutive readings. Stored on your device only.</p>
       <div class="grid3">
@@ -518,7 +529,7 @@
       <div id="vitalsLogBody"></div>
     </div>
 
-    <div class="card">
+    <div class="card" id="labsCard">
       <h2>Lab Values &amp; Reference Ranges</h2>
       <p class="hint">Enter your latest results and adjust the reference range if your lab or clinician uses a different one.
         <b style="color:var(--brand-2)">Green</b> = within range, <b style="color:var(--danger)">red</b> = out of range with tips to improve it.
@@ -532,7 +543,7 @@
       <div id="labsBody"></div>
     </div>
 
-    <div class="card">
+    <div class="card" id="riskCard">
       <h2>Health Risk Assessment</h2>
       <p class="hint">Educational estimates for cardiac, stroke, liver, kidney and digestive health, from the vitals, labs and history you entered. Not a diagnosis or a validated risk score.</p>
       <div id="riskBody"></div>
@@ -551,7 +562,7 @@
       <div class="datawarn" id="dataWarn"></div>
     </div>
 
-    <div class="card">
+    <div class="card" id="otherRiskCard">
       <h2>🔎 Other Health Risks to Be Aware Of</h2>
       <p class="hint">A clinical read of your labs and vitals grouped into risk areas — 🫀 Metabolic, 🔴 Hematology, 🧁 Nutrition, 🦋 Thyroid, 🦴 Bone, 🩹 Thrombosis, 🔥 Inflammation &amp; Infection, 🌸 Reproductive &amp; Hormonal, and 🎗️ Oncology-marker awareness. Each appears once you enter relevant values. Educational only — not a diagnosis.</p>
       <div id="otherRiskBody"></div>
