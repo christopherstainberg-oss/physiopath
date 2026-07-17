@@ -1283,7 +1283,31 @@ function syncHealthCards(){
     card._autoSynced = true;
   });
 }
-function renderHealth(){ renderHRMonitor(); renderVitalsLog(); renderLabs(); renderRisks(); syncHealthCards(); }
+function renderHealth(){ renderHRMonitor(); renderVitalsLog(); renderLabs(); renderMeasures(); renderRisks(); syncHealthCards(); }
+/* OBJ-1: the recovery-measurements trend (the values captured in the Program's "Ready to progress?"). */
+function measureDef(key){
+  for(const set of Object.values(MEASURE_SETS)){ const g = set.find(x=>x.key===key); if(g) return g; }
+  return { key, label:key, kind:"ratio" };
+}
+function renderMeasures(){
+  const host = $("#measuresBody"); if(!host) return;
+  const m = state.measures || {};
+  const keys = Object.keys(m).filter(k=>(m[k]||[]).length);
+  if(!keys.length){ host.innerHTML = `<p class="hint muted">Nothing recorded yet — when you're in a program, record range and strength in <b>Ready to progress?</b> and each measure will trend here.</p>`; return; }
+  host.innerHTML = keys.map(k=>{
+    const g = measureDef(k), hist = m[k];
+    const latest = hist[hist.length-1];
+    const now = g.kind==="tick" ? (Number(latest.aff)>=1?"confirmed ✓":"not yet")
+              : (measurePct(latest)!=null ? measurePct(latest)+"% of the other side" : "—");
+    const rows = hist.slice(-8).map(e=>{
+      const detail = g.kind==="tick" ? (Number(e.aff)>=1?"confirmed":"—")
+                   : `${esc(String(e.aff))} / ${esc(String(e.oth))}${g.unit?" "+esc(g.unit):""}`;
+      const pct = g.kind==="tick" ? "" : (measurePct(e)!=null ? measurePct(e)+"%" : "");
+      return `<div class="mtrendrow"><span class="mtd">${esc(e.d)}</span><span class="mtv">${detail}</span><span class="mtp">${esc(pct)}</span></div>`;
+    }).join("");
+    return `<div class="mcard"><div class="mchead"><b>${esc(g.label)}</b><span class="mcnow">${esc(now)}</span></div><div class="mtrend">${rows}</div></div>`;
+  }).join("");
+}
 function initHealth(){
   const d=$("#vlDate"); if(d && !d.value) d.value=todayISO();
   const sv=$("#vlSave"); if(sv) sv.onclick=saveVitalsEntry;

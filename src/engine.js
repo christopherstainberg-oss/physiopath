@@ -328,7 +328,7 @@ const state = {
   equipment:"", timePerDay:"", workDemand:"", priorEpisodes:"", moveConfidence:"", pregStage:"", footSensation:"",
   medIds:[], medFilter:false, homeMode:false, customPrecautions:[], clinicianProtocols:[], clinPrecautionProtocol:"", clinicianGuided:false, selfGuided:false,
   medDoses:{}, weightBearing:{status:"",pct:"",lbs:"",side:"",limb:"le"}, devices:[],
-  cardiacDevice:{type:"",icdRate:""}, specialPrecautions:[], planVariant:{}, progress:{},
+  cardiacDevice:{type:"",icdRate:""}, specialPrecautions:[], planVariant:{}, progress:{}, measures:{},
   log:[], logMood:"", logDone:[], logTpl:"blank", photoNoted:false,
   jjThread:[], chatHistory:[], apiKey:"", apiModel:"claude-opus-4-8"
 };
@@ -3044,6 +3044,73 @@ function setCriteriaMet(label, idx, on){
   save();
   state.program = generateProgram(); save();
   renderProgram(state.program);
+}
+/* ---------- objective progression gates (OBJ-1) ----------
+   Turn phase-advance criteria from a self-tick into something MEASURED: enter the affected side and
+   the other side, the app computes a symmetry %, and a phase only clears when the measurable gates
+   are met AND the logged pain supports it. Region-derived and deliberately at-home-measurable —
+   a tape measure, a count of reps, a "does it go as straight as the other side". */
+const MEASURE_SETS = {
+  knee: [
+    { key:"knee_flex", label:"Knee bend (flexion)",                    kind:"ratio", unit:"°", target:0.90, hint:"How far each knee bends" },
+    { key:"knee_ext",  label:"Full straightening (extension)",         kind:"tick",            target:1,    hint:"The knee goes as straight as the other side" },
+    { key:"knee_sls",  label:"Single-leg sit-to-stands / heel-raises", kind:"count",           target:0.90, hint:"Reps each side before form breaks" },
+  ],
+  hip: [
+    { key:"hip_flex",   label:"Hip bend (flexion)",         kind:"ratio", unit:"°", target:0.90, hint:"vs the other hip" },
+    { key:"hip_stance", label:"Single-leg stance time",     kind:"count", unit:"s", target:0.90, hint:"Seconds balanced each side" },
+    { key:"hip_sts",    label:"Single-leg sit-to-stands",   kind:"count",           target:0.90, hint:"Reps each side" },
+  ],
+  shoulder: [
+    { key:"sh_flex", label:"Overhead reach (flexion)",  kind:"ratio", unit:"°", target:0.90, hint:"How high each arm lifts" },
+    { key:"sh_er",   label:"External rotation",         kind:"ratio", unit:"°", target:0.90, hint:"Elbow at side, turning out" },
+  ],
+  ankle: [
+    { key:"ank_df",  label:"Ankle dorsiflexion (knee-to-wall)", kind:"ratio", unit:"cm", target:0.90, hint:"Distance from the wall each side" },
+    { key:"ank_slr", label:"Single-leg heel-raises",            kind:"count",            target:0.90, hint:"Reps each side" },
+  ],
+  general: [
+    { key:"gen_rom", label:"Movement range vs the other side",     kind:"ratio", target:0.90, hint:"The main limited movement, measured each side" },
+    { key:"gen_str", label:"Strength / function vs the other side", kind:"count", target:0.90, hint:"A key exercise's reps, each side" },
+  ],
+};
+function measureRegionKey(item){
+  const r = (((item && item.region) || "") + " " + ((item && item.name) || "")).toLowerCase();
+  if(/knee|\bacl\b|\bpcl\b|\bmcl\b|patell|meniscus/.test(r)) return "knee";
+  if(/\bhip\b|groin|gluteal/.test(r))                        return "hip";
+  if(/shoulder|scapul|rotator cuff|\bcuff\b/.test(r))        return "shoulder";
+  if(/ankle|foot|calf|achilles|plantar/.test(r))             return "ankle";
+  return "general";
+}
+function measuresFor(item){ return MEASURE_SETS[measureRegionKey(item)] || MEASURE_SETS.general; }
+function latestMeasure(key){ const h = (state.measures||{})[key]; return (h && h.length) ? h[h.length-1] : null; }
+/* Symmetry as a % of the other side, capped at 100 (past parity isn't "more ready"). */
+function measurePct(m){
+  if(!m) return null;
+  const a = Number(m.aff), o = Number(m.oth);
+  if(!isFinite(a) || !isFinite(o) || o <= 0) return null;
+  return Math.round(Math.min(a / o, 1) * 100);
+}
+/* The pain/swelling guard: the logged trend can block advancement even when the numbers are there. */
+function measurePainOk(){
+  const ep = effectivePain();
+  const trend = (state.log||[]).length ? painTrend(state.log) : null;
+  if(trend && trend.cls === "trend-up") return { ok:false, why:`your logged pain is trending up (${trend.txt}) — let it settle before progressing` };
+  if(ep.v >= 5)                          return { ok:false, why:`you're logging around ${(+ep.v).toFixed(1)}/10 — settle it below ~4 first` };
+  return { ok:true, why:`pain ${(+ep.v).toFixed(1)}/10, settled` };
+}
+/* Evaluate every gate for a condition's current phase → whether the phase is ready to clear. */
+function gateStatus(item){
+  const items = measuresFor(item).map(g => {
+    const m = latestMeasure(g.key);
+    if(g.kind === "tick"){ const met = !!(m && Number(m.aff) >= 1); return { g, met, pct:null, detail: met ? "confirmed" : "not yet" }; }
+    const pct = measurePct(m);
+    const met = pct != null && pct >= Math.round(g.target * 100);
+    return { g, met, pct, detail: pct != null ? `${pct}% of the other side` : "not measured yet" };
+  });
+  const measurableMet = items.length > 0 && items.every(x => x.met);
+  const pain = measurePainOk();
+  return { items, measurableMet, pain, ready: measurableMet && pain.ok };
 }
 function weekPhaseOf(plan){
   const w = weeksPostOp();
