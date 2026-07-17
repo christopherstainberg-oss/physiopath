@@ -5874,12 +5874,7 @@ function renderProgram(prog){
     <h2>Your ${esc(prog.totalWeeks)}-week program ${trackBadge}</h2>
     <p class="hint">Built for ${esc(String(state.weeks))} week(s) in, pain ${state.painRest}/10 at rest and ${state.painMove}/10 on movement${state.surgery==="yes"?", post-surgical":""}.
       ${state.goal?`Goal: <b>${esc(state.goal)}</b>.`:""}</p>
-    <div class="summary">
-      <div class="stat"><div class="k">Length</div><div class="v">${esc(prog.totalWeeks)} wks</div></div>
-      <div class="stat"><div class="k">Frequency</div><div class="v" style="font-size:14px">${esc(prog.sessions)}</div></div>
-      <div class="stat"><div class="k">Conditions</div><div class="v">${prog.items.length}</div></div>
-      <div class="stat"><div class="k">Supervision</div><div class="v" style="font-size:13px"><span class="sup ${supCls}">${supTxt}</span></div></div>
-    </div>`;
+    <div class="progmeta"><span><b>${esc(prog.totalWeeks)}</b> weeks</span><span class="pmsep">·</span><span>${esc(prog.sessions)}</span><span class="pmsep">·</span><span class="sup ${supCls}">${supTxt}</span></div>`;
 
   if(prog.clearance){
     html += `<div class="banner clear"><b>⚠ Get medical clearance before starting.</b> Based on your history and/or condition,
