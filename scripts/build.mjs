@@ -7,7 +7,7 @@ import { writeApp } from "./assemble-app.mjs";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const DIST = join(ROOT, "dist");
 
-// 0) assemble app.js from src/engine.js + src/ui.js so dist ships the current source
+// 0) assemble app.js from src/engine.js + the src/ui/*.js parts so dist ships the current source
 writeApp();
 
 // 1) regenerate generated assets (importing runs each generator's top-level code)
