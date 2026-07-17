@@ -100,9 +100,20 @@ details.collapsecard[open]>summary .collapsechev{transform:rotate(180deg)}
 details.collapsecard[open]>summary .collapsehint{display:none}
 .collapsebadge{font-size:11px;font-weight:800;color:var(--danger);background:rgba(255,107,107,.14);border-radius:999px;padding:2px 9px;white-space:nowrap}
 .collapsebody{margin-top:12px}
+/* Reference group on the Program — folds the secondary cards below the plan (need-to-know first) */
+details.refgroup{margin:14px 0;border:1px solid var(--line);border-radius:14px;background:var(--panel-2)}
+details.refgroup>summary.refsum{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:14px 18px}
+details.refgroup>summary.refsum::-webkit-details-marker{display:none}
+.reftitle{font-weight:700;font-size:15px}
+.refhint{font-size:12px;color:var(--muted);flex:1 1 auto}
+.refchev{color:var(--muted)}
+details.refgroup[open]>summary .refchev{transform:rotate(180deg)}
+details.refgroup[open]>summary .refhint{display:none}
+.refbody{padding:2px 12px 8px}
+.refbody>.card:first-child{margin-top:0}
 /* count badge in a Health card summary ("12 readings") — surfaces logged data on a collapsed card */
 .hcardcount{margin-left:8px;font-size:11px;font-weight:700;color:var(--brand-ink);background:var(--chip);border-radius:999px;padding:1px 9px;white-space:nowrap}
-@media print{ details.collapsecard>.collapsebody{display:block!important} .collapsechev,.collapsehint{display:none!important} }
+@media print{ details.collapsecard>.collapsebody, details.refgroup>.refbody{display:block!important} .collapsechev,.collapsehint,.refchev,.refhint{display:none!important} }
 .hint{color:var(--muted);font-size:13.5px;margin:0 0 16px}
 .field{display:block;margin-bottom:14px}
 .field .lab{display:block;font-weight:600;font-size:13.5px;margin-bottom:6px}

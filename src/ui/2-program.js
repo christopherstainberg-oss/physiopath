@@ -588,9 +588,7 @@ function renderProgram(prog){
       esc([...new Set(prog.removed.map(r=>TAG_LABEL[r.tag]||r.tag))].join(", ")) +
       ` and substituted safer options where needed.</div>`;
   }
-  html += `<div class="banner info no-print"><b>✎ Make it yours.</b> On any exercise: tap <b>⟳ Rotate</b> to swap it for the next option, or <b>⇄ Swap…</b> to choose from a list.
-    For a whole phase: <b>🔄 Rotate all exercises</b> or <b>↩ Reset to recommended</b>. Everything stays within your precautions and is saved automatically.</div>`;
-  html += `</div>`;
+  html += `</div>`;   // (the "✎ Make it yours" instructional banner was removed — the per-exercise ⟳ Rotate / ⇄ Swap buttons and phase tools already say it, in context)
 
   // render-time medication filtering (hide high-risk exercises; fully reversible)
   const mflags = medExerciseFlags();
@@ -604,15 +602,12 @@ function renderProgram(prog){
     if(homeSwap(e).home) homeAdapted++;
   })));
 
-  html += whyThisPlanCard(prog);
-  html += returnGoalsCard();
-  html += adlSuggestionsCard();
-  html += homeCard(homeAdapted);
-  html += pedGuidanceCard();      // age reshapes everything below it, so it says so first
-  html += safetyNotesCard(prog);
-  html += riskAwarenessCard(prog);
-  html += vitalsCard(prog);
-  html += medicationCard(medHiddenTotal);
+  // Lead with the PLAN. Only the safety framing stays above the exercises — pediatric guidance (age
+  // reshapes everything) and the collapsed Safety-notes card. Clearance + personalized precautions are
+  // already in the summary above. Everything else is reference and moves BELOW the plan, collapsed, so
+  // today's exercises are the first thing after the summary — not the tenth card down.
+  html += pedGuidanceCard();      // child only; age reshapes everything below it, so it says so first
+  html += safetyNotesCard(prog);  // already collapsed by default — safety notes before the plan
 
   prog.items.forEach((item, ci)=>{
     html += `<div class="card"><h2>${esc(item.name)}</h2>
@@ -657,6 +652,12 @@ function renderProgram(prog){
   });
 
   html += clinicianProtocolCards();     // any saved physician protocols, shown verbatim (added in the Clinician step)
+  // ── Reference — collapsed by default (need-to-know first). The "why this plan", return goals,
+  //    daily-task suggestions, home mode, and the vitals / risk / medication considerations: all
+  //    valuable on demand, none of them what the user opened the Program to see today.
+  const refCards = whyThisPlanCard(prog) + returnGoalsCard() + adlSuggestionsCard()
+    + homeCard(homeAdapted) + riskAwarenessCard(prog) + vitalsCard(prog) + medicationCard(medHiddenTotal);
+  if(refCards.trim()) html += `<details class="refgroup"><summary class="refsum"><span class="reftitle">📁 More about your plan</span><span class="refhint">why it looks like this · goals · home mode · vitals · meds</span><span class="refchev" aria-hidden="true">▾</span></summary><div class="refbody">${refCards}</div></details>`;
   html += suggestionsCard(prog);
   out.innerHTML = html;
   wireProgram();
