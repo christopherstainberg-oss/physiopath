@@ -5478,10 +5478,17 @@ function clinicianIntroCard(){
 }
 function clinPrecautionCard(){
   const v = state.clinPrecautionProtocol || "";
+  const wbCur = (state.weightBearing||{}).status || "";
+  const wbOpts = WB_ORDER.map(k=>`<option value="${k}"${k===wbCur?" selected":""}>${WB_STATUS[k].abbr} — ${esc(WB_STATUS[k].label)}</option>`).join("");
   return `<div class="card clinformcard no-print">
     <h2>🛡️ Clinician precaution protocol</h2>
-    <p class="hint">Add precaution or activity-restriction orders in your own words (e.g. weight-bearing details, ROM limits, brace wear, sternal/spinal precautions, "no resisted knee extension 0–45° for 6 weeks"). This is shown verbatim in the <b>Precautions area</b> alongside the app's precautions.</p>
-    <textarea id="clinPrecText" rows="5" placeholder="e.g. PWB 50% left leg × 6 weeks · ROM 0–90° knee flexion · hinged brace locked 0–30° · no open-chain knee extension 0–40°">${esc(v)}</textarea>
+    <p class="hint">Add precaution or activity-restriction orders (e.g. weight-bearing, ROM limits, brace wear, sternal/spinal precautions). Anything in the box below is shown verbatim in the <b>Precautions area</b> alongside the app's precautions.</p>
+    <div class="clinwbrow">
+      <label class="clinwblab" for="clinWbSelect"><b>🦵 Weight-bearing order</b> <span class="sub">— the one precaution that actually limits which exercises the app suggests</span></label>
+      <select id="clinWbSelect"><option value="">— not set —</option>${wbOpts}</select>
+    </div>
+    <p class="hint clinwbhint">Setting this <b>constrains the plan</b> (the auto-program regenerates to match). The free-text box below is shown <b>verbatim</b> for everything else — to have ROM / brace / special precautions shape the plan too, set them as structured limits in <b>Details ▸ Precautions</b>.</p>
+    <textarea id="clinPrecText" rows="5" placeholder="e.g. ROM 0–90° knee flexion · hinged brace locked 0–30° · no open-chain knee extension 0–40°">${esc(v)}</textarea>
     <div class="clinbtns"><button class="btn primary" id="clinPrecSave" type="button">Save precaution protocol</button>
       ${v?`<button class="btn ghost" id="clinPrecClear" type="button">Clear</button>`:""}</div>
   </div>`;
@@ -5500,6 +5507,15 @@ function wireClinician(){
   const clinEx = $("#clinicianOut #clinExample"); if(clinEx) clinEx.onclick = fillClinExample;
   const clinText = $("#clinicianOut #clinText"); if(clinText){ clinText.oninput = updateClinPreview; updateClinPreview(); }
   const precSave = $("#clinicianOut #clinPrecSave"); if(precSave) precSave.onclick = saveClinPrecaution;
+  // Weight-bearing order set from the Clinician step reuses the same state + engine path as the
+  // Details precautions console (setWeightBearingStatus → afterPrecautionChange regenerates the
+  // plan), so a clinician's NWB/PWB order genuinely tightens the auto-program — no engine change.
+  const clinWb = $("#clinicianOut #clinWbSelect"); if(clinWb) clinWb.onchange = ()=>{
+    const val = clinWb.value;
+    if(val){ setWeightBearingStatus(val); }
+    else { const wb = state.weightBearing = state.weightBearing||{}; wb.status=""; wb.pct=""; wb.lbs=""; save(); afterPrecautionChange(true); toast("Weight-bearing order cleared."); }
+    initClinician();
+  };
   const precClear = $("#clinicianOut #clinPrecClear"); if(precClear) precClear.onclick = ()=>{ state.clinPrecautionProtocol=""; save(); initClinician(); renderPrecautions(); toast("Precaution protocol cleared."); };
   $$("#clinicianOut .clindel2").forEach(b=>b.onclick=()=>removeClinProtocol(+b.dataset.idx));
 }
