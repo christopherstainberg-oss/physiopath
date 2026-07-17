@@ -1114,8 +1114,10 @@ details.labdomain[open]>summary.labdh::before{transform:rotate(90deg)}
 .hdrctx b{color:var(--text);font-weight:700}
 .hdrctx .sep{opacity:.5;margin:0 8px}
 
-/* in-step quick-nav for the (tall) Health step — sticky on phones, static on desktop */
-.hsubnav{position:sticky;top:calc(54px + env(safe-area-inset-top));z-index:6;
+/* in-step quick-nav for the (tall) Health step — sticky on phones, static on desktop.
+   top clears the real mobile header: a 44px .icon-btn + 12+12 padding = 68px (border-box),
+   so the pills sit flush under it instead of tucking ~14px behind it while scrolling. */
+.hsubnav{position:sticky;top:calc(68px + env(safe-area-inset-top));z-index:6;
   display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 14px;padding:8px 0;background:var(--bg)}
 .hsubnav a{font-size:12.5px;font-weight:600;color:var(--muted);text-decoration:none;
   border:1px solid var(--line);background:var(--panel-2);border-radius:999px;padding:6px 12px;white-space:nowrap}
