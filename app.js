@@ -5871,7 +5871,7 @@ function renderProgram(prog){
   const [supTxt,supCls] = supMap[prog.supervision] || supMap.self;   // tolerate a stale/invalid supervision on a persisted program
 
   let html = `<div class="card">
-    <h2>Your ${esc(prog.totalWeeks)}-week program ${trackBadge}</h2>
+    <h2>Your ${esc(prog.totalWeeks)}-week program</h2>
     <p class="hint">Built for ${esc(String(state.weeks))} week(s) in, pain ${state.painRest}/10 at rest and ${state.painMove}/10 on movement${state.surgery==="yes"?", post-surgical":""}.
       ${state.goal?`Goal: <b>${esc(state.goal)}</b>.`:""}</p>
     <div class="progmeta"><span><b>${esc(prog.totalWeeks)}</b> weeks</span><span class="pmsep">·</span><span>${esc(prog.sessions)}</span><span class="pmsep">·</span><span class="sup ${supCls}">${supTxt}</span></div>`;
@@ -6956,6 +6956,26 @@ function adlFocusPlan(flags){
 }
 /* Condition card header: the real rehab timeline this plan follows, and where
    the user currently sits on it. */
+/* One horizontal phase timeline per condition — the single orientation that replaces the scattered
+   position indicators (the summary track badge and the "you're around week N, phase Y of Z" prose).
+   done ✓ · current ● · upcoming, each with its real week window, plus one position line. */
+function phaseTimelineHTML(item){
+  const p = item && item.plan; if(!p || !item.phases || !item.phases.length) return "";
+  const ph = item.phases;
+  const cur = item.planPhase>=0 ? item.planPhase : 0;
+  const w = weeksPostOp();
+  const curWk = Number(w!=null ? w : state.weeks);
+  const nodes = ph.map((x,i)=>{
+    const st = i<cur ? "done" : i===cur ? "current" : "upcoming";
+    const mark = i<cur ? "✓ " : i===cur ? "● " : "";
+    return `<div class="ptchip ${st}"><span class="ptn">${mark}Phase ${i+1}</span><span class="ptw">wk ${esc(x.weekStart)}–${esc(x.weekEnd)}</span></div>`;
+  }).join("");
+  const cp = ph[cur];
+  const len = cp ? Math.max(1, Number(cp.weekEnd)-Number(cp.weekStart)) : 1;
+  const wip = (cp && isFinite(curWk)) ? Math.min(len, Math.max(1, Math.round(curWk-Number(cp.weekStart))+1)) : null;
+  const pos = cp ? `📍 <b>Phase ${cur+1} of ${ph.length}</b> · ${esc(cp.title)}${wip?` — week ${wip} of ${len} in this phase`:""}` : "";
+  return `<div class="phasetl"><div class="ptrail">${nodes}</div>${pos?`<div class="ptpos">${pos}</div>`:""}</div>`;
+}
 function planLineHTML(item){
   const p = item && item.plan; if(!p) return "";
   const w = weeksPostOp();
@@ -6980,7 +7000,8 @@ function planLineHTML(item){
     ${p.variant&&p.variant.sub?`<div class="planvarsub"><b>${esc(p.variant.label)}</b> — ${esc(p.variant.sub)}</div>`:""}` : "";
   return `<div class="planline">
     <div class="planhead">📋 <b>Following the ${esc(p.label)} timeline — about ${p.total} weeks${months}</b></div>
-    <div class="plannote">${esc(p.note)}${at}</div>
+    ${phaseTimelineHTML(item)}
+    <div class="plannote">${esc(p.note)}</div>
     ${chips}
     ${progressReportHTML(item)}
     <div class="planfoot">Phases below use the real week windows for this injury. Progress on the <b>criteria</b>, not the dates — and your surgeon's or therapist's own protocol always comes first.</div>

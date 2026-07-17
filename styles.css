@@ -223,6 +223,18 @@ input[type=range]{flex:1;accent-color:var(--brand);height:30px}
   padding:10px 12px;margin:0 0 12px;font-size:13px;line-height:1.55}
 .planhead{color:var(--brand-ink);margin-bottom:4px}
 .plannote{color:var(--text)}
+/* horizontal phase timeline — the single position indicator (replaces the track badge + week prose) */
+.phasetl{margin:10px 0}
+.ptrail{display:flex;flex-wrap:wrap;gap:6px}
+.ptchip{flex:1 1 auto;min-width:82px;border:1px solid var(--line);border-radius:9px;padding:7px 9px;display:flex;flex-direction:column;gap:1px;background:var(--panel)}
+.ptchip.done{border-color:color-mix(in srgb,var(--ok,#37c98b) 42%,var(--line))}
+.ptchip.current{border-color:var(--ok,#37c98b);background:color-mix(in srgb,var(--ok,#37c98b) 11%, transparent)}
+.ptchip.upcoming{opacity:.65}
+.ptchip .ptn{font-size:12px;font-weight:700;color:var(--muted)}
+.ptchip.current .ptn{color:var(--text)}
+.ptchip .ptw{font-size:10.5px;color:var(--muted);opacity:.85;font-variant-numeric:tabular-nums}
+.ptpos{margin-top:9px;font-size:13px;color:var(--muted)}
+.ptpos b{color:var(--text)}
 .planfoot{color:var(--muted);font-size:12px;margin-top:6px}
 .planvars{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:9px}
 .planvarlbl{font-size:11.5px;font-weight:700;color:var(--muted);margin-right:2px}
