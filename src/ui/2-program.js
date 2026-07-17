@@ -624,6 +624,7 @@ function renderProgram(prog){
       const key = ci+"-"+i;
       const open = (ph.current || (i===0 && !hasCurrent) || openPhases.has(key)) ? "open" : "";
       const hiddenNames = mflags.length ? new Set(window.applyContra(ph.ex, mflags).removed.map(r=>r.n)) : null;
+      const tw = ph.current ? thisWeekFocus(item) : null;
       const rows = ph.ex.map((e,ei)=>{
         const disp = state.homeMode ? homeSwap(e) : e;      // display copy only — real exercise unchanged
         return exItemHTML(disp, [item.region], {ci, pi:i, ei}, hiddenNames && hiddenNames.has(e.n));
@@ -637,6 +638,9 @@ function renderProgram(prog){
         </div>
         <div class="body">
           ${ph.restrict?`<div class="planrestrict"><b>⚠ At this stage:</b> ${esc(ph.restrict)}</div>`:""}
+          ${tw?`<div class="thisweek"><div class="twk"><b>📅 This week</b> · week ${tw.wip} of ${tw.len} in this phase</div>
+            <div class="twrung">${esc(tw.rung)}</div>
+            <div class="twnudge tw-${tw.signal||"time"}">${tw.signal==="hold"?"⏸ ":tw.signal==="advance"?"✅ ":""}${esc(tw.nudge)}</div></div>`:""}
           <ul class="exlist">${rows}</ul>
           <div class="phasetools no-print">
             <span class="phasetoolslbl">Whole phase:</span>

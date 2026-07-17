@@ -16,6 +16,9 @@ import "./coach-stream.test.mjs";
 import "./safety-fixes.test.mjs";
 import "./progression-floor.test.mjs";
 import "./specificity-reach.test.mjs";
+import "./healing-scaler.test.mjs";
+import "./tissue-ladder.test.mjs";
+import "./response-progression.test.mjs";
 import { report } from "./runner.mjs";
 
 report();

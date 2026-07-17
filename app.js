@@ -2770,8 +2770,9 @@ function historyVariantKeys(cond){
   if(/arthroscop|keyhole|laparoscop|percutaneous|robotic|minimally invasive|endoscopic/.test(sname)) keys.push("keyhole");
   else if(/\bopen\b|mini-?open|sternotom|laparotom|thoracotom/.test(sname)) keys.push("open");
   if(/revision|complex|redo/.test(sname)) keys.unshift("revision");
-  // things that measurably slow tissue healing
-  if(state.smoking==="current" || flags.has("diabetes") || meds.has("corticosteroid")) keys.push("slowheal");
+  // Systemic healing-slowers (diabetes / smoking / steroids / alcohol / CKD / cancer / PAD / high
+  // BMI) now feed healingScale() in applyVariant, which STACKS them multiplicatively — so they no
+  // longer collapse into a single flat "slowheal" variant here (slowheal stays user-selectable).
   // falls / balance history and age → the older-adult pathway (adds balance & bone work)
   if(state.falls==="2" || (state.aid && state.aid!=="none") || Number(state.age)>=70) keys.push("older");
   // baseline fitness
@@ -2784,7 +2785,6 @@ function historyVariantKeys(cond){
   if((state.returnSports||[]).length) keys.push("athlete");
   // newly asked answers, each driving a pathway that already existed
   if(state.priorEpisodes==="recurrent") keys.unshift("recurrent");
-  if(state.alcohol==="heavy") keys.push("slowheal");
   if(state.sleep==="lt6" || state.stress==="high") keys.push("irritable");
   if(state.moveConfidence==="fearful") keys.push("irritable");
   if(["manual","heavy"].includes(state.workDemand)) keys.push("work");
@@ -2802,14 +2802,44 @@ function scalePlanPhases(ph, scale){
   for(let i=1;i<sc.length;i++) if(sc[i] <= sc[i-1]) sc[i] = sc[i-1]+1;
   return ph.map((f,i)=>[f[0], sc[i], sc[i+1], f[3], f[4], f[5]]);
 }
+/* Systemic factors that slow TISSUE HEALING (distinct from the pacing/context variants). Each
+   multiplies the whole recovery timeline a little, so they COMPOUND — a diabetic smoker on
+   steroids runs longer than any one of those alone — capped at 1.6x. Evidence-informed and
+   deliberately conservative; the clinician can tune the magnitudes below. Age is handled by the
+   `older` variant, not here, so the two don't double-count. */
+function healingScale(){
+  const meds = new Set(selectedMeds().flatMap(m=>m.flags||[]));
+  const flags = new Set(state.flags||[]);
+  const bmi = bmiCalc((state.vitals||{}).height, (state.vitals||{}).weight);
+  const F = [
+    [flags.has("diabetes"),           1.15, "diabetes"],
+    [state.smoking==="current",       1.15, "current smoking"],
+    [meds.has("corticosteroid"),      1.10, "long-term corticosteroids"],
+    [flags.has("ckd"),                1.10, "chronic kidney disease"],
+    [flags.has("cancer_treatment"),   1.15, "active cancer treatment"],
+    [flags.has("pad"),                1.10, "poor circulation (PAD)"],
+    [state.alcohol==="heavy",         1.05, "heavy alcohol use"],
+    [Number.isFinite(bmi) && bmi>=35, 1.08, "a high BMI"],
+  ];
+  let s = 1; const factors = [];
+  for(const [on, mult, label] of F) if(on){ s *= mult; factors.push(label); }
+  return { scale: Math.min(s, 1.6), factors };
+}
 /* Resolve a base plan + chosen variation into the plan actually used. */
 function applyVariant(plan, v){
   if(!plan) return null;
-  const ph = (v && v.ph) ? v.ph
+  let ph = (v && v.ph) ? v.ph
     : (v && v.scale && v.scale!==1) ? scalePlanPhases(plan.ph, v.scale)
     : plan.ph;
+  /* Stack comorbidity healing time ON TOP of the clinical/context variant, so multiple
+     healing-slowing factors compound the recovery length instead of only the strongest one. */
+  const hs = healingScale();
+  if(hs.scale > 1) ph = scalePlanPhases(ph, hs.scale);
+  const healNote = hs.factors.length
+    ? ` Your recovery timeline is extended (~${Math.round((hs.scale-1)*100)}% longer) because ${hs.factors.join(", ")} slow tissue healing — the phase weeks below already account for this.`
+    : "";
   return { ...plan, ph, total: ph[ph.length-1][2],
-    note: plan.note + (v && v.note ? " " + v.note : ""),
+    note: plan.note + (v && v.note ? " " + v.note : "") + healNote,
     freq: (v && v.freq) || plan.freq,
     variant: v ? { k:v.k, label:v.label, sub:v.sub } : null,
     variantList: planVariants(plan).map(x=>({ k:x.k, label:x.label, sub:x.sub })) };
@@ -3037,6 +3067,104 @@ function planFloored(plan){
   if(plan.postop) return true;
   return /fracture|stress reaction|\brupture|reconstruction|\brepair\b|fusion|arthrodesis|osteotomy|\bgraft|union\b|replacement|arthroplasty/i
     .test((plan.label||"") + " " + (plan.note||""));
+}
+/* ---------- week-resolved progression (tissue loading ladders) ----------
+   The phase windows tell you WHICH rung of the ladder you're on; this resolves
+   WHERE in the current phase you are and what to actually change THIS week, along
+   a ladder appropriate to the tissue that's healing. It never alters the plan's
+   weeks or doses — it's the "what do I do differently from last week" layer that a
+   static per-phase dose can't express, so it's purely additive on top of a plan. */
+function tissueClass(item){
+  const t = (((item && item.name) || "") + " " + (((detectSurgery() || {}).name) || "")).toLowerCase();
+  if(/tendo|tendi|epicondyl|plantar fasc|achill/.test(t))                                   return "tendon";
+  if(/cartilage|chondr|microfracture|osteochondr|maci|\baci\b/.test(t))                     return "cartilage"; // before bone: "microFRACTURE"
+  if(/fracture|stress reaction|osteotomy|fusion|arthrodesis|\bbone\b/.test(t))              return "bone";
+  if(/strain|muscle tear|hamstring|calf tear|quad(riceps)? tear|\bmyo/.test(t))             return "muscle";
+  if(/acl|pcl|mcl|lcl|ligament|sprain|instabilit|reconstruction|labr|rotator cuff|repair/.test(t)) return "ligament";
+  if(/stroke|neuro|parkinson|spinal cord|\bsci\b|palsy|guillain|multiple sclerosis|neuropath/.test(t)) return "nerve";
+  return "general";
+}
+/* One rung per phase-stage (protect → load → build → return). Indexed by the current
+   phase, capped at 4 stages so it works for 3- and 4-phase plans alike. */
+const LOADING_LADDER = {
+  tendon: [
+    "Isometric holds — long, comfortable holds (aim ~30–45s). They ease tendon pain and keep the muscle switched on.",
+    "Heavy-slow resistance — load the tendon through range with a slow 3s-up / 3s-down tempo. This is the rung where a tendon actually remodels.",
+    "Add range and speed — fuller range and quicker tempos, once heavy-slow leaves the tendon settled the next morning.",
+    "Energy-storage & spring — hops, bounds and sport-specific plyometrics, built in gradually." ],
+  bone: [
+    "Protect & offload — follow the weight-bearing order exactly; the bone is still knitting.",
+    "Progressive weight-bearing — add load through the limb as you're cleared, building standing and walking tolerance.",
+    "Progressive resistance — load the muscles around the healed bone; add resistance a step at a time.",
+    "Return to impact — reintroduce running or jumping only once loaded resistance is pain-free." ],
+  cartilage: [
+    "Offload & move — restore motion with minimal joint compression; respect any weight-bearing limit.",
+    "Progressive loading — add controlled load through range as the surface tolerates it (slower than soft tissue).",
+    "Strength & function — build capacity for your daily and work demands.",
+    "Return to impact — cautious, late reintroduction of running and jumping." ],
+  muscle: [
+    "Pain-free isometrics — gentle holds at short-to-mid length; protect the healing muscle.",
+    "Concentric through range — build strength through increasing range, staying inside pain.",
+    "Eccentric & lengthened load — the higher-risk pattern for muscle, so it's added later and progressed slowly.",
+    "Speed & sprint — graded high-speed and plyometric work before return to sport." ],
+  ligament: [
+    "Protect & restore range — settle swelling and regain full, controlled motion.",
+    "Strength & control — progressive resistance with good alignment; start single-limb work.",
+    "Proprioception & power — balance, landing and change-of-direction control.",
+    "Return to sport — sport-specific speed and cutting, with strength near the other side." ],
+  nerve: [
+    "High-repetition task practice — frequent, specific practice of the movement you're rebuilding.",
+    "Progress the difficulty — less support, more range, harder variations of the same task.",
+    "Strength & endurance — the capacity to repeat the task through a whole day.",
+    "Real-world & dual-task — the task under distracting, everyday conditions." ],
+  general: [
+    "Restore range & settle symptoms — gentle, frequent movement inside comfort.",
+    "Progressive strengthening — add load a little at a time as control improves.",
+    "Build capacity — heavier, more functional loading toward your goal.",
+    "Return to full activity — the demands of your sport, work or life." ],
+};
+/* Response-based override for the weekly nudge. The plan is time-based, but what someone is
+   actually LOGGING should hold them back or clear them on — auto-regress on a rising trend or a
+   flare, consolidate when they're behind on sessions, and only give the green light when things
+   are settled AND consistent. Returns null when there isn't enough logged data to make the call,
+   so the nudge falls back to the time-based one. */
+function progressionSignal(){
+  const log = (state.log || []).filter(e => isFinite(Number(e.pain)));
+  if(log.length < 2) return null;                    // too little to base a call on — stay time-based
+  const trend = painTrend(state.log || []);
+  const ep = effectivePain();
+  const adh = adherence();
+  if(trend.cls === "trend-up")
+    return { rec:"hold", why:"Your recent logs show pain trending up — hold at this level (or ease back a step) this week rather than adding load, and let it settle first." };
+  if(ep.v >= 7)
+    return { rec:"hold", why:`You're logging around ${(+ep.v).toFixed(1)}/10 right now — keep this week light and don't progress until it eases.` };
+  if(adh && adh.status === "behind")
+    return { rec:"hold", why:"You've logged fewer sessions than the plan asks — consolidate at this level before adding anything; the consistency is what earns the next step." };
+  if((trend.cls === "trend-down" || trend.cls === "trend-flat") && ep.v <= 4 && (!adh || adh.status === "on-track"))
+    return { rec:"advance", why:`Your logs are settled (${trend.txt}) and you're keeping up — you're clear to progress as the phase allows.` };
+  return null;
+}
+/* Where in the current phase the person is, and the one thing to change THIS week. Prefers the
+   response-based signal from what they're logging, and falls back to time-based guidance.
+   Returns null when there's no matched plan phase to resolve against. */
+function thisWeekFocus(item){
+  if(!item || !item.phases || !(item.planPhase >= 0)) return null;
+  const ph = item.phases[item.planPhase];
+  if(!ph) return null;
+  const wpo = weeksPostOp();
+  const cur = (wpo != null ? wpo : Number(state.weeks)) || 0;
+  const start = Number(ph.weekStart) || 0;
+  const end   = Number(ph.weekEnd) || (start + 1);
+  const len   = Math.max(1, end - start);
+  const wip   = Math.min(len, Math.max(1, Math.round(cur - start) + 1));   // 1-based week-in-phase
+  const rung  = (LOADING_LADDER[tissueClass(item)] || LOADING_LADDER.general)[Math.min(3, item.planPhase)];
+  const timeNudge = wip <= 1
+    ? "Start of this phase — establish tolerance at this level before adding anything."
+    : wip >= len
+    ? "End of this phase — if it's controlled and next-morning symptoms are settled, you're ready to progress to the next phase."
+    : "Nudge it up this week — one more set, slightly heavier, or a slower tempo. No more than ~10% up from last week, and only if the last step settled well.";
+  const sig = progressionSignal();
+  return { wip, len, rung, nudge: sig ? sig.why : timeNudge, tissue: tissueClass(item), signal: sig ? sig.rec : null };
 }
 /* Where the user actually is. Without a self-report we fall back to the calendar. With one, the
    rule now depends on whether the tissue has a biological floor: a floored plan is CAPPED by the
@@ -5709,6 +5837,7 @@ function renderProgram(prog){
       const key = ci+"-"+i;
       const open = (ph.current || (i===0 && !hasCurrent) || openPhases.has(key)) ? "open" : "";
       const hiddenNames = mflags.length ? new Set(window.applyContra(ph.ex, mflags).removed.map(r=>r.n)) : null;
+      const tw = ph.current ? thisWeekFocus(item) : null;
       const rows = ph.ex.map((e,ei)=>{
         const disp = state.homeMode ? homeSwap(e) : e;      // display copy only — real exercise unchanged
         return exItemHTML(disp, [item.region], {ci, pi:i, ei}, hiddenNames && hiddenNames.has(e.n));
@@ -5722,6 +5851,9 @@ function renderProgram(prog){
         </div>
         <div class="body">
           ${ph.restrict?`<div class="planrestrict"><b>⚠ At this stage:</b> ${esc(ph.restrict)}</div>`:""}
+          ${tw?`<div class="thisweek"><div class="twk"><b>📅 This week</b> · week ${tw.wip} of ${tw.len} in this phase</div>
+            <div class="twrung">${esc(tw.rung)}</div>
+            <div class="twnudge tw-${tw.signal||"time"}">${tw.signal==="hold"?"⏸ ":tw.signal==="advance"?"✅ ":""}${esc(tw.nudge)}</div></div>`:""}
           <ul class="exlist">${rows}</ul>
           <div class="phasetools no-print">
             <span class="phasetoolslbl">Whole phase:</span>
