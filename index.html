@@ -36,7 +36,7 @@
 <nav class="steps no-print" id="steps" aria-label="Progress">
   <div class="railgroup" aria-hidden="true">Set up</div>
   <button class="step" data-step="0"><i>1</i><span>History</span></button>
-  <button class="step" data-step="1"><i>2</i><span>Clinician</span></button>
+  <button class="step" id="stepClinician" data-step="1"><i>2</i><span>Clinician</span></button>
   <button class="step" data-step="2"><i>3</i><span>Injury</span></button>
   <button class="step" data-step="3"><i>4</i><span>Details</span></button>
   <button class="step" data-step="4"><i>5</i><span>Program</span></button>
@@ -66,12 +66,13 @@
 
       <!-- Two sides of one question: who's setting this up? They're mutually exclusive
            (ticking one clears the other) so the state can never say both. Leaving both
-           unticked is the neutral default — Next still stops at the optional Clinician step. -->
+           unticked is the neutral default — the patient flow: the Clinician step stays hidden
+           and Next skips to choosing your injury. "Clinician-guided" reveals + visits it. -->
       <label class="clinguide" id="clinGuideCard">
         <input type="checkbox" id="q_clinicianGuided" />
         <span class="clinguidemain">
           <span class="clinguideh">🩺 Clinician-guided session</span>
-          <span class="clinguidesub" id="clinGuideSub">Tick this if a <b>clinician</b> is setting up this program. <b>Next</b> will take you straight to the <b>Clinician step</b>, pre-filled with a protocol to adjust. Leave it unticked to continue as a patient — Next goes to <b>choosing your injury</b>.</span>
+          <span class="clinguidesub" id="clinGuideSub">Tick this if a <b>clinician</b> is setting up this program — a <b>Clinician step</b> appears in your steps, pre-filled with a protocol to adjust. Otherwise <b>Next</b> goes straight to <b>choosing your injury</b>.</span>
         </span>
       </label>
 
@@ -79,7 +80,7 @@
         <input type="checkbox" id="q_selfGuided" />
         <span class="clinguidemain">
           <span class="clinguideh">🧭 Self-guided session</span>
-          <span class="clinguidesub" id="selfGuideSub">Doing this on your own? Tick this to <b>skip the Clinician step</b> — <b>Next</b> takes you straight to <b>choosing your injury</b>. You can still open the Clinician step any time from the steps bar above if you'd like a clinician's help.</span>
+          <span class="clinguidesub" id="selfGuideSub">Doing this on your own? Tick this to confirm the patient flow — clinician tools stay hidden and <b>Next</b> goes straight to <b>choosing your injury</b>.</span>
         </span>
       </label>
 

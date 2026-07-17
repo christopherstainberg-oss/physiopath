@@ -1717,14 +1717,14 @@ document.addEventListener("DOMContentLoaded",()=>{
   $$(".step").forEach(s=>s.onclick=()=>{ const n=+s.dataset.step;
     if([3,4,5,6].includes(n) && !state.condIds.length){ toast("Pick a condition first."); goStep(2); return; }
     goStep(n); });
-  // History → next: goes to the Clinician step (1) by default, but SKIPS straight to Injury (2)
-  // when self-guided is on. Either way the Clinician step stays reachable from the steps bar and
-  // from Injury's "← Back", so a self-guided user can always double back for a clinician's help.
-  const histNext = $("#historyNext"); if(histNext) histNext.onclick=()=>goStep(state.selfGuided ? 2 : 1);
-  // Injury → back MIRRORS the forward skip: a self-guided user reached Injury straight from History
-  // (Next skipped the Clinician step), so their "← Back" must return to History (0), not a Clinician
-  // step they never saw. Everyone else arrived via Clinician (1), so they go back there.
-  const injBack = $("#injuryBack"); if(injBack) injBack.onclick=()=>goStep(state.selfGuided ? 0 : 1);
+  // History → next: clinician-guided visits the Clinician step (1); everyone else (the patient
+  // default, incl. self-guided) skips straight to Injury (2). The Clinician step is hidden from
+  // the rail for patients, so ticking "Clinician-guided" above is how they bring it back.
+  const histNext = $("#historyNext"); if(histNext) histNext.onclick=()=>goStep(state.clinicianGuided ? 1 : 2);
+  // Injury → back MIRRORS the forward skip: a patient reached Injury straight from History (the
+  // Clinician step was skipped and is hidden from the rail), so their "← Back" must return to
+  // History (0), not a Clinician step they never saw. Clinician-guided users came via Clinician (1).
+  const injBack = $("#injuryBack"); if(injBack) injBack.onclick=()=>goStep(state.clinicianGuided ? 1 : 0);
   // Clinician-guided and self-guided are opposites — ticking one clears the other so the state
   // can never claim both "a clinician is setting this up" and "I'm doing it myself".
   const cg = $("#q_clinicianGuided"); if(cg) cg.onchange=()=>{ state.clinicianGuided=cg.checked; if(cg.checked) state.selfGuided=false; save(); syncSessionMode(); };

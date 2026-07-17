@@ -101,7 +101,7 @@ function initClinician(){
    themselves (mutual exclusivity means one can flip the other) and the Next button.
    - Clinician-guided → Next opens the Clinician step pre-filled with a starter to adjust.
    - Self-guided → Next SKIPS the Clinician step and goes straight to Injury.
-   - Neither (the default) → Next stops at the optional, empty Clinician step.
+   - Neither (the default) → patient flow: the Clinician step is hidden and Next skips to Injury.
    The routing itself lives in the #historyNext handler; this only keeps the UI honest. */
 function syncSessionMode(){
   const cg = !!state.clinicianGuided, sg = !!state.selfGuided;
@@ -110,15 +110,33 @@ function syncSessionMode(){
   const cgCard = $("#clinGuideCard"); if(cgCard) cgCard.classList.toggle("on", cg);
   const sgCard = $("#selfGuideCard"); if(sgCard) sgCard.classList.toggle("on", sg);
   const btn = $("#historyNext");
-  if(btn) btn.textContent = sg ? "Next: choose your injury →"
-                          : cg ? "Next: clinician setup →"
-                               : "Next: continue →";
+  if(btn) btn.textContent = cg ? "Next: clinician setup →" : "Next: choose your injury →";
   const cgSub = $("#clinGuideSub"); if(cgSub) cgSub.innerHTML = cg
-    ? `<b>On.</b> <b>Next</b> opens the <b>Clinician step</b> pre-filled with a protocol to adjust, then Injury and Details.`
-    : `Tick this if a <b>clinician</b> is setting up this program — the Clinician step will arrive pre-filled with a protocol to adjust. Either way, <b>Next</b> continues through <b>Clinician → Injury → Details</b> (the Clinician step is optional — patients can just click through it).`;
+    ? `<b>On.</b> A <b>Clinician step</b> is now in your steps, pre-filled with a protocol to adjust — <b>Next</b> opens it, then Injury and Details.`
+    : `Tick this if a <b>clinician</b> is setting up this program — a <b>Clinician step</b> appears in your steps, pre-filled with a protocol to adjust. Otherwise <b>Next</b> goes straight to <b>choosing your injury</b>.`;
   const sgSub = $("#selfGuideSub"); if(sgSub) sgSub.innerHTML = sg
-    ? `<b>On.</b> <b>Next</b> skips the Clinician step and goes straight to <b>choosing your injury</b>. You can still open the <b>Clinician step</b> any time from the steps bar above.`
-    : `Doing this on your own? Tick this to <b>skip the Clinician step</b> — <b>Next</b> takes you straight to <b>choosing your injury</b>. You can still open the Clinician step any time from the steps bar above if you'd like a clinician's help.`;
+    ? `<b>On.</b> Clinician tools stay hidden and <b>Next</b> goes straight to <b>choosing your injury</b>. Tick <b>Clinician-guided</b> above whenever you want them back.`
+    : `Doing this on your own? Tick this to confirm the patient flow — clinician tools stay hidden and <b>Next</b> goes straight to <b>choosing your injury</b>.`;
+  updateStepRail();
+}
+/* Clinician-as-a-mode: the Clinician step (index 1) is hidden from the rail for patients and
+   shown only in clinician mode — you ticked "Clinician-guided", you've already entered a
+   clinician protocol/precaution, or you're standing on the step (a ?go=clinician / direct link).
+   The button stays in the DOM (display:none via .clin-hidden), so goStep's index→panel mapping
+   and every data-step / deep-link never shift. */
+function clinicianModeOn(){
+  return !!state.clinicianGuided
+      || (state.clinicianProtocols||[]).length>0
+      || !!state.clinPrecautionProtocol
+      || Number(state.step)===1;
+}
+/* Hide/show the Clinician step, then renumber the VISIBLE steps' badges so 1..N stays gap-free
+   (the <i> numbers are display-only; routing uses data-step / DOM index, which never changes). */
+function updateStepRail(){
+  const cs=$("#stepClinician"); if(cs) cs.classList.toggle("clin-hidden", !clinicianModeOn());
+  let n=0;
+  $$("#steps .step").forEach(s=>{ if(s.classList.contains("clin-hidden")) return;
+    const b=s.querySelector("i"); if(b) b.textContent=String(++n); });
 }
 function clinicianIntroCard(){
   return `<div class="card clinintro">
@@ -1357,6 +1375,7 @@ function goStep(n){
   if(n===6){ renderHealth(); renderDataWarn(); }              // Health & vitals
   if(n===7) initCoach();
   if(n===8) ensureProgramData().then(initLibrary);   // the library IS exercises.js
+  updateStepRail();     // reveal/hide the Clinician step for the new position, keep the badges gap-free
   updateHeaderContext();
 }
 
