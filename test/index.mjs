@@ -13,6 +13,7 @@ import "./coverage.test.mjs";
 import "./snapshots.test.mjs";
 import "./migration.test.mjs";
 import "./coach-stream.test.mjs";
+import "./healing-scaler.test.mjs";
 import { report } from "./runner.mjs";
 
 report();

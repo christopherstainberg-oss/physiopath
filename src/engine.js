@@ -2718,8 +2718,9 @@ function historyVariantKeys(cond){
   if(/arthroscop|keyhole|laparoscop|percutaneous|robotic|minimally invasive|endoscopic/.test(sname)) keys.push("keyhole");
   else if(/\bopen\b|mini-?open|sternotom|laparotom|thoracotom/.test(sname)) keys.push("open");
   if(/revision|complex|redo/.test(sname)) keys.unshift("revision");
-  // things that measurably slow tissue healing
-  if(state.smoking==="current" || flags.has("diabetes") || meds.has("corticosteroid")) keys.push("slowheal");
+  // Systemic healing-slowers (diabetes / smoking / steroids / alcohol / CKD / cancer / PAD / high
+  // BMI) now feed healingScale() in applyVariant, which STACKS them multiplicatively — so they no
+  // longer collapse into a single flat "slowheal" variant here (slowheal stays user-selectable).
   // falls / balance history and age → the older-adult pathway (adds balance & bone work)
   if(state.falls==="2" || (state.aid && state.aid!=="none") || Number(state.age)>=70) keys.push("older");
   // baseline fitness
@@ -2732,7 +2733,6 @@ function historyVariantKeys(cond){
   if((state.returnSports||[]).length) keys.push("athlete");
   // newly asked answers, each driving a pathway that already existed
   if(state.priorEpisodes==="recurrent") keys.unshift("recurrent");
-  if(state.alcohol==="heavy") keys.push("slowheal");
   if(state.sleep==="lt6" || state.stress==="high") keys.push("irritable");
   if(state.moveConfidence==="fearful") keys.push("irritable");
   if(["manual","heavy"].includes(state.workDemand)) keys.push("work");
@@ -2750,14 +2750,44 @@ function scalePlanPhases(ph, scale){
   for(let i=1;i<sc.length;i++) if(sc[i] <= sc[i-1]) sc[i] = sc[i-1]+1;
   return ph.map((f,i)=>[f[0], sc[i], sc[i+1], f[3], f[4], f[5]]);
 }
+/* Systemic factors that slow TISSUE HEALING (distinct from the pacing/context variants). Each
+   multiplies the whole recovery timeline a little, so they COMPOUND — a diabetic smoker on
+   steroids runs longer than any one of those alone — capped at 1.6x. Evidence-informed and
+   deliberately conservative; the clinician can tune the magnitudes below. Age is handled by the
+   `older` variant, not here, so the two don't double-count. */
+function healingScale(){
+  const meds = new Set(selectedMeds().flatMap(m=>m.flags||[]));
+  const flags = new Set(state.flags||[]);
+  const bmi = bmiCalc((state.vitals||{}).height, (state.vitals||{}).weight);
+  const F = [
+    [flags.has("diabetes"),           1.15, "diabetes"],
+    [state.smoking==="current",       1.15, "current smoking"],
+    [meds.has("corticosteroid"),      1.10, "long-term corticosteroids"],
+    [flags.has("ckd"),                1.10, "chronic kidney disease"],
+    [flags.has("cancer_treatment"),   1.15, "active cancer treatment"],
+    [flags.has("pad"),                1.10, "poor circulation (PAD)"],
+    [state.alcohol==="heavy",         1.05, "heavy alcohol use"],
+    [Number.isFinite(bmi) && bmi>=35, 1.08, "a high BMI"],
+  ];
+  let s = 1; const factors = [];
+  for(const [on, mult, label] of F) if(on){ s *= mult; factors.push(label); }
+  return { scale: Math.min(s, 1.6), factors };
+}
 /* Resolve a base plan + chosen variation into the plan actually used. */
 function applyVariant(plan, v){
   if(!plan) return null;
-  const ph = (v && v.ph) ? v.ph
+  let ph = (v && v.ph) ? v.ph
     : (v && v.scale && v.scale!==1) ? scalePlanPhases(plan.ph, v.scale)
     : plan.ph;
+  /* Stack comorbidity healing time ON TOP of the clinical/context variant, so multiple
+     healing-slowing factors compound the recovery length instead of only the strongest one. */
+  const hs = healingScale();
+  if(hs.scale > 1) ph = scalePlanPhases(ph, hs.scale);
+  const healNote = hs.factors.length
+    ? ` Your recovery timeline is extended (~${Math.round((hs.scale-1)*100)}% longer) because ${hs.factors.join(", ")} slow tissue healing — the phase weeks below already account for this.`
+    : "";
   return { ...plan, ph, total: ph[ph.length-1][2],
-    note: plan.note + (v && v.note ? " " + v.note : ""),
+    note: plan.note + (v && v.note ? " " + v.note : "") + healNote,
     freq: (v && v.freq) || plan.freq,
     variant: v ? { k:v.k, label:v.label, sub:v.sub } : null,
     variantList: planVariants(plan).map(x=>({ k:x.k, label:x.label, sub:x.sub })) };
