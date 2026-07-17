@@ -7185,9 +7185,17 @@ If you might want any of it later, press Cancel and use "Download a backup" on t
   localStorage.removeItem("physiopath");
   location.reload();
 }
-function toast(msg){
-  const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.appendChild(t);
-  setTimeout(()=>t.remove(),2600);
+function toast(msg, action){
+  const t=document.createElement("div"); t.className="toast"; t.textContent=msg;
+  if(action && action.label && typeof action.fn==="function"){
+    const b=document.createElement("button"); b.type="button"; b.className="toastbtn"; b.textContent=action.label;
+    b.onclick=()=>{ t.remove(); try{ action.fn(); }catch(_){} };
+    t.appendChild(b); document.body.appendChild(t);
+    setTimeout(()=>{ if(t.isConnected) t.remove(); }, 6000);   // a longer window when there's something to undo
+  } else {
+    document.body.appendChild(t);
+    setTimeout(()=>t.remove(), 2600);
+  }
 }
 
 /* ---- service worker + update-available flow ---- */
@@ -8573,7 +8581,14 @@ function renderDriftNote(){
   if(b) b.onclick = () => { state.program = generateProgram(); save(); renderProgram(state.program); renderDriftNote();
     toast("Plan updated from your log."); };
 }
-function deleteLog(date){ state.log=state.log.filter(e=>e.date!==date); save(); renderProgress(); renderJournalToday(); syncPlanFromLog(); }
+function deleteLog(date){
+  const removed = (state.log||[]).find(e=>e.date===date);
+  state.log=state.log.filter(e=>e.date!==date); save(); renderProgress(); renderJournalToday(); syncPlanFromLog();
+  if(removed) toast("Entry deleted.", { label:"Undo", fn:()=>{
+    state.log.push(removed); state.log.sort((a,b)=>a.date<b.date?-1:1);
+    save(); renderProgress(); renderJournalToday(); syncPlanFromLog();
+  }});
+}
 
 /* The plan asks for N sessions/week and nothing ever checked. sessionsText() returns prose,
    so there was no number to compare the log against — weeklyTarget() parses one out. */
@@ -10366,6 +10381,20 @@ document.addEventListener("DOMContentLoaded",()=>{
   const clinNext = $("#clinToProgram"); if(clinNext) clinNext.onclick=()=>goStep(2);   // Clinician → Injury (consecutive)
   $("#generateBtn").onclick=doGenerate;
   $("#printBtn").onclick=()=>{ preparePrint(); window.print(); };
+  /* Native share (mobile) — a lightweight summary; the full plan still goes via Print/PDF.
+     Shown only where the Web Share API exists (absent in the test shim, so tests are unaffected). */
+  const shareBtn=$("#shareBtn");
+  if(shareBtn && navigator.share){
+    shareBtn.classList.remove("hide");
+    shareBtn.onclick=()=>{
+      const conds=(typeof selectedConditions==="function"?selectedConditions():[]).map(c=>c.name);
+      const wk=state.program&&state.program.totalWeeks;
+      const text = conds.length
+        ? `My PhysioPath recovery plan: ${conds.join(", ")}${wk?` — a ${wk}-week program`:""}. Educational injury-recovery guidance.`
+        : "PhysioPath — personalized, contraindication-aware injury-recovery programs.";
+      navigator.share({ title:"PhysioPath", text }).catch(()=>{});
+    };
+  }
   window.addEventListener("beforeprint", preparePrint);      // Ctrl+P / browser menu
   $("#resetBtn").onclick=doReset;
   $("#chatform").addEventListener("submit",e=>{ e.preventDefault();
