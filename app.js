@@ -6446,9 +6446,10 @@ function initADLs(){
     results.innerHTML = rows + custom;
     results.classList.remove("hide");
     results.querySelectorAll(".acrow").forEach(r=>r.onclick=()=>adlAdd(r.dataset.v));
+    wireListKeys(input, results, ".acrow");
   }, 110); };
   input.onkeydown = (e)=>{ if(e.key==="Enter"){ e.preventDefault(); adlAdd(input.value); } };
-  input.onblur = ()=> setTimeout(()=>results.classList.add("hide"), 180);
+  input.onblur = (e)=>{ if(e && e.relatedTarget && results.contains(e.relatedTarget)) return; setTimeout(()=>results.classList.add("hide"), 180); };
   renderADLList();
 }
 /* Per-area improvement tips: how to build CAPABILITY, ADAPT the task (equipment /
@@ -6957,6 +6958,41 @@ function renderSelectedMeds(){
   $$("#selectedMeds .medselx").forEach(x=>x.onclick=()=>{ const id=x.dataset.id; state.medIds=state.medIds.filter(i=>i!==id); if(state.medDoses) delete state.medDoses[id]; save(); renderSelectedMeds(); runMedSearch(); });
   $$("#selectedMeds .medseldose").forEach(inp=>inp.oninput=()=>{ (state.medDoses=state.medDoses||{})[inp.dataset.id]=inp.value; save(); });
 }
+/* Make a rendered result list keyboard-navigable — the same listbox pattern the condition
+   search uses, factored out so meds / surgery / activity / sport / ADL get it too (they were
+   mouse-only; meds & surgery had NO keyboard path at all). Rows become focusable options:
+   ArrowDown from the input enters the list, arrows move between options, Enter/Space activates
+   via the row's EXISTING click handler (so no select logic changes), Escape returns to the
+   input. Also stamps combobox semantics on the input. Idempotent — call after every render. */
+function wireListKeys(input, results, rowSel){
+  if(!input || !results) return;
+  const rows = Array.from(results.querySelectorAll(rowSel));
+  rows.forEach((r,i)=>{
+    r.setAttribute("role","option");
+    if(!r.hasAttribute("tabindex")) r.tabIndex = 0;
+    r.onkeydown = e=>{
+      if(e.key==="ArrowDown" || e.key==="ArrowUp"){
+        e.preventDefault();
+        const nxt = e.key==="ArrowDown" ? rows[i+1] : (i===0 ? input : rows[i-1]);
+        if(nxt) nxt.focus();
+      } else if(e.key==="Enter" || e.key===" "){
+        e.preventDefault(); r.click();
+      } else if(e.key==="Escape"){
+        e.preventDefault(); input.focus();
+      }
+    };
+  });
+  input.setAttribute("role","combobox");
+  input.setAttribute("aria-autocomplete","list");
+  if(results.id) input.setAttribute("aria-controls", results.id);
+  input.setAttribute("aria-expanded", rows.length ? "true" : "false");
+  if(!input._listKeysWired){
+    input._listKeysWired = true;
+    input.addEventListener("keydown", e=>{
+      if(e.key==="ArrowDown"){ const first=results.querySelector(rowSel); if(first){ e.preventDefault(); first.focus(); } }
+    });
+  }
+}
 function runMedSearch(){
   const res=$("#medResults"); if(!res || !window.MEDICATIONS) return;
   const q=$("#medSearch").value.trim().toLowerCase(); const toks=q.split(/\s+/).filter(Boolean);
@@ -6973,6 +7009,7 @@ function runMedSearch(){
   $$("#medResults .result").forEach(r=>r.onclick=()=>{ const id=r.dataset.id;
     if(state.medIds.includes(id)) state.medIds=state.medIds.filter(i=>i!==id); else state.medIds.push(id);
     save(); renderSelectedMeds(); runMedSearch(); });
+  wireListKeys($("#medSearch"), res, ".result");
 }
 function initMeds(){
   if(window.MEDICATIONS) window.MEDICATIONS.forEach(m=>MEDMAP.set(m.id,m));
@@ -7053,9 +7090,10 @@ function setupAutocomplete(inputId, resultsId, chipsId, data, stateKey, opts){
     results.innerHTML = rows + custom;
     results.classList.remove("hide");
     results.querySelectorAll(".acrow").forEach(r=>r.onclick=()=>add(r.dataset.v));
+    wireListKeys(input, results, ".acrow");
   }, 110); };
   input.onkeydown = (e)=>{ if(e.key==="Enter"){ e.preventDefault(); add(input.value); } };
-  input.onblur = ()=> setTimeout(()=>results.classList.add("hide"), 180);
+  input.onblur = (e)=>{ if(e && e.relatedTarget && results.contains(e.relatedTarget)) return; setTimeout(()=>results.classList.add("hide"), 180); };
   draw();
 }
 function toggleSurgeryExtra(){
@@ -7101,6 +7139,7 @@ function runSurgerySearch(){
     return `<div class="result ${picked?"picked":""}" data-id="${s.id}"><span class="rn">${esc(s.name)}<div class="rr">${esc(s.region||s.cat||"surgery")}</div></span><span class="add">${picked?"✓":"+"}</span></div>`; }).join("")
     + (total>40?`<div class="moreinfo">Showing 40 of ${total} — keep typing to narrow.</div>`:"") + otherRow;
   $$("#surgeryResults .result").forEach(r=>r.onclick=()=>setSurgery(r.dataset.id));
+  wireListKeys($("#surgerySearch"), $("#surgeryResults"), ".result");
 }
 
 async function doGenerate(){
