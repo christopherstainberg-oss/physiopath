@@ -86,6 +86,7 @@ header.app{display:flex;align-items:center;gap:12px;
 .step.active{color:var(--text);border-bottom-color:var(--brand)}
 .step.active i{background:var(--brand);color:#04121f;border-color:transparent}
 .step.done i{background:var(--brand-2);color:#04121f;border-color:transparent}
+.step.clin-hidden{display:none!important}   /* Clinician-as-a-mode: hidden from the rail for patients (still in the DOM, so step indices never shift) */
 
 /* cards & fields */
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin:14px 0;box-shadow:var(--shadow)}
