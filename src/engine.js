@@ -3007,6 +3007,81 @@ function weekPhaseOf(plan){
 /* Where the user actually is. You advance only when you've met the criteria AND
    the tissue has had time — so whichever is further behind wins. Without a
    self-report we fall back to the calendar. */
+/* ---------- week-resolved progression (tissue loading ladders) ----------
+   The phase windows tell you WHICH rung of the ladder you're on; this resolves
+   WHERE in the current phase you are and what to actually change THIS week, along
+   a ladder appropriate to the tissue that's healing. It never alters the plan's
+   weeks or doses — it's the "what do I do differently from last week" layer that a
+   static per-phase dose can't express, so it's purely additive on top of a plan. */
+function tissueClass(item){
+  const t = (((item && item.name) || "") + " " + (((detectSurgery() || {}).name) || "")).toLowerCase();
+  if(/tendo|tendi|epicondyl|plantar fasc|achill/.test(t))                                   return "tendon";
+  if(/cartilage|chondr|microfracture|osteochondr|maci|\baci\b/.test(t))                     return "cartilage"; // before bone: "microFRACTURE"
+  if(/fracture|stress reaction|osteotomy|fusion|arthrodesis|\bbone\b/.test(t))              return "bone";
+  if(/strain|muscle tear|hamstring|calf tear|quad(riceps)? tear|\bmyo/.test(t))             return "muscle";
+  if(/acl|pcl|mcl|lcl|ligament|sprain|instabilit|reconstruction|labr|rotator cuff|repair/.test(t)) return "ligament";
+  if(/stroke|neuro|parkinson|spinal cord|\bsci\b|palsy|guillain|multiple sclerosis|neuropath/.test(t)) return "nerve";
+  return "general";
+}
+/* One rung per phase-stage (protect → load → build → return). Indexed by the current
+   phase, capped at 4 stages so it works for 3- and 4-phase plans alike. */
+const LOADING_LADDER = {
+  tendon: [
+    "Isometric holds — long, comfortable holds (aim ~30–45s). They ease tendon pain and keep the muscle switched on.",
+    "Heavy-slow resistance — load the tendon through range with a slow 3s-up / 3s-down tempo. This is the rung where a tendon actually remodels.",
+    "Add range and speed — fuller range and quicker tempos, once heavy-slow leaves the tendon settled the next morning.",
+    "Energy-storage & spring — hops, bounds and sport-specific plyometrics, built in gradually." ],
+  bone: [
+    "Protect & offload — follow the weight-bearing order exactly; the bone is still knitting.",
+    "Progressive weight-bearing — add load through the limb as you're cleared, building standing and walking tolerance.",
+    "Progressive resistance — load the muscles around the healed bone; add resistance a step at a time.",
+    "Return to impact — reintroduce running or jumping only once loaded resistance is pain-free." ],
+  cartilage: [
+    "Offload & move — restore motion with minimal joint compression; respect any weight-bearing limit.",
+    "Progressive loading — add controlled load through range as the surface tolerates it (slower than soft tissue).",
+    "Strength & function — build capacity for your daily and work demands.",
+    "Return to impact — cautious, late reintroduction of running and jumping." ],
+  muscle: [
+    "Pain-free isometrics — gentle holds at short-to-mid length; protect the healing muscle.",
+    "Concentric through range — build strength through increasing range, staying inside pain.",
+    "Eccentric & lengthened load — the higher-risk pattern for muscle, so it's added later and progressed slowly.",
+    "Speed & sprint — graded high-speed and plyometric work before return to sport." ],
+  ligament: [
+    "Protect & restore range — settle swelling and regain full, controlled motion.",
+    "Strength & control — progressive resistance with good alignment; start single-limb work.",
+    "Proprioception & power — balance, landing and change-of-direction control.",
+    "Return to sport — sport-specific speed and cutting, with strength near the other side." ],
+  nerve: [
+    "High-repetition task practice — frequent, specific practice of the movement you're rebuilding.",
+    "Progress the difficulty — less support, more range, harder variations of the same task.",
+    "Strength & endurance — the capacity to repeat the task through a whole day.",
+    "Real-world & dual-task — the task under distracting, everyday conditions." ],
+  general: [
+    "Restore range & settle symptoms — gentle, frequent movement inside comfort.",
+    "Progressive strengthening — add load a little at a time as control improves.",
+    "Build capacity — heavier, more functional loading toward your goal.",
+    "Return to full activity — the demands of your sport, work or life." ],
+};
+/* Where in the current phase the person is, and the one thing to change THIS week.
+   Returns null when there's no matched plan phase to resolve against. */
+function thisWeekFocus(item){
+  if(!item || !item.phases || !(item.planPhase >= 0)) return null;
+  const ph = item.phases[item.planPhase];
+  if(!ph) return null;
+  const wpo = weeksPostOp();
+  const cur = (wpo != null ? wpo : Number(state.weeks)) || 0;
+  const start = Number(ph.weekStart) || 0;
+  const end   = Number(ph.weekEnd) || (start + 1);
+  const len   = Math.max(1, end - start);
+  const wip   = Math.min(len, Math.max(1, Math.round(cur - start) + 1));   // 1-based week-in-phase
+  const rung  = (LOADING_LADDER[tissueClass(item)] || LOADING_LADDER.general)[Math.min(3, item.planPhase)];
+  const nudge = wip <= 1
+    ? "Start of this phase — establish tolerance at this level before adding anything."
+    : wip >= len
+    ? "End of this phase — if it's controlled and next-morning symptoms are settled, you're ready to progress to the next phase."
+    : "Nudge it up this week — one more set, slightly heavier, or a slower tempo. No more than ~10% up from last week, and only if the last step settled well.";
+  return { wip, len, rung, nudge, tissue: tissueClass(item) };
+}
 function currentPlanPhase(plan){
   if(!plan) return -1;
   const wp = weekPhaseOf(plan);
