@@ -1128,6 +1128,8 @@ details.labadv[open]>summary.labadvh::before{content:"▾"}
 .riskcard.risk-mod{border-color:rgba(255,204,87,.5)}
 .riskcard.risk-high{border-color:rgba(255,107,107,.55)}
 .riskcard.risk-info{border-color:rgba(62,166,255,.4)}
+.risksub{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin:16px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--line)}
+.risksub:first-child{margin-top:2px}
 .rlevel.risk-info{background:rgba(62,166,255,.16);color:var(--brand)}
 .riskhead{display:flex;align-items:center;gap:8px}
 .ricon{font-size:18px}

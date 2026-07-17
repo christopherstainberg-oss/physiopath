@@ -1108,9 +1108,10 @@ function computeRisks(){
 }
 function renderRisks(){
   const el=$("#riskBody"); if(!el) return;
-  const risks=computeRisks();
+  const risks=computeRisks(), areas=computeRiskAreas();
+  const dual = areas.length>0;   // labs/vitals entered → show BOTH groups under the one card, each labelled
   const lvlTxt={low:"Lower",moderate:"Moderate",high:"Higher"}, lvlCls={low:"risk-low",moderate:"risk-mod",high:"risk-high"};
-  el.innerHTML = risks.map(r=>{
+  const scored = risks.map(r=>{
     const cls=lvlCls[r.level];
     const facts = r.factors.length
       ? `<ul class="riskfactors">${r.factors.map(f=>`<li>${esc(f)}</li>`).join("")}</ul>`
@@ -1120,8 +1121,20 @@ function renderRisks(){
       ${facts}
       <p class="risknote">${esc(r.note)}</p>
     </div>`;
-  }).join("") + `<div class="redflags" style="margin-top:12px"><b>Educational only — not a diagnosis or a validated risk score.</b> These estimates use general thresholds and only the values you entered. Discuss any concerns, and any abnormal labs, with your doctor.</div>`;
-  renderOtherRisks();   // keep the cross-cutting "other risks" card in sync on every risk refresh
+  }).join("");
+  const aTxt={normal:"No flags",info:"Note",moderate:"Review",high:"Abnormal"}, aCls={normal:"risk-low",info:"risk-info",moderate:"risk-mod",high:"risk-high"};
+  const areaCards = areas.map(a=>{
+    const cls=aCls[a.level]||"risk-info";
+    return `<div class="riskcard ${cls}">
+      <div class="riskhead"><span class="ricon">${a.icon}</span><span class="rtitle">${esc(a.title)}</span><span class="rlevel ${cls}">${aTxt[a.level]||"Note"}</span></div>
+      <ul class="riskfindings">${a.findings.map(x=>`<li class="rf-${x.lv||'info'}">${esc(x.t)}</li>`).join("")}</ul>
+      <p class="risknote">${esc(a.note)}</p>
+    </div>`;
+  }).join("");
+  el.innerHTML =
+    (dual ? `<div class="risksub">Cardiovascular &amp; organ risk</div>` : "") + scored +
+    (dual ? `<div class="risksub">Lab &amp; vital risk areas</div>` + areaCards : "") +
+    `<div class="redflags" style="margin-top:12px"><b>Educational only — not a diagnosis or a validated risk score.</b> These estimates use general adult thresholds and only the values you entered; some vary by sex, age and lab. Discuss any concerns, and any abnormal labs, with your doctor.</div>`;
 }
 
 /* Health Risk Areas — clinically-grouped lab interpretation (metabolic, hematology, nutrition,
@@ -1252,20 +1265,8 @@ function computeRiskAreas(){
 
   return areas;
 }
-function renderOtherRisks(){
-  const el=$("#otherRiskBody"); if(!el) return;
-  const areas=computeRiskAreas();
-  if(!areas.length){ el.innerHTML=`<div class="empty" style="padding:20px 10px"><div class="big">🧪</div><div>Enter vitals and labs above and these risk areas — Metabolic, Hematology, Nutrition, Thyroid, Bone, Thrombosis, Inflammation & Infection, Reproductive & Hormonal, and Oncology-marker awareness — populate automatically.</div></div>`; return; }
-  const lvlTxt={normal:"No flags",info:"Note",moderate:"Review",high:"Abnormal"}, lvlCls={normal:"risk-low",info:"risk-info",moderate:"risk-mod",high:"risk-high"};
-  el.innerHTML = areas.map(a=>{
-    const cls=lvlCls[a.level]||"risk-info";
-    return `<div class="riskcard ${cls}">
-      <div class="riskhead"><span class="ricon">${a.icon}</span><span class="rtitle">${esc(a.title)}</span><span class="rlevel ${cls}">${lvlTxt[a.level]||"Note"}</span></div>
-      <ul class="riskfindings">${a.findings.map(x=>`<li class="rf-${x.lv||'info'}">${esc(x.t)}</li>`).join("")}</ul>
-      <p class="risknote">${esc(a.note)}</p>
-    </div>`;
-  }).join("") + `<div class="redflags" style="margin-top:12px"><b>Educational only — not a diagnosis.</b> These interpretations use general adult thresholds and only the values you entered; some vary by sex, age and lab. Discuss anything relevant with your clinician.</div>`;
-}
+/* renderOtherRisks was merged into renderRisks — computeRiskAreas now renders inside the single
+   "What Your Numbers Suggest" card (#riskBody), so there is no separate #otherRiskBody host. */
 
 /* Auto-open the data-ENTRY Health cards (Vitals log, Labs) when they already hold data, and
    show a count in the summary — so a returning user discovers their logged data instead of a
