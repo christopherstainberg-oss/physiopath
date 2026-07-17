@@ -34,6 +34,7 @@ function initDataCard(){
 }
 function initProgress(){
   $("#logPain").oninput = e=>$("#logPainVal").textContent=e.target.value;
+  { const le=$("#logEffort"); if(le) le.oninput = e=>{ const v=$("#logEffortVal"); if(v) v.textContent=e.target.value; }; }
   $("#logBtn").onclick = saveLogEntry;
 
   const mr = $("#logMood");
@@ -144,6 +145,8 @@ function loadLogDay(d){
   state.logDone = (e && Array.isArray(e.done)) ? e.done.slice() : [];   // before renderLogEx reads it
   if($("#logPain")){ $("#logPain").value = e ? e.pain : 3; $("#logPainVal").textContent = e ? e.pain : 3; }
   if($("#logSessions")) $("#logSessions").value = e ? e.sessions : 1;
+  if($("#logEffort")){ const v = (e && e.effort!=null) ? e.effort : 5; $("#logEffort").value = v; if($("#logEffortVal")) $("#logEffortVal").textContent = v; }
+  if($("#logSets")) $("#logSets").value = (e && e.sets) || "";
   if($("#logNote")) $("#logNote").value = e ? (e.note||"") : "";
   /* Don't stack two questions. When Jeffery asks an OPEN question his card is the prompt,
      so the note stays quiet; when he asks a CLOSED one (a tap), the written prompt
@@ -1226,6 +1229,8 @@ function collectEntry(d){
     mood: state.logMood || "",
     pain: parseInt($("#logPain").value),
     sessions: Math.max(0, parseInt($("#logSessions").value)||0),
+    effort: $("#logEffort") ? parseInt($("#logEffort").value) : null,
+    sets: ($("#logSets") && $("#logSets").value) || "",
     note: $("#logNote").value.trim(),
     t: (prev && prev.t) || now,          // first written — never overwritten
     edited: now

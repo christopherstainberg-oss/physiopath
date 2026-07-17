@@ -19,6 +19,7 @@ import "./specificity-reach.test.mjs";
 import "./healing-scaler.test.mjs";
 import "./tissue-ladder.test.mjs";
 import "./response-progression.test.mjs";
+import "./session-effort.test.mjs";
 import { report } from "./runner.mjs";
 
 report();
