@@ -643,14 +643,16 @@ const LAB_DOMAINS = [
   { key:"hepatic",      label:"🩺 Hepatic (liver) panel" },
   { key:"cbc",          label:"🩸 Complete blood count (CBC)" },
   { key:"iron",         label:"🧲 Iron studies" },
-  { key:"thyroid",      label:"🦋 Thyroid & endocrine" },
-  { key:"reproductive", label:"🧬 Reproductive & sex hormones" },
   { key:"vitamins",     label:"💊 Vitamins & nutrition" },
   { key:"inflammation", label:"🔥 Inflammatory & immune markers" },
-  { key:"coagulation",  label:"🩹 Coagulation (clotting)" },
-  { key:"tumor",        label:"🎗️ Tumor markers" },
-  { key:"gastro",       label:"🍽️ Gastrointestinal & pancreatic" },
-  { key:"bloodgas",     label:"🫧 Arterial blood gas" }
+  // --- advanced / specialist panels: behind one disclosure. A rehab tool shouldn't confront
+  //     everyone with thyroid, sex hormones, tumour markers, blood gas and clotting fields. ---
+  { key:"thyroid",      label:"🦋 Thyroid & endocrine", adv:true },
+  { key:"reproductive", label:"🧬 Reproductive & sex hormones", adv:true },
+  { key:"coagulation",  label:"🩹 Coagulation (clotting)", adv:true },
+  { key:"tumor",        label:"🎗️ Tumor markers", adv:true },
+  { key:"gastro",       label:"🍽️ Gastrointestinal & pancreatic", adv:true },
+  { key:"bloodgas",     label:"🫧 Arterial blood gas", adv:true }
 ];
 function labStatusVal(lab, value){
   const v=vnum(value); if(v==null) return "none";
@@ -705,13 +707,19 @@ function refreshLabRow(id){
 function renderLabs(){
   const el=$("#labsBody"); if(!el) return;
   if(!labsSeeded){ if(LAB_DOMAINS[0]) openLabDomains.add(LAB_DOMAINS[0].key); labsSeeded=true; }
-  el.innerHTML = LAB_DOMAINS.map(d=>{
+  const domHTML = d => {
     const domLabs=LABS.filter(l=>l.domain===d.key);
     const rows=domLabs.map(labRowHTML).join("");
     const open=openLabDomains.has(d.key)?" open":"";
     return `<details class="labdomain"${open} data-domain="${d.key}"><summary class="labdh">${esc(d.label)}<span class="labdcount">${domLabs.length}</span></summary>${rows}</details>`;
-  }).join("");
-  $$("#labsBody > .labdomain").forEach(dt=>dt.addEventListener("toggle",()=>{
+  };
+  const core = LAB_DOMAINS.filter(d=>!d.adv), adv = LAB_DOMAINS.filter(d=>d.adv);
+  const advCount = adv.reduce((n,d)=>n + LABS.filter(l=>l.domain===d.key).length, 0);
+  el.innerHTML = core.map(domHTML).join("")
+    + (adv.length ? `<details class="labadv"><summary class="labadvh"><span>🔬 Advanced / specialist labs</span><span class="labdcount">${advCount}</span></summary>
+        <p class="hint" style="margin:8px 2px 4px">Thyroid, reproductive hormones, coagulation, tumour markers, blood gas and GI/pancreatic panels — for anyone with specialist bloodwork. Most people won't need these.</p>
+        ${adv.map(domHTML).join("")}</details>` : "");
+  $$("#labsBody .labdomain").forEach(dt=>dt.addEventListener("toggle",()=>{
     dt.open ? openLabDomains.add(dt.dataset.domain) : openLabDomains.delete(dt.dataset.domain);
   }));
   $$("#labsBody .labval").forEach(inp=>inp.oninput=()=>{ const id=inp.dataset.lab; (state.labs[id]=state.labs[id]||{}).v=inp.value.trim(); save(); refreshLabRow(id); renderRisks(); });

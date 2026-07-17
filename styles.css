@@ -1079,6 +1079,12 @@ details.labdomain>summary.labdh::-webkit-details-marker{display:none}
 details.labdomain>summary.labdh::before{content:"▸";color:var(--muted);font-size:11px;transition:transform .15s}
 details.labdomain[open]>summary.labdh::before{transform:rotate(90deg)}
 .labdcount{margin-left:auto;font-size:11px;font-weight:700;color:var(--muted);background:var(--chip);border-radius:999px;padding:1px 9px}
+/* Advanced / specialist lab panels — one disclosure, so the default view is the rehab-relevant labs */
+details.labadv{margin-top:14px;border:1px dashed var(--line);border-radius:11px;background:var(--panel-2);padding:0 14px}
+details.labadv>summary.labadvh{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding:13px 2px;font-weight:700;font-size:14px}
+details.labadv>summary.labadvh::-webkit-details-marker{display:none}
+details.labadv>summary.labadvh::before{content:"▸";color:var(--muted);font-size:11px}
+details.labadv[open]>summary.labadvh::before{content:"▾"}
 .labrow{padding:10px 0;border-bottom:1px solid var(--line)}
 .labrow:last-child{border-bottom:none}
 .labname{font-size:13.5px;font-weight:600;margin-bottom:6px}
