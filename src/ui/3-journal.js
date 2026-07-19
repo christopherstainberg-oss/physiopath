@@ -551,7 +551,7 @@ function jefferyChatOffline(msg){
     const e = found[0];
     return `You wrote this ${fmtAgo(e.date)} — ${fmtDate(e.date)}:\n\n_“${String(e.note).slice(0,220)}”_\n\n` +
       (found[1] ? `And ${fmtAgo(found[1].date)}: _“${String(found[1].note).slice(0,140)}”_\n\n` : "") +
-      `That's from your own journal, not me guessing. I'm offline right now — add a Claude API key on the Jeffery step and I can actually talk about it.`;
+      `That's from your own journal, not me guessing. I'm offline right now, so this is the short version.`;
   }
   return jefferyReflectOffline(msg);
 }
@@ -581,7 +581,7 @@ function jefferyReflectOffline(note){
     if(bright) bits.push(`Worth reading this back — it's yours, from ${fmtAgo(bright.date)}:\n\n_“${String(bright.note).slice(0,180)}”_\n\nToday isn't the whole picture.`);
   }
   if(!bits.length) bits.push("Noted — and kept. I'll have this in mind next time you're here.");
-  bits.push("I'm offline right now, so this is the short version. Add a Claude API key on the Jeffery step and I can actually talk properly.");
+  bits.push("I'm offline right now, so this is the short version.");
   return bits.slice(0, 4).join("\n\n");
 }
 /* Online: same person, different register from the Coach tab. */

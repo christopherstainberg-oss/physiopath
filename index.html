@@ -556,7 +556,7 @@
       <div class="labimport no-print">
         <label class="labuploadbtn" for="labFile">⬆ Upload lab results</label>
         <input type="file" id="labFile" accept=".csv,.tsv,.txt,.json,.pdf,.png,.jpg,.jpeg,.webp,image/*,application/pdf,text/plain,text/csv,application/json" hidden />
-        <span class="labimporthint">CSV · TSV · TXT · JSON are read on your device. PDF &amp; photos of a report are parsed by the Claude API (add a key in the <b>AI</b> tab). Values go to a review step before anything is filled in.</span>
+        <span class="labimporthint">CSV · TSV · TXT · JSON are read on your device. PDF and photo imports are not available — use a CSV, TSV, TXT, or JSON export instead. Values go to a review step before anything is filled in.</span>
       </div>
       <div id="labImport" class="no-print"></div>
       <div id="labsBody"></div>
@@ -599,31 +599,6 @@
         </div>
         <div class="coachbtns">
           <button class="btn ghost small hide no-print" id="newChatBtn" title="Clear this conversation">New chat</button>
-          <button class="icon-btn no-print" id="coachSettingsBtn" title="AI settings" aria-label="AI settings">⚙</button>
-        </div>
-      </div>
-
-      <div class="settings hide" id="coachSettings">
-        <p class="hint" style="margin-bottom:10px">Optionally connect the <b>real Claude API</b> for open-ended answers.
-          Without a key, Jeffery uses a fast, private, offline knowledge base.</p>
-        <label class="field"><span class="lab">Anthropic API key <span class="sub">(stored only in this browser)</span></span>
-          <input type="password" id="apiKey" placeholder="sk-ant-…" autocomplete="off" />
-        </label>
-        <label class="field"><span class="lab">Model</span>
-          <select id="apiModel">
-            <option value="claude-opus-4-8">Claude Opus 4.8 (most capable)</option>
-            <option value="claude-sonnet-5">Claude Sonnet 5 (balanced)</option>
-            <option value="claude-haiku-4-5">Claude Haiku 4.5 (fastest / cheapest)</option>
-          </select>
-        </label>
-        <div class="banner clear" style="margin:0 0 10px">
-          <b>⚠ Key safety:</b> your key is saved in this browser's local storage and requests go
-          <b>directly from your browser to Anthropic</b>. Anyone with access to this device/browser could read it,
-          and usage is billed to your account. Only enable this on a device you trust; clear the key when done.
-        </div>
-        <div class="rowbtns">
-          <button class="btn ghost" id="clearKeyBtn">Clear key</button>
-          <button class="btn primary" id="saveKeyBtn">Save & enable</button>
         </div>
       </div>
 

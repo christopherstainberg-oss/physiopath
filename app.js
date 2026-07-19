@@ -6483,7 +6483,7 @@ function coachAnswer(qRaw){
     if(state.program) return `Your plan is a **${state.program.totalWeeks}-week, 4-phase program** (${state.program.track} track): ${TEMPLATE[state.program.track].phases.map(p=>p.title).join(" → ")}. Advance a phase when the current one feels controlled and symptoms are low. See the **Program** tab for exercises.`;
     return "Build a program first (History → Injury → Details), then I can walk you through your phases and exercises.";
   }
-  return `I'm not sure I caught that${coachOnline()?"":" (I'm answering offline — add a Claude API key below and I can tackle anything in your own words)"}. I can help most with: **ice vs heat · how much pain is okay · sets & reps · progressing exercises · target heart rate & HRV · SpO₂ · steps · pool/aquatic work · tendons · arthritis & bone health · your precautions & weight-bearing · flare-ups & pacing · nutrition · sleep · returning to sport · when to see a doctor**.\n\nTry *"How do I progress an exercise?"*, *"What should I avoid with my condition?"*, or *"How do I read my HRV?"* — and for anything serious or not improving, see a clinician in person.`;
+  return `I'm not sure I caught that. I can help most with: **ice vs heat · how much pain is okay · sets & reps · progressing exercises · target heart rate & HRV · SpO₂ · steps · pool/aquatic work · tendons · arthritis & bone health · your precautions & weight-bearing · flare-ups & pacing · nutrition · sleep · returning to sport · when to see a doctor**.\n\nTry *"How do I progress an exercise?"*, *"What should I avoid with my condition?"*, or *"How do I read my HRV?"* — and for anything serious or not improving, see a clinician in person.`;
 }
 
 /* ---------------------------------------------------------------------
@@ -6755,7 +6755,7 @@ function initCoach(){
 function coachIntro(){
   const conds=selectedConditions();
   const intro = conds.length ? `I can see you're working on: **${conds.map(c=>c.name).join(", ")}**. ` : "";
-  const mode = coachOnline() ? " (Claude API connected)" : " (offline — add a Claude API key below for richer, tailored answers)";
+  const mode = coachOnline() ? " (Claude API connected)" : " (offline)";
   return `Hi, I'm Jeffery, your AI rehabilitation specialist${mode}. ${intro}Ask me anything about your recovery, program, exercises, vitals, or medical precautions — or tap a suggestion below.`;
 }
 function renderChatlog(){
@@ -8336,7 +8336,7 @@ function jefferyChatOffline(msg){
     const e = found[0];
     return `You wrote this ${fmtAgo(e.date)} — ${fmtDate(e.date)}:\n\n_“${String(e.note).slice(0,220)}”_\n\n` +
       (found[1] ? `And ${fmtAgo(found[1].date)}: _“${String(found[1].note).slice(0,140)}”_\n\n` : "") +
-      `That's from your own journal, not me guessing. I'm offline right now — add a Claude API key on the Jeffery step and I can actually talk about it.`;
+      `That's from your own journal, not me guessing. I'm offline right now, so this is the short version.`;
   }
   return jefferyReflectOffline(msg);
 }
@@ -8366,7 +8366,7 @@ function jefferyReflectOffline(note){
     if(bright) bits.push(`Worth reading this back — it's yours, from ${fmtAgo(bright.date)}:\n\n_“${String(bright.note).slice(0,180)}”_\n\nToday isn't the whole picture.`);
   }
   if(!bits.length) bits.push("Noted — and kept. I'll have this in mind next time you're here.");
-  bits.push("I'm offline right now, so this is the short version. Add a Claude API key on the Jeffery step and I can actually talk properly.");
+  bits.push("I'm offline right now, so this is the short version.");
   return bits.slice(0, 4).join("\n\n");
 }
 /* Online: same person, different register from the Coach tab. */
@@ -10260,7 +10260,7 @@ async function handleLabFile(file){
   try{
     let cands=[], collectionDate=null;
     if(isImage||isPdf){
-      if(!coachOnline()){ labImportMsg("warn","PDFs and photos are parsed with the Claude API. Add your key in the <b>AI</b> tab, or upload a CSV, TSV, TXT or JSON export instead."); return; }
+      if(!coachOnline()){ labImportMsg("warn","PDFs and photos can't be parsed offline. Upload a CSV, TSV, TXT, or JSON export instead."); return; }
       labImportMsg("load", `Parsing ${isPdf?"PDF":"image"} with Claude…`);
       const r = await apiParseLabs({ kind:isPdf?"pdf":"image", media_type:file.type||"image/jpeg", data:await fileToBase64(file) });
       cands=r.cands; collectionDate=r.collectionDate;
@@ -10653,19 +10653,9 @@ function updateCoachMode(){
   pill.className = "modepill "+(on?"online":"offline");
 }
 function initCoachSettings(){
-  $("#apiKey").value = state.apiKey || "";
-  $("#apiModel").value = state.apiModel || "claude-opus-4-8";
-  $("#coachSettingsBtn").onclick = ()=>$("#coachSettings").classList.toggle("hide");
-  $("#saveKeyBtn").onclick = ()=>{
-    state.apiKey = $("#apiKey").value.trim();
-    state.apiModel = $("#apiModel").value;
-    save(); updateCoachMode(); $("#coachSettings").classList.add("hide");
-    toast(coachOnline() ? "Claude API connected." : "Key cleared — using Jeffery's offline mode.");
-  };
-  $("#clearKeyBtn").onclick = ()=>{
-    state.apiKey=""; $("#apiKey").value=""; save(); updateCoachMode();
-    toast("Key cleared.");
-  };
+  /* Anthropic API key card removed from the Jeffery step — Jeffery is offline-only.
+     Clear any previously stored browser key so we never call the API accidentally. */
+  if(state.apiKey){ state.apiKey = ""; save(); }
   updateCoachMode();
 }
 function buildCoachSystem(){

@@ -972,7 +972,7 @@ async function handleLabFile(file){
   try{
     let cands=[], collectionDate=null;
     if(isImage||isPdf){
-      if(!coachOnline()){ labImportMsg("warn","PDFs and photos are parsed with the Claude API. Add your key in the <b>AI</b> tab, or upload a CSV, TSV, TXT or JSON export instead."); return; }
+      if(!coachOnline()){ labImportMsg("warn","PDFs and photos can't be parsed offline. Upload a CSV, TSV, TXT, or JSON export instead."); return; }
       labImportMsg("load", `Parsing ${isPdf?"PDF":"image"} with Claude…`);
       const r = await apiParseLabs({ kind:isPdf?"pdf":"image", media_type:file.type||"image/jpeg", data:await fileToBase64(file) });
       cands=r.cands; collectionDate=r.collectionDate;
@@ -1365,19 +1365,9 @@ function updateCoachMode(){
   pill.className = "modepill "+(on?"online":"offline");
 }
 function initCoachSettings(){
-  $("#apiKey").value = state.apiKey || "";
-  $("#apiModel").value = state.apiModel || "claude-opus-4-8";
-  $("#coachSettingsBtn").onclick = ()=>$("#coachSettings").classList.toggle("hide");
-  $("#saveKeyBtn").onclick = ()=>{
-    state.apiKey = $("#apiKey").value.trim();
-    state.apiModel = $("#apiModel").value;
-    save(); updateCoachMode(); $("#coachSettings").classList.add("hide");
-    toast(coachOnline() ? "Claude API connected." : "Key cleared — using Jeffery's offline mode.");
-  };
-  $("#clearKeyBtn").onclick = ()=>{
-    state.apiKey=""; $("#apiKey").value=""; save(); updateCoachMode();
-    toast("Key cleared.");
-  };
+  /* Anthropic API key card removed from the Jeffery step — Jeffery is offline-only.
+     Clear any previously stored browser key so we never call the API accidentally. */
+  if(state.apiKey){ state.apiKey = ""; save(); }
   updateCoachMode();
 }
 function buildCoachSystem(){
