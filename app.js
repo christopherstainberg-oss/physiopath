@@ -10648,9 +10648,16 @@ function initHealth(){
    Uses Open WebUI's Anthropic-compatible POST /api/v1/messages endpoint so
    the existing message/SSE shape stays the same; only the host and key change.
 ===================================================================== */
-function openWebUIBase(){
-  return String(state.apiBase || "http://localhost:3000").trim().replace(/\/+$/,"");
+function normalizeOpenWebUIBase(raw){
+  let b = String(raw || "").trim();
+  if(!b) return "http://localhost:3000";
+  // Users often paste a chat URL or .../api — strip to origin + optional path prefix.
+  b = b.replace(/\/+$/,"");
+  b = b.replace(/\/api(?:\/v1)?(?:\/messages)?$/i, "");
+  b = b.replace(/\/#$/, "").replace(/\/+$/,"");
+  return b || "http://localhost:3000";
 }
+function openWebUIBase(){ return normalizeOpenWebUIBase(state.apiBase); }
 function openWebUIMessagesUrl(){ return openWebUIBase() + "/api/v1/messages"; }
 function openWebUIHeaders(){
   const key = (state.apiKey || "").trim();
@@ -10662,11 +10669,83 @@ function openWebUIHeaders(){
   };
 }
 function coachOnline(){ return !!(state.apiKey && state.apiKey.trim() && openWebUIBase()); }
+/* Turn opaque "Failed to fetch" into an actionable diagnosis for the Jeffery UI. */
+function openWebUIFetchHint(err){
+  const raw = String((err && err.message) || err || "network error");
+  const base = openWebUIBase();
+  const pageHttps = typeof location !== "undefined" && location.protocol === "https:";
+  const targetHttp = /^http:\/\//i.test(base);
+  if(/Failed to fetch|NetworkError|Load failed|Network request failed/i.test(raw)){
+    if(pageHttps && targetHttp)
+      return `Browser blocked mixed content: this page is HTTPS but Open WebUI is HTTP (${base}). Serve Open WebUI over HTTPS, or open PhysioPath over HTTP.`;
+    const origin = (typeof location !== "undefined" && location.origin) || "(this site)";
+    return `Could not reach ${base} from this browser (${raw}). Check: (1) Open WebUI is running, (2) the base URL is reachable from THIS device (use the host IP/domain — "localhost" only works on the machine running Open WebUI), (3) if PhysioPath is HTTPS Open WebUI must be HTTPS, (4) set CORS_ALLOW_ORIGIN on Open WebUI to include ${origin} or *.`;
+  }
+  return raw;
+}
 function updateCoachMode(){
   const pill=$("#coachMode"); if(!pill) return;
   const on=coachOnline();
   pill.textContent = on ? "Open WebUI" : "offline";
   pill.className = "modepill "+(on?"online":"offline");
+}
+function readCoachSettingsFromForm(){
+  const baseEl = $("#apiBase"), keyEl = $("#apiKey"), modelEl = $("#apiModel");
+  return {
+    apiBase: normalizeOpenWebUIBase(baseEl ? baseEl.value : state.apiBase),
+    apiKey: keyEl ? keyEl.value.trim() : (state.apiKey || ""),
+    apiModel: modelEl ? modelEl.value.trim() : (state.apiModel || "")
+  };
+}
+function setApiTestResult(ok, text){
+  const el = $("#apiTestResult"); if(!el) return;
+  el.hidden = !text;
+  el.textContent = text || "";
+  el.style.color = ok ? "var(--ok, #157a3a)" : "var(--warn, #a15c00)";
+}
+async function testOpenWebUIConnection(){
+  const draft = readCoachSettingsFromForm();
+  // Temporarily apply form values so URL/header helpers match what the user typed.
+  const prev = { apiBase: state.apiBase, apiKey: state.apiKey, apiModel: state.apiModel };
+  state.apiBase = draft.apiBase; state.apiKey = draft.apiKey; state.apiModel = draft.apiModel;
+  setApiTestResult(true, "Testing " + openWebUIMessagesUrl() + "…");
+  try{
+    if(!draft.apiKey) throw new Error("Paste an Open WebUI API key first.");
+    if(!draft.apiModel) throw new Error("Enter a model id (exact name from Open WebUI).");
+    const res = await fetch(openWebUIMessagesUrl(), {
+      method: "POST",
+      headers: openWebUIHeaders(),
+      body: JSON.stringify({
+        model: draft.apiModel,
+        max_tokens: 16,
+        stream: false,
+        messages: [{ role: "user", content: "Reply with the single word: pong" }]
+      })
+    });
+    if(!res.ok){
+      let msg = "HTTP " + res.status;
+      try{
+        const t = await res.text();
+        try{
+          const j = JSON.parse(t);
+          if(j.error && j.error.message) msg = j.error.message;
+          else if(j.detail) msg = String(j.detail);
+          else if(t) msg += " — " + t.slice(0, 160);
+        }catch(_){ if(t) msg += " — " + t.slice(0, 160); }
+      }catch(__){}
+      throw new Error(msg);
+    }
+    setApiTestResult(true, "✓ Connected to Open WebUI at " + openWebUIBase() + " (model “" + draft.apiModel + "”). Click Save & enable.");
+    toast("Open WebUI connection OK.");
+    return true;
+  }catch(err){
+    const hint = openWebUIFetchHint(err);
+    setApiTestResult(false, "✗ " + hint);
+    toast("Connection failed — see details under ⚙.");
+    return false;
+  }finally{
+    state.apiBase = prev.apiBase; state.apiKey = prev.apiKey; state.apiModel = prev.apiModel;
+  }
 }
 function initCoachSettings(){
   const baseEl = $("#apiBase"), keyEl = $("#apiKey"), modelEl = $("#apiModel");
@@ -10677,9 +10756,11 @@ function initCoachSettings(){
   if(settingsBtn) settingsBtn.onclick = ()=>$("#coachSettings").classList.toggle("hide");
   const saveBtn = $("#saveKeyBtn");
   if(saveBtn) saveBtn.onclick = ()=>{
-    state.apiBase = (baseEl && baseEl.value.trim()) || "http://localhost:3000";
-    state.apiKey = keyEl ? keyEl.value.trim() : "";
-    state.apiModel = modelEl ? modelEl.value.trim() : "";
+    const draft = readCoachSettingsFromForm();
+    state.apiBase = draft.apiBase;
+    state.apiKey = draft.apiKey;
+    state.apiModel = draft.apiModel;
+    if(baseEl) baseEl.value = state.apiBase;
     save(); updateCoachMode();
     const panel = $("#coachSettings"); if(panel) panel.classList.add("hide");
     toast(coachOnline() ? "Open WebUI connected." : "Key cleared — using Jeffery's offline mode.");
@@ -10688,9 +10769,12 @@ function initCoachSettings(){
   if(clearBtn) clearBtn.onclick = ()=>{
     state.apiKey = "";
     if(keyEl) keyEl.value = "";
+    setApiTestResult(true, "");
     save(); updateCoachMode();
     toast("Key cleared.");
   };
+  const testBtn = $("#testKeyBtn");
+  if(testBtn) testBtn.onclick = () => testOpenWebUIConnection();
   updateCoachMode();
 }
 function buildCoachSystem(){
@@ -10966,7 +11050,7 @@ async function askClaude(q){
     /* Keep the user's turn: it is rendered, so dropping it would desync the transcript from
        the history and lose it on reload. Record the fallback as the assistant turn so the
        pairing stays valid for the next request. */
-    const fb = "⚠ Couldn't reach Open WebUI ("+err.message+"). Here's Jeffery's offline answer instead:\n\n"+coachAnswer(q);
+    const fb = "⚠ Couldn't reach Open WebUI ("+openWebUIFetchHint(err)+"). Here's Jeffery's offline answer instead:\n\n"+coachAnswer(q);
     pushTurn("assistant", fb);
     addMsg(fb,"bot");
   }

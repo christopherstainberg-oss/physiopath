@@ -610,6 +610,8 @@
         <label class="field"><span class="lab">Open WebUI base URL</span>
           <input type="url" id="apiBase" placeholder="http://localhost:3000" autocomplete="off" />
         </label>
+        <p class="hint" style="margin:-4px 0 10px">Origin only (no <code>/api</code>). Use the host this <b>browser</b> can reach —
+          <code>localhost</code> only works on the same machine. If PhysioPath is <b>HTTPS</b>, Open WebUI must be HTTPS too.</p>
         <label class="field"><span class="lab">Open WebUI API key <span class="sub">(stored only in this browser)</span></span>
           <input type="password" id="apiKey" placeholder="sk-…" autocomplete="off" />
         </label>
@@ -620,11 +622,14 @@
           <b>⚠ Key safety:</b> your key is saved in this browser's local storage and requests go
           <b>directly from your browser to your Open WebUI server</b> (Anthropic-compatible
           <code>/api/v1/messages</code>). Anyone with access to this device could read the key.
-          If PhysioPath is served over HTTPS, Open WebUI must also be HTTPS (browsers block mixed content).
+          On Open WebUI, set <code>CORS_ALLOW_ORIGIN</code> to include this site’s origin
+          (or <code>*</code>) if the browser reports a CORS block.
         </div>
+        <p class="hint" id="apiTestResult" style="margin:0 0 10px" hidden></p>
         <div class="rowbtns">
-          <button class="btn ghost" id="clearKeyBtn">Clear key</button>
-          <button class="btn primary" id="saveKeyBtn">Save &amp; enable</button>
+          <button class="btn ghost" id="clearKeyBtn" type="button">Clear key</button>
+          <button class="btn ghost" id="testKeyBtn" type="button">Test connection</button>
+          <button class="btn primary" id="saveKeyBtn" type="button">Save &amp; enable</button>
         </div>
       </div>
 
