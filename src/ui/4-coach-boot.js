@@ -726,7 +726,7 @@ function renderLabs(){
   $$("#labsBody .labt").forEach(inp=>inp.oninput=()=>{ const id=inp.dataset.lab; (state.labs[id]=state.labs[id]||{})[inp.dataset.b]=inp.value.trim(); save(); refreshLabRow(id); renderRisks(); });
 }
 
-/* ---- import lab values from an uploaded file (CSV/TSV/TXT/JSON on-device; PDF/photos via Claude API) ---- */
+/* ---- import lab values from an uploaded file (CSV/TSV/TXT/JSON on-device; PDF/photos via Open WebUI) ---- */
 const LAB_ALIASES = {
   tchol:["total cholesterol","cholesterol total","cholesterol, total","chol total"],
   ldl:["ldl cholesterol","ldl-c","ldl chol","ldl","low density"],
@@ -954,9 +954,9 @@ Rules: "collectionDate" is the specimen collection/report date if shown (else nu
   if(payload.kind==="text") content=[{type:"text",text:`Extract the lab results from this document:\n\n${payload.text.slice(0,60000)}`}];
   else if(payload.kind==="image") content=[{type:"image",source:{type:"base64",media_type:payload.media_type,data:payload.data}},{type:"text",text:"Extract every lab test result visible in this image."}];
   else content=[{type:"document",source:{type:"base64",media_type:"application/pdf",data:payload.data}},{type:"text",text:"Extract every lab test result from this PDF."}];
-  const res=await fetch("https://api.anthropic.com/v1/messages",{ method:"POST",
-    headers:{"content-type":"application/json","x-api-key":state.apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-    body:JSON.stringify({ model:state.apiModel||"claude-opus-4-8", max_tokens:1500, system:sys, messages:[{role:"user",content}] }) });
+  const res=await fetch(openWebUIMessagesUrl(),{ method:"POST",
+    headers: openWebUIHeaders(),
+    body:JSON.stringify({ model:state.apiModel||"", max_tokens:1500, system:sys, messages:[{role:"user",content}] }) });
   if(!res.ok){ const t=await res.text().catch(()=>""); throw new Error(`API ${res.status}${t?" — "+t.slice(0,140):""}`); }
   const data=await res.json();
   const txt=(data.content||[]).map(b=>b.text||"").join("");
@@ -972,13 +972,13 @@ async function handleLabFile(file){
   try{
     let cands=[], collectionDate=null;
     if(isImage||isPdf){
-      if(!coachOnline()){ labImportMsg("warn","PDFs and photos can't be parsed offline. Upload a CSV, TSV, TXT, or JSON export instead."); return; }
-      labImportMsg("load", `Parsing ${isPdf?"PDF":"image"} with Claude…`);
+      if(!coachOnline()){ labImportMsg("warn","PDFs and photos can't be parsed offline. Connect Open WebUI (⚙ on the Jeffery step), or upload a CSV, TSV, TXT, or JSON export instead."); return; }
+      labImportMsg("load", `Parsing ${isPdf?"PDF":"image"} with Open WebUI…`);
       const r = await apiParseLabs({ kind:isPdf?"pdf":"image", media_type:file.type||"image/jpeg", data:await fileToBase64(file) });
       cands=r.cands; collectionDate=r.collectionDate;
     } else {
       const text=await file.text();
-      if(coachOnline()){ labImportMsg("load","Parsing with Claude…"); try{ const r=await apiParseLabs({kind:"text",text}); cands=r.cands; collectionDate=r.collectionDate; }catch(e){ cands=localParseLabs(text); collectionDate=detectCollectionDate(text); } }
+      if(coachOnline()){ labImportMsg("load","Parsing with Open WebUI…"); try{ const r=await apiParseLabs({kind:"text",text}); cands=r.cands; collectionDate=r.collectionDate; }catch(e){ cands=localParseLabs(text); collectionDate=detectCollectionDate(text); } }
       else { cands=localParseLabs(text); collectionDate=detectCollectionDate(text); }
     }
     cands=(cands||[]).filter(c=>LABS.some(l=>l.id===c.id) && c.value!=null && c.value!=="" && !isNaN(parseFloat(c.value)));
@@ -1000,7 +1000,7 @@ function showLabReview(cands, collectionDate){
       <input class="labrevval" data-i="${i}" value="${esc(String(c.value))}" inputmode="decimal" />
       <span class="labrevunit">${esc(c.unit||labUnit(c.id))}</span></label>`).join("")}
     <div class="labrevbtns"><button class="btn ghost" id="labRevCancel">Cancel</button><button class="btn primary" id="labRevApply">Apply to my labs</button></div>
-    <p class="hint" style="margin:8px 0 0">Automated parsing can make mistakes — verify each value first. Applying keeps a dated record, so uploading another report adds a column you can compare.${coachOnline()?" This file was parsed by the Claude API (its contents were sent to Anthropic).":""}</p>
+    <p class="hint" style="margin:8px 0 0">Automated parsing can make mistakes — verify each value first. Applying keeps a dated record, so uploading another report adds a column you can compare.${coachOnline()?" This file was parsed via your Open WebUI server.":""}</p>
   </div>`;
   $("#labRevApply").onclick=()=>applyLabImport(cands);
   $("#labRevCancel").onclick=()=>{ el.innerHTML=""; };
@@ -1355,19 +1355,53 @@ function initHealth(){
 }
 
 /* =====================================================================
-   CLAUDE API COACH (optional) + settings
+   OPEN WEBUI COACH (optional) + settings
+   Uses Open WebUI's Anthropic-compatible POST /api/v1/messages endpoint so
+   the existing message/SSE shape stays the same; only the host and key change.
 ===================================================================== */
-function coachOnline(){ return !!(state.apiKey && state.apiKey.trim()); }
+function openWebUIBase(){
+  return String(state.apiBase || "http://localhost:3000").trim().replace(/\/+$/,"");
+}
+function openWebUIMessagesUrl(){ return openWebUIBase() + "/api/v1/messages"; }
+function openWebUIHeaders(){
+  const key = (state.apiKey || "").trim();
+  return {
+    "content-type":"application/json",
+    "x-api-key": key,
+    "Authorization": "Bearer " + key,
+    "anthropic-version":"2023-06-01"
+  };
+}
+function coachOnline(){ return !!(state.apiKey && state.apiKey.trim() && openWebUIBase()); }
 function updateCoachMode(){
   const pill=$("#coachMode"); if(!pill) return;
   const on=coachOnline();
-  pill.textContent = on ? "Claude API" : "offline";
+  pill.textContent = on ? "Open WebUI" : "offline";
   pill.className = "modepill "+(on?"online":"offline");
 }
 function initCoachSettings(){
-  /* Anthropic API key card removed from the Jeffery step — Jeffery is offline-only.
-     Clear any previously stored browser key so we never call the API accidentally. */
-  if(state.apiKey){ state.apiKey = ""; save(); }
+  const baseEl = $("#apiBase"), keyEl = $("#apiKey"), modelEl = $("#apiModel");
+  if(baseEl) baseEl.value = state.apiBase || "http://localhost:3000";
+  if(keyEl) keyEl.value = state.apiKey || "";
+  if(modelEl) modelEl.value = state.apiModel || "";
+  const settingsBtn = $("#coachSettingsBtn");
+  if(settingsBtn) settingsBtn.onclick = ()=>$("#coachSettings").classList.toggle("hide");
+  const saveBtn = $("#saveKeyBtn");
+  if(saveBtn) saveBtn.onclick = ()=>{
+    state.apiBase = (baseEl && baseEl.value.trim()) || "http://localhost:3000";
+    state.apiKey = keyEl ? keyEl.value.trim() : "";
+    state.apiModel = modelEl ? modelEl.value.trim() : "";
+    save(); updateCoachMode();
+    const panel = $("#coachSettings"); if(panel) panel.classList.add("hide");
+    toast(coachOnline() ? "Open WebUI connected." : "Key cleared — using Jeffery's offline mode.");
+  };
+  const clearBtn = $("#clearKeyBtn");
+  if(clearBtn) clearBtn.onclick = ()=>{
+    state.apiKey = "";
+    if(keyEl) keyEl.value = "";
+    save(); updateCoachMode();
+    toast("Key cleared.");
+  };
   updateCoachMode();
 }
 function buildCoachSystem(){
@@ -1577,16 +1611,11 @@ function parseAnthropicSSE(sse){
 async function askClaude(q){
   /* The user turn is pushed by the submit handler — pushing again here would duplicate it. */
   const typing=addTyping();
-  const callAPI = () => fetch("https://api.anthropic.com/v1/messages",{
+  const callAPI = () => fetch(openWebUIMessagesUrl(),{
       method:"POST",
-      headers:{
-        "content-type":"application/json",
-        "x-api-key":state.apiKey.trim(),
-        "anthropic-version":"2023-06-01",
-        "anthropic-dangerous-direct-browser-access":"true"
-      },
+      headers: openWebUIHeaders(),
       body:JSON.stringify({
-        model: state.apiModel || "claude-opus-4-8",
+        model: state.apiModel || "",
         max_tokens: 4000,          // 1100 truncated mid-answer on anything with sets/reps detail
         stream: true,              // stream the answer so it renders as it is written, not after a long wait
         system: buildCoachSystem(),
@@ -1648,7 +1677,7 @@ async function askClaude(q){
     /* Keep the user's turn: it is rendered, so dropping it would desync the transcript from
        the history and lose it on reload. Record the fallback as the assistant turn so the
        pairing stays valid for the next request. */
-    const fb = "⚠ Couldn't reach the Claude API ("+err.message+"). Here's Jeffery's offline answer instead:\n\n"+coachAnswer(q);
+    const fb = "⚠ Couldn't reach Open WebUI ("+err.message+"). Here's Jeffery's offline answer instead:\n\n"+coachAnswer(q);
     pushTurn("assistant", fb);
     addMsg(fb,"bot");
   }

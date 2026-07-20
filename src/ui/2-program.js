@@ -1174,10 +1174,12 @@ function importData(file){
       + `This REPLACES everything currently in the app`
       + (have ? `, including the ${have} photo${have===1?"":"s"} on this device` : "")
       + `. Export first if you are not sure.`)) return;
-    const key = state.apiKey;                        // never clobber the live key from a file
+    const key = state.apiKey;                        // never clobber the live Open WebUI key from a file
+    const base = state.apiBase;
     Object.keys(state).forEach(k=>{ delete state[k]; });
     Object.assign(state, JSON.parse(JSON.stringify(DEFAULT_STATE)), incoming);
     if(key) state.apiKey = key;
+    if(base) state.apiBase = base;
     if(!save()){ toast("⚠ Restored, but couldn't save - storage is full or blocked."); return; }
     try{ await photoClear(); await photoUnpack(pics); }catch(_){}
     location.reload();
@@ -1390,7 +1392,7 @@ function initCoach(){
 function coachIntro(){
   const conds=selectedConditions();
   const intro = conds.length ? `I can see you're working on: **${conds.map(c=>c.name).join(", ")}**. ` : "";
-  const mode = coachOnline() ? " (Claude API connected)" : " (offline)";
+  const mode = coachOnline() ? " (Open WebUI connected)" : " (offline)";
   return `Hi, I'm Jeffery, your AI rehabilitation specialist${mode}. ${intro}Ask me anything about your recovery, program, exercises, vitals, or medical precautions — or tap a suggestion below.`;
 }
 function renderChatlog(){

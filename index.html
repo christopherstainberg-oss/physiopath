@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta http-equiv="Content-Security-Policy" content="connect-src 'self' https://api.anthropic.com data:; object-src 'none'; base-uri 'none'" />
+<meta http-equiv="Content-Security-Policy" content="connect-src 'self' http: https: data: blob:; object-src 'none'; base-uri 'none'" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
 <meta name="theme-color" content="#eef3f8" media="(prefers-color-scheme: light)" />
 <meta name="theme-color" content="#0f1720" media="(prefers-color-scheme: dark)" />
@@ -556,7 +556,7 @@
       <div class="labimport no-print">
         <label class="labuploadbtn" for="labFile">⬆ Upload lab results</label>
         <input type="file" id="labFile" accept=".csv,.tsv,.txt,.json,.pdf,.png,.jpg,.jpeg,.webp,image/*,application/pdf,text/plain,text/csv,application/json" hidden />
-        <span class="labimporthint">CSV · TSV · TXT · JSON are read on your device. PDF and photo imports are not available — use a CSV, TSV, TXT, or JSON export instead. Values go to a review step before anything is filled in.</span>
+        <span class="labimporthint">CSV · TSV · TXT · JSON are read on your device. PDF &amp; photos of a report can be parsed when Open WebUI is connected (⚙ on the <b>Jeffery</b> step). Values go to a review step before anything is filled in.</span>
       </div>
       <div id="labImport" class="no-print"></div>
       <div id="labsBody"></div>
@@ -599,6 +599,32 @@
         </div>
         <div class="coachbtns">
           <button class="btn ghost small hide no-print" id="newChatBtn" title="Clear this conversation">New chat</button>
+          <button class="icon-btn no-print" id="coachSettingsBtn" title="AI settings" aria-label="AI settings">⚙</button>
+        </div>
+      </div>
+
+      <div class="settings hide" id="coachSettings">
+        <p class="hint" style="margin-bottom:10px">Optionally connect your <b>Open WebUI</b> server for open-ended answers.
+          Without a key, Jeffery uses a fast, private, offline knowledge base. Get an API key in Open WebUI under
+          <b>Settings → Account</b>.</p>
+        <label class="field"><span class="lab">Open WebUI base URL</span>
+          <input type="url" id="apiBase" placeholder="http://localhost:3000" autocomplete="off" />
+        </label>
+        <label class="field"><span class="lab">Open WebUI API key <span class="sub">(stored only in this browser)</span></span>
+          <input type="password" id="apiKey" placeholder="sk-…" autocomplete="off" />
+        </label>
+        <label class="field"><span class="lab">Model <span class="sub">(Open WebUI model id)</span></span>
+          <input type="text" id="apiModel" placeholder="e.g. llama3.1 or gpt-4o" autocomplete="off" />
+        </label>
+        <div class="banner clear" style="margin:0 0 10px">
+          <b>⚠ Key safety:</b> your key is saved in this browser's local storage and requests go
+          <b>directly from your browser to your Open WebUI server</b> (Anthropic-compatible
+          <code>/api/v1/messages</code>). Anyone with access to this device could read the key.
+          If PhysioPath is served over HTTPS, Open WebUI must also be HTTPS (browsers block mixed content).
+        </div>
+        <div class="rowbtns">
+          <button class="btn ghost" id="clearKeyBtn">Clear key</button>
+          <button class="btn primary" id="saveKeyBtn">Save &amp; enable</button>
         </div>
       </div>
 

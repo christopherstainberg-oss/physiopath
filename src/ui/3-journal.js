@@ -740,11 +740,10 @@ async function jjSend(text, isEntry){
   renderJJThread();
   const iThinking = state.jjThread.length - 1;
   try{
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
+    const res = await fetch(openWebUIMessagesUrl(), {
       method:"POST",
-      headers:{ "content-type":"application/json", "x-api-key":state.apiKey.trim(),
-        "anthropic-version":"2023-06-01", "anthropic-dangerous-direct-browser-access":"true" },
-      body: JSON.stringify({ model: state.apiModel || "claude-opus-4-8", max_tokens: 700,
+      headers: openWebUIHeaders(),
+      body: JSON.stringify({ model: state.apiModel || "", max_tokens: 700,
         system: jefferyJournalSystem(), messages: jjWindow(12) })
     });
     if(!res.ok){ let m = "HTTP "+res.status; try{ const j = await res.json(); if(j.error&&j.error.message) m = j.error.message; }catch(e){} throw new Error(m); }

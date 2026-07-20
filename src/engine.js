@@ -330,7 +330,7 @@ const state = {
   medDoses:{}, weightBearing:{status:"",pct:"",lbs:"",side:"",limb:"le"}, devices:[],
   cardiacDevice:{type:"",icdRate:""}, specialPrecautions:[], planVariant:{}, progress:{}, measures:{},
   log:[], logMood:"", logDone:[], logTpl:"blank", photoNoted:false,
-  jjThread:[], chatHistory:[], apiKey:"", apiModel:"claude-opus-4-8"
+  jjThread:[], chatHistory:[], apiKey:"", apiBase:"http://localhost:3000", apiModel:""
 };
 const MED_FILTERABLE = ["fluoroquinolone","anticoagulant","antiplatelet","opioid","sedative","muscle_relaxant","gabapentinoid","antipsychotic"];
 /* ---------- on-demand data loading ----------

@@ -61,7 +61,7 @@ writeFileSync(join(DIST, "_headers"),
   Referrer-Policy: no-referrer
   X-Frame-Options: SAMEORIGIN
   Permissions-Policy: geolocation=(), camera=(), microphone=()
-  Content-Security-Policy: connect-src 'self' https://api.anthropic.com data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'
+  Content-Security-Policy: connect-src 'self' http: https: data: blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'
   Strict-Transport-Security: max-age=31536000; includeSubDomains
 /sw.js
   Cache-Control: no-cache
