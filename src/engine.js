@@ -42,6 +42,8 @@ const HISTORY_ITEMS = [
   { flag:"neuropathy",           group:"neuro", label:"Numbness, tingling, or nerve damage" },
   { flag:"neuro_condition",      group:"neuro", label:"Neurological condition (MS, Parkinson's, prior stroke)" },
   { flag:"seizure",              group:"neuro", label:"Seizures or epilepsy" },
+  { flag:"autonomic_dysreflexia", group:"neuro", label:"Spinal cord injury ~T6 or above (autonomic dysreflexia risk)" },
+  { flag:"raised_icp",           group:"neuro", label:"Recent brain bleed, neurosurgery, or raised intracranial pressure precautions" },
   // general health
   { flag:"diabetes",             group:"general", label:"Diabetes" },
   { flag:"ckd",                  group:"general", label:"Chronic kidney disease" },
@@ -51,7 +53,12 @@ const HISTORY_ITEMS = [
   { flag:"reflux",               group:"general", label:"Acid reflux (GORD) or hiatal hernia" },
   { flag:"hernia",               group:"general", label:"Abdominal or groin hernia (not yet repaired)" },
   { flag:"pregnancy",            group:"general", label:"Pregnant or recently postpartum" },
-  { flag:"recent_surgery",       group:"general", label:"Any surgery in the last 6 weeks" }
+  { flag:"recent_surgery",       group:"general", label:"Any surgery in the last 6 weeks" },
+  { flag:"acute_medical",        group:"general", label:"Recent hospitalisation for serious medical illness (sepsis, pneumonia, kidney injury, etc.)" },
+  { flag:"post_sepsis",          group:"general", label:"Recent sepsis or septic shock" },
+  { flag:"polytrauma",           group:"bones",   label:"Multiple injuries / major trauma (follow each team’s orders)" },
+  { flag:"major_burn",           group:"bones",   label:"Major burn injury (contracture-prevention programme)" },
+  { flag:"pe_acute",             group:"heart",   label:"Recent pulmonary embolism (lung clot)" }
 ];
 
 /* ---------- program phase templates ---------- */
@@ -73,7 +80,7 @@ const TEMPLATE = {
 const DOMAIN_NAME = { msk:"musculoskeletal", neuro:"neurological", cardiac:"cardiac", pulmonary:"pulmonary" };
 const DOMAIN_REDFLAGS = {
   msk:"Get it checked for: inability to bear weight or use the limb, obvious deformity, a hot/swollen joint with fever, new numbness or weakness, or pain that steadily worsens despite rest.",
-  neuro:"Seek prompt care for: new or worsening weakness/numbness, trouble speaking or swallowing, sudden severe headache, new loss of balance, or loss of bladder/bowel control.",
+  neuro:"Seek prompt care for: new or worsening weakness/numbness, trouble speaking or swallowing, sudden severe headache, new loss of balance, loss of bladder/bowel control or saddle numbness, unequal pupils, rapidly dropping alertness, or (after SCI ~T6 and above) pounding headache with flushing/sweating that may signal autonomic dysreflexia.",
   cardiac:"Stop and seek urgent care for: chest pain or pressure, unusual breathlessness, palpitations, fainting, or cold sweats. Report rapid weight gain or new swelling to your team.",
   pulmonary:"Seek care for: worsening breathlessness at rest, chest pain, blue-tinged lips/fingertips, fever with discolored sputum, or oxygen readings below your prescribed level."
 };
@@ -589,6 +596,8 @@ function medExerciseFlags(){
   if(mf.has("fluoroquinolone")) out.push("fluoroquinolone");
   if(mf.has("anticoagulant") || mf.has("antiplatelet")) out.push("med_bleeding");
   if(["opioid","sedative","muscle_relaxant","gabapentinoid","antipsychotic"].some(x=>mf.has(x))) out.push("med_sedating");
+  /* Systemic corticosteroids: bone/tendon risk — caution impact & high intensity in the built plan */
+  if(mf.has("corticosteroid")) out.push("med_steroid");
   return out;
 }
 /* Base program flags plus any active medication flags — used by the edit controls
@@ -1139,6 +1148,7 @@ const LIB_REGION = {
   elbow:["Elbow","Forearm"], wrist_hand:["Wrist / Hand","Forearm"],
   hip:["Hip","Glute","Core"], hip_replacement:["Hip","Glute","Core"],
   knee_ligament:["Knee","Hip","Ankle"], knee_pf:["Knee","Hip"], knee_meniscus:["Knee","Hip"], knee_replacement:["Knee","Hip"],
+  knee_oa:["Knee","Hip","Cardio"],
   ankle:["Ankle","Calf","Balance"], achilles:["Ankle","Calf"], foot:["Foot","Ankle","Calf"],
   cervical:["Neck","Scapula/Upper back"], radiculopathy_cervical:["Neck","Scapula/Upper back"],
   thoracic:["Thoracic/Upper back","Scapula/Upper back","Core"],
@@ -1148,9 +1158,12 @@ const LIB_REGION = {
   tmj:["Neck"], general_msk:["Full body","Core","Hip"], rhabdo:["Cardio","Full body"], charcot:["Core","Full body"],
   stroke:["Balance","Gait","Core"], tbi:["Balance","Gait","Core"], sci:["Core","Balance","Full body"],
   ms:["Balance","Core","Cardio"], parkinsons:["Balance","Gait","Full body"], balance_neuro:["Balance","Gait","Core"], guillain_barre:["Balance","Core","Full body"],
+  icu_aw:["Full body","Balance","Core","Cardio"], myasthenia:["Full body","Breathing","Balance"], encephalopathy:["Balance","Gait","Core","Full body"],
+  acute_medical:["Full body","Balance","Cardio","Core"], polytrauma:["Full body","Core","Balance","Cardio"], burn:["Full body","Core","Shoulder","Wrist / Hand"],
   neuropathy:["Balance","Foot","Ankle"], vestibular:["Vestibular","Balance"], bells_palsy:["Neck"],
   cardiac_rehab:["Cardio","Full body"], heart_failure:["Cardio","Full body"], hypertension:["Cardio","Full body"],
-  pad:["Cardio","Knee","Hip"], valve:["Cardio","Breathing"], arrhythmia:["Cardio","Full body"],
+  pad:["Cardio","Knee","Hip"], venous_rehab:["Cardio","Knee","Ankle","Calf"], lymphedema:["Full body","Cardio"],
+  valve:["Cardio","Breathing"], arrhythmia:["Cardio","Full body"],
   cardiac_surgery:["Cardio","Breathing","Full body"],
   pulmonary_rehab:["Cardio","Breathing","Core"], asthma:["Cardio","Breathing"], post_covid:["Cardio","Breathing","Balance"],
   ild:["Cardio","Breathing"], thoracic_surgery:["Breathing","Scapula/Upper back","Cardio"], pulm_hypertension:["Cardio","Breathing"],
@@ -2075,7 +2088,74 @@ const INJURY_FOCUS = [
   {re:/contusion|\bbruise\b|haematoma|hematoma/, generic:true,
    focus:"Contusion (deep bruise): early gentle pain-free movement and gradual loading restore function — avoid aggressive massage or stretching of a fresh deep bruise.",
    add:[{p:1,n:"Gentle pain-free movement",d:"3×10",c:"Keep it moving"},
-        {p:2,n:"Progressive strengthening",d:"3×12",c:"Rebuild as pain settles"}]}
+        {p:2,n:"Progressive strengthening",d:"3×12",c:"Rebuild as pain settles"}]},
+  /* ---- acute-care neurology correlations ---- */
+  {re:/stroke|\bcva\b|hemipleg|hemipar|post-thrombectomy|post-thrombolysis|intracerebral|\bICH\b|subarachnoid|\bSAH\b/,
+   focus:"Stroke: high-repetition task practice drives recovery. Protect a subluxed shoulder (never pull on the weak arm), train the weak side, and manage falls risk. After ICH/SAH, respect BP and neurosurgical limits early.",
+   add:[{p:1,n:"Supported sitting balance & trunk control",d:"3×30s",c:"Near support; quality posture",tags:["balance"]},
+        {p:1,n:"Affected-arm task practice (reach & grasp)",d:"3×10",c:"High reps; support the shoulder girdle"},
+        {p:2,n:"Sit-to-stand with even weight through both legs",d:"3×8",c:"Load the weak leg as able",tags:["weight_bearing","balance"]},
+        {p:3,n:"Gait practice with quality foot placement",d:"per team",c:"Near a rail; even step length",tags:["weight_bearing","balance"]}]},
+  {re:/guillain|miller fisher|\bAIDP\b|\bAMAN\b|acute flaccid myelitis/,
+   focus:"GBS: recovery is proximal-to-distal over months. Sub-fatigue dosing only — overwork can set you back. Watch breathing and swallow early.",
+   add:[{p:1,n:"Passive/assisted ROM all joints",d:"2–3× daily",c:"Prevent contracture without fatigue"},
+        {p:1,n:"Very light available-muscle activation",d:"2×5–8",c:"Stop well before failure"},
+        {p:2,n:"Sitting edge-of-bed tolerance",d:"build minutes",c:"Orthostatic monitoring",tags:["balance"]},
+        {p:3,n:"Assisted sit-to-stand & short walks",d:"per team",c:"Aids as needed",tags:["weight_bearing","balance"]}]},
+  {re:/ICU-acquired weakness|critical illness (polyneuropathy|myopathy|polyneuromyopathy)|\bCIPNM\b|post-ICU syndrome|prolonged mechanical ventilation/,
+   focus:"ICU-acquired weakness: rebuild sitting/standing tolerance first, then strength. Expect orthostasis and long recovery; short frequent sessions beat heroic ones.",
+   add:[{p:1,n:"Bed mobility & passive/active-assisted ROM",d:"2–3× daily",c:"Protect joints and skin"},
+        {p:1,n:"Edge-of-bed sitting (as cleared)",d:"build minutes",c:"Monitor dizziness/BP",tags:["balance"]},
+        {p:2,n:"Sit-to-stand with assistance as needed",d:"3–8 reps",c:"Rest between",tags:["weight_bearing","balance"]},
+        {p:3,n:"Short walking bouts with aids",d:"several × day",c:"Quality and safety",tags:["weight_bearing","aerobic"]}]},
+  {re:/myasthen|Lambert-Eaton|myasthenic crisis/,
+   focus:"Myasthenia: never exercise to exhaustion. Short bouts, rest before failure, often better after meds. Urgent care for breathing/swallow crisis signs.",
+   add:[{p:1,n:"Energy pacing plan (rest before failure)",d:"daily",c:"Hard tasks when strongest"},
+        {p:2,n:"Short sub-fatigue strength bouts",d:"2×6–10",c:"Stop at first true fatigue"},
+        {p:3,n:"Paced walking intervals",d:"10–15 min total",c:"Conversational; rest early",tags:["aerobic"]}]},
+  {re:/spinal cord injury|\bSCI\b|tetrapleg|parapleg|central cord|autonomic dysreflex/,
+   focus:"SCI: ROM, skin, respiratory care, and transfers. At ~T6 and above, know autonomic dysreflexia (pounding headache + high BP = emergency response).",
+   add:[{p:1,n:"Pressure-relief schedule & skin check",d:"every 15–30 min sitting",c:"You may not feel a problem forming"},
+        {p:1,n:"Passive/assisted ROM (heel cords, hips, hands)",d:"daily",c:"Prevent contracture"},
+        {p:2,n:"Transfer practice with safe shoulder technique",d:"per team",c:"Protect long-term shoulders",tags:["weight_bearing"]},
+        {p:3,n:"Wheelchair skills or gait as level allows",d:"per team",c:"",tags:["balance"]}]},
+  {re:/delirium|encephalopath|hypoxic-ischemic|anoxic brain|Wernicke|status epileptic|meningitis recovery|encephalitis recovery|\bPRES\b/,
+   focus:"Encephalopathy/delirium: reorientation, sleep-wake routine, and always-supervised mobility until safe. Fix reversible drivers (infection, meds, glasses/hearing aids).",
+   add:[{p:1,n:"Reorientation cues (name, place, task)",d:"several × day",c:"Calm, consistent"},
+        {p:1,n:"Supervised bed-to-chair transfers only",d:"per team",c:"High fall risk",tags:["balance"]},
+        {p:2,n:"Short supervised walks",d:"3–5 bouts",c:"Never alone until cleared",tags:["weight_bearing","balance"]},
+        {p:3,n:"Simple dual-task when safe",d:"3×1 min",c:"Walk + name objects",tags:["balance"]}]},
+  {re:/traumatic brain injury|\bTBI\b|subdural|epidural|craniotom|craniect|diffuse axonal/,
+   focus:"TBI/neurosurgery: symptom-limited early activity, avoid breath-holding and head-down work if ICP precautions apply, and progress dual-task and balance only as symptoms allow.",
+   add:[{p:1,n:"Symptom-limited easy walking",d:"5–10 min",c:"Stop if headache/dizziness spikes",tags:["aerobic"]},
+        {p:1,n:"Gentle cervical & eye ROM as cleared",d:"3×10",c:"",tags:["end_range_neck"]},
+        {p:2,n:"Gaze stabilisation & balance near support",d:"3×1 min",c:"",tags:["balance"]},
+        {p:3,n:"Graded dual-task mobility",d:"3×30s",c:"Move + think",tags:["balance"]}]},
+  {re:/\bsepsis\b|septic shock|acute kidney injury|\bAKI\b|diabetic ketoacidosis|\bDKA\b|hospital-associated deconditioning|neutropenic sepsis/,
+   focus:"After acute medical illness: orthostasis and muscle loss dominate. Sit and walk first; strength second; never boom-and-bust.",
+   add:[{p:1,n:"Edge-of-bed sitting tolerance",d:"build minutes",c:"Rise slowly",tags:["balance"]},
+        {p:2,n:"Short supervised hallway walks",d:"3–5 bouts",c:"Minutes before speed",tags:["weight_bearing","aerobic"]},
+        {p:3,n:"Sit-to-stand strength practice",d:"3×8–10",c:"",tags:["weight_bearing"]}]},
+  {re:/polytrauma|major trauma|pelvic fracture|acetabular fracture|fragility hip fracture|flail chest|open fracture/,
+   focus:"Polytrauma: obey every weight-bearing and spinal order. Mobilise unrestricted joints aggressively; protect the rest.",
+   add:[{p:1,n:"ROM of all unrestricted joints",d:"2–3× daily",c:"Prevent avoidable stiffness"},
+        {p:1,n:"Incentive spirometry / deep breathing if chest trauma",d:"hourly while awake",c:"Never breath-hold against a closed glottis"},
+        {p:2,n:"Transfers within WB orders only",d:"per team",c:"",tags:["weight_bearing"]}]},
+  {re:/major burn|full-thickness burn|TBSA|post-burn|electrical burn|chemical burn|hand burn \(acute\)/,
+   focus:"Burns: ROM little-and-often prevents contracture. Position against the expected deformity; only massage closed skin as taught.",
+   add:[{p:1,n:"Positioning to oppose contracture",d:"ongoing",c:"Flexor surfaces want to tighten"},
+        {p:1,n:"Gentle ROM of burned joints",d:"several × day",c:"Coordinate with dressing/pain plan"},
+        {p:3,n:"Sustained stretch into restricted planes",d:"daily",c:"Once skin allows"}]},
+  {re:/pulmonary embolism|\bPE\b recovery|post-pulmonary-embolism|right-heart strain/,
+   focus:"PE recovery: walk as cleared once stable and anticoagulated; rebuild endurance gradually; avoid high fall-risk sport on blood thinners.",
+   add:[{p:1,n:"Short graded walks as cleared",d:"several × day",c:"Stop for new chest pain or syncope",tags:["aerobic","weight_bearing"]},
+        {p:2,n:"Walking endurance build",d:"15–25 min",c:"",tags:["aerobic"]},
+        {p:3,n:"Light whole-body strength",d:"2×12",c:"Exhale on effort"}]},
+  {re:/community-acquired pneumonia|hospital-acquired pneumonia|aspiration pneumonia|COPD acute exacerbation|ARDS recovery \(post-ICU\)|pneumothorax \(post-chest/,
+   focus:"Post-pneumonia/COPD flare/ARDS: breathing strategies plus interval walking; breathlessness on exertion is expected while capacity returns.",
+   add:[{p:1,n:"Pursed-lip breathing practice",d:"several × day",c:"Control breathlessness"},
+        {p:1,n:"Short walk/rest intervals",d:"5–10 min total",c:"",tags:["aerobic"]},
+        {p:3,n:"Continuous walking build",d:"15–25 min",c:"",tags:["aerobic"]}]}
 ];
 /* Prefer the most specific match. A non-generic diagnosis always beats a
    generic catch-all (tendinopathy, fracture, OA, sprain, strain, bursitis…);
@@ -2243,11 +2323,19 @@ function matchedSportDemands(){
 }
 function sportFor(phaseIdx){
   const p = phaseIdx+1;
+  /* Cardiac, sternal, critical offload, HCM/aortopathy: do not inject impact/HIIT
+     sport tails — contraindications already strip tags, but empty late phases then
+     backfill with generic SAFE_SUBS. Skip the inject so the core pathway stays coherent. */
+  const fl = new Set(gatherFlags());
+  const noSportImpact = ["cardiac","sternal_precautions","critical_offload","hcm","aortopathy","cardiac_icd","cardiac_lvad","red_flags_urgent"]
+    .some(f => fl.has(f));
   const picked = []; const seen = new Set();
   for(const d of matchedSportDemands())
     (d.add||[]).filter(a=>a.p===p).forEach(a=>{
+      const tags = a.tags||[];
+      if(noSportImpact && tags.some(t => t==="impact" || t==="high_intensity")) return;
       const k=a.n.toLowerCase();
-      if(!seen.has(k)){ seen.add(k); picked.push({ n:a.n, d:a.d, c:a.c, tags:a.tags||[], sig:true, sport:true }); }
+      if(!seen.has(k)){ seen.add(k); picked.push({ n:a.n, d:a.d, c:a.c, tags, sig:true, sport:true }); }
     });
   return picked.slice(0,3);   // cap sport additions per phase
 }
@@ -2676,9 +2764,9 @@ const REHAB_PLANS = [
       ["Nerve gliding & ergonomics",3,6,"Restore nerve mobility and reduce provocation.","numbness reducing during the day, comfortable with daily tasks","Nerve glides should not increase symptoms — gentle is the rule."],
       ["Strength & function",6,9,"Rebuild grip and pinch strength.","grip/pinch improving, minimal daytime symptoms","Progress loading as symptoms allow."],
       ["Return to full use",9,12,"Restore full hand function.","symptoms settled, strength near-normal","Constant numbness, weakness or muscle wasting warrants a surgical opinion — decompression is very effective."]] },
-  { re:/stroke|\bcva\b|cerebrovascular accident|hemipleg|hemipar/, label:"Stroke rehabilitation", total:52,
+  { re:/stroke|\bcva\b|cerebrovascular accident|hemipleg|hemipar|post-thrombectomy|post-thrombolysis|intracerebral hemorrhage|\bICH\b|subarachnoid|\bSAH\b|malignant MCA/, label:"Stroke rehabilitation", total:52,
     freq:"Little and often, every day — repetition drives recovery",
-    note:"Recovery is fastest in the first 3 months but continues for years — the brain stays plastic. Intensity and repetition are what drive change: high-repetition, task-specific practice beats passive treatment.",
+    note:"Recovery is fastest in the first 3 months but continues for years — the brain stays plastic. Intensity and repetition are what drive change: high-repetition, task-specific practice beats passive treatment. After ICH/SAH, blood-pressure and neurosurgical limits still apply early.",
     variants:[
       { k:"mild", label:"Mild", sub:"Walking independently, mild weakness", scale:0.5,
         note:"Milder strokes progress faster — push intensity and dose, and target the specific tasks and fine control you want back." },
@@ -2686,12 +2774,98 @@ const REHAB_PLANS = [
       { k:"severe", label:"Severe", sub:"Dependent for transfers/mobility", scale:1.5,
         note:"With severe stroke the early focus is safe transfers, positioning, preventing complications (shoulder pain, contracture, pressure areas) and carer training, alongside task practice." },
       { k:"posterior", label:"Cerebellar / balance-dominant", sub:"Ataxia and coordination rather than weakness", scale:1.2,
-        note:"Cerebellar strokes present with ataxia and coordination loss rather than weakness — balance, coordination and gaze/vestibular work take priority over strengthening." }],
+        note:"Cerebellar strokes present with ataxia and coordination loss rather than weakness — balance, coordination and gaze/vestibular work take priority over strengthening." },
+      { k:"hemorrhage", label:"ICH / SAH", sub:"Bleeding stroke — slower early load", pick:/hemorrhag|ICH|SAH|subarachnoid|intracerebral/, scale:1.25,
+        note:"After brain hemorrhage, early goals are safe BP, ICP/neurosurgical precautions, and complication prevention; task practice builds as the team lifts restrictions." }],
     ph:[
       ["Early rehabilitation",0,4,"Safe mobility and transfers; start task practice early.","safe transfers and sitting balance, beginning task-specific practice","Falls risk is high — work with your team. Protect a weak/subluxed shoulder; support it and avoid pulling on the arm."],
       ["Intensive task-specific practice",4,12,"High-repetition practice of the tasks you need.","improving sitting/standing balance, walking with the least support you safely can, using the affected arm in tasks","Repetition matters — aim for many quality repetitions. Avoid over-using the good side only ('learned non-use')."],
       ["Strength, walking & arm function",12,26,"Build strength, walking capacity and hand/arm function.","walking further and more independently, improving arm/hand use in daily tasks","Keep pushing task-specific practice; spasticity and fatigue need managing alongside."],
       ["Community reintegration & maintenance",26,52,"Restore community mobility, endurance and daily roles.","independent or assisted community mobility, meaningful daily activity","Recovery continues well past a year — keep training. Manage stroke risk factors (BP, lipids, AF, diabetes) as a priority."]] },
+  { re:/guillain|miller fisher|\bAIDP\b|\bAMAN\b|acute flaccid|critical illness (polyneuropathy|myopathy|polyneuromyopathy)|\bCIPNM\b|ICU-acquired weakness|post-ICU syndrome/, label:"Acute neuromuscular / ICU-acquired weakness", total:39,
+    freq:"Short frequent sessions — never to exhaustion",
+    note:"GBS and ICU-acquired weakness recover proximal-to-distal over months. Overwork can set recovery back; sub-fatigue dosing and respiratory vigilance are the rules.",
+    variants:[
+      { k:"gbs", label:"Guillain-Barré", sub:"Post-infectious demyelinating/axonal", pick:/guillain|miller fisher|AIDP|AMAN/, scale:1 },
+      { k:"icu", label:"ICU-acquired weakness", sub:"After critical illness / ventilation", pick:/ICU|critical illness|CIPNM|post-ICU|ARDS/, scale:1.1,
+        note:"Expect orthostatic intolerance and profound fatigue after prolonged bed rest — rebuild sitting and standing tolerance before ambitious walking goals." }],
+    ph:[
+      ["Protect & activate",0,4,"Prevent contracture; gentle activation; respiratory care.","full passive range maintained, beginning active movement, stable breathing","Do NOT exercise to failure. Report increasing breathlessness or weak cough."],
+      ["Upright tolerance & transfers",4,12,"Sit, stand and transfer with graded help.","sitting tolerance improving, assisted transfers safer","Blood pressure may drop on sitting — rise slowly."],
+      ["Strength & gait rebuilding",12,26,"Progressive strength and walking practice.","increasing distance with aids as needed, strength trending up","Still sub-fatigue; next-day collapse means you did too much."],
+      ["Community & roles",26,39,"Community mobility and graded return to roles.","community distances, fatigue managed","Full recovery can take a year or more — consistency beats intensity."]] },
+  { re:/myasthen|Lambert-Eaton|myasthenic crisis/, label:"Myasthenia gravis rehabilitation", total:26,
+    freq:"Short bouts with rests — stop at first true fatigue",
+    note:"Myasthenia is a fatigable neuromuscular junction disorder. Exercise helps when dosed below exhaustion; crises with breathing or swallowing failure are emergencies.",
+    ph:[
+      ["Pacing & baseline",0,2,"Learn energy envelope; very light activation.","understand rest-before-failure rule, stable breathing/swallowing","Coordinate sessions with medication timing if advised."],
+      ["Graded functional strength",2,8,"Short strength and walking bouts.","daily tasks easier without next-day crash","Stop if speech softens, eyelids drop more, or breathing feels harder."],
+      ["Capacity building",8,16,"Build sustainable strength and aerobic minutes.","tolerating planned sessions most days","Avoid heat and untreated infection — both worsen MG."],
+      ["Maintenance",16,26,"Lifelong paced activity.","stable function, clear crisis action plan","Seek urgent care for rapid weakness, choking, or respiratory distress."]] },
+  { re:/spinal cord injury|\bSCI\b|tetrapleg|parapleg|central cord|autonomic dysreflex/, label:"Spinal cord injury rehabilitation", total:52,
+    freq:"Daily ROM + strength; pressure care every sitting session",
+    note:"SCI rehab is systems-based: respiratory care, skin, bowel/bladder, orthostasis, and — at ~T6 and above — autonomic dysreflexia recognition. Strength and skill practice are lifelong.",
+    variants:[
+      { k:"tetra", label:"Tetraplegia / cervical", sub:"Arm and trunk involvement", pick:/C[1-8]|tetrapleg|cervical/, scale:1.2 },
+      { k:"para", label:"Paraplegia / thoracic-lumbar", sub:"Legs and trunk as level allows", pick:/T[1-9]|T1[0-2]|L[1-5]|parapleg/, scale:1 },
+      { k:"incomplete", label:"Incomplete", sub:"Some motor/sensory sparing", pick:/incomplete|ASIA [CD]/, scale:0.9 }],
+    ph:[
+      ["Acute protection & early mobility",0,4,"Respiratory care, ROM, pressure relief, sit as cleared.","stable breathing, skin intact, beginning upright tolerance","Know AD signs if injury ~T6+. Never ignore pounding headache + high BP."],
+      ["Transfers & equipment skills",4,12,"Bed, chair, wheelchair or gait as level allows.","safer transfers, equipment skills progressing","Protect shoulders — they are your long-term 'legs' if you roll."],
+      ["Strength, endurance & skills",12,26,"Build available strength and community skills.","increasing independence in daily tasks","Continue skin checks and spasticity management."],
+      ["Community & health maintenance",26,52,"Community mobility and lifelong health.","participation goals advancing","AD education, bone health, and cardiovascular fitness are ongoing."]] },
+  { re:/delirium|encephalopath|hypoxic-ischemic|anoxic brain|Wernicke|status epileptic|post-ictal|meningitis|encephalitis|PRES\b/, label:"Encephalopathy / delirium recovery", total:20,
+    freq:"Short frequent supervised sessions",
+    note:"Cognition, sleep-wake cycle, and safety drive the early plan. Fix reversible causes (infection, meds, sensory aids, electrolytes) while rebuilding mobility with close supervision.",
+    ph:[
+      ["Safety & reorientation",0,2,"Supervised mobility; reorientation; sleep-wake routine.","safer transfers with help, less agitation or more alertness","Never leave a delirious person to walk alone."],
+      ["Rebuild upright tolerance",2,6,"Sit, stand, short walks with supervision.","increasing awake sitting and walking minutes","Orthostasis and deconditioning are expected after acute illness."],
+      ["Strength & dual-task",6,12,"Strength and simple cognitive-motor practice.","safer independent or assisted mobility","Keep sessions short; fatigue worsens confusion."],
+      ["Community & roles",12,20,"Graded independence and role return.","family/carers confident with the plan","Recovery can fluctuate — escalate for new neurological deficits."]] },
+  { re:/\bsepsis\b|septic shock|bacteraemia|acute kidney injury|\bAKI\b|diabetic ketoacidosis|\bDKA\b|hyperosmolar|GI bleed|acute pancreatitis|hospital-associated deconditioning|frailty crisis|neutropenic sepsis/, label:"Acute medical illness recovery", total:16,
+    freq:"Short frequent sessions most days",
+    note:"After serious medical illness the body is catabolic: muscle loss, orthostasis and fatigue dominate. Rebuild sitting and walking tolerance first; full strength often takes months.",
+    variants:[
+      { k:"sepsis", label:"Post-sepsis", sub:"Including septic shock step-down", pick:/sepsis|septic|bacteraemia|neutropenic/, scale:1.2,
+        note:"Post-sepsis syndrome includes fatigue and cognitive fog — grade activity for months, not days." },
+      { k:"metabolic", label:"Metabolic crisis", sub:"DKA, HHS, electrolyte", pick:/ketoacidosis|DKA|hyperosmolar|hyponatr/, scale:1 }],
+    ph:[
+      ["Protect & upright",0,2,"Bed mobility, sitting, prevent complications.","sitting tolerance improving, skin intact","Rise slowly; report chest pain, new confusion or fever."],
+      ["Ward mobility",2,6,"Hallway walks and light strength.","walking short distances most days","Sub-fatigue dosing."],
+      ["Capacity rebuild",6,12,"Distance and strength 2–3×/week.","stairs or community distances progressing","Expect setbacks if infection returns."],
+      ["Home & roles",12,16,"Graded return to life roles.","sustainable weekly activity","Keep a long-term walking habit."]] },
+  { re:/polytrauma|major trauma|pelvic (ring )?fracture|acetabular fracture|multi-system|blast injury|gunshot wound extremity|open fracture|fragility hip fracture|flail chest/, label:"Major trauma / polytrauma recovery", total:26,
+    freq:"As allowed by each injury’s orders — often daily ROM of free joints",
+    note:"Multiple injuries heal on different clocks. Weight-bearing, spinal and wound rules from the trauma team override any generic timeline.",
+    ph:[
+      ["Orders & protection",0,4,"Obey WB/spinal orders; move unrestricted joints.","clear understanding of every restriction","Never guess weight-bearing."],
+      ["Protected mobility",4,10,"Transfers and gait within orders.","safer transfers, progressing as ortho allows","Coordinate multi-team clearances."],
+      ["Rebuild capacity",10,18,"Strength and distance as fractures allow.","functional independence rising","Impact only when all relevant bones are cleared."],
+      ["Community return",18,26,"Roles, work and sport only when cleared by all teams.","community mobility",""]] },
+  { re:/major burn|full-thickness burn|partial-thickness burn|TBSA|inhalation injury with cutaneous|post-burn ICU|electrical burn|chemical burn/, label:"Major burn rehabilitation", total:39,
+    freq:"ROM several times daily — contracture prevention is the medicine",
+    note:"Burns want to contract. Positioning and frequent ROM decide long-term function; infection control and graft protection shape early limits.",
+    ph:[
+      ["Position & ROM",0,3,"Oppose expected contracture; little-and-often ROM.","range maintained at dressing changes","Coordinate with pain plan; only massage closed skin as taught."],
+      ["Graft protection & function",3,8,"Protect grafts; progressive active ROM and early function.","grafts stable, active ROM improving","Watch for infection signs."],
+      ["Stretch & strength",8,20,"Sustained stretch into restricted planes; strengthen new range.","functional range for ADLs","Peak scar tightness can arrive months later."],
+      ["Long-term scar & activity",20,39,"Maintenance stretch, pressure garments, graded activity.","participation goals advancing","Sun protection and lifelong stretch habits."]] },
+  { re:/pulmonary embolism|\bPE\b recovery|post-pulmonary-embolism|post-thrombolysis PE|right-heart strain/, label:"Pulmonary embolism recovery", total:12,
+    freq:"Walking most days once stable and anticoagulated",
+    note:"After PE, early mobilisation is usually encouraged when the team says you are stable on anticoagulation. Breathlessness often improves over weeks; contact/high-fall-risk sport waits while you are anticoagulated.",
+    ph:[
+      ["Stabilise & start walking",0,2,"Short walks as cleared; anticoagulation education.","comfortable short walks, understanding clot warning signs","STOP for new chest pain, haemoptysis, sudden breathlessness or syncope."],
+      ["Build endurance",2,6,"Progress walking minutes.","20–30 min continuous walking","Stay on blood thinners as prescribed."],
+      ["Strength & confidence",6,10,"Add light resistance; balance if falls risk.","daily function restored","Avoid contact collision while anticoagulated."],
+      ["Maintenance",10,12,"Heart-lung fitness habit.","sustained activity most days","Report recurrent PE symptoms urgently."]] },
+  { re:/community-acquired pneumonia|hospital-acquired pneumonia|aspiration pneumonia|COPD acute exacerbation|ARDS recovery|pneumothorax \(post-chest|empyema \(post-drainage|acute respiratory failure/, label:"Acute respiratory illness recovery", total:12,
+    freq:"Breathing exercises daily + progressive walking",
+    note:"After hospitalised pneumonia, COPD flare or ARDS, breathlessness on exertion is expected while you rebuild. Pursed-lip breathing and interval walking help.",
+    ph:[
+      ["Airway & short walks",0,2,"Breathing control; very short walks.","using breathing strategies, short walks with rests","Use oxygen/inhalers as prescribed."],
+      ["Endurance intervals",2,6,"Walk/rest intervals building distance.","longer continuous walks","Breathlessness 3–4/10 during work is often acceptable if it settles."],
+      ["Strength & stairs",6,10,"Light resistance and stair practice.","daily tasks easier",""],
+      ["Maintenance",10,12,"Pulmonary rehab habits.","sustained activity","Seek care for fever with coloured sputum or resting breathlessness."]] },
   { re:/myocardial infarction|heart attack|\bcabg\b|coronary artery bypass|\bpci\b|coronary stent|angioplasty|acute coronary|angina|cardiac rehab|heart failure|cardiomyopath|\bhfref\b|\bhfpef\b|valve (repair|replacement)/, label:"Cardiac rehabilitation", total:26,
     freq:"Aerobic exercise most days (aim ≥150 min/week) + resistance 2–3×/week",
     note:"Cardiac rehab reduces cardiovascular mortality and re-hospitalisation — it's one of the most effective things you can do. Programmes are supervised and progress by symptoms and perceived exertion, not just heart rate (especially on beta-blockers).",
@@ -3201,7 +3375,8 @@ function tissueClass(item){
   if(/fracture|stress reaction|osteotomy|fusion|arthrodesis|\bbone\b/.test(t))              return "bone";
   if(/strain|muscle tear|hamstring|calf tear|quad(riceps)? tear|\bmyo/.test(t))             return "muscle";
   if(/acl|pcl|mcl|lcl|ligament|sprain|instabilit|reconstruction|labr|rotator cuff|repair/.test(t)) return "ligament";
-  if(/stroke|neuro|parkinson|spinal cord|\bsci\b|palsy|guillain|multiple sclerosis|neuropath/.test(t)) return "nerve";
+  if(/stroke|neuro|parkinson|spinal cord|\bsci\b|palsy|guillain|multiple sclerosis|neuropath|myasthen|encephalopath|delirium|ICU-acquired|critical illness|hypoxic-ischemic|anoxic/.test(t)) return "nerve";
+  if(/\bsepsis\b|septic|acute kidney|\bAKI\b|ketoacidosis|polytrauma|major trauma|major burn|pulmonary embolism|\bPE\b recovery|pneumonia \(hospital|ARDS recovery/.test(t)) return "general";
   return "general";
 }
 /* One rung per phase-stage (protect → load → build → return). Indexed by the current

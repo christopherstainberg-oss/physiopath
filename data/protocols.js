@@ -96,23 +96,48 @@
      E("Cutting drills (45° → 90° angles)","3×6 each side","Brake, plant, push off — knee over foot",T.impact,T.highInt)]
   ];
 
+  /* THA: mid-range ROM that already respects ~90° / no midline-cross is NOT tagged
+     deepHipFlex/hipAddIR — those tags mean "this move tends to violate precautions" and
+     would strip the core early program when hip_replacement flag is on. True end-range
+     deep squats / crossing midline keep the avoid tags. Confirm approach with surgeon. */
   P.hip_replacement = [
-    [E("Ankle pumps","3×20","Circulation & clot prevention"),
-     E("Glute & quad sets","3×12","Gentle isometrics"),
-     E("Heel slides (within precautions)","3×10","Do NOT bend hip past 90°",T.deepHipFlex),
-     E("Standing hip abduction (supported)","3×10","Hold a rail",T.balance)],
-    [E("Seated knee extensions","3×12","Rebuild quad"),
-     E("Standing hip extension","3×12","Squeeze glute",T.ext),
-     E("Mini squats (shallow)","3×10","Stay above 90° hip flexion",T.deepHipFlex),
-     E("Weight shifts / gait practice","3×1 min","Even steps",T.wb,T.balance)],
-    [E("Sit-to-stand","3×10","Controlled, use hands less over time",T.wb),
+    [E("Ankle pumps","3×20","Circulation & clot prevention — early mobility lowers clot risk"),
+     E("Glute & quad sets","3×12","Gentle isometrics — switch muscles on without stressing the new joint"),
+     E("Heel slides (within precautions)","3×10","Slide heel toward you only to a comfortable bend — typically stay above ~90° hip flexion unless your surgeon cleared more"),
+     E("Standing hip abduction (supported)","3×10","Hold a rail; lead with the heel — do not cross the midline",T.balance)],
+    [E("Seated knee extensions","3×12","Rebuild quad for walking control"),
+     E("Standing hip extension","3×12","Squeeze glute — small range",T.ext),
+     E("Mini squats (shallow)","3×10","Sit back lightly; keep hips higher than knees so you stay above ~90° flexion",T.wb),
+     E("Weight shifts / gait practice","3×1 min","Even steps; use the aid your team set",T.wb,T.balance)],
+    [E("Sit-to-stand","3×10","Controlled, use hands less over time — scoot forward rather than deep hip bend",T.wb),
      E("Step-ups (low)","3×10 each","Lead with operated leg up",T.wb,T.balance),
-     E("Standing abduction (band)","3×15","Do not cross midline",T.hipAddIR),
-     E("Bridges","3×12","Comfortable range")],
-    [E("Progressive squats / lunges","3×10","Within pain-free, precaution-safe range",T.deepHipFlex,T.wb),
+     E("Standing abduction (band)","3×15","Stay open — do not cross midline"),
+     E("Bridges","3×12","Comfortable range; squeeze glutes")],
+    [E("Progressive squats / lunges","3×10","Only within pain-free, precaution-safe range your surgeon allowed",T.wb),
      E("Balance & single-leg stance","3×30s","Near support",T.balance),
-     E("Walking endurance","20–30 min","Build distance",T.wb,T.aerobic),
-     E("Return to low-impact activity","as tolerated","Avoid high impact",T.impact)]
+     E("Walking endurance","20–30 min","Build distance — best early cardio after hip replacement",T.wb,T.aerobic),
+     E("Return to low-impact activity","as tolerated","Swimming/cycling preferred; avoid high impact long-term",T.impact)]
+  ];
+
+  /* Knee OA — exercise is first-line (OARSI/NICE/ACR). Progressive load + aerobic.
+     NOT a TKA pathway: no "operated leg", implant limits, or post-arthroplasty ROM race. */
+  P.knee_oa = [
+    [E("Quad sets","3×12","Tighten the thigh — stronger quads unload the joint",T.wb),
+     E("Heel slides / gentle knee ROM","3×12","Keep the joint moving; stiffness feeds pain"),
+     E("Glute bridges","3×12","Hip strength shares load away from the knee"),
+     E("Easy bike or walk","10–15 min","Low-impact aerobic is medicine for OA",T.aerobic)],
+    [E("Sit-to-stand (chair)","3×10","Use hands less over time; control the lower",T.wb),
+     E("Side-lying hip abduction","3×12 each","Hip abductors protect the medial knee"),
+     E("Mini squats (pain-free depth)","3×12","Knees track over mid-foot",T.wb),
+     E("Walking dose","15–25 min","Build minutes before speed",T.aerobic,T.wb)],
+    [E("Step-ups (low)","3×10 each","Slow tempo; no knee collapse",T.wb,T.balance),
+     E("Sit-to-stand progression","3×12","Lower seat or slower tempo to load more",T.wb),
+     E("Lateral band walks","3×12 steps","Stay low; hips drive the step"),
+     E("Aerobic build (walk/bike/swim)","20–30 min","Most days; joint-friendly cardio",T.aerobic)],
+    [E("Progressive leg strength","3×10","Add load only if next-day pain stays acceptable",T.wb),
+     E("Balance & single-leg control","3×30s","Near support",T.balance),
+     E("Return to valued activity","graded","Match the plan to hiking, work, or sport goals",T.aerobic),
+     E("Long-term OA routine","ongoing","Consistency beats intensity — keep loading the joint",T.aerobic)]
   ];
 
   P.knee_ligament = [
@@ -435,13 +460,14 @@
   ];
 
   P.sci = [
-    [E("Respiratory & breathing exercises","several × day","Protect lung function"),
-     E("Passive/assisted ROM (all joints)","daily","Prevent contractures"),
-     E("Available-muscle activation","3×10","Work what you can, isometrically"),
-     E("Pressure-relief & positioning","every 15–30 min","Protect the skin")],
+    [E("Respiratory & breathing exercises","several × day","Protect lung function — atelectasis risk is high early after cervical/thoracic SCI"),
+     E("Passive/assisted ROM (all joints)","daily","Prevent contractures — especially heel cords, hips, hands"),
+     E("Available-muscle activation","3×10","Work what you can, isometrically — stop well before fatigue"),
+     E("Pressure-relief & positioning","every 15–30 min","Protect the skin — you may not feel a problem developing"),
+     E("Autonomic dysreflexia awareness (injury ~T6 and above)","every session","Sudden pounding headache, flushing, sweating above the level, high BP = sit up, loosen clothes, check bladder/bowel/skin, get urgent help")],
     [E("Seated balance training","3×30s","Near support",T.balance),
      E("Upper-body strengthening","3×12","Prepare for transfers/wheelchair",T.grip),
-     E("Transfer practice","per team","Safe technique",T.wb),
+     E("Transfer practice","per team","Safe technique — protect shoulders long-term",T.wb),
      E("Core & trunk control","3×10","Available musculature")],
     [E("Progressive resistance (available muscles)","3×12","Build functional strength",T.grip),
      E("Functional mobility / transfers","per team","Bed, chair, car",T.wb),
@@ -450,7 +476,127 @@
     [E("Advanced functional training","as tolerated","Independence goals",T.balance),
      E("Community reintegration skills","progressive","Ramps, terrain, distance",T.wb),
      E("Adaptive recreation/sport","as tolerated","Options for your level"),
-     E("Maintenance & health program","ongoing","Lifelong fitness")]
+     E("Maintenance & health program","ongoing","Lifelong fitness; know your AD triggers and bowel/bladder routine")]
+  ];
+
+  /* ICU-acquired weakness / critical illness polyneuropathy-myopathy — very common in acute care */
+  P.icu_aw = [
+    [E("Passive & active-assisted ROM (all major joints)","2–3 × day","Prevent contracture while strength is critically low"),
+     E("Bed mobility & positioning with team","several × day","Roll, bridge as able; protect skin and lines"),
+     E("Sitting on edge of bed (as cleared)","build minutes","Orthostatic tolerance — monitor BP/dizziness",T.balance),
+     E("Diaphragmatic breathing & airway clearance","several × day","ICU survivors often have residual respiratory weakness",T.breath)],
+    [E("Sit-to-stand with maximal assistance as needed","3–8 reps","Quality over quantity; rest between",T.wb,T.balance),
+     E("Seated marching & limb activation","3×10","Wake proximal and distal muscles"),
+     E("Supported standing frame / tilt table (per team)","as prescribed","Rebuild upright tolerance",T.wb,T.balance),
+     E("Very light resistance (gravity-eliminated first)","2×8–10","Sub-fatigue — overwork can set CIP/CIM back")],
+    [E("Progressive transfer & gait practice","per team","Aids as needed; short frequent bouts",T.wb,T.balance),
+     E("Strength 2–3×/week (major groups)","2×10–12","Build load only when next-day function holds"),
+     E("Balance near support","3×30s","Falls risk remains high after ICU",T.balance),
+     E("Aerobic intervals (walk/arm erg)","10–15 min total","Paced; stop for unexpected breathlessness",T.aerobic)],
+    [E("Community mobility & stairs (as able)","progressive","Real distances with rest strategy",T.wb),
+     E("Whole-body strength maintenance","2–3×/week","ICU-AW recovery can take 6–12+ months"),
+     E("Fatigue & pacing plan","ongoing","Boom-and-bust is common after critical illness"),
+     E("Return to roles / work graded","as tolerated","Coordinate with rehab team")]
+  ];
+
+  /* Myasthenia gravis / neuromuscular junction — sub-fatigue, respiratory vigilance */
+  P.myasthenia = [
+    [E("Energy pacing & activity diary","daily","Plan hard tasks when strongest; rest before exhaustion"),
+     E("Gentle ROM & posture","3×10","Keep mobility without forcing end-range"),
+     E("Breathing awareness & rest positions","several × day","Report increasing breathlessness, weak voice, or drooping eyelids urgently"),
+     E("Very light activation of weak muscle groups","2×5–8","Stop at first true fatigue — not 'push through'")],
+    [E("Short strength bouts (many rest breaks)","2×6–10","Prefer mornings/'on' periods after meds if timed"),
+     E("Supported balance & transfers","3×20–30s","Near support",T.balance),
+     E("Seated aerobic (arm/leg erg) short bouts","5–10 min","Conversational; stop early if speech softens",T.aerobic),
+     E("Swallow-safe posture education","with SLT as needed","Coordinate with speech therapy if dysphagia")],
+    [E("Progressive functional strength","2–3×8–12","Only if no next-day crash in strength"),
+     E("Walking tolerance (paced)","10–20 min","Rest before you fail",T.aerobic,T.wb),
+     E("Proximal muscle focus (hips, shoulders)","2×8–10","Common MG pattern — still sub-fatigue"),
+     E("Fall-prevention skills","3×30s","Near support",T.balance)],
+    [E("Maintenance program on good days","ongoing","Consistency without overwork"),
+     E("Heat & infection awareness","ongoing","Both can worsen MG — cool environment, seek care if unwell"),
+     E("Role-specific graded return","as tolerated","Team-guided"),
+     E("Emergency action knowledge","ongoing","Crisis signs: rapid weakness, breathing/swallowing trouble — urgent care")]
+  ];
+
+  /* Medical-ward acute illness (sepsis, AKI, DKA, hospital deconditioning) */
+  P.acute_medical = [
+    [E("Bed mobility & frequent position changes","several × day","Prevent pressure injury and stiffness while still weak"),
+     E("Passive to active-assisted ROM","2–3 × day","Keep joints moving during acute illness"),
+     E("Sitting on edge of bed / chair (as cleared)","build minutes","Orthostatic tolerance after bed rest",T.balance),
+     E("Breathing & airway clearance as needed","several × day","Illness often leaves residual breathlessness",T.breath)],
+    [E("Sit-to-stand with help as needed","3–8 reps","Short bouts; rest between",T.wb,T.balance),
+     E("Short supervised hallway walks","3–5 bouts","Build minutes before speed",T.wb,T.aerobic),
+     E("Light limb strengthening (seated/standing)","2×8–10","Sub-fatigue — you are still recovering from systemic illness"),
+     E("Balance near support","3×20–30s","Falls risk is high after acute illness",T.balance)],
+    [E("Progressive walking distance","build daily","Most days if stable",T.wb,T.aerobic),
+     E("Sit-to-stand & step practice","3×10", "",T.wb,T.balance),
+     E("Whole-body light resistance","2×10–12","Rebuild what bed rest took"),
+     E("Stair practice when safe","per team", "",T.wb,T.balance)],
+    [E("Community / home mobility graded return","progressive","Pace energy for weeks after discharge",T.aerobic),
+     E("Strength 2–3×/week maintenance","2–3×10","Hospitalisation can cost months of muscle"),
+     E("Fatigue & pacing plan","ongoing","Boom-and-bust is common after sepsis/critical illness"),
+     E("Long-term activity habit","ongoing","Walking and strength cut readmission risk",T.aerobic)]
+  ];
+
+  /* Polytrauma / major multi-system trauma — protect orders, mobilise what is allowed */
+  P.polytrauma = [
+    [E("Follow every weight-bearing & spinal/limb order exactly","per team","Different bones/organs heal on different clocks",T.wb),
+     E("ROM of unrestricted joints","2–3 × day","Prevent stiffness in the parts you CAN move"),
+     E("Respiratory care & incentive spirometry if chest involved","several × day","Trauma patients get atelectasis easily",T.breath),
+     E("Protected bed mobility / log-roll as ordered","per team","Spine and pelvic rules override enthusiasm")],
+    [E("Sitting tolerance as cleared","build minutes","Monitor BP, pain, drains/lines",T.balance),
+     E("Transfer practice within precautions","per team","",T.wb),
+     E("Strength for unrestricted limbs","2×10","Keep the healthy chain strong"),
+     E("Short walks only if WB status allows","as ordered","",T.wb,T.aerobic)],
+    [E("Progressive gait / wheelchair mobility per orders","per team","",T.wb,T.balance),
+     E("Multi-limb strengthening as fractures allow","2–3×10","Coordinate with ortho timelines"),
+     E("Balance & confidence near support","3×30s","",T.balance),
+     E("ADL practice with adaptive strategies","daily","OT-aligned task practice")],
+    [E("Community mobility graded","progressive","",T.wb),
+     E("Return-to-work/drive only when all teams clear","as cleared","Multiple specialists may need to agree"),
+     E("Scar, swelling & pain self-management","ongoing",""),
+     E("Long-term strength & bone health","ongoing","Trauma recovery is months, not weeks",T.aerobic)]
+  ];
+
+  /* Major burns — ROM is survival of function; infection and contracture rules */
+  P.burn = [
+    [E("Positioning to oppose expected contracture","ongoing","Burned flexor surfaces want to tighten — position against that"),
+     E("Gentle ROM of burned and nearby joints","several × day","Little and often; coordinate with dressing pain plan"),
+     E("Edema elevation & hand pumps if involved","several × day","Swelling steals range"),
+     E("Respiratory care if inhalation injury","as prescribed","",T.breath)],
+    [E("Active-assisted ROM progressing to active","3× daily","Hold end-range gently as skin allows"),
+     E("Functional hand/ADL practice if UE burn","3×10","Early function reduces disability"),
+     E("Standing / walking as medical status allows","short bouts","",T.wb,T.aerobic),
+     E("Scar massage once healed / permitted","as taught","Only on closed skin per team")],
+    [E("Progressive stretching into restricted planes","daily","Contracture prevention is months long"),
+     E("Strength through new range","2×10–12","Range you cannot control, you lose"),
+     E("Aerobic reconditioning","15–25 min","Build capacity after catabolic illness",T.aerobic),
+     E("Pressure garment adherence (if prescribed)","daily","Part of the rehab, not optional")],
+    [E("Advanced mobility & work/sport adaptation","progressive","",T.wb),
+     E("Long-term scar & stretch maintenance","ongoing","Peak scar tightness often months post-burn"),
+     E("Psychosocial pacing & graded exposure","ongoing","Pain and fear of movement are common"),
+     E("Lifelong skin care & sun protection","daily","")]
+  ];
+
+  /* Acute encephalopathy / delirium / HIE step-down — orientation, safety, graded mobility */
+  P.encephalopathy = [
+    [E("Reorientation & simple command practice","several × day","Name, place, task — calm, consistent cues"),
+     E("Protected bed mobility & transfers with supervision","per team","Delirium = high fall and line-pull risk",T.balance),
+     E("Gentle ROM all limbs","2–3 × day","Prevent deconditioning and contracture"),
+     E("Day–night routine & early sitting","build minutes","Light by day, quiet at night supports recovery",T.balance)],
+    [E("Sit-to-stand and short supervised walks","3–5 short bouts","Always supervised until cognition/safety clear",T.wb,T.balance),
+     E("Simple dual-task (walk + name objects)","3×1 min","Only when safe standing",T.balance),
+     E("Light strength (sit-to-stand, bridges)","2×8–10","Sub-fatigue",T.wb),
+     E("Hydration, nutrition, glasses/hearing aids","daily","Fix reversible delirium drivers")],
+    [E("Progressive walking distance","build daily","Quality and safety over speed",T.wb,T.aerobic),
+     E("Balance near support","3×30s","",T.balance),
+     E("Cognitive-motor practice (therapy homework)","daily","Short, frequent sessions beat long exhausting ones"),
+     E("Stair/curb practice when cleared","per team","",T.wb,T.balance)],
+    [E("Community mobility with graded independence","progressive","",T.wb),
+     E("Return-to-activity & fatigue management","ongoing","HIE/delirium recovery is often non-linear"),
+     E("Caregiver education (safety & pacing)","ongoing","Same messages at home as in hospital"),
+     E("Long-term fitness habit","ongoing","Walking and strength protect against re-hospitalisation",T.aerobic)]
   ];
 
   P.ms = [
@@ -568,40 +714,42 @@
   ];
 
   /* ================= CARDIAC PROTOCOLS ================= */
+  /* high_intensity is reserved for true HIIT / maximal effort — never moderate RPE 11–13
+     aerobic, or cardiac/pulm patients lose their core program to their own flags. */
   P.cardiac_rehab = [
-    [E("Warm-up: easy walking / marching","5–10 min","RPE 9–11 (very light)",T.aerobic),
+    [E("Warm-up: easy walking / marching","5–10 min","RPE 9–11 (very light) — warm tissue and heart rate gradually",T.aerobic),
      E("Light rhythmic movement","10 min","Talk-test: able to chat",T.aerobic),
-     E("Diaphragmatic breathing","3×1 min","No breath-holding"),
-     E("Gentle mobility","3×10","Loosen up — avoid straining",T.grip)],
-    [E("Continuous aerobic (walk/bike)","15–20 min","RPE 11–13 (light–moderate)",T.aerobic,T.highInt),
-     E("Light resistance (bands/light db)","1–2×12–15","Exhale on effort, no straining",T.grip,T.valsalva),
-     E("Cool-down walk","5 min","Gradually lower HR",T.aerobic),
-     E("Symptom monitoring","every session","Stop for chest pain/dizziness")],
-    [E("Interval aerobic (as prescribed)","20–30 min","Within your target HR/RPE",T.aerobic,T.highInt),
-     E("Whole-body resistance circuit","2×12–15","Moderate, controlled breathing",T.grip,T.valsalva),
+     E("Diaphragmatic breathing","3×1 min","No breath-holding — breath-holds spike blood pressure"),
+     E("Gentle mobility","3×10","Loosen up — exhale on any effort")],
+    [E("Continuous aerobic (walk/bike)","15–20 min","RPE 11–13 (light–moderate) — the backbone of cardiac rehab",T.aerobic),
+     E("Light resistance (bands/light db)","1–2×12–15","Exhale on effort; never hold breath or strain",T.aerobic),
+     E("Cool-down walk","5 min","Gradually lower HR — abrupt stops can cause dizziness",T.aerobic),
+     E("Symptom monitoring","every session","Stop for chest pain, unusual breathlessness, palpitations, or dizziness")],
+    [E("Interval aerobic (as prescribed)","20–30 min","Within your target HR/RPE — only as your program allows",T.aerobic),
+     E("Whole-body resistance circuit","2×12–15","Moderate, controlled breathing — no maximal holds"),
      E("Functional endurance","10 min","Stairs, hills as cleared",T.wb,T.aerobic),
      E("Flexibility & cool-down","10 min","Relax, breathe")],
-    [E("Progressive aerobic conditioning","30–40 min","Build duration first, then intensity",T.aerobic,T.highInt),
-     E("Maintenance resistance training","2–3×12–15","Avoid maximal/heavy holds",T.valsalva,T.grip),
+    [E("Progressive aerobic conditioning","30–40 min","Build duration first, then intensity — still conversational early",T.aerobic),
+     E("Maintenance resistance training","2–3×12–15","Avoid maximal/heavy isometric holds",T.valsalva),
      E("Return to activity/hobbies","as cleared","Gradual, monitored",T.aerobic),
-     E("Long-term heart-healthy routine","ongoing","150 min/week goal",T.aerobic)]
+     E("Long-term heart-healthy routine","ongoing","~150 min/week moderate aerobic goal",T.aerobic)]
   ];
 
   P.heart_failure = [
     [E("Very light walking (intervals)","3–5 × 2–3 min","RPE 9–11, rest between",T.aerobic),
      E("Breathing exercises","3×1 min","No breath-holding"),
-     E("Seated mobility / gentle ROM","3×10","Avoid straining",T.grip),
-     E("Daily weight & symptom check","daily","Report rapid weight gain/swelling")],
+     E("Seated mobility / gentle ROM","3×10","Avoid straining"),
+     E("Daily weight & symptom check","daily","Report rapid weight gain/swelling — fluid is a heart-failure signal")],
     [E("Short aerobic bouts (walk/bike)","10–15 min total","RPE 11–12, stay conversational",T.aerobic),
-     E("Light resistance (very light)","1×12–15","Small muscle groups, exhale on effort",T.grip,T.valsalva),
+     E("Light resistance (very light)","1×12–15","Small muscle groups, exhale on effort"),
      E("Balance & standing tolerance","3×30s","Near support",T.balance),
      E("Cool-down & breathing","5 min","Ease down slowly")],
-    [E("Aerobic build (as tolerated)","15–25 min","RPE ≤13, monitor symptoms",T.aerobic,T.highInt),
-     E("Progressive light resistance","1–2×12–15","No heavy loads or holds",T.valsalva,T.grip),
+    [E("Aerobic build (as tolerated)","15–25 min","RPE ≤13, monitor symptoms",T.aerobic),
+     E("Progressive light resistance","1–2×12–15","No heavy loads or breath-holds"),
      E("Functional endurance","10 min","Daily-task tolerance",T.aerobic),
      E("Symptom-guided pacing","every session","Fatigue/breathlessness is the guide")],
-    [E("Maintenance aerobic","20–30 min","Consistent, moderate",T.aerobic,T.highInt),
-     E("Maintenance resistance","2×12–15","Light–moderate only",T.valsalva),
+    [E("Maintenance aerobic","20–30 min","Consistent, moderate",T.aerobic),
+     E("Maintenance resistance","2×12–15","Light–moderate only"),
      E("Energy conservation skills","ongoing","Balance activity & rest"),
      E("Long-term supervised routine","ongoing","Keep in touch with your team",T.aerobic)]
   ];
@@ -612,11 +760,11 @@
      E("Breathing practice","3×1 min","Never hold your breath",T.breath),
      E("Cool-down","5 min","Gradual")],
     [E("Aerobic conditioning","20–30 min","Most days of the week",T.aerobic),
-     E("Light–moderate resistance","2×10–15","Exhale on effort, avoid heavy grip holds",T.grip,T.valsalva),
+     E("Light–moderate resistance","2×10–15","Exhale on effort, avoid heavy grip holds"),
      E("Mobility & stretching","3×30s","Relax"),
      E("Home BP awareness","as advised","Know your numbers")],
     [E("Progressive aerobic","30–40 min","Build steadily",T.aerobic),
-     E("Full-body resistance circuit","2×12–15","Controlled breathing throughout",T.valsalva,T.grip),
+     E("Full-body resistance circuit","2×12–15","Controlled breathing throughout — never hold breath or strain"),
      E("Functional conditioning","10 min","Real-life tasks",T.wb),
      E("Stress-reduction (breathing/yoga)","10 min","Lowers BP too")],
     [E("Aerobic maintenance","150+ min/week","The cornerstone for BP",T.aerobic),
@@ -625,23 +773,66 @@
      E("Long-term routine","ongoing","Consistency lowers BP")]
   ];
 
+  /* PAD: supervised walk-to-moderate-claudication is first-line evidence-based therapy.
+     Do NOT reuse this protocol for DVT/CVI/lymphedema. */
   P.pad = [
-    [E("Walk-to-claudication intervals","walk until moderate leg pain, rest, repeat","30 min total incl. rest",T.aerobic,T.wb),
+    [E("Walk-to-claudication intervals","walk until moderate leg pain, rest, repeat","30 min total incl. rest — this is treatment, not a failed walk",T.aerobic,T.wb),
      E("Ankle pumps & calf work","3×15","Circulation"),
      E("Gentle mobility","3×10","Warm up"),
      E("Foot inspection","daily","Protect skin/circulation")],
-    [E("Structured walking program","30–40 min (with rests)","The key treatment for claudication",T.aerobic,T.wb),
+    [E("Structured walking program","30–40 min (with rests)","Best-evidenced non-invasive therapy for claudication",T.aerobic,T.wb),
      E("Calf raises","3×12","Build lower-leg endurance"),
-     E("Light resistance","2×12","Legs & core",T.grip),
+     E("Light resistance","2×12","Legs & core — exhale on effort"),
      E("Cardio cross-training (bike)","10–15 min","If walking limited",T.aerobic)],
     [E("Progressive walking","40–50 min (with rests)","Increase pain-free distance",T.aerobic,T.wb),
      E("Lower-limb strengthening","3×12","Functional",T.wb),
-     E("Interval conditioning","20 min","As tolerated",T.aerobic,T.highInt),
+     E("Interval conditioning","20 min","As tolerated — still claudication-guided",T.aerobic),
      E("Endurance building","progressive","Extend distance",T.aerobic)],
     [E("Maintenance walking","30+ min most days","Preserve the gains",T.aerobic,T.wb),
      E("Whole-body conditioning","2–3×/week","Strength & cardio",T.aerobic),
      E("Risk-factor lifestyle","ongoing","Circulation health"),
      E("Long-term routine","ongoing","Keep walking",T.aerobic)]
+  ];
+
+  /* Venous rehab (post-DVT / CVI): graded walking + pumps + compression education.
+     NOT walk-into-ischemic-calf-pain (that is PAD). Stop for PE red flags. */
+  P.venous_rehab = [
+    [E("Ankle pumps & calf mobility","3×20","Muscle pump supports venous return"),
+     E("Short graded walks","5–10 min ×2–3/day","Move early as your team allows — not to claudication pain",T.aerobic,T.wb),
+     E("Leg elevation rests","several × day","Above heart level when resting if swelling is an issue"),
+     E("Compression adherence (if prescribed)","daily","Wear as fitted — don't guess tightness")],
+    [E("Walking build","15–25 min","Comfortable pace; stop for new calf swelling/pain or chest symptoms",T.aerobic,T.wb),
+     E("Seated / standing calf raises","3×12","Support the venous pump",T.wb),
+     E("Light whole-body mobility","3×10","Keep deconditioning away"),
+     E("Symptom & medication check","daily","Anticoagulation as prescribed; report unusual bleeding")],
+    [E("Walking endurance","25–40 min","Most days if stable",T.aerobic,T.wb),
+     E("Lower-limb strengthening","3×12","Quads, glutes, calves",T.wb),
+     E("Balance near support","3×30s","Falls matter more on blood thinners",T.balance),
+     E("Bike or pool alternative","15–20 min","If walking limited",T.aerobic)],
+    [E("Maintenance aerobic","30+ min most days","Keep the venous pump working",T.aerobic),
+     E("Strength 2×/week","2×12","Moderate; exhale on effort"),
+     E("Skin & swelling surveillance","ongoing","New unilateral swelling or chest pain = urgent care"),
+     E("Long-term active routine","ongoing","Movement is protective after clot disease",T.aerobic)]
+  ];
+
+  /* Lymphedema: progressive resistance is safe when graded; skin care + compression. */
+  P.lymphedema = [
+    [E("Gentle ROM of the affected limb","3×10","Keep joints moving without forcing girth up"),
+     E("Skin check & hygiene","daily","Breaks in skin raise infection risk"),
+     E("Compression wear (if prescribed)","as fitted","Exercise is safer with prescribed compression on"),
+     E("Diaphragmatic breathing","3×1 min","Calm start; never hold the breath")],
+    [E("Light resistance (very gradual)","1–2×12–15","Build load slowly — sudden spikes can swell the limb"),
+     E("Walking or easy bike","10–20 min","Aerobic supports lymph flow",T.aerobic),
+     E("Scapular / postural work (UE lymph) or hip/core (LE lymph)","3×12","Support the drainage pathways"),
+     E("Limb girth / heaviness check","after sessions","More heaviness next day = do less next time")],
+    [E("Progressive resistance","2×12–15","Evidence supports graded strength — not avoidance"),
+     E("Functional task practice","3×10","Reach, carry, stairs as relevant",T.wb),
+     E("Aerobic build","20–30 min","Most days, moderate",T.aerobic),
+     E("Self-MLD or therapist techniques (if taught)","as advised","Only the sequence you were taught")],
+    [E("Maintenance strength 2–3×/week","2–3×12","Keep the gains without boom-and-bust"),
+     E("Aerobic maintenance","30 min most days","Consistency over intensity",T.aerobic),
+     E("Travel & flare plan","ongoing","Know how to pace if the limb swells"),
+     E("Lifelong skin & compression routine","daily","Infection prevention is part of rehab")]
   ];
 
   /* ================= PULMONARY PROTOCOLS ================= */
@@ -651,14 +842,14 @@
      E("Seated arm & leg movements","3×10","Build base, avoid breath-holding",T.breath),
      E("Airway clearance (if prescribed)","as advised","Huff/cough technique")],
     [E("Walking endurance","10–15 min","Pace with breathing, use O₂ if prescribed",T.aerobic),
-     E("Light resistance (bands)","1–2×10–15","Exhale on effort",T.grip,T.valsalva),
+     E("Light resistance (bands)","1–2×10–15","Exhale on effort — never hold breath"),
      E("Breathing-coordinated exercise","3×10","Sync movement with breath"),
      E("Balance & standing tolerance","3×30s","Near support",T.balance)],
-    [E("Aerobic build (walk/bike)","15–25 min","Interval or continuous, RPE moderate",T.aerobic,T.highInt),
+    [E("Aerobic build (walk/bike)","15–25 min","Interval or continuous, RPE moderate",T.aerobic),
      E("Progressive resistance","2×10–15","Whole body, controlled breathing",T.valsalva),
      E("Functional endurance","10 min","Stairs, carrying — paced",T.wb,T.aerobic),
      E("Breathlessness recovery positions","as needed","Lean forward, relax")],
-    [E("Aerobic maintenance","20–30 min","Most days, paced",T.aerobic,T.highInt),
+    [E("Aerobic maintenance","20–30 min","Most days, paced",T.aerobic),
      E("Maintenance resistance","2×12–15","Light–moderate",T.valsalva),
      E("Energy conservation & pacing","ongoing","Plan activity/rest"),
      E("Long-term active routine","ongoing","Keep lungs & body conditioned",T.aerobic)]
@@ -673,7 +864,7 @@
      E("Light strengthening","2×10–12","Small increments"),
      E("Breathing-pattern retraining","3×1 min","Nose breathing, slow rhythm"),
      E("Symptom/recovery diary","daily","Watch for post-exertional malaise")],
-    [E("Aerobic reconditioning","15–20 min","Only after stable tolerance",T.aerobic,T.highInt),
+    [E("Aerobic reconditioning","15–20 min","Only after stable tolerance",T.aerobic),
      E("Progressive resistance","2×12","Whole body"),
      E("Functional endurance","10 min","Daily tasks",T.aerobic),
      E("Balance if needed","3×30s","Near support",T.balance)],
@@ -693,7 +884,7 @@
      E("Seated & standing balance","3×30s","Near support",T.balance),
      E("Gaze stabilization (if cleared)","3×1 min","For dizziness/visual symptoms"),
      E("Light strengthening","3×12","Whole body, sub-fatigue")],
-    [E("Graded aerobic progression","15–20 min","Raise intensity as tolerance improves",T.aerobic,T.highInt),
+    [E("Graded aerobic progression","15–20 min","Raise intensity as tolerance improves",T.aerobic),
      E("Dynamic balance & coordination","3×30s","Near support",T.balance),
      E("Dual-task drills","3×30s","Move + think",T.balance),
      E("Progressive strengthening","3×12","Functional")],
@@ -729,14 +920,14 @@
      E("Diaphragmatic & deep breathing","3×1 min","Protect lungs, no breath-holding"),
      E("Posture & gentle ROM (within precautions)","3×10","No pushing/pulling/lifting >~5 lb early",T.overhead)],
     [E("Walking intervals","10–15 min","RPE 11–12, conversational",T.aerobic),
-     E("Seated light band work (respect sternum)","1×12–15","No heavy pulling until cleared (~6–8 wks)",T.grip,T.valsalva),
+     E("Seated light band work (respect sternum)","1×12–15","No heavy pulling until cleared (~6–8 wks); exhale on effort"),
      E("Standing balance","3×30s","Near support",T.balance),
      E("Cool-down & breathing","5 min","Ease down")],
-    [E("Continuous aerobic","15–25 min","Within target RPE/HR",T.aerobic,T.highInt),
+    [E("Continuous aerobic","15–25 min","Within target RPE/HR",T.aerobic),
      E("Light resistance (post-precaution)","1–2×12–15","Once sternum has healed & cleared",T.valsalva),
      E("Functional endurance","10 min","Stairs/hills as cleared",T.wb,T.aerobic),
      E("Flexibility","10 min","Relax, breathe")],
-    [E("Progressive aerobic conditioning","30–40 min","Build duration then intensity",T.aerobic,T.highInt),
+    [E("Progressive aerobic conditioning","30–40 min","Build duration then intensity",T.aerobic),
      E("Maintenance resistance","2–3×12–15","Avoid maximal/heavy holds",T.valsalva),
      E("Return to activity/hobbies","as cleared","Gradual, monitored"),
      E("Long-term heart-healthy routine","ongoing","150 min/week goal",T.aerobic)]
@@ -747,15 +938,15 @@
      E("Moderate aerobic","10–15 min","Stay conversational; know your HR limits",T.aerobic),
      E("Breathing practice","3×1 min","No breath-holding"),
      E("Gentle mobility","3×10","Loosen up")],
-    [E("Aerobic conditioning","15–20 min","Keep HR below any prescribed cap",T.aerobic,T.highInt),
-     E("Light resistance","2×12–15","Exhale on effort, avoid maximal holds",T.grip,T.valsalva),
+    [E("Aerobic conditioning","15–20 min","Keep HR below any prescribed cap",T.aerobic),
+     E("Light resistance","2×12–15","Exhale on effort, avoid maximal holds"),
      E("Balance & mobility","3×30s","Near support if needed",T.balance),
      E("Symptom monitoring","every session","Stop for palpitations, dizziness, faintness")],
-    [E("Progressive aerobic","20–30 min","Within HR/RPE limits",T.aerobic,T.highInt),
+    [E("Progressive aerobic","20–30 min","Within HR/RPE limits",T.aerobic),
      E("Whole-body resistance","2×12–15","Controlled breathing",T.valsalva),
      E("Functional endurance","10 min","Daily-task capacity",T.wb),
-     E("Know your device limits","ongoing","Stay below any ICD/pacemaker threshold",T.highInt)],
-    [E("Aerobic maintenance","30+ min most days","Consistent, moderate",T.aerobic,T.highInt),
+     E("Know your device limits","ongoing","Stay below any ICD/pacemaker threshold")],
+    [E("Aerobic maintenance","30+ min most days","Consistent, moderate",T.aerobic),
      E("Maintenance resistance","2–3×12–15","No maximal exertion",T.valsalva),
      E("Active lifestyle","ongoing","Movement throughout the day"),
      E("Long-term monitored routine","ongoing","Keep your care team informed",T.aerobic)]
@@ -768,14 +959,14 @@
      E("Seated limb movements","3×10","Gentle, no breath-holding",T.breath),
      E("Recovery positions","as needed","Lean forward, relax shoulders")],
     [E("Interval walking (SpO₂-guided)","10 min total","Rest to keep saturation up",T.aerobic),
-     E("Light resistance (small muscles)","1×10–12","Exhale on effort",T.grip,T.valsalva),
+     E("Light resistance (small muscles)","1×10–12","Exhale on effort — never hold breath"),
      E("Breathing-coordinated movement","3×10","Sync with breath"),
      E("Balance & standing tolerance","3×30s","Near support",T.balance)],
-    [E("Graded aerobic (monitored)","12–20 min","Keep SpO₂ above your prescribed level",T.aerobic,T.highInt),
+    [E("Graded aerobic (monitored)","12–20 min","Keep SpO₂ above your prescribed level",T.aerobic),
      E("Progressive light resistance","2×10–12","Whole body, paced",T.valsalva),
      E("Functional endurance","8–10 min","Daily tasks, with rests",T.wb,T.aerobic),
      E("Energy conservation","ongoing","Plan activity around rest")],
-    [E("Aerobic maintenance (paced)","20–25 min","Consistency over intensity",T.aerobic,T.highInt),
+    [E("Aerobic maintenance (paced)","20–25 min","Consistency over intensity",T.aerobic),
      E("Maintenance resistance","2×12","Light–moderate",T.valsalva),
      E("Breathlessness self-management","ongoing","Positions, pacing, oxygen"),
      E("Long-term supervised routine","ongoing","Stay linked to pulmonary rehab",T.aerobic)]
@@ -788,13 +979,13 @@
      E("Short walks","5–10 min","Frequent, easy pace",T.aerobic)],
     [E("Walking endurance","10–15 min","Pace with breathing, use O₂ if prescribed",T.aerobic),
      E("Posture & scapular work","3×12","Counter guarding around the incision"),
-     E("Light resistance (respect precautions)","1×12–15","Avoid heavy pushing/pulling early",T.grip,T.valsalva),
+     E("Light resistance (respect precautions)","1×12–15","Avoid heavy pushing/pulling early; exhale on effort"),
      E("Breathing-coordinated movement","3×10","Sync breath with effort")],
-    [E("Aerobic build","15–25 min","Interval or continuous, moderate",T.aerobic,T.highInt),
+    [E("Aerobic build","15–25 min","Interval or continuous, moderate",T.aerobic),
      E("Progressive resistance","2×10–15","Whole body, controlled breathing",T.valsalva),
      E("Full shoulder/thoracic mobility","3×10","Restore range",T.overhead),
      E("Functional endurance","10 min","Stairs, carrying — paced",T.wb,T.aerobic)],
-    [E("Aerobic maintenance","20–30 min","Most days, paced",T.aerobic,T.highInt),
+    [E("Aerobic maintenance","20–30 min","Most days, paced",T.aerobic),
      E("Maintenance resistance","2×12–15","Light–moderate",T.valsalva),
      E("Return to activity/work","as cleared","Gradual, breathing-led"),
      E("Long-term active routine","ongoing","Keep lungs & body conditioned",T.aerobic)]
@@ -806,14 +997,14 @@
      E("Seated gentle mobility","3×10","No straining or heavy effort",T.valsalva),
      E("Symptom awareness","every session","Stop for lightheadedness, chest pain, fainting")],
     [E("Low-intensity walking","8–12 min","Keep it conversational and easy",T.aerobic),
-     E("Very light resistance","1×10–12","Small muscles, exhale on effort — no heavy loads",T.grip,T.valsalva),
+     E("Very light resistance","1×10–12","Small muscles, exhale on effort — no heavy loads"),
      E("Breathing-coordinated movement","3×10","Calm, controlled"),
      E("Balance near support","3×20s","Fall safety",T.balance)],
-    [E("Low–moderate aerobic (supervised)","12–20 min","Only within your prescribed limits",T.aerobic,T.highInt),
+    [E("Low–moderate aerobic (supervised)","12–20 min","Only within your prescribed limits",T.aerobic),
      E("Light resistance","1–2×12","No breath-holding, no maximal effort",T.valsalva,T.breath),
      E("Functional endurance","8 min","Gentle daily tasks",T.wb),
      E("Pacing & rest","ongoing","Avoid exertional symptoms")],
-    [E("Maintenance low–moderate aerobic","15–25 min","Consistency, never maximal",T.aerobic,T.highInt),
+    [E("Maintenance low–moderate aerobic","15–25 min","Consistency, never maximal",T.aerobic),
      E("Maintenance light resistance","2×12","Light only",T.valsalva),
      E("Energy conservation","ongoing","Balance activity and rest"),
      E("Long-term specialist-guided routine","ongoing","Exercise only as your PH team advises",T.aerobic)]
@@ -824,11 +1015,11 @@
      E("Pre-exercise inhaler (per action plan)","as prescribed","Use reliever beforehand if advised"),
      E("Breathing (nasal, relaxed)","3×1 min","Warm, humidified air helps"),
      E("Easy aerobic","10–15 min","Build gradually; carry your reliever",T.aerobic)],
-    [E("Interval aerobic","15–20 min","Intervals suit exercise-induced asthma well",T.aerobic,T.highInt),
+    [E("Interval aerobic","15–20 min","Intervals suit exercise-induced asthma well",T.aerobic),
      E("Resistance training","2×10–15","Normal breathing, exhale on effort",T.valsalva),
      E("Core & mobility","3×10","Whole-body conditioning"),
      E("Cool-down","5–10 min","Gradual — avoids post-exercise symptoms",T.aerobic)],
-    [E("Progressive aerobic","20–30 min","Swimming/cycling are well tolerated",T.aerobic,T.highInt),
+    [E("Progressive aerobic","20–30 min","Swimming/cycling are well tolerated",T.aerobic),
      E("Full-body resistance","2–3×10–15","Controlled breathing",T.valsalva),
      E("Higher-intensity intervals","as tolerated","With good warm-up",T.highInt),
      E("Trigger management","ongoing","Avoid cold/pollen triggers where possible")],
@@ -1079,7 +1270,7 @@
       note:"Heart condition: get medical clearance and ideally join a supervised cardiac-rehab program. Keep effort light–moderate (RPE 11–13, able to talk), avoid heavy lifting, breath-holding, and straining. Stop immediately for chest pain, unusual breathlessness, palpitations, or dizziness." },
     hypertension: { avoid:[T.valsalva,T.breath,T.grip], caution:[T.highInt,T.inversion],
       note:"High blood pressure: never hold your breath — exhale on effort. Avoid heavy isometric/grip holds and head-down positions. Favor moderate aerobic exercise, which lowers BP." },
-    pulmonary: { avoid:[T.breath], caution:[T.highInt,T.aerobic],
+    pulmonary: { avoid:[T.breath], caution:[T.aerobic],
       clearance:true,
       note:"Lung condition: pace with your breathing, use pursed-lip breathing, and use prescribed oxygen. Keep intensity moderate and rest as needed; monitor SpO₂ if you have a pulse oximeter." },
     osteoporosis: { avoid:[T.impact,T.flexLoad], caution:[T.endNeck,T.highInt],
@@ -1089,7 +1280,7 @@
       note:"Healing fracture: follow the weight-bearing status your surgeon gave you. Reintroduce impact only once the bone is confirmed healed." },
     hip_replacement: { avoid:[T.deepHipFlex,T.hipAddIR], caution:[T.impact],
       clearance:true,
-      note:"Hip-replacement precautions (typically first 6–12 weeks): don't bend the hip past ~90°, don't cross your legs/midline, and don't turn the foot inward. Follow your surgeon's specific precautions." },
+      note:"Hip-replacement precautions are often used for the first 6–12 weeks and are APPROACH-DEPENDENT: posterior approaches classically limit deep flexion past ~90°, crossing the midline, and turning the foot inward; anterior approaches more often limit extension and external rotation. Confirm your exact rules with your surgeon — mid-range heel slides and shallow squats that stay within your limits are standard early rehab, not violations." },
     knee_replacement: { avoid:[], caution:[T.impact,T.highInt],
       clearance:true,
       note:"Knee replacement: prioritize regaining full straightening and bend early; progress load gradually and avoid high-impact activities." },
@@ -1097,8 +1288,8 @@
       note:"Balance/falls risk: do all balance and standing work beside a sturdy rail, counter, or in a corner, ideally with someone nearby. Progress difficulty slowly." },
     neuropathy: { avoid:[], caution:[T.balance,T.impact,T.wb],
       note:"Reduced sensation: inspect your feet/hands before and after exercise, wear protective footwear, and use support for balance since you may not feel your position well." },
-    critical_offload: { avoid:[T.impact], caution:[T.wb,T.highInt,T.balance], clearance:true,
-      note:"This condition — such as Charcot neuroarthropathy or avascular necrosis / osteonecrosis of a weight-bearing joint — needs PROTECTED weight-bearing and specialist guidance: the bone or joint can collapse under load. Get assessed before loading it, and follow the offloading and weight-bearing limits your specialist sets." },
+    critical_offload: { avoid:[T.impact,T.wb], caution:[T.highInt,T.balance], clearance:true,
+      note:"This condition — such as Charcot neuroarthropathy or avascular necrosis / osteonecrosis of a weight-bearing joint — needs PROTECTED weight-bearing and specialist guidance: the bone or joint can collapse under load. Standing, stepping and impact work through the affected limb is removed until your specialist clears loading. Follow the offloading device and weight-bearing limits exactly." },
     dvt: { avoid:[T.highInt], caution:[T.aerobic],
       clearance:true,
       note:"Clot history / blood thinners: get clearance before vigorous exercise. Seek urgent care for new calf pain/swelling/warmth or sudden breathlessness or chest pain." },
@@ -1117,12 +1308,16 @@
       note:"Implanted defibrillator (ICD / CRT-D): keep your heart rate WELL BELOW the device's therapy threshold — going above it can trigger a shock. Stay light–moderate (RPE ≤13), skip maximal / high-intensity efforts, and avoid breath-holding and heavy straining. Confirm your safe heart-rate ceiling with your cardiologist and, ideally, join supervised cardiac rehab." },
     cardiac_lvad: { avoid:[T.highInt,T.impact,T.valsalva,T.breath], caution:[T.aerobic], clearance:true,
       note:"Left ventricular assist device (LVAD): heart rate and blood pressure are unreliable with continuous flow — judge effort by RPE / the talk-test only. Avoid contact, high-impact activity and breath-holding / straining, protect the driveline site, and follow your VAD team's exercise plan exactly." },
+    hcm: { avoid:[T.highInt,T.impact,T.valsalva,T.breath], caution:[T.aerobic,T.grip], clearance:true,
+      note:"Hypertrophic cardiomyopathy (HCM): even when cleared for exercise, competitive and high-intensity efforts are often restricted — specialist risk stratification sets your ceiling. Keep to light–moderate aerobic (talk-test / RPE ~11–13), avoid breath-holding and heavy straining, and stop for chest pain, dizziness, palpitations or faintness. Confirm any sport or intensity goals with your cardiologist." },
+    aortopathy: { avoid:[T.highInt,T.impact,T.valsalva,T.breath], caution:[T.grip,T.aerobic], clearance:true,
+      note:"Aortic aneurysm, dissection recovery, Marfan/aortopathy or similar: avoid competitive contact, maximal straining and breath-holding — sharp rises in blood pressure stress the vessel wall. Prefer moderate aerobic work and controlled resistance with exhale-on-effort. Follow your vascular/cardiac team's blood-pressure and lifting limits exactly." },
     // ---- additional medical-history conditions (from the intake form) ----
     pad: { avoid:[], caution:[T.highInt],
       note:"Peripheral artery disease / poor leg circulation: a structured walking program is the best-evidenced treatment — walk to moderate calf (claudication) pain, rest until it eases, then repeat. Stop for chest pain; report new coldness, numbness, or a non-healing wound." },
     bleeding_disorder: { avoid:[T.impact], caution:[T.highInt],
       note:"Bleeding disorder / on blood thinners: avoid contact and high-impact activity (bruising/bleeding risk) and take extra care to prevent falls. Seek care for a newly swollen or painful joint or muscle, or any unusual bleeding." },
-    fatigue: { avoid:[], caution:[T.highInt,T.aerobic],
+    fatigue: { avoid:[], caution:[T.aerobic],
       note:"Chronic fatigue / post-viral / long COVID: PACE carefully to avoid post-exertional 'crashes' — keep bouts short, rest between, and progress only when you recover well. Scale back if symptoms flare rather than pushing through." },
     inflammatory_arthritis: { avoid:[], caution:[T.impact,T.highInt],
       note:"Inflammatory arthritis (rheumatoid, psoriatic, ankylosing spondylitis, gout, lupus): favour gentle range-of-motion and low-impact strengthening, protect the joints, and do LESS during a flare — build back gradually. Swimming and cycling are ideal. Coordinate with your rheumatology team." },
@@ -1130,6 +1325,26 @@
       note:"Very flexible / hypermobile joints (hEDS): favour controlled MID-RANGE strengthening and stability over stretching, don't push into end-range, and progress load steadily — good control protects loose joints." },
     neuro_condition: { avoid:[], caution:[T.balance,T.impact,T.highInt],
       note:"Neurological condition (MS, Parkinson's, prior stroke): do balance and standing work near sturdy support, watch for fatigue and (for MS) heat sensitivity — keep cool and pace effort. Practise the specific movements you want to keep, safely and often." },
+    autonomic_dysreflexia: { avoid:[T.highInt,T.impact], caution:[T.balance,T.wb,T.aerobic], clearance:true,
+      note:"Spinal cord injury around T6 and above: autonomic dysreflexia is a medical emergency — sudden pounding headache, flushing/sweating above the injury, goosebumps, blurred vision or very high blood pressure. Sit upright if safe, loosen tight clothes/abdominal binders, check bladder catheter kinks, bowel, and skin pressure, and get urgent help. Avoid extreme noxious stimuli during exercise; know your usual BP and stop for new headache." },
+    raised_icp: { avoid:[T.inversion,T.valsalva,T.breath,T.highInt], caution:[T.impact,T.aerobic], clearance:true,
+      note:"Recent raised intracranial pressure, intracranial bleed, or neurosurgical precautions: avoid head-down positions, breath-holding/straining and maximal effort until your neurosurgical/neuro team clears you. Progress mobility only as ordered; report severe headache, vomiting, new weakness, unequal pupils or dropping alertness urgently." },
+    neuro_acute: { avoid:[], caution:[T.highInt,T.impact,T.balance], clearance:true,
+      note:"Recent acute neurological event (stroke, brain injury, spinal cord injury, GBS, encephalopathy): this plan is educational support for recovery after specialist care — not a substitute for inpatient or outpatient neuro rehab. Progress with your team; stop for new or worsening neurological symptoms." },
+    myasthenia: { avoid:[T.highInt], caution:[T.aerobic,T.balance], clearance:true,
+      note:"Myasthenia gravis / neuromuscular junction disorder: never exercise to exhaustion — stop at the first true fatigue. Prefer short bouts with rests, often better after medications kick in. Seek urgent care for increasing breathlessness, weak voice, choking, or rapidly worsening weakness (possible crisis)." },
+    icu_aw: { avoid:[], caution:[T.highInt,T.balance,T.impact], clearance:true,
+      note:"ICU-acquired weakness / critical illness polyneuropathy or myopathy: recovery is often measured in months. Start with frequent short sessions, protect joints and skin, rebuild sitting and standing tolerance first, and avoid boom-and-bust. Orthostatic dizziness is common after prolonged bed rest." },
+    acute_medical: { avoid:[], caution:[T.highInt,T.balance,T.impact], clearance:true,
+      note:"Recent acute medical illness (sepsis, pneumonia, kidney injury, major metabolic crisis, hospitalisation): you are rebuilding after a whole-body insult. Keep sessions short, rise slowly (blood pressure often drops), and stop for chest pain, new confusion, high fever, or breathlessness at rest. This is educational support alongside your medical team — not a substitute for hospital physiotherapy orders." },
+    polytrauma: { avoid:[], caution:[T.wb,T.impact,T.highInt,T.balance], clearance:true,
+      note:"Multiple injuries: each bone, organ and incision has its own rules. Weight-bearing, spinal and lifting orders from your trauma/orthopaedic team ALWAYS override a general exercise list. Mobilise only what is cleared; protect the rest." },
+    major_burn: { avoid:[T.impact], caution:[T.highInt,T.balance], clearance:true,
+      note:"Major burn recovery: range of motion is what prevents lifelong contracture — little and often, coordinated with pain control and dressings. Only massage closed skin as taught; watch for infection (spreading redness, fever, wound change). Heat intolerance and fluid needs remain elevated." },
+    pe_acute: { avoid:[T.highInt,T.impact], caution:[T.aerobic,T.balance], clearance:true,
+      note:"Pulmonary embolism (or recent major clot in the lung): early mobilisation is usually encouraged once anticoagulated and stable — but this is specialist-led. Stop for new chest pain, coughing blood, sudden breathlessness, or fainting. Avoid contact sports and high fall-risk activity while on blood thinners." },
+    post_sepsis: { avoid:[], caution:[T.highInt,T.balance,T.aerobic], clearance:true,
+      note:"After sepsis / septic shock: profound fatigue, muscle loss and foggy thinking are common for months. Grade activity up slowly; fever or new confusion needs medical review, not a harder workout." },
     ckd: { avoid:[], caution:[T.highInt],
       note:"Chronic kidney disease: moderate exercise is safe and helpful — build up gradually around fatigue, watch your blood pressure, and follow any fluid limits. If you have a dialysis fistula, avoid heavy loading and blood-pressure cuffs on that arm." },
     cancer_treatment: { avoid:[], caution:[T.highInt,T.impact], clearance:true,
@@ -1181,7 +1396,7 @@
     vital_bp_crisis: { avoid:[T.valsalva,T.breath,T.grip,T.highInt,T.impact], caution:[T.aerobic],
       clearance:true,
       note:"The blood pressure you entered is very high: do NOT do vigorous exercise until it is rechecked and controlled. Seek urgent care for chest pain, a severe headache, vision changes, or breathlessness." },
-    vital_tachy: { avoid:[], caution:[T.highInt,T.aerobic],
+    vital_tachy: { avoid:[], caution:[T.aerobic],
       note:"The resting heart rate you entered is high: build intensity gradually, judge effort by RPE / the talk-test rather than pace, and get it checked if it stays elevated at rest." },
     vital_brady: { avoid:[], caution:[T.highInt],
       note:"The resting heart rate you entered is low: if you also feel dizzy, faint, or unusually breathless, get it checked before harder exercise; otherwise warm up well and progress intensity gradually." },
@@ -1197,9 +1412,11 @@
       note:"Partial weight-bearing (PWB): put only the allowed share of your body weight through the limb. Practise the amount on a bathroom scale so you know how it feels, and progress only as your surgeon allows." },
     wb_wbat: { avoid:[], caution:[T.impact],
       note:"Weight-bearing as tolerated (WBAT): put as much weight through the limb as stays comfortable, using aids as needed and easing off if pain or swelling rises. Progress gradually." },
-    // ---- optional medication-derived rules (only applied when the user turns on medication safety filtering) ----
+    // ---- optional medication-derived rules (high-risk classes also shape the built plan via gatherFlags) ----
     fluoroquinolone: { avoid:[T.impact], caution:[],
       note:"On a fluoroquinolone antibiotic: high-impact and heavy tendon-loading exercises are removed to protect your tendons (raised Achilles-rupture risk) while taking it and for a few weeks after." },
+    med_steroid: { avoid:[], caution:[T.highInt,T.impact],
+      note:"On longer-term systemic corticosteroids: tendons and bone can be weaker — progress load gradually, prioritise good technique, and avoid sudden maximal efforts and high impact until your clinician says otherwise." },
     med_bleeding: { avoid:[T.impact], caution:[T.balance],
       note:"On blood thinners / antiplatelets: high-impact and high-fall-risk exercises are removed or flagged to reduce bruising and bleeding risk — avoid contact/collision activities." },
     med_sedating: { avoid:[], caution:[T.impact,T.balance],

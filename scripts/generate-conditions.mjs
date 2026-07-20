@@ -49,14 +49,36 @@ function autoFlagsFor(protocol, name) {
   if (protocol === "hip_replacement") f.push("hip_replacement");
   if (protocol === "knee_replacement") f.push("knee_replacement");
   if (protocol.startsWith("fracture")) f.push("recent_fracture");
-  if (["cardiac_rehab","heart_failure","valve","arrhythmia","pad","cardiac_surgery"].includes(protocol)) f.push("cardiac");
+  if (["cardiac_rehab","heart_failure","valve","arrhythmia","pad","cardiac_surgery","venous_rehab"].includes(protocol)) f.push("cardiac");
   if (protocol === "cardiac_surgery") f.push("sternal_precautions");        // post-sternotomy (CABG / open-heart)
   if (protocol === "abdominal_surgery") f.push("abdominal_precautions");    // post-abdominal-wall surgery
   if (protocol === "hypertension") f.push("hypertension");
   if (["pulmonary_rehab","asthma","post_covid","ild","thoracic_surgery","pulm_hypertension"].includes(protocol)) f.push("pulmonary");
-  if (["stroke","tbi","sci","ms","parkinsons","vestibular","balance_neuro","guillain_barre"].includes(protocol)) f.push("balance_risk");
+  if (["stroke","tbi","sci","ms","parkinsons","vestibular","balance_neuro","guillain_barre","icu_aw","myasthenia","encephalopathy","acute_medical","polytrauma","burn"].includes(protocol)) f.push("balance_risk");
   if (protocol === "neuropathy") f.push("neuropathy");
+  if (protocol === "lymphedema") f.push("lymphedema");
+  if (protocol === "charcot") { f.push("critical_offload"); f.push("neuropathy"); f.push("balance_risk"); }
+  if (protocol === "venous_rehab" && /dvt|thromb/i.test(name)) f.push("dvt");
+  if (["stroke","tbi","sci","guillain_barre","icu_aw","myasthenia","encephalopathy"].includes(protocol)) f.push("neuro_acute");
+  if (protocol === "sci") {
+    /* Autonomic dysreflexia risk ≈ T6 and above (cervical + high thoracic) */
+    if (/\b(C[1-8]|T[1-6])\b|tetrapleg|quadripleg|cervical|\bAD\b|dysreflexia|SCI ≥T6|SCI >=T6/i.test(name)) f.push("autonomic_dysreflexia");
+  }
+  if (protocol === "myasthenia") f.push("myasthenia");
+  if (protocol === "icu_aw") f.push("icu_aw");
+  if (protocol === "acute_medical") f.push("acute_medical");
+  if (protocol === "polytrauma") f.push("polytrauma");
+  if (protocol === "burn") f.push("major_burn");
+  if (/sepsis|septic shock/i.test(name)) f.push("post_sepsis");
+  if (/pulmonary embolism|\bPE\b recovery|post-pulmonary-embolism|acute PE/i.test(name)) { f.push("pe_acute"); f.push("dvt"); f.push("pulmonary"); }
+  /* Raised ICP / neurosurgical precautions — not routine mild concussion */
+  if (/intracranial|subarachnoid|\bSAH\b|intracerebral|\bICH\b|subdural|epidural|craniotom|craniect|cranioplast|raised.?icp|intracranial pressure|malignant MCA|decompressive/i.test(name)) f.push("raised_icp");
+  else if (protocol === "tbi" && !/mild|concussion|post-concussion/i.test(name)) f.push("raised_icp");
   if (/osteoporos/i.test(name)) f.push("osteoporosis");
+  /* HCM: even when "cleared", competitive high-intensity remains specialist-limited */
+  if (/hypertrophic cardiomyopathy|\bhcm\b/i.test(name)) f.push("hcm");
+  /* Marfan / aortopathy: avoid competitive contact and maximal straining */
+  if (/marfan|aortopath|aortic aneurysm|loeys.?dietz/i.test(name)) f.push("aortopathy");
   return f;
 }
 
@@ -92,7 +114,9 @@ const MSK_REGIONS = [
     "Femoroacetabular impingement (FAI)","Hip flexor strain","Adductor (groin) strain",
     "Piriformis syndrome","Hip abductor weakness","Snapping hip syndrome","Proximal hamstring tendinopathy" ] },
   { region:"Hip", protocol:"hip_replacement", dx:[
-    "Total hip replacement recovery","Hip hemiarthroplasty recovery","Hip resurfacing recovery",
+    "Total hip replacement recovery","Hip hemiarthroplasty recovery","Hip resurfacing recovery" ] },
+  /* Hip fracture fixation is ORIF/nail — NOT arthroplasty. THA precautions (90°/adduction/IR) do not apply. */
+  { region:"Hip", protocol:"fracture_le", dx:[
     "Hip fracture (post-fixation) recovery" ] },
   { region:"Knee", protocol:"knee_ligament", dx:[
     "ACL sprain","ACL reconstruction recovery","PCL sprain","MCL sprain","LCL sprain",
@@ -104,7 +128,10 @@ const MSK_REGIONS = [
     "Medial meniscus tear","Lateral meniscus tear","Meniscus repair recovery","Partial meniscectomy recovery",
     "Degenerative meniscal tear" ] },
   { region:"Knee", protocol:"knee_replacement", dx:[
-    "Total knee replacement recovery","Partial (unicompartmental) knee replacement recovery","Knee osteoarthritis" ] },
+    "Total knee replacement recovery","Partial (unicompartmental) knee replacement recovery" ] },
+  /* Knee OA is exercise-first conservative care (OARSI/NICE/ACR) — not a TKA pathway. */
+  { region:"Knee", protocol:"knee_oa", dx:[
+    "Knee osteoarthritis" ] },
   { region:"Ankle", protocol:"ankle", dx:[
     "Lateral ankle sprain (grade I)","Lateral ankle sprain (grade II)","Lateral ankle sprain (grade III)",
     "High ankle (syndesmosis) sprain","Chronic ankle instability","Ankle osteoarthritis",
@@ -322,6 +349,86 @@ for (const lv of SCI_LEVELS) {
  "Ataxia (functional balance training)","Huntington's disease (reconditioning)"]
   .forEach(dx => add(dx, "neuro", "CNS", "balance_neuro", { supervision:"supervised", chronic:true }));
 
+/* ==================== NEURO — acute care / hospital-significant ====================
+   Diagnoses commonly managed on neurology, neurosurgery, stroke, and ICU step-down
+   units. Each maps to a protocol with matching autoFlags (neuro_acute, AD, ICP, etc.). */
+// Acute cerebrovascular (inpatient → early rehab)
+["Acute ischemic stroke (early rehab)","Large-vessel occlusion stroke (post-thrombectomy) recovery",
+ "Post-thrombolysis (tPA/TNK) stroke reconditioning","Intracerebral hemorrhage (ICH) recovery",
+ "Subarachnoid hemorrhage (SAH) recovery","Aneurysmal SAH (post-coiling) recovery",
+ "Aneurysmal SAH (post-clipping) recovery","Cerebral venous sinus thrombosis recovery",
+ "Watershed infarct recovery","Brainstem stroke (acute phase) recovery",
+ "Cerebellar stroke with ataxia (acute)","Hemorrhagic transformation after ischemic stroke",
+ "Malignant MCA syndrome (post-decompressive craniectomy) recovery"]
+  .forEach(dx => add(dx, "neuro", "Brain — acute stroke", "stroke", { supervision:"clinical", clearance:true }));
+
+// Acute TBI / neurosurgical
+["Severe traumatic brain injury (ICU step-down)","Moderate TBI (acute hospital phase)",
+ "Diffuse axonal injury recovery","Acute subdural hematoma (post-evacuation) recovery",
+ "Chronic subdural hematoma (post-drainage) recovery","Acute epidural hematoma (post-evacuation) recovery",
+ "Post-craniotomy (tumor resection) early mobility","Post-craniectomy (bone flap out) precautions recovery",
+ "Post-cranioplasty reconditioning","Raised intracranial pressure (resolved) reconditioning",
+ "Penetrating traumatic brain injury recovery","Blast-related TBI recovery"]
+  .forEach(dx => add(dx, "neuro", "Brain — acute TBI / neurosurgery", "tbi", { supervision:"clinical", clearance:true }));
+
+// Acute spinal cord
+["Acute traumatic spinal cord injury (cervical) early rehab","Acute traumatic spinal cord injury (thoracic) early rehab",
+ "Acute traumatic spinal cord injury (lumbar) early rehab","Spinal shock (resolving) mobility programme",
+ "Acute central cord syndrome (hospital phase)","Spinal cord infarction (acute) recovery",
+ "Acute complete tetraplegia (early rehab)","Acute incomplete paraplegia (early rehab)",
+ "Neurogenic shock (resolved) reconditioning","Autonomic dysreflexia education & safe exercise (SCI ≥T6)"]
+  .forEach(dx => add(dx, "neuro", "Spinal cord — acute", "sci", { supervision:"clinical", clearance:true }));
+
+// Acute neuromuscular / peripheral
+["Guillain-Barré syndrome (acute ascending phase, supportive)","Guillain-Barré syndrome (nadir / plateau phase)",
+ "Guillain-Barré syndrome (ICU-ventilated recovery)","Miller Fisher variant GBS recovery",
+ "Acute myasthenic crisis recovery","Myasthenia gravis (hospitalised exacerbation) reconditioning",
+ "Lambert-Eaton myasthenic syndrome (acute reconditioning)","Acute inflammatory demyelinating polyneuropathy (AIDP)",
+ "Acute motor axonal neuropathy (AMAN) recovery","Botulism (recovery phase) reconditioning",
+ "West Nile virus neuroinvasive disease recovery","Acute flaccid myelitis (recovery)"]
+  .forEach(dx => {
+    const p = /myasthen|Lambert/i.test(dx) ? "myasthenia"
+      : /Guillain|Miller Fisher|AIDP|AMAN|botulism|West Nile|flaccid myelitis/i.test(dx) ? "guillain_barre"
+      : "guillain_barre";
+    add(dx, "neuro", "Neuromuscular — acute", p, { supervision:"clinical", clearance:true });
+  });
+
+// ICU-acquired weakness / critical illness
+["ICU-acquired weakness","Critical illness polyneuropathy","Critical illness myopathy",
+ "Critical illness polyneuromyopathy (CIPNM)","Post-ICU syndrome (physical domain)",
+ "Prolonged mechanical ventilation deconditioning","Post-ARDS neuromuscular reconditioning",
+ "Hospital-acquired deconditioning (neuro unit)","Prolonged bed-rest orthostatic intolerance (neuro)"]
+  .forEach(dx => add(dx, "neuro", "ICU / critical illness", "icu_aw", { supervision:"clinical", clearance:true }));
+
+// Encephalopathy / delirium / infection / metabolic (acute care)
+["Hypoxic-ischemic encephalopathy (post-cardiac arrest) recovery","Anoxic brain injury reconditioning",
+ "Hospital delirium (hyperactive) mobility programme","Hospital delirium (hypoactive) mobility programme",
+ "ICU delirium recovery","Metabolic encephalopathy reconditioning",
+ "Hepatic encephalopathy (resolved) reconditioning","Uremic encephalopathy reconditioning",
+ "Wernicke's encephalopathy recovery","Acute bacterial meningitis recovery",
+ "Viral encephalitis recovery","Autoimmune encephalitis recovery",
+ "Status epilepticus (post-ictal reconditioning)","Non-convulsive status epilepticus recovery",
+ "Acute hydrocephalus (post-shunt) mobility","Normal pressure hydrocephalus (post-shunt) gait rehab",
+ "Posterior reversible encephalopathy syndrome (PRES) recovery","Acute disseminated encephalomyelitis (ADEM) recovery",
+ "Neuromyelitis optica spectrum disorder (acute relapse) recovery","Acute transverse myelitis (hospital phase)"]
+  .forEach(dx => {
+    const p = /transverse myelitis|neuromyelitis|ADEM/i.test(dx) ? "sci"
+      : /delirium|encephalopath|anoxic|hypoxic-ischemic|meningitis|encephalitis|status epileptic|hydrocephalus|PRES|Wernicke/i.test(dx) ? "encephalopathy"
+      : "encephalopathy";
+    add(dx, "neuro", "Encephalopathy / infection — acute", p, { supervision:"clinical", clearance:true });
+  });
+
+// Acute vestibular / brainstem (ED → ward)
+["Acute vestibular neuritis (hospital phase)","Acute labyrinthitis (hospital phase)",
+ "Vertebrobasilar TIA reconditioning","Lateral medullary (Wallenberg) syndrome — acute phase",
+ "Acute unilateral vestibular loss (early compensation)"]
+  .forEach(dx => add(dx, "neuro", "Vestibular — acute", "vestibular", { supervision:"clinical", clearance:true }));
+
+// Functional / seizure-related acute presentations (mobility-safe framing)
+["First seizure (post-ictal mobility clearance programme)","Todd's paresis (resolving) reconditioning",
+ "Acute symptomatic seizure (metabolic) recovery"]
+  .forEach(dx => add(dx, "neuro", "Seizure — acute", "encephalopathy", { supervision:"clinical", clearance:true, autoFlags:["seizure","neuro_acute","balance_risk"] }));
+
 /* ==================== CARDIAC ==================== */
 ["Post-myocardial infarction (heart attack) recovery","Post-STEMI recovery","Post-NSTEMI recovery",
  "Stable coronary artery disease","Post-angioplasty (PCI) recovery","Post-stent (single-vessel) recovery",
@@ -336,9 +443,12 @@ for (const lv of SCI_LEVELS) {
 
 ["Heart failure (reduced ejection fraction, HFrEF)","Heart failure (preserved ejection fraction, HFpEF)",
  "Heart failure NYHA class I","Heart failure NYHA class II","Heart failure NYHA class III (supervised)",
- "Cardiomyopathy (dilated)","Cardiomyopathy (hypertrophic — cleared for exercise)","Post-LVAD reconditioning",
+ "Cardiomyopathy (dilated)","Post-LVAD reconditioning",
  "Post-heart-transplant reconditioning"]
   .forEach(dx => add(dx, "cardiac", "Heart", "heart_failure", { supervision:"clinical", clearance:true, chronic:true }));
+/* HCM is not heart-failure rehab — intensity ceilings and contact limits differ; specialist clearance required. */
+["Cardiomyopathy (hypertrophic — cleared for exercise)"]
+  .forEach(dx => add(dx, "cardiac", "Heart", "cardiac_rehab", { supervision:"clinical", clearance:true, chronic:true }));
 
 // Open (surgical) valve procedures — sternotomy/thoracotomy → sternal precautions
 ["Post-aortic-valve replacement recovery","Post-mitral-valve repair recovery","Post-mitral-valve replacement recovery",
@@ -357,10 +467,18 @@ for (const lv of SCI_LEVELS) {
  "Hypertension with exercise programming"]
   .forEach(dx => add(dx, "cardiac", "Vascular", "hypertension", { supervision:"supervised", clearance:true }));
 
-["Peripheral artery disease (claudication)","Post-lower-limb bypass reconditioning","Intermittent claudication",
- "Post-DVT reconditioning","Chronic venous insufficiency (exercise)","Lymphedema (exercise management)",
- "Post-aortic-aneurysm-repair reconditioning"]
+/* PAD: structured walk-to-claudication is first-line — keep on pad protocol only. */
+["Peripheral artery disease (claudication)","Post-lower-limb bypass reconditioning","Intermittent claudication"]
   .forEach(dx => add(dx, "cardiac", "Vascular", "pad", { supervision:"clinical", clearance:true }));
+/* Venous disease is NOT claudication walking — graded activity + compression education. */
+["Post-DVT reconditioning","Chronic venous insufficiency (exercise)"]
+  .forEach(dx => add(dx, "cardiac", "Vascular", "venous_rehab", { supervision:"clinical", clearance:true }));
+/* Lymphedema: gradual resistance + skin care — not PAD intervals. */
+["Lymphedema (exercise management)"]
+  .forEach(dx => add(dx, "cardiac", "Vascular", "lymphedema", { supervision:"supervised", clearance:true, chronic:true }));
+/* Post-aneurysm repair: cardiac-style graded load, avoid early heavy straining. */
+["Post-aortic-aneurysm-repair reconditioning"]
+  .forEach(dx => add(dx, "cardiac", "Vascular", "cardiac_rehab", { supervision:"clinical", clearance:true, autoFlags:["cardiac","aortopathy"] }));
 
 /* ==================== PULMONARY ==================== */
 ["COPD (GOLD stage 1)","COPD (GOLD stage 2)","COPD (GOLD stage 3, supervised)","Chronic bronchitis","Emphysema",
@@ -425,9 +543,12 @@ for (const [protocol, region, subs] of SUBPRESENT)
 ["Congenital heart disease (adult, cleared)","Post-cardiac-catheterization reconditioning","Myocarditis recovery (cleared)",
  "Pericarditis recovery (cleared)","Metabolic syndrome (cardiac risk reduction)","Type 2 diabetes (cardiometabolic exercise)"]
   .forEach(dx => add(dx, "cardiac", "Cardiometabolic", "cardiac_rehab", { supervision:"clinical", clearance:true }));
-["Obesity hypoventilation (reconditioning)","Obstructive sleep apnea (exercise adjunct)","Post-pulmonary-embolism reconditioning",
+["Obesity hypoventilation (reconditioning)","Obstructive sleep apnea (exercise adjunct)",
  "Chronic cough / breathing pattern disorder","Hyperventilation syndrome (breathing retraining)","Vocal cord dysfunction (breathing)"]
-  .forEach(dx => add(dx, "pulmonary", "Respiratory", /embolism/.test(dx) ? "post_covid" : "asthma", { supervision:"supervised", clearance:true }));
+  .forEach(dx => add(dx, "pulmonary", "Respiratory", "asthma", { supervision:"supervised", clearance:true }));
+/* PE is clot disease + respiratory recovery — not a post-viral pacing pathway */
+["Post-pulmonary-embolism reconditioning"]
+  .forEach(dx => add(dx, "cardiac", "Vascular — PE", "venous_rehab", { supervision:"clinical", clearance:true }));
 
 /* ==================== MEGA EXPANSION — thousands more named conditions ==================== */
 const latList  = (names, domain, region, protocol, opts={}) => names.forEach(nm => lateral(nm, domain, region, protocol, opts));
@@ -505,7 +626,8 @@ plainList(["Sternoclavicular joint dislocation (anterior)","TMJ dislocation (pos
 /* --- Arthroplasty / joint replacement at more joints + revisions --- */
 latList(["Total elbow replacement recovery","Total wrist replacement recovery","Total ankle replacement recovery",
   "First MTP joint replacement recovery","MCP joint replacement recovery","PIP joint replacement recovery"],"msk","Upper/lower limb","general_msk",{supervision:"supervised"});
-latList(["Revision total hip replacement recovery","Revision total knee replacement recovery"],"msk","Lower limb","hip_replacement",{supervision:"supervised"});
+latList(["Revision total hip replacement recovery"],"msk","Hip","hip_replacement",{supervision:"supervised"});
+latList(["Revision total knee replacement recovery"],"msk","Knee","knee_replacement",{supervision:"supervised"});
 latList(["Revision total shoulder replacement recovery"],"msk","Shoulder","shoulder",{supervision:"supervised"});
 
 /* --- Osteochondroses / apophysitis / AVN --- */
@@ -519,8 +641,10 @@ plainList(["Slipped capital femoral epiphysis (post-fixation)","Developmental hi
 plainList(["Reactive arthritis","Enteropathic arthritis","Juvenile idiopathic arthritis (adult)","Sjögren-related arthralgia",
   "Systemic sclerosis (reconditioning)","Dermatomyositis (reconditioning)","Polymyositis (reconditioning)","Mixed connective tissue disease (reconditioning)",
   "Ehlers-Danlos / hypermobility spectrum","Marfan syndrome (exercise management)","Hemochromatosis arthropathy","CPPD (pseudogout) reconditioning",
-  "Chondrocalcinosis","Paget's disease of bone","Charcot neuroarthropathy","Diffuse idiopathic skeletal hyperostosis (DISH)",
+  "Chondrocalcinosis","Paget's disease of bone","Diffuse idiopathic skeletal hyperostosis (DISH)",
   "Enthesitis-related arthritis","Reactive tenosynovitis","Palindromic rheumatism"],"msk","Systemic","general_msk",{chronic:true,supervision:"supervised"});
+/* Charcot neuroarthropathy needs protected offloading — never general_msk loading. */
+plainList(["Charcot neuroarthropathy"],"msk","Foot / ankle","charcot",{chronic:true,supervision:"clinical",clearance:true});
 
 /* --- Chronic pain / soft-tissue syndromes --- */
 plainList(["Chronic exertional compartment syndrome (leg)","Myositis ossificans (reconditioning)","Delayed-onset muscle soreness (reconditioning)",
@@ -540,9 +664,11 @@ plainList([
  "Post-spinal-decompression reconditioning","Post-spinal-fusion neuro reconditioning","Syringomyelia","Tethered cord syndrome (adult)",
  "Transverse myelitis recovery","Spinal cord infarction recovery"
 ], "neuro","Spinal cord","sci");
-// Cranial nerve palsies
+// Cranial nerve palsies — facial motor only for Bell's pathway; ocular/hypoglossal need different frames
+plainList(["Facial nerve (CN VII) palsy recovery","Facial nerve palsy (post-parotid) recovery"],"neuro","Cranial nerve","bells_palsy");
 plainList(["Oculomotor (CN III) palsy recovery","Trochlear (CN IV) palsy recovery","Abducens (CN VI) palsy recovery",
- "Hypoglossal (CN XII) palsy recovery","Spinal accessory nerve palsy recovery","Vestibulocochlear schwannoma (post-op balance)"],"neuro","Cranial nerve","bells_palsy");
+ "Vestibulocochlear schwannoma (post-op balance)"],"neuro","Cranial nerve","vestibular",{supervision:"clinical",clearance:true});
+plainList(["Hypoglossal (CN XII) palsy recovery","Spinal accessory nerve palsy recovery"],"neuro","Cranial nerve","balance_neuro",{supervision:"supervised"});
 // Peripheral nerve injuries by named nerve (lateralized)
 latList(["Axillary nerve injury","Musculocutaneous nerve injury","Median nerve injury","Anterior interosseous nerve syndrome",
  "Radial nerve injury","Posterior interosseous nerve palsy","Long thoracic nerve palsy (winged scapula)","Suprascapular nerve injury",
@@ -576,16 +702,23 @@ plainList(["Tetralogy of Fallot (repaired, adult)","Atrial septal defect (repair
  "Coarctation of the aorta (repaired)","Ebstein anomaly (reconditioning)","Transposition (post arterial switch)","Fontan circulation (exercise)",
  "Patent ductus arteriosus (repaired)","Bicuspid aortic valve (stable)"],"cardiac","Congenital heart","cardiac_rehab");
 plainList(["Restrictive cardiomyopathy","Arrhythmogenic right ventricular cardiomyopathy (cleared)","Peripartum cardiomyopathy recovery",
- "Takotsubo (stress) cardiomyopathy recovery","Non-obstructive hypertrophic cardiomyopathy (cleared)","Ischemic cardiomyopathy","Alcoholic cardiomyopathy",
+ "Takotsubo (stress) cardiomyopathy recovery","Ischemic cardiomyopathy","Alcoholic cardiomyopathy",
  "Chemotherapy-induced cardiomyopathy"],"cardiac","Heart muscle","heart_failure",{chronic:true});
+/* HCM: specialist intensity limits — not HFrEF deconditioning pathway */
+plainList(["Non-obstructive hypertrophic cardiomyopathy (cleared)"],"cardiac","Heart muscle","cardiac_rehab",{chronic:true,supervision:"clinical",clearance:true});
 plainList(["Aortic stenosis (stable)","Aortic regurgitation (stable)","Mitral stenosis (stable)","Mitral regurgitation (stable)",
  "Mitral valve prolapse","Tricuspid regurgitation (stable)","Pulmonary valve stenosis (stable)","Post-mitral-clip recovery"],"cardiac","Heart valve","valve");
 plainList(["Paroxysmal atrial fibrillation","Persistent atrial fibrillation","Permanent atrial fibrillation (rate-controlled)","Atrial flutter",
  "AVNRT (reconditioning)","Wolff-Parkinson-White (post-ablation)","Atrial tachycardia","Ventricular tachycardia (ICD, cleared)",
  "Frequent PVCs (reconditioning)","First-degree AV block","Second-degree AV block (Mobitz I)","Sick sinus syndrome (paced)","Long QT syndrome (cleared)"],"cardiac","Rhythm","arrhythmia");
-plainList(["Abdominal aortic aneurysm (post-repair)","Thoracic aortic aneurysm (post-repair)","Aortic dissection recovery",
- "Carotid endarterectomy recovery","Raynaud's phenomenon (exercise)","Buerger's disease (thromboangiitis obliterans)","Giant cell arteritis (reconditioning)",
- "Takayasu arteritis (reconditioning)","Post-varicose-vein-procedure reconditioning","Post-endovascular-repair reconditioning"],"cardiac","Vascular","pad");
+/* Arterial PAD / vasculitis — not venous programs */
+plainList(["Carotid endarterectomy recovery","Raynaud's phenomenon (exercise)","Buerger's disease (thromboangiitis obliterans)","Giant cell arteritis (reconditioning)",
+ "Takayasu arteritis (reconditioning)","Post-endovascular-repair reconditioning"],"cardiac","Vascular","pad");
+/* Aortopathy / aneurysm repair: avoid heavy strain — not claudication walking */
+plainList(["Abdominal aortic aneurysm (post-repair)","Thoracic aortic aneurysm (post-repair)","Aortic dissection recovery"],
+ "cardiac","Vascular","cardiac_rehab",{supervision:"clinical",clearance:true,autoFlags:["cardiac","aortopathy"]});
+/* Venous procedure recovery */
+plainList(["Post-varicose-vein-procedure reconditioning"],"cardiac","Vascular","venous_rehab",{supervision:"supervised",clearance:true});
 
 /* ==================== PULMONARY — mega expansion ==================== */
 plainList(["Non-specific interstitial pneumonia (NSIP)","Usual interstitial pneumonia (UIP)","Hypersensitivity pneumonitis","Connective-tissue-disease ILD",
@@ -593,8 +726,10 @@ plainList(["Non-specific interstitial pneumonia (NSIP)","Usual interstitial pneu
 plainList(["Asbestosis","Silicosis","Coal workers' pneumoconiosis","Berylliosis","Byssinosis","Farmer's lung"],"pulmonary","Occupational lung","ild",{chronic:true});
 plainList(["Bronchiolitis obliterans","Primary ciliary dyskinesia","Alpha-1 antitrypsin emphysema","Non-CF bronchiectasis"],"pulmonary","Airways","pulmonary_rehab",{chronic:true});
 plainList(["Post-pleural-effusion recovery","Post-pneumothorax recovery","Post-empyema recovery","Post-pleurodesis recovery","Mesothelioma (reconditioning)"],"pulmonary","Pleura","thoracic_surgery");
-plainList(["Pulmonary embolism recovery","Chronic thromboembolic pulmonary hypertension","Post-ARDS recovery","Ventilator-weaning reconditioning",
- "Post-tuberculosis lung reconditioning","Post-influenza pneumonia recovery"],"pulmonary","Lungs","post_covid");
+plainList(["Chronic thromboembolic pulmonary hypertension"],"pulmonary","Lungs","pulm_hypertension",{supervision:"clinical",clearance:true,chronic:true});
+plainList(["Pulmonary embolism recovery"],"cardiac","Vascular — PE","venous_rehab",{supervision:"clinical",clearance:true});
+plainList(["Post-ARDS recovery","Ventilator-weaning reconditioning","Post-tuberculosis lung reconditioning","Post-influenza pneumonia recovery"],
+ "pulmonary","Lungs","pulmonary_rehab",{supervision:"clinical",clearance:true});
 plainList(["Diaphragmatic weakness (reconditioning)","Phrenic nerve palsy (breathing)","Neuromuscular respiratory weakness","Obesity-related restrictive lung",
  "Kyphoscoliosis-related restrictive lung","Pectus excavatum (post-op reconditioning)","Chest-wall deformity reconditioning"],"pulmonary","Chest wall / respiratory muscle","thoracic_surgery");
 
@@ -657,7 +792,8 @@ plainList(["Post-lumpectomy shoulder rehabilitation","Cancer-related fatigue (gr
  "Post-radiation fibrosis (shoulder)","Post-radiation fibrosis (pelvis)","Post-prostatectomy reconditioning","Post-abdominal-cancer-surgery reconditioning",
  "Head & neck cancer neck/shoulder rehabilitation","Limb-salvage (sarcoma) reconditioning","Post-stem-cell-transplant reconditioning",
  "Bone metastasis (supervised gentle exercise)","Post-chemotherapy deconditioning","Post-thoracic-oncology reconditioning",
- "Breast-cancer-related lymphedema (upper limb)","Post-colorectal-surgery reconditioning"],"msk","Oncology rehab","general_msk",{supervision:"supervised",clearance:true});
+ "Post-colorectal-surgery reconditioning"],"msk","Oncology rehab","general_msk",{supervision:"supervised",clearance:true});
+plainList(["Breast-cancer-related lymphedema (upper limb)"],"msk","Oncology rehab","lymphedema",{supervision:"supervised",clearance:true,chronic:true});
 
 /* --- Burns / plastics / wound (lateralized) --- */
 latList(["Burn contracture (hand)","Burn contracture (shoulder/axilla)","Burn contracture (elbow)","Burn contracture (knee)",
@@ -671,8 +807,11 @@ plainList(["Diastasis recti (rehabilitation)","Pubic symphysis dysfunction","Rou
 
 /* --- Geriatric / frailty / deconditioning --- */
 plainList(["Sarcopenia (progressive resistance)","Frailty reconditioning","Post-hospitalization deconditioning","Post-ICU reconditioning",
- "Falls-prevention reconditioning","Immobility-related deconditioning","Age-related muscle weakness","Osteoporotic vertebral compression (reconditioning)",
+ "Falls-prevention reconditioning","Immobility-related deconditioning","Age-related muscle weakness",
  "Post-delirium mobility reconditioning","Multimorbidity exercise reconditioning"],"msk","Geriatric","general_msk",{chronic:true,supervision:"supervised"});
+/* Vertebral compression: extension-bias / upright loading — not LE fracture or generic MSK impact. */
+plainList(["Osteoporotic vertebral compression (reconditioning)"],"msk","Thoracic / lumbar spine","lumbar",{
+  chronic:true,supervision:"supervised",clearance:true,autoFlags:["osteoporosis"] });
 
 /* --- TMJ / headache subtypes --- */
 plainList(["TMJ disc displacement with reduction","TMJ disc displacement without reduction","TMJ arthralgia","Myogenous TMJ disorder",
@@ -689,12 +828,99 @@ plainList(["Ataxic hemiparesis (stroke)","Post-stroke aphasia (functional exerci
 latList(["Common peroneal nerve palsy (foot drop)","Chronic meralgia paresthetica","Chronic tarsal tunnel syndrome","Piriformis-related sciatic irritation",
  "Chronic carpal tunnel syndrome","Chronic cubital tunnel syndrome"].map(s=>s+" rehabilitation"),"neuro","Peripheral nerve","neuropathy");
 
+/* ==================== ACUTE CARE — multi-domain hospital conditions ==================== */
+// Medical ward / sepsis / metabolic
+plainList([
+  "Sepsis recovery (post-ward)","Septic shock recovery (ICU step-down)","Bacteraemia recovery reconditioning",
+  "Acute kidney injury (AKI) recovery mobility","Acute-on-chronic kidney disease hospital recovery",
+  "Diabetic ketoacidosis (DKA) recovery reconditioning","Hyperosmolar hyperglycaemic state recovery",
+  "Severe hyponatraemia (resolved) reconditioning","Adrenal crisis recovery reconditioning",
+  "Upper GI bleed (post-stabilisation) mobility","Lower GI bleed (post-stabilisation) mobility",
+  "Acute pancreatitis recovery reconditioning","Clostridioides difficile colitis recovery",
+  "Severe community cellulitis recovery","Necrotising soft-tissue infection (post-debridement) recovery",
+  "Hospital-associated deconditioning (medical ward)","Failure to thrive / frailty crisis reconditioning"
+],"msk","Acute medical ward","acute_medical",{supervision:"clinical",clearance:true});
+
+// Trauma / polytrauma
+plainList([
+  "Polytrauma (multi-system) early rehab","Major trauma (ISS high) step-down reconditioning",
+  "Pelvic fracture (acute, protected WB) recovery","Acetabular fracture (post-fixation) recovery",
+  "Unstable pelvic ring injury recovery","Pathological fracture (metastatic) protected rehab",
+  "Fragility hip fracture (acute post-op) recovery","Open fracture (Gustilo) recovery",
+  "Crush injury limb recovery","Acute compartment syndrome (post-fasciotomy) — hospital phase",
+  "Traumatic amputation (acute residual-limb care)","Rib fractures (multiple) hospital mobility",
+  "Flail chest recovery reconditioning","Sternal fracture recovery",
+  "Vertebral burst fracture (braced) recovery","Gunshot wound extremity recovery","Blast injury multi-trauma recovery"
+],"msk","Trauma / acute ortho","polytrauma",{supervision:"clinical",clearance:true});
+plainList(["Neck of femur fracture (total hip replacement pathway)"],"msk","Trauma / acute ortho","hip_replacement",{supervision:"clinical",clearance:true});
+plainList(["Neck of femur fracture (hemiarthroplasty pathway)"],"msk","Trauma / acute ortho","hip_replacement",{supervision:"clinical",clearance:true});
+
+// Major burns
+plainList([
+  "Major burn (>20% TBSA) recovery","Partial-thickness burn (extensive) recovery",
+  "Full-thickness burn (grafted) recovery","Inhalation injury with cutaneous burns recovery",
+  "Hand burn (acute) rehabilitation","Axillary / neck burn contracture-prevention programme",
+  "Electrical burn recovery","Chemical burn recovery","Post-burn ICU step-down reconditioning"
+],"msk","Burns — acute","burn",{supervision:"clinical",clearance:true});
+
+// Cardiac acute
+plainList([
+  "Acute coronary syndrome (hospital phase) reconditioning","Cardiogenic shock recovery",
+  "Post-cardiac arrest (target temperature management) recovery","Unstable angina (high-risk NSTE-ACS) reconditioning",
+  "Acute decompensated heart failure (ward) reconditioning","Flash pulmonary oedema recovery",
+  "Acute myocarditis recovery","Acute pericarditis recovery",
+  "Post-IABP / temporary MCS reconditioning","Hypertensive emergency (resolved) reconditioning"
+],"cardiac","Cardiac — acute care","cardiac_rehab",{supervision:"clinical",clearance:true});
+plainList(["Acute decompensated HFrEF (ICU step-down)"],"cardiac","Cardiac — acute care","heart_failure",{supervision:"clinical",clearance:true,chronic:true});
+
+// PE acute (venous_rehab + pe_acute flags — not post_covid)
+plainList([
+  "Acute pulmonary embolism (low-risk) recovery","Acute pulmonary embolism (intermediate-risk) recovery",
+  "Massive / high-risk PE recovery","Submassive PE recovery",
+  "PE with right-heart strain recovery","Post-thrombolysis PE reconditioning"
+],"cardiac","Vascular — PE","venous_rehab",{supervision:"clinical",clearance:true});
+
+// Respiratory acute
+plainList([
+  "Community-acquired pneumonia (hospitalised) recovery","Hospital-acquired pneumonia recovery",
+  "Aspiration pneumonia recovery","Severe influenza pneumonia recovery",
+  "COVID-19 pneumonia (hospitalised) recovery","COPD acute exacerbation (hospital) recovery",
+  "Asthma acute severe (hospital) recovery","Acute respiratory failure (post-NIV) reconditioning",
+  "ARDS recovery (post-ICU)","Pneumothorax (post-chest-drain) recovery",
+  "Haemothorax recovery","Empyema (post-drainage) recovery"
+],"pulmonary","Respiratory — acute care","pulmonary_rehab",{supervision:"clinical",clearance:true});
+plainList(["Acute severe asthma (near-fatal) recovery"],"pulmonary","Respiratory — acute care","asthma",{supervision:"clinical",clearance:true});
+
+// Emergency abdominal surgery
+plainList([
+  "Emergency laparotomy recovery","Perforated viscus (post-repair) recovery",
+  "Bowel obstruction (post-op) recovery","Ischaemic bowel (post-resection) recovery",
+  "Ruptured abdominal aortic aneurysm (post-repair) recovery","Exploratory laparotomy (trauma) recovery",
+  "Open abdomen / temporary abdominal closure recovery"
+],"msk","Acute abdominal surgery","abdominal_surgery",{supervision:"clinical",clearance:true});
+
+// Oncology emergencies
+plainList([
+  "Malignant spinal cord compression (post-treatment) rehab","Neutropenic sepsis recovery reconditioning",
+  "Tumour lysis syndrome recovery reconditioning","Pathological spinal fracture (braced) recovery",
+  "Brain metastases (post-treatment) mobility programme"
+],"msk","Oncology — acute","acute_medical",{supervision:"clinical",clearance:true,autoFlags:["cancer_treatment","acute_medical","balance_risk"]});
+plainList(["Malignant spinal cord compression (SCI-level deficit)"],"neuro","Oncology — acute","sci",{supervision:"clinical",clearance:true,autoFlags:["cancer_treatment","neuro_acute","balance_risk"]});
+
+// Transplant acute phase
+plainList([
+  "Kidney transplant (first 30 days) reconditioning","Liver transplant (first 30 days) reconditioning",
+  "Heart transplant (first 30 days) reconditioning","Lung transplant (first 30 days) reconditioning",
+  "Allogeneic stem-cell transplant (engraftment phase) reconditioning"
+],"cardiac","Transplant — acute","acute_medical",{supervision:"clinical",clearance:true,autoFlags:["acute_medical","balance_risk"]});
+
 /* ==================== CARDIAC — expansion 2 ==================== */
 plainList(["Post-heart-transplant (year 1) reconditioning","Post-LVAD (destination therapy) reconditioning","Infective endocarditis recovery",
  "Post-pericardiectomy recovery","Constrictive pericarditis (reconditioning)","Pulmonary valve regurgitation (stable)","Hypertension stage 1 (exercise)",
  "Hypertension stage 2 (controlled, exercise)","Resistant hypertension (supervised exercise)","Postural hypotension (reconditioning)",
  "Peripheral artery disease (Fontaine stage II)","Peripheral artery disease (Rutherford category 3)","Post-carotid-stent reconditioning",
- "Chronic DVT (reconditioning)","Post-thrombophlebitis reconditioning","Cardiac syndrome X (microvascular angina)"],"cardiac","Cardiovascular","cardiac_rehab");
+ "Cardiac syndrome X (microvascular angina)"],"cardiac","Cardiovascular","cardiac_rehab");
+plainList(["Chronic DVT (reconditioning)","Post-thrombophlebitis reconditioning"],"cardiac","Vascular","venous_rehab",{supervision:"clinical",clearance:true});
 
 /* ==================== PULMONARY — expansion 2 ==================== */
 plainList(["COPD (GOLD stage 4, supervised)","Severe persistent asthma (step 4–5)","Moderate persistent asthma","Mild persistent asthma",
@@ -775,8 +1001,11 @@ plainList(["Pure autonomic failure (reconditioning)","Baroreflex failure (recond
 plainList(["Vasospastic (Prinzmetal) angina (reconditioning)","Cardiac amyloidosis (gentle exercise)","Left bundle branch block (reconditioning)",
  "Post-LAA-closure (Watchman) reconditioning","Athlete's heart (reassurance reconditioning)","Post-septal-myectomy recovery","Chronic stable heart failure (Stage C)",
  "Post-CRT (resynchronization) reconditioning","Diastolic dysfunction (reconditioning)","Post-infective-endocarditis reconditioning"],"cardiac","Heart","cardiac_rehab",{supervision:"clinical",clearance:true});
-plainList(["Chronic limb-threatening ischemia (supervised)","Lower-limb lymphedema (exercise management)","Post-lymph-node-dissection lymphedema (limb)",
- "Superficial thrombophlebitis (reconditioning)","Post-thrombotic syndrome (reconditioning)","Chronic venous ulcer (exercise adjunct)"],"cardiac","Vascular","pad",{supervision:"clinical",clearance:true});
+plainList(["Chronic limb-threatening ischemia (supervised)"],"cardiac","Vascular","pad",{supervision:"clinical",clearance:true});
+plainList(["Lower-limb lymphedema (exercise management)","Post-lymph-node-dissection lymphedema (limb)"],
+ "cardiac","Vascular","lymphedema",{supervision:"supervised",clearance:true,chronic:true});
+plainList(["Superficial thrombophlebitis (reconditioning)","Post-thrombotic syndrome (reconditioning)","Chronic venous ulcer (exercise adjunct)"],
+ "cardiac","Vascular","venous_rehab",{supervision:"clinical",clearance:true});
 
 /* PULMONARY — more */
 plainList(["Post-COVID exertional dyspnea (paced)","Eosinophilic asthma (reconditioning)","Allergic bronchopulmonary aspergillosis (reconditioning)",
@@ -814,8 +1043,10 @@ latList(["Ischiofemoral impingement","Deep gluteal syndrome","Obturator internus
 latList(["Fat pad (Hoffa's) impingement","Distal iliotibial band friction","Popliteus tendinopathy","Biceps femoris insertional tendinopathy",
  "Semimembranosus tendinopathy","Lateral patellar compression syndrome","Quadriceps tendinopathy","Proximal tibiofibular joint sprain",
  "Bipartite patella (symptomatic)","Infrapatellar (saphenous) nerve entrapment","Medial patellofemoral ligament sprain","Prepatellar bursitis",
- "Pes anserine bursitis","Osgood-Schlatter disease","Sinding-Larsen-Johansson syndrome","Medial plica syndrome","Knee osteoarthritis (medial)",
+ "Pes anserine bursitis","Osgood-Schlatter disease","Sinding-Larsen-Johansson syndrome","Medial plica syndrome",
  "Patellar tendinopathy","Quadriceps strain"],"msk","Knee","knee_pf",{chronic:true});
+latList(["Knee osteoarthritis (medial)","Knee osteoarthritis (lateral)","Knee osteoarthritis (patellofemoral compartment)"],
+ "msk","Knee","knee_oa",{chronic:true});
 /* Foot / ankle */
 latList(["Sinus tarsi syndrome","Anterolateral ankle impingement","Posterior ankle impingement","Deltoid ligament sprain","Spring ligament insufficiency",
  "Tibialis anterior tendinopathy","Navicular stress reaction","Sever's disease (calcaneal apophysitis)","Baxter's nerve entrapment","Retrocalcaneal bursitis",

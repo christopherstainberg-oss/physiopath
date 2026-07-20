@@ -173,6 +173,42 @@ A.release = (s) => ({
     ["Return to full function",9,12,"Restore full function.","functional range and strength for your daily tasks","Keep a maintenance stretch/movement routine — recurrence of tightness is the main risk."]]
 });
 
+/* amputation — residual limb shaping, not bone-fixation clocks */
+A.amputation = (s) => ({
+  total: 26, freq:"Daily residual-limb care + progressive whole-body work",
+  note:`${s.label}: early weeks are about wound healing, preventing contracture, desensitisation and shaping the residual limb so a socket can fit. The timeline is driven by soft-tissue healing and the prosthetic team — not by fracture-union X-rays.`,
+  variants: SURG_VARIANTS([SLOWHEAL]),
+  ph:[
+    ["Wound healing, positioning & desensitisation",0,3,"Protect the wound, prevent flexion contracture, start desensitisation.","wound progressing, residual limb positioned correctly, desensitisation started",`Avoid prolonged hip/knee bending that shortens the limb into a contracture. Follow dressing and elevation rules. Do NOT load the residual limb until your team says so.${s.extra ? " " + s.extra : ""}`],
+    ["Shaping, strength & pre-prosthetic mobility",3,8,"Shape the limb, strengthen the residual and sound sides, practise transfers.","volume stabilising, good residual-limb control, independent transfers with aids","Wear schedule and compression as the prosthetist directs. Core and sound-limb strength make walking safer later."],
+    ["Prosthetic tolerance & gait training",8,16,"Build wear time and gait quality with the prosthesis (or adaptive mobility).","increasing wear time without skin breakdown, safer gait with aids as needed","Skin checks every time the socket comes off. Progress walking surfaces gradually."],
+    ["Community mobility & activity",16,26,"Restore community walking, stairs/ramps and valued activity.","confident community mobility, activity goals progressing","Lifelong residual-limb and prosthetic care; report pain, skin breakdown or socket fit problems early."]]
+});
+
+/* cardiac device — lead settling, not nerve-decompression glides */
+A.device = (s) => ({
+  total: 12, freq:"Daily gentle walking; protect the implant-side shoulder",
+  note:`${s.label}: leads need weeks to settle in the heart and pocket. The main restriction is the **implant-side arm** — not nerve gliding or fracture loading.`,
+  variants: SURG_VARIANTS(),
+  ph:[
+    ["Pocket healing & arm precautions",0,2,"Protect the pocket and keep the arm below shoulder height.","wound healing, walking short distances, understanding device limits",`Do not raise the implant-side arm above shoulder height; no heavy push/pull with that arm. Walk and use the other limbs freely.${s.extra ? " " + s.extra : ""}`],
+    ["Build walking; keep arm limits",2,6,"Build aerobic walking while leads settle.","walking 20–30 minutes, pocket comfortable, no lead issues","Arm height and lifting limits usually last ~4–6 weeks — confirm with your cardiology team. Know your device's rate/shock settings if you have an ICD."],
+    ["Restore shoulder motion & light activity",6,9,"Restore full shoulder motion and light upper-body use once cleared.","full comfortable shoulder range, light activity resumed","Reintroduce reaching and light loads gradually; stop for pocket pain, swelling or fever."],
+    ["Return to usual activity",9,12,"Return to usual activity within device guidance.","back to daily life, long-term device care understood","Avoid extreme contact to the pocket; keep ID card; report shocks, dizziness or near-faints promptly."]]
+});
+
+/* solid-organ / stem-cell transplant */
+A.transplant = (s) => ({
+  total: 26, freq:"Short frequent walks early, building under the transplant team",
+  note:`${s.label}: recovery is team-led around graft function and immunosuppression. Infection risk is higher; progressive walking and later resistance training matter, but crowded gyms early do not.`,
+  variants: SURG_VARIANTS([SLOWHEAL]),
+  ph:[
+    ["Protection, walking & infection vigilance",0,4,"Protect the graft/wound, walk little and often, watch for infection.","walking short distances several times a day, wound healing, no fever",`Follow lifting and incision rules exactly. Hand hygiene and fever reporting are part of rehab.${s.extra ? " " + s.extra : ""}`],
+    ["Build aerobic capacity",4,10,"Build continuous walking and daily function.","walking 20–30 minutes, daily tasks easier, team happy with progress","Avoid maximal straining; steroids can weaken bone and muscle — progressive strength later is important, not optional."],
+    ["Strength & conditioning",10,18,"Add progressive resistance and longer aerobic work as cleared.","tolerating light–moderate resistance 2×/week, aerobic minutes rising","Still avoid boom-and-bust and high infection-risk environments until your team advises."],
+    ["Long-term active life",18,26,"Make activity lifelong within graft and medication limits.","≥150 min/week moderate activity when appropriate, strength maintained","Transplant fitness is a long game — coordinate every step-up with your transplant team."]]
+});
+
 /* cardiac surgery via sternotomy */
 A.cardiacsurg = (s) => ({
   total: 26, freq:"Short walks several times daily early, building to 150 min/week",
@@ -279,11 +315,11 @@ const FAM = [
   ["scope","arthroscopy|arthroscopic|meniscectomy|meniscus (repair|trim|debridement)|debridement|washout|synovectomy|chondroplasty|microfracture|loose body|subacromial decompression|labral (repair|debridement)","Keyhole (arthroscopic) surgery","joint",""],
   // soft-tissue release
   ["release","release|fasciotomy|fasciectomy|lengthening|decompression fasciotomy|trigger finger release|dupuytren|plantar fascia release|capsular release|manipulation under an","Soft-tissue release","tissue",""],
-  // amputation
-  ["orif","amputation|disarticulation|replantation","Amputation / limb surgery","residual limb","Residual-limb shaping and preventing contracture in the first weeks decide how well a prosthesis will fit later."],
+  // amputation — residual limb, not fracture fixation
+  ["amputation","amputation|disarticulation|replantation","Amputation / limb surgery","residual limb","Residual-limb shaping and preventing contracture in the first weeks decide how well a prosthesis will fit later."],
   // cardiac
   ["cardiacsurg","\\bcabg\\b|coronary artery bypass|bypass graft|valve (repair|replacement)|sternotomy|open heart|aortic (root|aneurysm) repair|myectomy|\\btavi\\b|\\btavr\\b|transcatheter|mitral|aortic valve","Cardiac surgery","heart",""],
-  ["decompress","pacemaker|defibrillator|\\bicd\\b|\\bcrt\\b|loop recorder|device implant","Cardiac device implant","chest","Avoid raising the arm on the device side above shoulder height, and no heavy lifting with it, for ~6 weeks while the leads settle."],
+  ["device","pacemaker|defibrillator|\\bicd\\b|\\bcrt\\b|loop recorder|device implant","Cardiac device implant","chest","Avoid raising the arm on the device side above shoulder height, and no heavy lifting with it, for ~6 weeks while the leads settle."],
   ["scope","angioplasty|\\bpci\\b|stent|cardiac catheter|coronary angiogram|ablation","Cardiac catheter procedure","heart","Follow the access-site (groin or wrist) restrictions: no heavy lifting or straining for a few days, and report any bleeding or swelling there."],
   // thoracic / vascular
   ["thoracic","lobectomy|pneumonectomy|wedge resection|thoracotomy|thoracoscop|\\bvats\\b|lung (resection|surgery)|pleurodesis|decortication|lung transplant","Thoracic (lung) surgery","chest",""],
@@ -299,7 +335,7 @@ const FAM = [
   // ENT / eye / endocrine / other
   ["softtissue","thyroidectomy|parathyroid|tonsillectomy|adenoid|grommet|septoplasty|sinus surgery|cochlear|mastoid|laryng|tracheostomy|cataract|retinal|glaucoma|vitrectomy|dental|maxillofacial|cleft","ENT / head & neck procedure","area","Follow your surgeon's activity limits; avoid straining, heavy lifting and (for eye or ear surgery) bending head-down while it heals."],
   ["softtissue","skin graft|flap|scar revision|burn|excision|biopsy|lipoma|cyst|abscess|wound","Skin & soft-tissue procedure","area",""],
-  ["neuro","transplant|kidney transplant|liver transplant|heart transplant","Transplant","body","You'll be on immunosuppression — infection risk is higher, so avoid crowded gyms early, keep wounds clean, and build activity gradually. Steroids weaken bone and muscle, which makes resistance training more important, not less."]
+  ["transplant","transplant|kidney transplant|liver transplant|heart transplant|stem.?cell transplant|bone.?marrow transplant","Transplant","body","You'll be on immunosuppression — infection risk is higher, so avoid crowded gyms early, keep wounds clean, and build activity gradually. Steroids weaken bone and muscle, which makes resistance training more important, not less."]
 ];
 FAM.forEach(([arch, r, label, part, extra]) =>
   add({ r, label, ...A[arch]({ label, part, extra }) }));

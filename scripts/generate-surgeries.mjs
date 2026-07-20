@@ -131,7 +131,8 @@ const FAM = [
     ret: "Prosthetic fitting and gait/functional training follow wound healing and limb shaping (weeks–months).",
     prec: [P("Position the residual limb to prevent contracture (avoid prolonged bending).", 8), P("Care for the wound and desensitise the limb as taught.", 6), P("Follow your prosthetic and weight-bearing timeline from the team.", 0)],
     bases: [{ n: "Below-knee (transtibial) amputation", kw: ["below-knee amputation", "transtibial amputation", "bka"] }, { n: "Above-knee (transfemoral) amputation", kw: ["above-knee amputation", "transfemoral amputation", "aka"] }, { n: "Toe amputation", kw: ["toe amputation"] }, { n: "Partial-foot / Syme amputation", kw: ["partial foot amputation", "syme amputation"] }, { n: "Finger / partial-hand amputation", kw: ["finger amputation", "partial hand amputation"] }, { n: "Below-elbow (transradial) amputation", kw: ["below-elbow amputation", "transradial amputation"] }, { n: "Above-elbow (transhumeral) amputation", kw: ["above-elbow amputation", "transhumeral amputation"] }],
-    mods: A_PLAIN, sides: S_SIDE },
+    /* Never day-case soften — residual-limb rehab is not a minor keyhole timeline */
+    mods: [{ m: "", soft: false }, { m: "revision", soft: false }], sides: S_SIDE },
 
   { cat: "hand_nerve", region: "hand", autoFlags: [],
     ret: "Light use returns within days–weeks; full grip/strength can take 2–3 months.",
@@ -275,7 +276,8 @@ const FAM = [
     ret: "Transplant recovery is closely supervised; reconditioning is gradual around immunosuppression — follow your transplant team's plan exactly.",
     prec: [P("Follow your transplant team's activity limits and immunosuppression schedule exactly.", 8), P("Avoid crowds and infection risk; keep meticulous wound and hand hygiene.", 6), P("Report fever, wound problems or graft-area pain promptly.", 4)],
     bases: [{ n: "Kidney transplant", kw: ["kidney transplant", "renal transplant"] }, { n: "Liver transplant", kw: ["liver transplant"] }, { n: "Heart transplant", kw: ["heart transplant"] }, { n: "Lung transplant", kw: ["lung transplant"] }, { n: "Pancreas transplant", kw: ["pancreas transplant"] }, { n: "Combined kidney-pancreas transplant", kw: ["kidney-pancreas transplant"] }, { n: "Corneal transplant", kw: ["corneal graft"] }, { n: "Bone-marrow / stem-cell transplant", kw: ["bone marrow transplant", "stem cell transplant"] }],
-    mods: A_PLAIN, sides: S_NONE },
+    /* Solid-organ / stem-cell transplant is never a day-case keyhole pathway */
+    mods: [{ m: "", soft: false }], sides: S_NONE },
 
   { cat: "vascular_access", region: "vascular", autoFlags: [],
     ret: "Access/endovascular procedures recover within days–weeks; care for the site and avoid heavy lifting with that limb early.",

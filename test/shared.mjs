@@ -30,7 +30,7 @@ export const COND = {
   copd:    pick(/COPD|pulmonary/i),
   osteo:   pick(/osteoporos/i),
   cp:      pick(/cerebral palsy/i),
-  severs:  pick(/sever|calcaneal apophysitis/i),
+  severs:  pick(/sever'?s|calcaneal apophysitis/i),
   frozen:  pick(/frozen shoulder|adhesive capsulitis/i),
 };
 
