@@ -1002,7 +1002,7 @@ const KB = [
    RED-FLAG INTERCEPTION
    The coach must never answer a possible emergency with a rehab explainer.
    This runs at the CHAT ENTRY POINT — deliberately OUTSIDE coachAnswer(),
-   because askClaude()'s error path falls back to coachAnswer(), so a check
+   because askJeffery()'s error path falls back to coachAnswer(), so a check
    living inside it would be skipped by a rate limit or a dropped connection.
    Patterns are narrow on purpose: crying wolf teaches people to click past
    the one that matters. They are tested against the app's own exercise
@@ -1337,7 +1337,7 @@ function addMsg(text, who){
   $("#chatlog").appendChild(div); $("#chatlog").scrollTop=$("#chatlog").scrollHeight;
 }
 /* Lightweight markdown -> HTML for coach replies. esc() FIRST (so any real HTML in the text
-   is inert), then apply markup to the escaped string. Handles the shapes Claude actually emits
+   is inert), then apply markup to the escaped string. Handles the shapes models typically emit
    — bold/italic/inline-code, bullet & numbered lists, and #/##/### headings — which the old
    bold/italic-only version rendered as literal `-` / `#` characters (the system prompt asks
    for exactly those). */

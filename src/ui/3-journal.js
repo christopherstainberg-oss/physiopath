@@ -740,15 +740,22 @@ async function jjSend(text, isEntry){
   renderJJThread();
   const iThinking = state.jjThread.length - 1;
   try{
-    const res = await fetch(openWebUIMessagesUrl(), {
+    const res = await fetch(openWebUIChatUrl(), {
       method:"POST",
-      headers: openWebUIHeaders(),
-      body: JSON.stringify({ model: state.apiModel || "", max_tokens: 700,
-        system: jefferyJournalSystem(), messages: jjWindow(12) })
+      headers: openWebUIChatHeaders(),
+      body: JSON.stringify({
+        model: state.apiModel || "",
+        max_tokens: 700,
+        stream: false,
+        messages: [
+          { role: "system", content: jefferyJournalSystem() },
+          ...jjWindow(12)
+        ]
+      })
     });
     if(!res.ok){ let m = "HTTP "+res.status; try{ const j = await res.json(); if(j.error&&j.error.message) m = j.error.message; }catch(e){} throw new Error(m); }
     const data = await res.json();
-    const out = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n").trim();
+    const out = (assistantTextFromChat(data) || "").trim();
     state.jjThread[iThinking] = { who:"jeffery", text: out || jefferyReflectOffline(msg) };
   }catch(err){
     state.jjThread[iThinking] = { who:"jeffery", text: (isEntry ? jefferyReflectOffline(msg) : jefferyChatOffline(msg)) };

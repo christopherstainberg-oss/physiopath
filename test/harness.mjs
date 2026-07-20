@@ -44,7 +44,7 @@ const DATA_FILES = [
 const SEAM = `
 ;window.__engine = {
   state, generateProgram, gatherFlags, clearanceNeeded,
-  save, load, migrateState, DEFAULT_STATE, STATE_VERSION, parseAnthropicSSE,
+  save, load, migrateState, DEFAULT_STATE, STATE_VERSION, parseOpenAISSE,
   exAgeMin, exAgeMax, exAgeOk, adaptForAge, protoAgeMin, PROTO_AGE_RULES, isPediatric, phaseTarget,
   detectPlan, detectFocus, getProtocol: window.getProtocol,
   gateStatus, measuresFor, measureRegionKey, measurePct, latestMeasure, MEASURE_SETS,

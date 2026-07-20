@@ -1,35 +1,40 @@
 /* =====================================================================
-   Coach streaming — the pure SSE parser (parseAnthropicSSE).
+   Coach streaming — the pure SSE parser (parseOpenAISSE).
 
    The live fetch/stream loop can't run under the node shim (no fetch/streams), but its
    correctness hinges on this pure function, which the loop feeds the growing buffer. These
-   pin: text_delta accumulation, stop_reason, partial-event tolerance, and error surfacing.
+   pin: delta.content accumulation, finish_reason, partial-event tolerance, and error surfacing.
 ===================================================================== */
 import { E } from "./shared.mjs";
 import { test, suite } from "./runner.mjs";
 import { strict as A } from "node:assert";
 
 suite("coach SSE streaming");
-const parse = E.parseAnthropicSSE;
+const parse = E.parseOpenAISSE;
 
-const ev = (type, obj) => `event: ${type}\ndata: ${JSON.stringify({ type, ...obj })}`;
+const chunk = (delta, finish = null) =>
+  `data: ${JSON.stringify({
+    id: "chatcmpl-test",
+    object: "chat.completion.chunk",
+    choices: [{ index: 0, delta, finish_reason: finish }]
+  })}`;
+
 const FULL = [
-  ev("message_start", { message: {} }),
-  ev("content_block_start", { index: 0 }),
-  ev("content_block_delta", { index: 0, delta: { type: "text_delta", text: "Ice" } }),
-  ev("content_block_delta", { index: 0, delta: { type: "text_delta", text: " for 15 min." } }),
-  ev("message_delta", { delta: { stop_reason: "end_turn" } }),
-  ev("message_stop", {}),
+  chunk({ role: "assistant", content: "" }),
+  chunk({ content: "Ice" }),
+  chunk({ content: " for 15 min." }),
+  chunk({}, "stop"),
+  "data: [DONE]"
 ].join("\n\n");
 
-test("assembles text_delta chunks and reads stop_reason", () => {
+test("assembles delta.content chunks and reads finish_reason", () => {
   const r = parse(FULL);
   A.equal(r.text, "Ice for 15 min.");
-  A.equal(r.stop, "end_turn");
+  A.equal(r.stop, "stop");
 });
 
-test("ignores ping / start / stop events (no spurious text)", () => {
-  const r = parse([ev("ping", {}), ev("message_start", {}), ev("content_block_stop", { index: 0 })].join("\n\n"));
+test("ignores [DONE] and empty deltas (no spurious text)", () => {
+  const r = parse([chunk({ role: "assistant" }), "data: [DONE]"].join("\n\n"));
   A.equal(r.text, "");
   A.equal(r.stop, null);
 });
@@ -41,16 +46,19 @@ test("an incomplete trailing event (chunk split mid-event) is skipped until comp
   A.equal(r.text, "Ice", "only the complete first delta is included");
 });
 
-test("max_tokens stop_reason surfaces (so the 'cut off' note fires)", () => {
+test("length finish_reason surfaces (so the 'cut off' note fires)", () => {
   const s = [
-    ev("content_block_delta", { delta: { type: "text_delta", text: "hi" } }),
-    ev("message_delta", { delta: { stop_reason: "max_tokens" } }),
+    chunk({ content: "hi" }),
+    chunk({}, "length"),
   ].join("\n\n");
   const r = parse(s);
   A.equal(r.text, "hi");
-  A.equal(r.stop, "max_tokens");
+  A.equal(r.stop, "length");
 });
 
-test("an error event throws (routes to the offline fallback)", () => {
-  A.throws(() => parse(ev("error", { error: { message: "overloaded_error" } })), /overloaded_error/);
+test("an error payload throws (routes to the offline fallback)", () => {
+  A.throws(
+    () => parse(`data: ${JSON.stringify({ error: { message: "overloaded_error" } })}`),
+    /overloaded_error/
+  );
 });

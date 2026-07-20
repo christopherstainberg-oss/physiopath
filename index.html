@@ -555,8 +555,8 @@
         Educational only — reference ranges vary by lab; your clinician's ranges take precedence.</p>
       <div class="labimport no-print">
         <label class="labuploadbtn" for="labFile">⬆ Upload lab results</label>
-        <input type="file" id="labFile" accept=".csv,.tsv,.txt,.json,.pdf,.png,.jpg,.jpeg,.webp,image/*,application/pdf,text/plain,text/csv,application/json" hidden />
-        <span class="labimporthint">CSV · TSV · TXT · JSON are read on your device. PDF &amp; photos of a report can be parsed when Open WebUI is connected (⚙ on the <b>Jeffery</b> step). Values go to a review step before anything is filled in.</span>
+        <input type="file" id="labFile" accept=".csv,.tsv,.txt,.json,.png,.jpg,.jpeg,.webp,image/*,text/plain,text/csv,application/json" hidden />
+        <span class="labimporthint">CSV · TSV · TXT · JSON are read on your device. Photos of a report can be parsed with <b>Grok Vision</b> when Open WebUI is connected with a vision model (⚙ on the <b>Jeffery</b> step). Values go to a review step before anything is filled in.</span>
       </div>
       <div id="labImport" class="no-print"></div>
       <div id="labsBody"></div>
@@ -616,12 +616,12 @@
           <input type="password" id="apiKey" placeholder="sk-…" autocomplete="off" />
         </label>
         <label class="field"><span class="lab">Model <span class="sub">(Open WebUI model id)</span></span>
-          <input type="text" id="apiModel" placeholder="e.g. llama3.1 or gpt-4o" autocomplete="off" />
+          <input type="text" id="apiModel" placeholder="e.g. grok-4 or llama3.1" autocomplete="off" />
         </label>
         <div class="banner clear" style="margin:0 0 10px">
           <b>⚠ Key safety:</b> your key is saved in this browser's local storage and requests go
-          <b>directly from your browser to your Open WebUI server</b> (Anthropic-compatible
-          <code>/api/v1/messages</code>). Anyone with access to this device could read the key.
+          <b>directly from your browser to your Open WebUI server</b> (OpenAI-compatible
+          <code>/api/chat/completions</code>). Anyone with access to this device could read the key.
           On Open WebUI, set <code>CORS_ALLOW_ORIGIN</code> to include this site’s origin
           (or <code>*</code>) if the browser reports a CORS block.
         </div>

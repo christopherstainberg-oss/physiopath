@@ -6542,7 +6542,7 @@ const KB = [
    RED-FLAG INTERCEPTION
    The coach must never answer a possible emergency with a rehab explainer.
    This runs at the CHAT ENTRY POINT — deliberately OUTSIDE coachAnswer(),
-   because askClaude()'s error path falls back to coachAnswer(), so a check
+   because askJeffery()'s error path falls back to coachAnswer(), so a check
    living inside it would be skipped by a rate limit or a dropped connection.
    Patterns are narrow on purpose: crying wolf teaches people to click past
    the one that matters. They are tested against the app's own exercise
@@ -6877,7 +6877,7 @@ function addMsg(text, who){
   $("#chatlog").appendChild(div); $("#chatlog").scrollTop=$("#chatlog").scrollHeight;
 }
 /* Lightweight markdown -> HTML for coach replies. esc() FIRST (so any real HTML in the text
-   is inert), then apply markup to the escaped string. Handles the shapes Claude actually emits
+   is inert), then apply markup to the escaped string. Handles the shapes models typically emit
    — bold/italic/inline-code, bullet & numbered lists, and #/##/### headings — which the old
    bold/italic-only version rendered as literal `-` / `#` characters (the system prompt asks
    for exactly those). */
@@ -8702,15 +8702,22 @@ async function jjSend(text, isEntry){
   renderJJThread();
   const iThinking = state.jjThread.length - 1;
   try{
-    const res = await fetch(openWebUIMessagesUrl(), {
+    const res = await fetch(openWebUIChatUrl(), {
       method:"POST",
-      headers: openWebUIHeaders(),
-      body: JSON.stringify({ model: state.apiModel || "", max_tokens: 700,
-        system: jefferyJournalSystem(), messages: jjWindow(12) })
+      headers: openWebUIChatHeaders(),
+      body: JSON.stringify({
+        model: state.apiModel || "",
+        max_tokens: 700,
+        stream: false,
+        messages: [
+          { role: "system", content: jefferyJournalSystem() },
+          ...jjWindow(12)
+        ]
+      })
     });
     if(!res.ok){ let m = "HTTP "+res.status; try{ const j = await res.json(); if(j.error&&j.error.message) m = j.error.message; }catch(e){} throw new Error(m); }
     const data = await res.json();
-    const out = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n").trim();
+    const out = (assistantTextFromChat(data) || "").trim();
     state.jjThread[iThinking] = { who:"jeffery", text: out || jefferyReflectOffline(msg) };
   }catch(err){
     state.jjThread[iThinking] = { who:"jeffery", text: (isEntry ? jefferyReflectOffline(msg) : jefferyChatOffline(msg)) };
@@ -10190,7 +10197,7 @@ function renderLabs(){
   $$("#labsBody .labt").forEach(inp=>inp.oninput=()=>{ const id=inp.dataset.lab; (state.labs[id]=state.labs[id]||{})[inp.dataset.b]=inp.value.trim(); save(); refreshLabRow(id); renderRisks(); });
 }
 
-/* ---- import lab values from an uploaded file (CSV/TSV/TXT/JSON on-device; PDF/photos via Open WebUI) ---- */
+/* ---- import lab values from an uploaded file (CSV/TSV/TXT/JSON on-device; photos via Grok Vision) ---- */
 const LAB_ALIASES = {
   tchol:["total cholesterol","cholesterol total","cholesterol, total","chol total"],
   ldl:["ldl cholesterol","ldl-c","ldl chol","ldl","low density"],
@@ -10405,6 +10412,23 @@ function extractJSON(t){
   const m=s.match(/\{[\s\S]*\}/); if(m){ try{ return JSON.parse(m[0]); }catch(e){} }
   return null;
 }
+/* Open WebUI chat-completions helpers (OpenAI-compatible — Grok Vision, Jeffery, journal). */
+function openWebUIChatUrl(){ return openWebUIBase() + "/api/chat/completions"; }
+function openWebUIChatHeaders(){
+  const key = (state.apiKey || "").trim();
+  return { "content-type":"application/json", "Authorization": "Bearer " + key };
+}
+function assistantTextFromChat(data){
+  if(!data) return "";
+  const c0 = data.choices && data.choices[0];
+  if(c0 && c0.message){
+    const m = c0.message.content;
+    if(typeof m === "string") return m;
+    if(Array.isArray(m)) return m.map(b => (typeof b === "string" ? b : (b && (b.text || b.content)) || "")).join("");
+  }
+  if(typeof data.content === "string") return data.content;
+  return "";
+}
 async function apiParseLabs(payload){
   const known = LABS.map(l=>`${l.id} — ${l.name} (${l.unit}); aliases: ${(LAB_ALIASES[l.id]||[]).join(", ")}`).join("\n");
   const sys = `You extract laboratory test results from the user's document and map each to one of the KNOWN TESTS below.
@@ -10414,17 +10438,38 @@ ${known}
 Return ONLY a JSON object — no prose, no code fences:
 {"collectionDate":"YYYY-MM-DD or null","labs":[{"id":"<known id>","value":<number>,"unit":"<unit found>"}]}
 Rules: "collectionDate" is the specimen collection/report date if shown (else null). Include a test only if it has a clear numeric result. Use the matching id from the list. If the reported unit differs from the target unit and the conversion is standard and unambiguous, convert to the target unit; otherwise return the original number and its unit. Ignore anything not in the list. If none are found, return {"labs":[]}.`;
-  let content;
-  if(payload.kind==="text") content=[{type:"text",text:`Extract the lab results from this document:\n\n${payload.text.slice(0,60000)}`}];
-  else if(payload.kind==="image") content=[{type:"image",source:{type:"base64",media_type:payload.media_type,data:payload.data}},{type:"text",text:"Extract every lab test result visible in this image."}];
-  else content=[{type:"document",source:{type:"base64",media_type:"application/pdf",data:payload.data}},{type:"text",text:"Extract every lab test result from this PDF."}];
-  const res=await fetch(openWebUIMessagesUrl(),{ method:"POST",
-    headers: openWebUIHeaders(),
-    body:JSON.stringify({ model:state.apiModel||"", max_tokens:1500, system:sys, messages:[{role:"user",content}] }) });
+  let userContent;
+  if(payload.kind==="text"){
+    userContent = `Extract the lab results from this document:\n\n${payload.text.slice(0,60000)}`;
+  } else if(payload.kind==="image"){
+    const mt = payload.media_type || "image/jpeg";
+    // Grok Vision (OpenAI-compatible): image as data URL + instruction text
+    userContent = [
+      { type:"image_url", image_url:{ url:`data:${mt};base64,${payload.data}` } },
+      { type:"text", text:"Extract every lab test result visible in this image. Return only the JSON object described in the system instructions." }
+    ];
+  } else {
+    // Grok Vision is image-based — photos/screenshots only
+    throw new Error("Grok Vision reads photos of lab reports (PNG/JPEG). Upload a clear photo or screenshot of the page, or a CSV / TSV / TXT / JSON export.");
+  }
+  const res = await fetch(openWebUIChatUrl(), {
+    method:"POST",
+    headers: openWebUIChatHeaders(),
+    body: JSON.stringify({
+      model: state.apiModel || "",
+      max_tokens: 1500,
+      temperature: 0,
+      stream: false,
+      messages: [
+        { role:"system", content: sys },
+        { role:"user", content: userContent }
+      ]
+    })
+  });
   if(!res.ok){ const t=await res.text().catch(()=>""); throw new Error(`API ${res.status}${t?" — "+t.slice(0,140):""}`); }
-  const data=await res.json();
-  const txt=(data.content||[]).map(b=>b.text||"").join("");
-  const parsed=extractJSON(txt), labs=(parsed&&parsed.labs)||[];
+  const data = await res.json();
+  const txt = assistantTextFromChat(data);
+  const parsed = extractJSON(txt), labs = (parsed && parsed.labs) || [];
   const collectionDate = parsed && parsed.collectionDate ? parseDateLoose(String(parsed.collectionDate)) : null;
   return { collectionDate, cands: labs.filter(x=>x&&x.id!=null&&x.value!=null).map(x=>({id:x.id, value:x.value, unit:x.unit, name:labName(x.id)})) };
 }
@@ -10435,18 +10480,22 @@ async function handleLabFile(file){
   labImportMsg("load", `Reading ${esc(file.name)}…`);
   try{
     let cands=[], collectionDate=null;
-    if(isImage||isPdf){
-      if(!coachOnline()){ labImportMsg("warn","PDFs and photos can't be parsed offline. Connect Open WebUI (⚙ on the Jeffery step), or upload a CSV, TSV, TXT, or JSON export instead."); return; }
-      labImportMsg("load", `Parsing ${isPdf?"PDF":"image"} with Open WebUI…`);
-      const r = await apiParseLabs({ kind:isPdf?"pdf":"image", media_type:file.type||"image/jpeg", data:await fileToBase64(file) });
+    if(isPdf){
+      labImportMsg("warn","Grok Vision reads <b>photos</b> of lab reports, not PDF files. Take a clear photo or screenshot of the page (PNG/JPEG), or upload a CSV / TSV / TXT / JSON export.");
+      return;
+    }
+    if(isImage){
+      if(!coachOnline()){ labImportMsg("warn","Photos can't be parsed offline. Connect Open WebUI with a vision model such as Grok (⚙ on the <b>Jeffery</b> step), or upload a CSV, TSV, TXT, or JSON export instead."); return; }
+      labImportMsg("load", "Parsing image with Grok Vision…");
+      const r = await apiParseLabs({ kind:"image", media_type:file.type||"image/jpeg", data:await fileToBase64(file) });
       cands=r.cands; collectionDate=r.collectionDate;
     } else {
       const text=await file.text();
-      if(coachOnline()){ labImportMsg("load","Parsing with Open WebUI…"); try{ const r=await apiParseLabs({kind:"text",text}); cands=r.cands; collectionDate=r.collectionDate; }catch(e){ cands=localParseLabs(text); collectionDate=detectCollectionDate(text); } }
+      if(coachOnline()){ labImportMsg("load","Parsing with Grok Vision…"); try{ const r=await apiParseLabs({kind:"text",text}); cands=r.cands; collectionDate=r.collectionDate; }catch(e){ cands=localParseLabs(text); collectionDate=detectCollectionDate(text); } }
       else { cands=localParseLabs(text); collectionDate=detectCollectionDate(text); }
     }
     cands=(cands||[]).filter(c=>LABS.some(l=>l.id===c.id) && c.value!=null && c.value!=="" && !isNaN(parseFloat(c.value)));
-    if(!cands.length){ labImportMsg("warn","Couldn't find recognizable lab values in that file. Try a clearer export (CSV/JSON) or enter values manually below."); return; }
+    if(!cands.length){ labImportMsg("warn","Couldn't find recognizable lab values in that file. Try a clearer photo or export (CSV/JSON), or enter values manually below."); return; }
     // de-dupe by id, keep first
     const seen=new Set(); cands=cands.filter(c=>seen.has(c.id)?false:(seen.add(c.id),true));
     showLabReview(cands, collectionDate);
@@ -10464,7 +10513,7 @@ function showLabReview(cands, collectionDate){
       <input class="labrevval" data-i="${i}" value="${esc(String(c.value))}" inputmode="decimal" />
       <span class="labrevunit">${esc(c.unit||labUnit(c.id))}</span></label>`).join("")}
     <div class="labrevbtns"><button class="btn ghost" id="labRevCancel">Cancel</button><button class="btn primary" id="labRevApply">Apply to my labs</button></div>
-    <p class="hint" style="margin:8px 0 0">Automated parsing can make mistakes — verify each value first. Applying keeps a dated record, so uploading another report adds a column you can compare.${coachOnline()?" This file was parsed via your Open WebUI server.":""}</p>
+    <p class="hint" style="margin:8px 0 0">Automated parsing can make mistakes — verify each value first. Applying keeps a dated record, so uploading another report adds a column you can compare.${coachOnline()?" Parsed with <b>Grok Vision</b> via your Open WebUI server.":""}</p>
   </div>`;
   $("#labRevApply").onclick=()=>applyLabImport(cands);
   $("#labRevCancel").onclick=()=>{ el.innerHTML=""; };
@@ -10820,29 +10869,19 @@ function initHealth(){
 
 /* =====================================================================
    OPEN WEBUI COACH (optional) + settings
-   Uses Open WebUI's Anthropic-compatible POST /api/v1/messages endpoint so
-   the existing message/SSE shape stays the same; only the host and key change.
+   OpenAI-compatible POST /api/chat/completions (works with Grok and other models).
 ===================================================================== */
 function normalizeOpenWebUIBase(raw){
   let b = String(raw || "").trim();
   if(!b) return "http://localhost:3000";
   // Users often paste a chat URL or .../api — strip to origin + optional path prefix.
   b = b.replace(/\/+$/,"");
-  b = b.replace(/\/api(?:\/v1)?(?:\/messages)?$/i, "");
+  b = b.replace(/\/api(?:\/v1)?(?:\/(?:messages|chat\/completions))?$/i, "");
+  b = b.replace(/\/v1(?:\/chat\/completions)?$/i, "");
   b = b.replace(/\/#$/, "").replace(/\/+$/,"");
   return b || "http://localhost:3000";
 }
 function openWebUIBase(){ return normalizeOpenWebUIBase(state.apiBase); }
-function openWebUIMessagesUrl(){ return openWebUIBase() + "/api/v1/messages"; }
-function openWebUIHeaders(){
-  const key = (state.apiKey || "").trim();
-  return {
-    "content-type":"application/json",
-    "x-api-key": key,
-    "Authorization": "Bearer " + key,
-    "anthropic-version":"2023-06-01"
-  };
-}
 function coachOnline(){ return !!(state.apiKey && state.apiKey.trim() && openWebUIBase()); }
 /* Turn opaque "Failed to fetch" into an actionable diagnosis for the Jeffery UI. */
 function openWebUIFetchHint(err){
@@ -10883,13 +10922,13 @@ async function testOpenWebUIConnection(){
   // Temporarily apply form values so URL/header helpers match what the user typed.
   const prev = { apiBase: state.apiBase, apiKey: state.apiKey, apiModel: state.apiModel };
   state.apiBase = draft.apiBase; state.apiKey = draft.apiKey; state.apiModel = draft.apiModel;
-  setApiTestResult(true, "Testing " + openWebUIMessagesUrl() + "…");
+  setApiTestResult(true, "Testing " + openWebUIChatUrl() + "…");
   try{
     if(!draft.apiKey) throw new Error("Paste an Open WebUI API key first.");
     if(!draft.apiModel) throw new Error("Enter a model id (exact name from Open WebUI).");
-    const res = await fetch(openWebUIMessagesUrl(), {
+    const res = await fetch(openWebUIChatUrl(), {
       method: "POST",
-      headers: openWebUIHeaders(),
+      headers: openWebUIChatHeaders(),
       body: JSON.stringify({
         model: draft.apiModel,
         max_tokens: 16,
@@ -11140,34 +11179,43 @@ function addTyping(){
   const div=document.createElement("div"); div.className="msg bot typing"; div.textContent="thinking…";
   $("#chatlog").appendChild(div); $("#chatlog").scrollTop=$("#chatlog").scrollHeight; return div;
 }
-/* Parse an Anthropic streaming SSE payload → the assembled assistant text + stop_reason.
+/* Parse an OpenAI-compatible streaming SSE payload → assembled assistant text + finish_reason.
    PURE and unit-tested (test/coach-stream.test.mjs). The live loop feeds it the GROWING buffer,
    so an incomplete trailing event (a network chunk that split mid-event) simply doesn't parse
-   yet and turns up on the next read. Accumulates text_delta and reads the message_delta stop. */
-function parseAnthropicSSE(sse){
+   yet and turns up on the next read. Accumulates delta.content and reads finish_reason. */
+function parseOpenAISSE(sse){
   let text="", stop=null;
   for(const block of String(sse).split("\n\n")){
     const line = block.split("\n").find(l=>l.startsWith("data:"));
     if(!line) continue;
-    let ev; try{ ev = JSON.parse(line.slice(5).trim()); }catch(_){ continue; }
-    if(ev.type==="content_block_delta" && ev.delta && ev.delta.type==="text_delta") text += ev.delta.text;
-    else if(ev.type==="message_delta" && ev.delta && ev.delta.stop_reason) stop = ev.delta.stop_reason;
-    else if(ev.type==="error" && ev.error && ev.error.message) throw new Error(ev.error.message);
+    const raw = line.slice(5).trim();
+    if(!raw || raw === "[DONE]") continue;
+    let ev; try{ ev = JSON.parse(raw); }catch(_){ continue; }
+    if(ev.error){
+      const msg = (ev.error && ev.error.message) || (typeof ev.error === "string" ? ev.error : "stream error");
+      throw new Error(msg);
+    }
+    const ch = ev.choices && ev.choices[0];
+    if(!ch) continue;
+    if(ch.delta && typeof ch.delta.content === "string") text += ch.delta.content;
+    if(ch.finish_reason) stop = ch.finish_reason;
   }
   return { text, stop };
 }
-async function askClaude(q){
+async function askJeffery(q){
   /* The user turn is pushed by the submit handler — pushing again here would duplicate it. */
   const typing=addTyping();
-  const callAPI = () => fetch(openWebUIMessagesUrl(),{
+  const callAPI = () => fetch(openWebUIChatUrl(),{
       method:"POST",
-      headers: openWebUIHeaders(),
+      headers: openWebUIChatHeaders(),
       body:JSON.stringify({
         model: state.apiModel || "",
         max_tokens: 4000,          // 1100 truncated mid-answer on anything with sets/reps detail
         stream: true,              // stream the answer so it renders as it is written, not after a long wait
-        system: buildCoachSystem(),
-        messages: chatWindow(10)          // must begin on a user turn or the API 400s
+        messages: [
+          { role: "system", content: buildCoachSystem() },
+          ...chatWindow(10)        // must begin on a user turn or the API 400s
+        ]
       })
     });
   let streamDiv=null;
@@ -11200,20 +11248,21 @@ async function askClaude(q){
         const {done, value} = await reader.read();
         if(done) break;
         buf += dec.decode(value, {stream:true});
-        const p = parseAnthropicSSE(buf);
+        const p = parseOpenAISSE(buf);
         if(p.text!==last){ last=p.text; streamDiv.innerHTML=mdLite(p.text); $("#chatlog").scrollTop=$("#chatlog").scrollHeight; }
       }
-      const p = parseAnthropicSSE(buf); full=p.text; stop=p.stop;
+      const p = parseOpenAISSE(buf); full=p.text; stop=p.stop;
     } else {
       /* No streamable body (e.g. an old browser) — fall back to a single JSON read. */
       const data=await res.json();
-      full=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n"); stop=data.stop_reason;
+      full=assistantTextFromChat(data);
+      stop=(data.choices&&data.choices[0]&&data.choices[0].finish_reason)||null;
     }
     full=(full||"").trim();
-    /* Read stop_reason so a capped reply isn't dressed up as a finished one. */
-    if(full && (stop==="max_tokens" || stop==="max_length"))
+    /* finish_reason "length" (OpenAI) means the reply hit max_tokens. */
+    if(full && (stop==="length" || stop==="max_tokens" || stop==="max_length"))
       full += "\n\n*(cut off — that hit the length limit. Ask me to continue, or for a shorter answer.)*";
-    if(!full) full = stop==="refusal"
+    if(!full) full = stop==="content_filter"
       ? "I wasn't able to answer that one. Try rephrasing it — or if it's about your specific case, ask your clinician."
       : "(no reply)";
     streamDiv.innerHTML=mdLite(full); attachBotExtras(streamDiv, full);
@@ -11388,7 +11437,7 @@ document.addEventListener("DOMContentLoaded",()=>{
     const nb = $("#newChatBtn"); if(nb) nb.classList.remove("hide");   // there's a thread to clear now
     const rf = redFlagFor(v);          // a possible emergency never reaches the API or the KB
     if(rf){ setTimeout(()=>{ addMsg(rf,"bot"); pushTurn("assistant", rf); },220); return; }
-    if(coachOnline()) askClaude(v);
+    if(coachOnline()) askJeffery(v);
     else setTimeout(()=>{ const a=coachAnswer(v); addMsg(a,"bot"); pushTurn("assistant", a); },220);
   });
   if(state.program){ try{ renderProgram(state.program); }catch(err){ console.error("Discarding an unreadable saved program:", err); state.program=null; save(); } }
