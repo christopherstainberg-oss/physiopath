@@ -519,7 +519,7 @@ const PED_SETS = [
   {n:"Lateral hop-and-stick",             reg:["Knee","Ankle","Balance"], t:["impact","weight_bearing","balance"], a:[9,12.5], d:"3×5 each", diff:3},
   {n:"Deceleration practice",             reg:["Knee","Balance"],  t:["impact","weight_bearing","balance"], a:[9,12.5], d:"4×10 m", diff:3},
   {n:"Basic agility ladder",              reg:["Gait","Balance","Ankle"], t:["impact","weight_bearing","balance"], a:[8,12.5], d:"4–6 passes", diff:3},
-  {n:"Short shuttle run",                 reg:["Cardio","Knee"],   t:["impact","weight_bearing","aerobic"], a:[9,12.5], d:"4–6 reps", diff:4},
+  {n:"Short shuttle run",                 reg:["Cardio","Knee"],   t:["impact","weight_bearing","aerobic"], a:[14,99], d:"4–6 reps", diff:4},
   {n:"Skipping with a rope",              reg:["Calf","Ankle","Cardio"], t:["impact","weight_bearing","aerobic"], a:[7,12.5], d:"3×30s", diff:3},
   {n:"Bike riding for endurance",         reg:["Cardio","Knee","Hip"], t:["aerobic"], a:[6,12.5], d:"15–25 min", diff:1},
   {n:"Light medicine-ball chest pass",    reg:["Shoulder","Core"], t:[],        a:[9,12.5], d:"2×10", diff:2},

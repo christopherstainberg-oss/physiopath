@@ -1354,6 +1354,46 @@
      E("Return to activity","as tolerated","Running/sport typically months out — clinician-guided")]
   ];
 
+  /* Cervical fusion / ACDF — collar and limited end-range. Not generic cervical mobility. */
+  P.cervical_fusion = [
+    [E("Walk often (collar as prescribed)","5–10 min × several/day","Best early exercise after ACDF",T.aerobic,T.wb),
+     E("Scapular squeezes","3×12","Shoulder blades, not the neck"),
+     E("Ankle pumps & sit-to-stand (tall)","3×10","Keep the body moving without looking down",T.wb),
+     E("Supported neutral neck (collar on if prescribed)","several × day","No end-range rotation or looking-up/down")],
+    [E("Walking build","10–20 min","Eyes forward — avoid prolonged phone-down posture",T.aerobic,T.wb),
+     E("Shoulder shrugs & scapular setting","3×12","Quiet neck"),
+     E("Gentle supported rotation in a comfortable mid-range","3×8","Stop before stiffness or collar limits",T.endNeck),
+     E("Deep neck flexor nods (tiny, pain-free)","3×8","Not a loaded chin tuck into end-range")],
+    [E("Walking endurance","20–30 min","Community distances",T.aerobic,T.wb),
+     E("Postural endurance (wall angels to comfort)","3×8","No forced overhead if the neck complains",T.overhead),
+     E("Isometric neck holds in neutral","3×8s","Match resistance, don't push into range",T.endNeck),
+     E("Shoulder and thoracic mobility (seated)","3×10","Move the mid-back, spare the fusion")],
+    [E("Functional reaching at eye level","3×10","Overhead only when cleared",T.overhead),
+     E("Progressive walking / bike","as tolerated","Low-impact first",T.aerobic),
+     E("Light functional loading","3×8","No heavy lifting until the surgeon eases limits"),
+     E("Return to activity","as tolerated","End-range sport and impact only with clearance")]
+  ];
+
+  /* Hip labral tear / arthroscopy — protect flexion-rotation; no cutting drills. */
+  P.hip_labral = [
+    [E("Protected walking (crutches as prescribed)","per surgeon","Follow weight-bearing exactly",T.wb),
+     E("Isometric glute sets","3×12","Squeeze, don't pinch the front of the hip"),
+     E("Ankle pumps & quad sets","3×12","Circulation without deep hip bend"),
+     E("Gentle mid-range hip flexion (pain-free)","3×8","Stay well short of a pinch",T.deepHipFlex)],
+    [E("Stationary bike (high seat, short bouts)","5–10 min","Avoid deep flexion at the bottom",T.aerobic),
+     E("Sidelying clams (small range)","3×10","No twisting the femur into a pinch",T.hipAddIR),
+     E("Glute bridges (small range)","3×10","Keep the hip quiet"),
+     E("Short-range hip abduction (standing, support)","3×10","Hold a rail; no pinch",T.wb,T.balance)],
+    [E("Bike / walk build","10–20 min","No cutting or pivoting",T.aerobic,T.wb),
+     E("Single-leg stance (supported)","3×20s","Quiet hip",T.balance,T.wb),
+     E("Sit-to-stand (tall, no deep squat)","3×8","Stay above a pinch",T.wb,T.deepHipFlex),
+     E("Hip hinge patterning (stick)","3×8","Hips, not a deep squat")],
+    [E("Strength in a pinch-free range","3×10","Add load only if the front of the hip stays quiet",T.wb),
+     E("Walk / hike / swim","as tolerated","Low-impact first",T.aerobic),
+     E("Balance and control","3×20s","No lateral bounds or cutting drills",T.balance),
+     E("Return to activity","as tolerated","Pivoting/cutting only with clinician clearance — not a sport-cutting program")]
+  ];
+
   /* ================= ALIASES ================= */
   const ALIAS = {
     shoulder_instability:"shoulder", knee_meniscus:"knee_ligament",

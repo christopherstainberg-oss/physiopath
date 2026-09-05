@@ -52,6 +52,7 @@ const SEAM = `
   tissueClass, thisWeekFocus, LOADING_LADDER, progressionSignal, recentEffort,
   SPECIAL_PRECAUTIONS, CONTRA_RULES: window.CONTRA_RULES,
   PROTOCOLS: window.PROTOCOLS, PROTOCOL_ALIAS: window.PROTOCOL_ALIAS,
+  landingStep,
   selectedConditions, CONMAP, EXMAP,
   // populate the id→object maps the way ensureConditions()/ensureProgramData() would,
   // minus the <script> element dance that the shim can't run.

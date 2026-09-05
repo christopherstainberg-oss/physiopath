@@ -341,7 +341,7 @@ const state = {
   medDoses:{}, weightBearing:{status:"",pct:"",lbs:"",side:"",limb:"le"}, devices:[],
   cardiacDevice:{type:"",icdRate:""}, specialPrecautions:[], planVariant:{}, progress:{}, measures:{},
   log:[], logMood:"", logDone:[], logTpl:"blank", photoNoted:false,
-  jjThread:[], chatHistory:[], apiKey:"", apiBase:"http://localhost:3000", apiModel:""
+  jjThread:[], chatHistory:[], apiKey:"", apiBase:"https://api.x.ai/v1", apiModel:"grok-4.6"
 };
 const MED_FILTERABLE = ["fluoroquinolone","anticoagulant","antiplatelet","opioid","sedative","muscle_relaxant","gabapentinoid","antipsychotic"];
 /* ---------- on-demand data loading ----------
@@ -504,6 +504,8 @@ function save(){
 function migrateState(s){
   // const from = typeof s._v === "number" ? s._v : 1;
   // if(from < 2){ /* … move / rename fields on `s` … */ }
+  if(!s.apiBase || /localhost:3000/.test(String(s.apiBase))) s.apiBase = "https://api.x.ai/v1";
+  if(!s.apiModel) s.apiModel = "grok-4.6";
   s._v = STATE_VERSION;
   return s;
 }
@@ -3637,6 +3639,8 @@ const PROTOCOL_APPROACH = {
   cuff_repair:"protecting the rotator-cuff repair first, then restoring assisted motion and cuff strength — not throwing or plyometrics",
   shoulder_replacement:"protected early motion after shoulder replacement (coffee-cup loads), then slow functional reaching — not overhead plyos",
   lumbar_fusion:"walking and BLT-safe (no bending/lifting/twisting) work while the fusion consolidates",
+  cervical_fusion:"walking and protected mid-range neck work in the collar — not end-range cervical mobility",
+  hip_labral:"protecting hip flexion/rotation and rebuilding glute control — not cutting drills",
   achilles_repair:"protected walking in the boot, then gradual calf loading — not early heel-drops or eccentric overload",
   knee_ligament:"restoring quad control and knee motion, then progressive loading and return-to-sport drills",
   knee_pf:"strengthening the hips and quads and managing load to settle kneecap pain",
@@ -6991,6 +6995,13 @@ function stepDone(i){
     default: return false;   // the hub tools (Journal/Health/Jeffery/Library) aren't "completed"
   }
 }
+function landingStep(st, go){
+  const goMap={ build:2, details:3, clinician:1, program:4, journal:5, progress:6, health:6, coach:7, library:8 };
+  if(go && goMap[go]!=null) return goMap[go];
+  if(st && st.program) return 4;
+  return Number(st && st.step) || 0;
+}
+window.landingStep = landingStep;
 function goStep(n){
   state.step=n; save();
   // Honour reduced-motion for the JS scrolls (the CSS killswitch can't reach a JS `behavior`).
@@ -8711,7 +8722,7 @@ async function jjSend(text, isEntry){
       method:"POST",
       headers: openWebUIChatHeaders(),
       body: JSON.stringify({
-        model: state.apiModel || "",
+        model: llmModel(),
         max_tokens: 700,
         stream: false,
         messages: [
@@ -10417,8 +10428,7 @@ function extractJSON(t){
   const m=s.match(/\{[\s\S]*\}/); if(m){ try{ return JSON.parse(m[0]); }catch(e){} }
   return null;
 }
-/* Open WebUI chat-completions helpers (OpenAI-compatible — Grok Vision, Jeffery, journal). */
-function openWebUIChatUrl(){ return openWebUIBase() + "/api/chat/completions"; }
+/* Chat URL is defined with Grok/xAI defaults below (openWebUIChatUrl). */
 function openWebUIChatHeaders(){
   const key = (state.apiKey || "").trim();
   return { "content-type":"application/json", "Authorization": "Bearer " + key };
@@ -10461,7 +10471,7 @@ Rules: "collectionDate" is the specimen collection/report date if shown (else nu
     method:"POST",
     headers: openWebUIChatHeaders(),
     body: JSON.stringify({
-      model: state.apiModel || "",
+      model: llmModel(),
       max_tokens: 1500,
       temperature: 0,
       stream: false,
@@ -10876,17 +10886,30 @@ function initHealth(){
    OPEN WEBUI COACH (optional) + settings
    OpenAI-compatible POST /api/chat/completions (works with Grok and other models).
 ===================================================================== */
+/* OpenAI-compatible chat helpers. Default is Grok via xAI; Open WebUI still works as a custom base. */
+const DEFAULT_LLM_BASE = "https://api.x.ai/v1";
+const DEFAULT_LLM_MODEL = "grok-4.6";
+function isXaiBase(raw){ return /api\.x\.ai/i.test(String(raw||"")); }
 function normalizeOpenWebUIBase(raw){
   let b = String(raw || "").trim();
-  if(!b) return "http://localhost:3000";
-  // Users often paste a chat URL or .../api — strip to origin + optional path prefix.
+  if(!b) return DEFAULT_LLM_BASE;
   b = b.replace(/\/+$/,"");
+  if(isXaiBase(b)){
+    if(!/\/v1$/i.test(b)) b += "/v1";
+    return b;
+  }
   b = b.replace(/\/api(?:\/v1)?(?:\/(?:messages|chat\/completions))?$/i, "");
   b = b.replace(/\/v1(?:\/chat\/completions)?$/i, "");
   b = b.replace(/\/#$/, "").replace(/\/+$/,"");
-  return b || "http://localhost:3000";
+  return b || DEFAULT_LLM_BASE;
 }
-function openWebUIBase(){ return normalizeOpenWebUIBase(state.apiBase); }
+function openWebUIBase(){ return normalizeOpenWebUIBase(state.apiBase || DEFAULT_LLM_BASE); }
+function openWebUIChatUrl(){
+  const b = openWebUIBase();
+  if(isXaiBase(b) || /\/v1$/i.test(b)) return b + "/chat/completions";
+  return b + "/api/chat/completions";
+}
+function llmModel(){ return (state.apiModel || DEFAULT_LLM_MODEL).trim() || DEFAULT_LLM_MODEL; }
 function coachOnline(){ return !!(state.apiKey && state.apiKey.trim() && openWebUIBase()); }
 /* Turn opaque "Failed to fetch" into an actionable diagnosis for the Jeffery UI. */
 function openWebUIFetchHint(err){
@@ -10905,7 +10928,7 @@ function openWebUIFetchHint(err){
 function updateCoachMode(){
   const pill=$("#coachMode"); if(!pill) return;
   const on=coachOnline();
-  pill.textContent = on ? "Open WebUI" : "offline";
+  pill.textContent = on ? (isXaiBase(openWebUIBase()) ? "Grok" : "Open WebUI") : "offline";
   pill.className = "modepill "+(on?"online":"offline");
 }
 function readCoachSettingsFromForm(){
@@ -10929,8 +10952,8 @@ async function testOpenWebUIConnection(){
   state.apiBase = draft.apiBase; state.apiKey = draft.apiKey; state.apiModel = draft.apiModel;
   setApiTestResult(true, "Testing " + openWebUIChatUrl() + "…");
   try{
-    if(!draft.apiKey) throw new Error("Paste an Open WebUI API key first.");
-    if(!draft.apiModel) throw new Error("Enter a model id (exact name from Open WebUI).");
+    if(!draft.apiKey) throw new Error("Paste an xAI (or Open WebUI) API key first.");
+    if(!draft.apiModel) throw new Error("Enter a model id (default grok-4.6).");
     const res = await fetch(openWebUIChatUrl(), {
       method: "POST",
       headers: openWebUIChatHeaders(),
@@ -10968,9 +10991,9 @@ async function testOpenWebUIConnection(){
 }
 function initCoachSettings(){
   const baseEl = $("#apiBase"), keyEl = $("#apiKey"), modelEl = $("#apiModel");
-  if(baseEl) baseEl.value = state.apiBase || "http://localhost:3000";
+  if(baseEl) baseEl.value = state.apiBase || DEFAULT_LLM_BASE;
   if(keyEl) keyEl.value = state.apiKey || "";
-  if(modelEl) modelEl.value = state.apiModel || "";
+  if(modelEl) modelEl.value = state.apiModel || DEFAULT_LLM_MODEL;
   const settingsBtn = $("#coachSettingsBtn");
   if(settingsBtn) settingsBtn.onclick = ()=>$("#coachSettings").classList.toggle("hide");
   const saveBtn = $("#saveKeyBtn");
@@ -10982,7 +11005,7 @@ function initCoachSettings(){
     if(baseEl) baseEl.value = state.apiBase;
     save(); updateCoachMode();
     const panel = $("#coachSettings"); if(panel) panel.classList.add("hide");
-    toast(coachOnline() ? "Open WebUI connected." : "Key cleared — using Jeffery's offline mode.");
+    toast(coachOnline() ? "Grok connected." : "Key cleared — using Jeffery's offline mode.");
   };
   const clearBtn = $("#clearKeyBtn");
   if(clearBtn) clearBtn.onclick = ()=>{
@@ -11214,7 +11237,7 @@ async function askJeffery(q){
       method:"POST",
       headers: openWebUIChatHeaders(),
       body:JSON.stringify({
-        model: state.apiModel || "",
+        model: llmModel(),
         max_tokens: 4000,          // 1100 truncated mid-answer on anything with sets/reps detail
         stream: true,              // stream the answer so it renders as it is written, not after a long wait
         messages: [
@@ -11449,8 +11472,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   // PWA app-shortcut routing (?go=coach|library|build|progress)
   /* ?go= shortcuts. "progress" kept as an alias so any installed PWA shortcut or saved link
      still lands somewhere sensible after the Journal took index 5. */
-  const goMap={ build:2, details:3, clinician:1, program:4, journal:5, progress:6, health:6, coach:7, library:8 };
   const go=new URLSearchParams(location.search).get("go");
-  goStep(go && goMap[go]!=null ? goMap[go] : (state.step||0));
+  goStep(landingStep(state, go));
  }catch(err){ bootFail(err); }
 });

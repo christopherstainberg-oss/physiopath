@@ -15,6 +15,7 @@ import "./migration.test.mjs";
 import "./coach-stream.test.mjs";
 import "./safety-fixes.test.mjs";
 import "./clinical-maps.test.mjs";
+import "./pa-home-grok.test.mjs";
 import "./acute-neuro.test.mjs";
 import "./acute-care.test.mjs";
 import "./progression-floor.test.mjs";

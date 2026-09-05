@@ -1446,6 +1446,13 @@ function stepDone(i){
     default: return false;   // the hub tools (Journal/Health/Jeffery/Library) aren't "completed"
   }
 }
+function landingStep(st, go){
+  const goMap={ build:2, details:3, clinician:1, program:4, journal:5, progress:6, health:6, coach:7, library:8 };
+  if(go && goMap[go]!=null) return goMap[go];
+  if(st && st.program) return 4;
+  return Number(st && st.step) || 0;
+}
+window.landingStep = landingStep;
 function goStep(n){
   state.step=n; save();
   // Honour reduced-motion for the JS scrolls (the CSS killswitch can't reach a JS `behavior`).

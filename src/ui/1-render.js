@@ -16,6 +16,8 @@ const PROTOCOL_APPROACH = {
   cuff_repair:"protecting the rotator-cuff repair first, then restoring assisted motion and cuff strength — not throwing or plyometrics",
   shoulder_replacement:"protected early motion after shoulder replacement (coffee-cup loads), then slow functional reaching — not overhead plyos",
   lumbar_fusion:"walking and BLT-safe (no bending/lifting/twisting) work while the fusion consolidates",
+  cervical_fusion:"walking and protected mid-range neck work in the collar — not end-range cervical mobility",
+  hip_labral:"protecting hip flexion/rotation and rebuilding glute control — not cutting drills",
   achilles_repair:"protected walking in the boot, then gradual calf loading — not early heel-drops or eccentric overload",
   knee_ligament:"restoring quad control and knee motion, then progressive loading and return-to-sport drills",
   knee_pf:"strengthening the hips and quads and managing load to settle kneecap pain",

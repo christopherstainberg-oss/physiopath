@@ -270,8 +270,9 @@
   <section class="panel hide" id="panel-2">
     <div class="card">
       <h2>Find your injury or condition</h2>
-      <p class="hint">Search across <span class="tag msk">musculoskeletal</span> <span class="tag neuro">neurological</span>
-        <span class="tag cardiac">cardiac</span> <span class="tag pulm">pulmonary</span> <span class="tag ped">paediatric&nbsp;0–18</span> conditions. Pick one or more.</p>
+      <p class="hint">Search a generated catalogue of names across <span class="tag msk">musculoskeletal</span> <span class="tag neuro">neurological</span>
+        <span class="tag cardiac">cardiac</span> <span class="tag pulm">pulmonary</span> <span class="tag ped">paediatric&nbsp;0–18</span>.
+        Many names share a protocol pool — this is not a unique plan per diagnosis.</p>
 
       <div class="searchbar">
         <input type="text" id="condSearch" aria-label="Search injuries and conditions" placeholder="Search e.g. ‘rotator cuff’, ‘ACL’, ‘COPD’, ‘stroke’, ‘low back’…" autocomplete="off" />
@@ -604,26 +605,25 @@
       </div>
 
       <div class="settings hide" id="coachSettings">
-        <p class="hint" style="margin-bottom:10px">Optionally connect your <b>Open WebUI</b> server for open-ended answers.
-          Without a key, Jeffery uses a fast, private, offline knowledge base. Get an API key in Open WebUI under
-          <b>Settings → Account</b>.</p>
-        <label class="field"><span class="lab">Open WebUI base URL</span>
-          <input type="url" id="apiBase" placeholder="http://localhost:3000" autocomplete="off" />
+        <p class="hint" style="margin-bottom:10px">Connect <b>Grok</b> (xAI) for open-ended answers.
+          Default is <code>https://api.x.ai/v1</code> with model <code>grok-4.6</code>.
+          Without a key, Jeffery uses a fast, private, offline knowledge base.
+          You can still point the base URL at Open WebUI if you prefer a local proxy.</p>
+        <label class="field"><span class="lab">LLM base URL</span>
+          <input type="url" id="apiBase" placeholder="https://api.x.ai/v1" autocomplete="off" />
         </label>
-        <p class="hint" style="margin:-4px 0 10px">Origin only (no <code>/api</code>). Use the host this <b>browser</b> can reach —
-          <code>localhost</code> only works on the same machine. If PhysioPath is <b>HTTPS</b>, Open WebUI must be HTTPS too.</p>
-        <label class="field"><span class="lab">Open WebUI API key <span class="sub">(stored only in this browser)</span></span>
-          <input type="password" id="apiKey" placeholder="sk-…" autocomplete="off" />
+        <p class="hint" style="margin:-4px 0 10px">xAI: <code>https://api.x.ai/v1</code>. Open WebUI: origin only (no <code>/api</code>).
+          <code>localhost</code> only works on the same machine. If PhysioPath is <b>HTTPS</b>, the API must be HTTPS too.</p>
+        <label class="field"><span class="lab">API key <span class="sub">(stored only in this browser)</span></span>
+          <input type="password" id="apiKey" placeholder="xai-… or sk-…" autocomplete="off" />
         </label>
-        <label class="field"><span class="lab">Model <span class="sub">(Open WebUI model id)</span></span>
-          <input type="text" id="apiModel" placeholder="e.g. grok-4 or llama3.1" autocomplete="off" />
+        <label class="field"><span class="lab">Model</span>
+          <input type="text" id="apiModel" placeholder="grok-4.6" autocomplete="off" />
         </label>
         <div class="banner clear" style="margin:0 0 10px">
           <b>⚠ Key safety:</b> your key is saved in this browser's local storage and requests go
-          <b>directly from your browser to your Open WebUI server</b> (OpenAI-compatible
-          <code>/api/chat/completions</code>). Anyone with access to this device could read the key.
-          On Open WebUI, set <code>CORS_ALLOW_ORIGIN</code> to include this site’s origin
-          (or <code>*</code>) if the browser reports a CORS block.
+          <b>directly from your browser to xAI</b> (or Open WebUI) using OpenAI-compatible
+          <code>/v1/chat/completions</code>. Anyone with access to this device could read the key.
         </div>
         <p class="hint" id="apiTestResult" style="margin:0 0 10px" hidden></p>
         <div class="rowbtns">

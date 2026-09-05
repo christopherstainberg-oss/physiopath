@@ -163,10 +163,48 @@ test("Achilles rupture uses achilles_repair — not tendinopathy heavy-slow load
 
 test("new program protocols exist as 4-phase pools", () => {
   const P = E.PROTOCOLS || {};
-  for (const id of ["hip_oa", "cuff_repair", "shoulder_replacement", "lumbar_fusion", "achilles_repair"]) {
+  for (const id of ["hip_oa", "cuff_repair", "shoulder_replacement", "lumbar_fusion", "achilles_repair", "cervical_fusion", "hip_labral"]) {
     assert(Array.isArray(P[id]) && P[id].length === 4, `${id} must be a 4-phase protocol`);
     assert(P[id].every(ph => Array.isArray(ph) && ph.length >= 3), `${id} phases need exercise pools`);
   }
+});
+
+test("Alpine-skier's ACL injury is knee_ligament — not kneecap-pain", () => {
+  const c = condByName(/Alpine-skier's ACL injury/i);
+  assert(c, "expected Alpine-skier's ACL injury");
+  assert(c.protocol === "knee_ligament", `got ${c.protocol}`);
+});
+
+test("Footballer's MCL sprain is knee_ligament — not kneecap-pain", () => {
+  const c = condByName(/Footballer's MCL sprain/i);
+  assert(c, "expected Footballer's MCL sprain");
+  assert(c.protocol === "knee_ligament", `got ${c.protocol}`);
+});
+
+test("Native hip dislocation is not knee_pf", () => {
+  const c = condByName(/Native hip dislocation/i);
+  assert(c, "expected Native hip dislocation (post-reduction)");
+  assert(c.protocol !== "knee_pf", `hip dislocation must not use knee_pf, got ${c.protocol}`);
+  assert(c.protocol === "hip_labral" || c.protocol === "hip_replacement", `got ${c.protocol}`);
+});
+
+test("Hip labral tear uses hip_labral — not generic hip cutting drills", () => {
+  const c = condByName(/^Hip labral tear$/i) || condByName(/Hip labral tear \(Left\)/i);
+  assert(c, "expected Hip labral tear");
+  assert(c.protocol === "hip_labral", `got ${c.protocol}`);
+  const prog = planFor(E, { condIds: [c.id], weeks: 4, age: 32, surgery: "no" });
+  const text = names(prog).toLowerCase();
+  assert(!/cutting drills|lateral bounds/.test(text), "labral tear must not use sport-cutting drills");
+});
+
+test("ACDF / cervical fusion uses cervical_fusion — not generic cervical end-range", () => {
+  const c = condByName(/Post-cervical fusion recovery/i) || condByName(/^ACDF recovery$/i) || condByName(/Cervical fusion \(ACDF\)/i);
+  assert(c, "expected a cervical fusion / ACDF recovery condition");
+  assert(c.protocol === "cervical_fusion", `got ${c.protocol}`);
+  const prog = planFor(E, { condIds: [c.id], weeks: 2, age: 58, surgery: "yes" });
+  const text = names(prog).toLowerCase();
+  assert(!/end-range rotation|loaded chin tuck|extension overpressure/.test(text), "early ACDF must not force end-range neck work");
+  assert(/walk|scapular|collar|log.?roll|neutral/.test(text), "ACDF should keep walking and protected neck work");
 });
 
 import { pathToFileURL } from "node:url";

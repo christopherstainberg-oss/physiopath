@@ -38,11 +38,11 @@ function defaultSupervision(domain, protocol) {
   if (domain === "cardiac") return "clinical";
   if (domain === "pulmonary") return "supervised";
   if (domain === "neuro") return "supervised";
-  if (/replacement|fracture|amputation|_surgery|cuff_repair|lumbar_fusion|achilles_repair/.test(protocol)) return "supervised";
+  if (/replacement|fracture|amputation|_surgery|cuff_repair|lumbar_fusion|cervical_fusion|achilles_repair|hip_labral/.test(protocol)) return "supervised";
   return "self";
 }
 function defaultClearance(domain, protocol) {
-  return domain !== "msk" || /replacement|fracture|amputation|surgery|cuff_repair|lumbar_fusion|achilles_repair/.test(protocol);
+  return domain !== "msk" || /replacement|fracture|amputation|surgery|cuff_repair|lumbar_fusion|cervical_fusion|achilles_repair|hip_labral/.test(protocol);
 }
 function autoFlagsFor(protocol, name) {
   const f = [];
@@ -50,7 +50,8 @@ function autoFlagsFor(protocol, name) {
   if (protocol === "knee_replacement") f.push("knee_replacement");
   if (protocol === "shoulder_replacement") f.push("recent_surgery");
   if (protocol === "cuff_repair") f.push("recent_surgery");
-  if (protocol === "lumbar_fusion") { f.push("spinal_precautions"); f.push("recent_surgery"); }
+  if (protocol === "lumbar_fusion" || protocol === "cervical_fusion") { f.push("spinal_precautions"); f.push("recent_surgery"); }
+  if (protocol === "hip_labral" && /repair|arthroscopy|post-reduction|dislocation/i.test(name)) f.push("recent_surgery");
   if (protocol === "achilles_repair") f.push("recent_surgery");
   if (protocol.startsWith("fracture")) f.push("recent_fracture");
   if (["cardiac_rehab","heart_failure","valve","arrhythmia","pad","cardiac_surgery","venous_rehab"].includes(protocol)) f.push("cardiac");
@@ -116,9 +117,11 @@ const MSK_REGIONS = [
     "Trigger finger","Thumb CMC osteoarthritis","Mallet finger recovery","Boxer's fracture recovery",
     "Ganglion cyst (post-excision)","Hand osteoarthritis","Dupuytren's contracture (post-release)" ] },
   { region:"Hip", protocol:"hip", dx:[
-    "Gluteal tendinopathy","Trochanteric bursitis","Hip labral tear",
-    "Femoroacetabular impingement (FAI)","Hip flexor strain","Adductor (groin) strain",
+    "Gluteal tendinopathy","Trochanteric bursitis",
+    "Hip flexor strain","Adductor (groin) strain",
     "Piriformis syndrome","Hip abductor weakness","Snapping hip syndrome","Proximal hamstring tendinopathy" ] },
+  { region:"Hip", protocol:"hip_labral", dx:[
+    "Hip labral tear","Femoroacetabular impingement (FAI)" ] },
   { region:"Hip", protocol:"hip_oa", dx:[
     "Hip osteoarthritis" ] },
   { region:"Hip", protocol:"hip_replacement", dx:[
@@ -189,6 +192,7 @@ const SPINE_GENERAL = [
     "Lumbar spinal stenosis","Spondylolysis","Spondylolisthesis (grade I)","Spondylolisthesis (grade II)",
     "Degenerative spondylolisthesis","Failed back surgery syndrome","Post-laminectomy recovery"]],
   ["Lumbar","lumbar_fusion",["Post-lumbar fusion recovery"]],
+  ["Cervical","cervical_fusion",["Post-cervical fusion recovery","ACDF recovery"]],
   ["Sacroiliac","sacroiliac",["Sacroiliac joint dysfunction","SI joint pain","Sacroiliitis","Coccydynia","Pelvic girdle pain"]]
 ];
 for (const [region, protocol, list] of SPINE_GENERAL)
@@ -632,7 +636,9 @@ for(const [protocol,region,list] of MUSC)
 /* --- Dislocations / subluxations by joint & direction, lateralized --- */
 latList(["Anterior shoulder dislocation","Posterior shoulder dislocation","Inferior shoulder dislocation (luxatio erecta)","Recurrent shoulder subluxation"],"msk","Shoulder","shoulder_instability",{supervision:"supervised"});
 latList(["Elbow dislocation (posterior)","Radial head subluxation","Perilunate dislocation","Lunate dislocation","Thumb MCP dislocation","Finger PIP dislocation","Finger DIP dislocation"],"msk","Upper limb","wrist_hand",{supervision:"supervised"});
-latList(["Patellar dislocation (lateral)","Recurrent patellar subluxation","Native hip dislocation (post-reduction)","Subtalar dislocation","Peroneal tendon subluxation"],"msk","Lower limb","knee_pf",{supervision:"supervised"});
+latList(["Patellar dislocation (lateral)","Recurrent patellar subluxation"],"msk","Knee","knee_pf",{supervision:"supervised"});
+latList(["Native hip dislocation (post-reduction)"],"msk","Hip","hip_labral",{supervision:"supervised"});
+latList(["Subtalar dislocation","Peroneal tendon subluxation"],"msk","Ankle","ankle",{supervision:"supervised"});
 plainList(["Sternoclavicular joint dislocation (anterior)","TMJ dislocation (post-reduction)"],"msk","Trunk / head","general_msk",{supervision:"supervised"});
 
 /* --- Arthroplasty / joint replacement at more joints + revisions --- */
@@ -955,8 +961,10 @@ latList(["Swimmer's shoulder (freestyle)","Overhead-athlete internal impingement
  "CrossFit shoulder overuse","Painter's overhead shoulder tendinopathy","Volleyball suprascapular neuropathy"],"msk","Shoulder","shoulder",{chronic:true});
 latList(["Thrower's elbow (UCL insufficiency)","Little Leaguer's elbow","Climber's medial elbow tendinopathy","Javelin thrower's elbow"],"msk","Elbow","elbow",{chronic:true});
 latList(["Climber's A2 pulley injury","Gymnast's wrist (physeal stress)","Cyclist's handlebar (ulnar) palsy","Golfer's hamate/ECU wrist injury"],"msk","Wrist / Hand","wrist_hand",{chronic:true});
-latList(["Rower's proximal hamstring tendinopathy","Dancer's snapping hip","Footballer's adductor (groin) strain","Ice-hockey femoroacetabular impingement","Hurdler's hip-flexor strain"],"msk","Hip","hip",{chronic:true});
-latList(["Runner's iliotibial band syndrome","Cyclist's patellofemoral pain","Basketball jumper's knee","Alpine-skier's ACL injury","Footballer's MCL sprain"],"msk","Knee","knee_pf",{chronic:true});
+latList(["Rower's proximal hamstring tendinopathy","Dancer's snapping hip","Footballer's adductor (groin) strain","Hurdler's hip-flexor strain"],"msk","Hip","hip",{chronic:true});
+latList(["Ice-hockey femoroacetabular impingement"],"msk","Hip","hip_labral",{chronic:true});
+latList(["Runner's iliotibial band syndrome","Cyclist's patellofemoral pain","Basketball jumper's knee"],"msk","Knee","knee_pf",{chronic:true});
+latList(["Alpine-skier's ACL injury","Footballer's MCL sprain"],"msk","Knee","knee_ligament",{chronic:true});
 latList(["Runner's Achilles tendinopathy","Badminton Achilles strain","Basketball lateral ankle sprain","Footballer's anterior ankle impingement","Trail-runner's peroneal tendinopathy"],"msk","Ankle","ankle",{chronic:true});
 plainList(["Rower's low-back pain","Golfer's low-back pain","Cricket fast-bowler's lumbar stress","Gymnast's spondylolysis","Powerlifter's low-back strain","Equestrian's low-back pain","Deadlift-related low-back strain"],"msk","Lumbar spine","lumbar",{chronic:true});
 plainList(["Triathlete's overtraining syndrome","Marathoner's overuse syndrome","Distance-runner's tibial stress reaction","Multisport overtraining reconditioning"],"msk","Sports / activity","general_msk",{chronic:true});

@@ -744,7 +744,7 @@ async function jjSend(text, isEntry){
       method:"POST",
       headers: openWebUIChatHeaders(),
       body: JSON.stringify({
-        model: state.apiModel || "",
+        model: llmModel(),
         max_tokens: 700,
         stream: false,
         messages: [

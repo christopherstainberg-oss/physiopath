@@ -10,14 +10,14 @@ Progressive Web App (PWA) covering **musculoskeletal, neurological, cardiac, and
 ## What it does
 
 1. **Medical history questionnaire first** — captures medical precautions (contraindications) *before* you pick an injury.
-2. **Search 2,000+ conditions** across MSK, neuro, cardiac, and pulmonary — each mapped to a rehab protocol.
+2. **Search a generated catalogue of names** across MSK, neuro, cardiac, and pulmonary.
+   Many names **share a hand-authored protocol pool** — this is not a unique plan per diagnosis.
 3. **Acuteness scaling** — `0–6 weeks → Acute` (16-week plan, longer protective phase) vs `6+ weeks → Chronic`
    (14-week plan focused on progressive loading). Adjusts for pain level, surgery, and fitness.
 4. **Contraindication engine** — filters or modifies exercises based on your history (e.g. removes loaded spinal
    flexion & impact for osteoporosis, breath-holding/heavy grip for heart conditions, deep hip flexion for a hip
    replacement), backfills safe substitutes, and shows personalized precautions + a clearance banner when needed.
-5. **AI Recovery Coach** — answers questions about pain, ice vs heat, precautions, when to see a doctor, and more,
-   personalized to your conditions. Runs fully on-device (no data leaves your browser).
+5. **AI Recovery Coach (Jeffery)** — offline knowledge base on-device; optional **Grok (xAI)** for open-ended answers.
 
 ## Run locally
 
@@ -34,9 +34,9 @@ The app is plain static files (`index.html`, `styles.css`, `app.js`, `data/`, `i
 npm run build     # regenerates data/conditions.js + icons, assembles ./dist
 ```
 
-- `scripts/generate-conditions.mjs` — generates the 2,000-condition catalog (`data/conditions.js`).
+- `scripts/generate-conditions.mjs` — generates the condition catalogue (`data/conditions.js`). Names share protocol pools.
 - `scripts/generate-icons.mjs` — generates PNG app icons.
-- `data/protocols.js` — the 32 rehab protocols + contraindication rules engine (hand-authored).
+- `data/protocols.js` — hand-authored rehab protocol pools + contraindication rules engine.
 
 ## Deploy with Docker / Portainer (GHCR)
 

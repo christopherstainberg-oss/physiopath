@@ -337,7 +337,7 @@ const state = {
   medDoses:{}, weightBearing:{status:"",pct:"",lbs:"",side:"",limb:"le"}, devices:[],
   cardiacDevice:{type:"",icdRate:""}, specialPrecautions:[], planVariant:{}, progress:{}, measures:{},
   log:[], logMood:"", logDone:[], logTpl:"blank", photoNoted:false,
-  jjThread:[], chatHistory:[], apiKey:"", apiBase:"http://localhost:3000", apiModel:""
+  jjThread:[], chatHistory:[], apiKey:"", apiBase:"https://api.x.ai/v1", apiModel:"grok-4.6"
 };
 const MED_FILTERABLE = ["fluoroquinolone","anticoagulant","antiplatelet","opioid","sedative","muscle_relaxant","gabapentinoid","antipsychotic"];
 /* ---------- on-demand data loading ----------
@@ -500,6 +500,8 @@ function save(){
 function migrateState(s){
   // const from = typeof s._v === "number" ? s._v : 1;
   // if(from < 2){ /* … move / rename fields on `s` … */ }
+  if(!s.apiBase || /localhost:3000/.test(String(s.apiBase))) s.apiBase = "https://api.x.ai/v1";
+  if(!s.apiModel) s.apiModel = "grok-4.6";
   s._v = STATE_VERSION;
   return s;
 }
