@@ -8008,6 +8008,13 @@ function initDataCard(){
     im.onclick = () => fi.click();
     fi.onchange = () => { if(fi.files && fi.files[0]) importData(fi.files[0]); fi.value=""; };
   }
+  const hr = $("#historyRestoreBtn"), hf = $("#historyImportFile");
+  if(hr && hf){
+    hr.onclick = () => hf.click();
+    hf.onchange = () => { if(hf.files && hf.files[0]) importData(hf.files[0]); hf.value=""; };
+  } else if(hr && fi){
+    hr.onclick = () => fi.click();
+  }
   renderDataWarn();
 }
 function initProgress(){
@@ -10431,7 +10438,9 @@ function extractJSON(t){
 /* Chat URL is defined with Grok/xAI defaults below (openWebUIChatUrl). */
 function openWebUIChatHeaders(){
   const key = (state.apiKey || "").trim();
-  return { "content-type":"application/json", "Authorization": "Bearer " + key };
+  const h = { "content-type":"application/json" };
+  if(key) h.Authorization = "Bearer " + key;
+  return h;
 }
 function assistantTextFromChat(data){
   if(!data) return "";
@@ -10903,14 +10912,32 @@ function normalizeOpenWebUIBase(raw){
   b = b.replace(/\/#$/, "").replace(/\/+$/,"");
   return b || DEFAULT_LLM_BASE;
 }
-function openWebUIBase(){ return normalizeOpenWebUIBase(state.apiBase || DEFAULT_LLM_BASE); }
+function xaiProxyBase(){
+  if(typeof location === "undefined") return "";
+  if(!/^https?:/.test(location.protocol || "")) return "";
+  const origin = String(location.origin || "").replace(/\/$/,"");
+  return origin ? origin + "/xai/v1" : "";
+}
+function openWebUIBase(){
+  const typed = String(state.apiBase || "").trim();
+  const userKey = (state.apiKey || "").trim();
+  if(!userKey && (!typed || isXaiBase(typed))){
+    const p = xaiProxyBase();
+    if(p) return p;
+  }
+  return normalizeOpenWebUIBase(typed || DEFAULT_LLM_BASE);
+}
 function openWebUIChatUrl(){
   const b = openWebUIBase();
-  if(isXaiBase(b) || /\/v1$/i.test(b)) return b + "/chat/completions";
+  if(isXaiBase(b) || /\/xai\/v1$/.test(b) || /\/v1$/i.test(b)) return b + "/chat/completions";
   return b + "/api/chat/completions";
 }
 function llmModel(){ return (state.apiModel || DEFAULT_LLM_MODEL).trim() || DEFAULT_LLM_MODEL; }
-function coachOnline(){ return !!(state.apiKey && state.apiKey.trim() && openWebUIBase()); }
+function coachOnline(){
+  const userKey = (state.apiKey || "").trim();
+  if(userKey && openWebUIBase()) return true;
+  return /\/xai\/v1$/.test(openWebUIBase());
+}
 /* Turn opaque "Failed to fetch" into an actionable diagnosis for the Jeffery UI. */
 function openWebUIFetchHint(err){
   const raw = String((err && err.message) || err || "network error");
@@ -10928,7 +10955,7 @@ function openWebUIFetchHint(err){
 function updateCoachMode(){
   const pill=$("#coachMode"); if(!pill) return;
   const on=coachOnline();
-  pill.textContent = on ? (isXaiBase(openWebUIBase()) ? "Grok" : "Open WebUI") : "offline";
+  pill.textContent = on ? ((isXaiBase(openWebUIBase()) || /\/xai\/v1$/.test(openWebUIBase())) ? "Grok" : "Open WebUI") : "offline";
   pill.className = "modepill "+(on?"online":"offline");
 }
 function readCoachSettingsFromForm(){
@@ -10952,7 +10979,8 @@ async function testOpenWebUIConnection(){
   state.apiBase = draft.apiBase; state.apiKey = draft.apiKey; state.apiModel = draft.apiModel;
   setApiTestResult(true, "Testing " + openWebUIChatUrl() + "…");
   try{
-    if(!draft.apiKey) throw new Error("Paste an xAI (or Open WebUI) API key first.");
+    if(!draft.apiKey && !/\/xai\/v1$/.test(openWebUIChatUrl()) && !xaiProxyBase())
+      throw new Error("Paste an xAI (or Open WebUI) API key first.");
     if(!draft.apiModel) throw new Error("Enter a model id (default grok-4.6).");
     const res = await fetch(openWebUIChatUrl(), {
       method: "POST",

@@ -30,6 +30,13 @@ function initDataCard(){
     im.onclick = () => fi.click();
     fi.onchange = () => { if(fi.files && fi.files[0]) importData(fi.files[0]); fi.value=""; };
   }
+  const hr = $("#historyRestoreBtn"), hf = $("#historyImportFile");
+  if(hr && hf){
+    hr.onclick = () => hf.click();
+    hf.onchange = () => { if(hf.files && hf.files[0]) importData(hf.files[0]); hf.value=""; };
+  } else if(hr && fi){
+    hr.onclick = () => fi.click();
+  }
   renderDataWarn();
 }
 function initProgress(){

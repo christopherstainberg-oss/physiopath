@@ -207,5 +207,31 @@ test("ACDF / cervical fusion uses cervical_fusion — not generic cervical end-r
   assert(/walk|scapular|collar|log.?roll|neutral/.test(text), "ACDF should keep walking and protected neck work");
 });
 
+test("Total ankle replacement uses ankle — not general_msk", () => {
+  const c = condByName(/Total ankle replacement recovery/i);
+  assert(c, "expected Total ankle replacement recovery");
+  assert(c.protocol === "ankle", `got ${c.protocol}`);
+});
+
+test("Total wrist replacement uses wrist_hand — not general_msk", () => {
+  const c = condByName(/Total wrist replacement recovery/i);
+  assert(c, "expected Total wrist replacement recovery");
+  assert(c.protocol === "wrist_hand", `got ${c.protocol}`);
+});
+
+test("AVN of the femoral head is not general_msk and carries critical_offload", () => {
+  const c = condByName(/Avascular necrosis of the femoral head/i);
+  assert(c, "expected AVN of the femoral head");
+  assert(c.protocol !== "general_msk", `AVN must not use general_msk, got ${c.protocol}`);
+  resetState(E, { condIds: [c.id], weeks: 4, age: 48 });
+  assert(E.gatherFlags().includes("critical_offload"), "femoral-head AVN must offload");
+});
+
+test("Hip arthroscopy recovery uses hip_labral — not generic hip", () => {
+  const c = condByName(/Hip arthroscopy recovery/i);
+  assert(c, "expected Hip arthroscopy recovery");
+  assert(c.protocol === "hip_labral", `got ${c.protocol}`);
+});
+
 import { pathToFileURL } from "node:url";
 if (import.meta.url === pathToFileURL(process.argv[1]).href) (await import("./runner.mjs")).report();

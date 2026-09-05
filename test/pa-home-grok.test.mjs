@@ -44,5 +44,33 @@ test("empty coach settings default to xAI grok-4.6", () => {
   assert(/api\.x\.ai/.test(boot), "Jeffery default base must be xAI");
 });
 
+test("same-origin /xai/ proxy exists and the key is not in JS", () => {
+  let nginx = src("nginx.conf");
+  try { nginx += "\n" + src("nginx.conf.template"); } catch (e) {}
+  assert(/location \/xai\//.test(nginx) || /proxy_pass https:\/\/api\.x\.ai/.test(nginx),
+    "nginx must proxy /xai/ to api.x.ai");
+  const js = src("src/ui/4-coach-boot.js") + src("index.html");
+  assert(!/XAI_API_KEY\s*=/.test(js), "must not bake XAI_API_KEY into the PWA");
+  assert(/\/xai\/v1/.test(src("src/ui/4-coach-boot.js")), "Jeffery should call same-origin /xai/v1 when the user has no key");
+});
+
+suite("ops: no Watchtower + Today shortcut");
+test("compose does not ship Watchtower", () => {
+  const y = src("docker-compose.yml");
+  assert(!/containrrr\/watchtower/.test(y), "Watchtower image must not be in compose");
+  assert(!/^[\s]*watchtower:/m.test(y), "no watchtower service");
+});
+test("PWA shortcuts include Today's session → ?go=program", () => {
+  const m = src("manifest.webmanifest");
+  assert(/go=program/.test(m), "manifest needs a Today shortcut to ?go=program");
+});
+
+suite("restore on History");
+test("History panel has Restore from a backup", () => {
+  const html = src("index.html");
+  assert(/id="historyRestoreBtn"/.test(html), "History needs historyRestoreBtn");
+  assert(/Restore from a backup/i.test(html), "Restore label missing");
+});
+
 import { pathToFileURL } from "node:url";
 if (import.meta.url === pathToFileURL(process.argv[1]).href) (await import("./runner.mjs")).report();

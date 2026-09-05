@@ -52,6 +52,7 @@ function autoFlagsFor(protocol, name) {
   if (protocol === "cuff_repair") f.push("recent_surgery");
   if (protocol === "lumbar_fusion" || protocol === "cervical_fusion") { f.push("spinal_precautions"); f.push("recent_surgery"); }
   if (protocol === "hip_labral" && /repair|arthroscopy|post-reduction|dislocation/i.test(name)) f.push("recent_surgery");
+  if (/avascular necrosis|osteonecrosis|\bavn\b|transient osteoporosis of the hip/i.test(name)) f.push("critical_offload");
   if (protocol === "achilles_repair") f.push("recent_surgery");
   if (protocol.startsWith("fracture")) f.push("recent_fracture");
   if (["cardiac_rehab","heart_failure","valve","arrhythmia","pad","cardiac_surgery","venous_rehab"].includes(protocol)) f.push("cardiac");
@@ -260,8 +261,8 @@ const EXTRA_JOINT = [
     "Elbow contracture rehabilitation"]],
   ["wrist_hand","Wrist / Hand",["Kienböck's disease (reconditioning)","Wrist stiffness (post-cast)","Extensor tendon repair recovery",
     "Flexor tendon repair recovery","Skier's thumb (UCL) recovery","Intersection syndrome"]],
-  ["hip","Hip",["Hip flexor tendinopathy","Deep gluteal syndrome","Ischiofemoral impingement","Hamstring origin repair recovery",
-    "Hip arthroscopy recovery","Labral repair recovery — hip"]],
+  ["hip","Hip",["Hip flexor tendinopathy","Deep gluteal syndrome","Ischiofemoral impingement","Hamstring origin repair recovery"]],
+  ["hip_labral","Hip",["Hip arthroscopy recovery","Labral repair recovery — hip"]],
   ["knee_ligament","Knee",["ACL revision recovery","Meniscus root repair recovery","Posterolateral corner injury recovery",
     "Patellar tendon graft (BPTB) recovery","Hamstring graft ACL recovery"]],
   ["knee_pf","Knee",["Patellofemoral instability","MPFL reconstruction recovery","Fat pad impingement (Hoffa's)",
@@ -642,8 +643,9 @@ latList(["Subtalar dislocation","Peroneal tendon subluxation"],"msk","Ankle","an
 plainList(["Sternoclavicular joint dislocation (anterior)","TMJ dislocation (post-reduction)"],"msk","Trunk / head","general_msk",{supervision:"supervised"});
 
 /* --- Arthroplasty / joint replacement at more joints + revisions --- */
-latList(["Total elbow replacement recovery","Total wrist replacement recovery","Total ankle replacement recovery",
-  "First MTP joint replacement recovery","MCP joint replacement recovery","PIP joint replacement recovery"],"msk","Upper/lower limb","general_msk",{supervision:"supervised"});
+latList(["Total elbow replacement recovery"],"msk","Elbow","elbow",{supervision:"supervised"});
+latList(["Total wrist replacement recovery","MCP joint replacement recovery","PIP joint replacement recovery"],"msk","Wrist / Hand","wrist_hand",{supervision:"supervised"});
+latList(["Total ankle replacement recovery","First MTP joint replacement recovery"],"msk","Foot / ankle","ankle",{supervision:"supervised"});
 latList(["Revision total hip replacement recovery"],"msk","Hip","hip_replacement",{supervision:"supervised"});
 latList(["Revision total knee replacement recovery"],"msk","Knee","knee_replacement",{supervision:"supervised"});
 latList(["Revision total shoulder replacement recovery"],"msk","Shoulder","shoulder",{supervision:"supervised"});
@@ -651,8 +653,10 @@ latList(["Revision total shoulder replacement recovery"],"msk","Shoulder","shoul
 /* --- Osteochondroses / apophysitis / AVN --- */
 latList(["Sever's disease (calcaneal apophysitis)","Sinding-Larsen-Johansson syndrome","Iselin's disease (5th metatarsal apophysitis)",
   "Köhler's disease (navicular)","Panner's disease (capitellum)","Legg-Calvé-Perthes disease","Blount's disease"],"msk","Growth plate / apophysis","general_msk",{chronic:true});
-latList(["Avascular necrosis of the femoral head","Avascular necrosis of the humeral head","Avascular necrosis of the talus",
-  "Avascular necrosis of the femoral condyle","Osteonecrosis of the knee (SPONK)","Transient osteoporosis of the hip"],"msk","Bone","general_msk",{chronic:true,supervision:"supervised"});
+latList(["Avascular necrosis of the femoral head","Transient osteoporosis of the hip"],"msk","Hip","hip_oa",{chronic:true,supervision:"supervised"});
+latList(["Avascular necrosis of the humeral head"],"msk","Shoulder","shoulder",{chronic:true,supervision:"supervised"});
+latList(["Avascular necrosis of the talus"],"msk","Ankle","ankle",{chronic:true,supervision:"supervised"});
+latList(["Avascular necrosis of the femoral condyle","Osteonecrosis of the knee (SPONK)"],"msk","Knee","knee_oa",{chronic:true,supervision:"supervised"});
 plainList(["Slipped capital femoral epiphysis (post-fixation)","Developmental hip dysplasia (adult reconditioning)","Congenital clubfoot (adult reconditioning)","Leg length discrepancy management"],"msk","Hip / lower limb","general_msk",{supervision:"supervised"});
 
 /* --- Systemic / rheumatologic (expanded) --- */

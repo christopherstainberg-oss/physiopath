@@ -1,15 +1,18 @@
 # PhysioPath — Portainer Stack / Docker Compose
-# Paste this into Portainer → Stacks → Add stack (Web editor), or run:
-#   docker compose up -d
+# Deploy: pull the image and recreate the container (no Watchtower).
+#   docker pull ghcr.io/christopherstainberg-oss/physiopath:latest
+#   then recreate physiopath with the same -p 8035:80 and --env XAI_API_KEY
 #
-# The image is published to GitHub Container Registry by the repo's
-# "Publish Docker image to GHCR" workflow on every push to main.
+# The image is published to GHCR by the repo's "Publish Docker image to GHCR"
+# workflow on every push to main.
 services:
   physiopath:
     image: ghcr.io/christopherstainberg-oss/physiopath:latest
     container_name: physiopath
     ports:
-      - "8080:80"          # host:container — browse at http://<host-ip>:8080
+      - "8080:80"          # host:container — this host maps 8035:80 at run time
+    environment:
+      XAI_API_KEY: ${XAI_API_KEY:-}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/"]
@@ -17,15 +20,3 @@ services:
       timeout: 5s
       retries: 3
       start_period: 5s
-
-  # Auto-update: pulls a fresh ghcr.io/.../physiopath:latest and recreates the
-  # container within ~5 min of each new build, so you always run the newest version.
-  # (This is the container-side of "auto-deploy" — Docker's :latest never updates on
-  # its own.) Remove this service if you'd rather update manually.
-  watchtower:
-    image: containrrr/watchtower
-    container_name: physiopath-watchtower
-    restart: unless-stopped
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    command: --cleanup --include-restarting --interval 300 physiopath

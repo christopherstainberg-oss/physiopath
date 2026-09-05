@@ -250,6 +250,12 @@
 
       </div>
 
+      <p class="hint">Returning? Restore a backup here — you don't have to hunt in Health.</p>
+      <div class="rowbtns" style="justify-content:flex-start;gap:8px">
+        <button class="btn ghost" id="historyRestoreBtn" type="button">⬆ Restore from a backup</button>
+        <input type="file" id="historyImportFile" accept="application/json,.json" hidden />
+      </div>
+
       <div class="rowbtns">
         <span></span>
         <button class="btn primary" id="historyNext">Next: continue →</button>
@@ -607,7 +613,8 @@
       <div class="settings hide" id="coachSettings">
         <p class="hint" style="margin-bottom:10px">Connect <b>Grok</b> (xAI) for open-ended answers.
           Default is <code>https://api.x.ai/v1</code> with model <code>grok-4.6</code>.
-          Without a key, Jeffery uses a fast, private, offline knowledge base.
+          Without a key, Jeffery uses the on-device knowledge base, or Grok via this server's
+          <code>/xai/</code> proxy when the container has <code>XAI_API_KEY</code> (never stored in the page).
           You can still point the base URL at Open WebUI if you prefer a local proxy.</p>
         <label class="field"><span class="lab">LLM base URL</span>
           <input type="url" id="apiBase" placeholder="https://api.x.ai/v1" autocomplete="off" />
