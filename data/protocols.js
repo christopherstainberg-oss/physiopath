@@ -1254,6 +1254,106 @@
      E("Return to activity","as tolerated","Team-guided")]
   ];
 
+  /* Hip OA — exercise-first (OARSI/NICE), not THA precautions or cutting drills. */
+  P.hip_oa = [
+    [E("Glute sets","3×12","Squeeze without stressing the joint"),
+     E("Gentle hip ROM","3×10","Circles, pain-free — motion is medicine for OA"),
+     E("Double-leg bridges","3×12","Share load through the hips"),
+     E("Easy walk or bike","10–15 min","Low-impact aerobic is first-line for hip OA",T.aerobic)],
+    [E("Sit-to-stand (chair)","3×10","Use hands less over time",T.wb),
+     E("Side-lying abduction","3×12 each","Hip abductors protect the joint"),
+     E("Mini squats (pain-free depth)","3×12","Sit back; stay in a comfortable range",T.wb),
+     E("Walking dose","15–25 min","Build minutes before speed",T.aerobic,T.wb)],
+    [E("Step-ups (low)","3×10 each","Slow tempo",T.wb,T.balance),
+     E("Sit-to-stand progression","3×12","Lower seat or slower tempo",T.wb),
+     E("Lateral band walks","3×12 steps","Hips drive the step"),
+     E("Aerobic build (walk/bike/swim)","20–30 min","Most days; joint-friendly",T.aerobic)],
+    [E("Progressive hip strength","3×10","Add load only if next-day pain stays acceptable",T.wb),
+     E("Balance & single-leg control","3×30s","Near support",T.balance),
+     E("Return to valued activity","graded","Hiking, work, or cycling — not cutting sports",T.aerobic),
+     E("Long-term OA routine","ongoing","Consistency beats intensity",T.aerobic)]
+  ];
+
+  /* Cuff repair — protect the repair first. Not generic shoulder plyos/throwing. */
+  P.cuff_repair = [
+    [E("Pendulum swings (supported)","3×30s","Protect the repair — small relaxed circles"),
+     E("Passive assisted ROM (as cleared)","3×8","Other arm or cane; stay in the surgeon's range"),
+     E("Scapular squeezes","3×12","Shoulder-blade setting without loading the cuff"),
+     E("Isometric rotator holds (neutral)","3×8s","Gentle press into a towel, elbow at the side",T.grip)],
+    [E("Active-assisted elevation","3×8","Only to a comfortable height",T.overhead),
+     E("Band external rotation (neutral)","3×12","Elbow tucked; avoid end-range"),
+     E("Scapular rows","3×12","Squeeze blades back"),
+     E("Table slides / wall walks (limited)","3×8","Stay below painful height")],
+    [E("Progressive cuff strengthening","3×12","Add load only when the repair is cleared",T.grip),
+     E("Below-shoulder raises (light)","3×10","Thumbs up; no end-range overhead yet"),
+     E("Prone T raises (light)","3×8","Mid-back, not a throw",T.prone),
+     E("Closed-chain wall control","3×20s","Hand on wall, small circles",T.balance)],
+    [E("Functional reaching & light lift","3×10","Daily tasks first — not sport throws",T.overhead),
+     E("Endurance of the shoulder girdle","3×12","Rows and walks",T.aerobic),
+     E("Graded return to work tasks","as tolerated","Match the job, not plyometrics"),
+     E("Return to activity (cleared)","as tolerated","Overhead sport only with clinician clearance")]
+  ];
+
+  /* Anatomic / reverse TSA — protected early ROM, coffee-cup load, no throwing. */
+  P.shoulder_replacement = [
+    [E("Pendulum swings","3×30s","Sling off only as instructed — small circles"),
+     E("Passive ROM within surgeon limits","3×8","Reverse and anatomic limits differ — follow yours"),
+     E("Scapular setting","3×12","Blade control without stressing the implant"),
+     E("Hand, wrist & elbow ROM","3×12","Keep the rest of the arm moving")],
+    [E("Active-assisted elevation (table/cane)","3×8","Stay in the allowed range",T.overhead),
+     E("Isometric rotator holds (gentle)","3×8s","Towel press, elbow at the side",T.grip),
+     E("Scapular rows (light band)","3×12","No pushing up from a chair with that arm"),
+     E("Coffee-cup lift practice","3×8","Nothing heavier than a cup early")],
+    [E("Active elevation progression","3×10","Build height slowly",T.overhead),
+     E("Light band internal/external rotation","3×12","Pain-free"),
+     E("Wall slides (comfortable height)","3×8","Stop before a painful pinch",T.overhead),
+     E("Walking / general fitness","15–20 min","Cardio without loading the implant",T.aerobic)],
+    [E("Functional reaching & dressing tasks","3×10","Behind-the-back only when cleared"),
+     E("Progressive light strengthening","3×10","Avoid heavy overhead lifting long-term",T.overhead),
+     E("Balance & posture","3×30s","Upright, supported",T.balance),
+     E("Return to low-impact activity","as tolerated","Swimming/walking preferred over throwing")]
+  ];
+
+  /* Lumbar fusion — BLT (no bending/lifting/twisting) early. Not generic lumbar load-lift. */
+  P.lumbar_fusion = [
+    [E("Log-roll in and out of bed","several × day","BLT: no bending, lifting, or twisting"),
+     E("Short frequent walks","5–10 min × several/day","Best early exercise after fusion",T.aerobic,T.wb),
+     E("Glute sets & ankle pumps","3×12","Circulation and gentle activation"),
+     E("Neutral spine breathing / pelvic tilts (tiny)","3×8","Stay in a comfortable mid-range — not a sit-up")],
+    [E("Walking build","10–20 min","Brace if prescribed",T.aerobic,T.wb),
+     E("Glute bridges (small range)","3×10","Keep the spine quiet"),
+     E("Quad sets & sit-to-stand (tall)","3×8","Hinge at the hips, not the fusion",T.wb),
+     E("Scapular squeezes","3×12","Upright posture without twisting")],
+    [E("Walking endurance","20–30 min","Community distances",T.aerobic,T.wb),
+     E("Hip hinge patterning (stick)","3×10","Protect the fusion — hips, not lumbar bend",T.flexLoad),
+     E("Bird-dog (short lever)","3×8 each","No spinal twist"),
+     E("Sit-to-stand & step-ups (low)","3×8","Neutral",T.wb,T.balance)],
+    [E("Core endurance (side plank on knees if cleared)","3×15–30s","Only after BLT eases"),
+     E("Progressive walking / bike","as tolerated","Low-impact first",T.aerobic),
+     E("Functional lifting (light, hip hinge)","3×8","Add load only when the surgeon eases BLT",T.flexLoad),
+     E("Return to activity","as tolerated","Impact and heavy lifting only with clearance")]
+  ];
+
+  /* Achilles rupture/repair — protect; no eccentric heel-drops until cleared. */
+  P.achilles_repair = [
+    [E("Ankle pumps in the boot (as allowed)","3×20","Circulation — keep the rest of the chain moving"),
+     E("Quad & glute sets","3×12","Maintain the leg without loading the repair"),
+     E("Protected walking (boot / wedges)","per surgeon","Follow weight-bearing exactly",T.wb),
+     E("Knee & hip ROM","3×10","Cast-free joints stay mobile")],
+    [E("Seated active ankle ROM (pain-free)","3×10","No aggressive calf stretch"),
+     E("Isometric calf holds (gentle, if cleared)","3×8s","No push-off yet"),
+     E("Progressive weight-bearing in boot","per protocol","Wedges come out on the surgeon's timeline",T.wb),
+     E("Core & other-leg strength","3×12","Keep fitness",T.aerobic)],
+    [E("Double-leg calf raise (floor, if cleared)","3×10","Both legs; no hopping",T.wb),
+     E("Gait retraining out of boot","as cleared","Even steps",T.wb,T.balance),
+     E("Bike / pool (no push-off pain)","10–20 min","Aerobic without aggressive stretch",T.aerobic),
+     E("Balance in supported stance","3×20s","Near a rail",T.balance)],
+    [E("Calf strength progression (cleared)","3×10","Single-leg only when the repair allows",T.wb),
+     E("Walk–jog introduction (cleared)","graded","Not a heel-drop program",T.impact),
+     E("Functional stairs & hills","as tolerated","Build push-off slowly",T.wb),
+     E("Return to activity","as tolerated","Running/sport typically months out — clinician-guided")]
+  ];
+
   /* ================= ALIASES ================= */
   const ALIAS = {
     shoulder_instability:"shoulder", knee_meniscus:"knee_ligament",

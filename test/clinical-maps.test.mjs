@@ -105,5 +105,69 @@ test("PAD still has walk-to-claudication (evidence-based, must not regress)", ()
   assert(/claudication|walk/.test(text), "PAD plan should still feature structured walking");
 });
 
+test("Osteoarthritis of the knee (JOINTS catalogue) is knee_oa — not TKA", () => {
+  const c = condByName(/^Osteoarthritis of the knee$/i) || condByName(/Osteoarthritis of the knee \(Left\)/i);
+  assert(c, "expected Osteoarthritis of the knee");
+  assert(c.protocol === "knee_oa", `got ${c.protocol}`);
+});
+
+test("Hip OA maps to hip_oa — not generic hip sport loading", () => {
+  const c = condByName(/^Hip osteoarthritis$/i) || condByName(/Osteoarthritis of the hip/i) || condByName(/Hip osteoarthritis \(Left\)/i);
+  assert(c, "expected Hip osteoarthritis");
+  assert(c.protocol === "hip_oa", `got ${c.protocol}`);
+  const prog = planFor(E, { condIds: [c.id], weeks: 8, age: 64, surgery: "no" });
+  const text = names(prog).toLowerCase();
+  assert(!/cutting drills|lateral bounds/.test(text), "hip OA must not use sport-cutting drills");
+  assert(/walk|bike|glute|sit-to-stand/.test(text), "hip OA should keep joint-friendly loading");
+});
+
+test("Rotator cuff repair uses cuff_repair pool — not generic shoulder plyos", () => {
+  const c = condByName(/Rotator cuff repair recovery/i);
+  assert(c, "expected Rotator cuff repair recovery");
+  assert(c.protocol === "cuff_repair", `got ${c.protocol}`);
+  const prog = planFor(E, { condIds: [c.id], weeks: 2, age: 55, surgery: "yes" });
+  const text = names(prog).toLowerCase();
+  assert(!/plyometric|throwing|racket/.test(text), "early cuff repair must not throw/plyo");
+  assert(/pendulum|passive|protect|isometric|scapular/.test(text), "early cuff repair should stay protective");
+});
+
+test("Shoulder replacement uses shoulder_replacement — not overhead plyos", () => {
+  const c = condByName(/Total shoulder replacement recovery/i) || condByName(/Reverse total shoulder replacement recovery/i);
+  assert(c, "expected shoulder replacement recovery");
+  assert(c.protocol === "shoulder_replacement", `got ${c.protocol}`);
+  const prog = planFor(E, { condIds: [c.id], weeks: 2, age: 70, surgery: "yes" });
+  const text = names(prog).toLowerCase();
+  assert(!/plyometric|throwing/.test(text), "TSA early plan must not plyo/throw");
+  assert(/pendulum|isometric|scapular|sling|coffee cup|passive/.test(text), "TSA should keep protected early motion");
+});
+
+test("Post-lumbar fusion uses lumbar_fusion — not generic lumbar loaded lifting", () => {
+  const c = condByName(/Post-lumbar fusion recovery/i);
+  assert(c, "expected Post-lumbar fusion recovery");
+  assert(c.protocol === "lumbar_fusion", `got ${c.protocol}`);
+  const prog = planFor(E, { condIds: [c.id], weeks: 2, age: 58, surgery: "yes" });
+  const text = names(prog).toLowerCase();
+  assert(!/loaded lifting mechanics|impact reintroduction/.test(text), "early fusion must not load-lift/impact");
+  assert(/log.?roll|walk|glute|blt|neutral/.test(text), "fusion should keep walking and BLT-safe work");
+});
+
+test("Achilles rupture uses achilles_repair — not tendinopathy heavy-slow loading", () => {
+  const c = condByName(/Achilles tendon rupture recovery/i);
+  assert(c, "expected Achilles tendon rupture recovery");
+  assert(c.protocol === "achilles_repair", `got ${c.protocol}`);
+  const prog = planFor(E, { condIds: [c.id], weeks: 2, age: 42, surgery: "yes" });
+  const text = names(prog).toLowerCase();
+  assert(!/heavy-slow|eccentric calf|heel drop/.test(text), "early rupture must not eccentric-load the repair");
+  assert(/boot|pump|quad|circulation|protected/.test(text), "early rupture should stay protected");
+});
+
+test("new program protocols exist as 4-phase pools", () => {
+  const P = E.PROTOCOLS || {};
+  for (const id of ["hip_oa", "cuff_repair", "shoulder_replacement", "lumbar_fusion", "achilles_repair"]) {
+    assert(Array.isArray(P[id]) && P[id].length === 4, `${id} must be a 4-phase protocol`);
+    assert(P[id].every(ph => Array.isArray(ph) && ph.length >= 3), `${id} phases need exercise pools`);
+  }
+});
+
 import { pathToFileURL } from "node:url";
 if (import.meta.url === pathToFileURL(process.argv[1]).href) (await import("./runner.mjs")).report();

@@ -38,16 +38,20 @@ function defaultSupervision(domain, protocol) {
   if (domain === "cardiac") return "clinical";
   if (domain === "pulmonary") return "supervised";
   if (domain === "neuro") return "supervised";
-  if (/replacement|fracture|amputation|_surgery/.test(protocol)) return "supervised";
+  if (/replacement|fracture|amputation|_surgery|cuff_repair|lumbar_fusion|achilles_repair/.test(protocol)) return "supervised";
   return "self";
 }
 function defaultClearance(domain, protocol) {
-  return domain !== "msk" || /replacement|fracture|amputation|surgery/.test(protocol);
+  return domain !== "msk" || /replacement|fracture|amputation|surgery|cuff_repair|lumbar_fusion|achilles_repair/.test(protocol);
 }
 function autoFlagsFor(protocol, name) {
   const f = [];
   if (protocol === "hip_replacement") f.push("hip_replacement");
   if (protocol === "knee_replacement") f.push("knee_replacement");
+  if (protocol === "shoulder_replacement") f.push("recent_surgery");
+  if (protocol === "cuff_repair") f.push("recent_surgery");
+  if (protocol === "lumbar_fusion") { f.push("spinal_precautions"); f.push("recent_surgery"); }
+  if (protocol === "achilles_repair") f.push("recent_surgery");
   if (protocol.startsWith("fracture")) f.push("recent_fracture");
   if (["cardiac_rehab","heart_failure","valve","arrhythmia","pad","cardiac_surgery","venous_rehab"].includes(protocol)) f.push("cardiac");
   if (protocol === "cardiac_surgery") f.push("sternal_precautions");        // post-sternotomy (CABG / open-heart)
@@ -94,7 +98,9 @@ const MSK_REGIONS = [
     "Subacromial impingement syndrome","Supraspinatus tendinitis","Biceps tendinopathy",
     "Adhesive capsulitis (frozen shoulder)","Glenohumeral osteoarthritis","Subacromial bursitis",
     "Calcific tendinitis of the shoulder","SLAP (labral) tear","Shoulder impingement post-repair",
-    "Rotator cuff repair recovery","Proximal humerus fracture recovery" ] },
+    "Proximal humerus fracture recovery" ] },
+  { region:"Shoulder", protocol:"cuff_repair", dx:[
+    "Rotator cuff repair recovery" ] },
   { region:"Shoulder", protocol:"shoulder_instability", dx:[
     "Anterior shoulder dislocation recovery","Recurrent shoulder instability","Shoulder subluxation",
     "Bankart lesion recovery","Multidirectional shoulder instability","Labral repair recovery" ] },
@@ -110,9 +116,11 @@ const MSK_REGIONS = [
     "Trigger finger","Thumb CMC osteoarthritis","Mallet finger recovery","Boxer's fracture recovery",
     "Ganglion cyst (post-excision)","Hand osteoarthritis","Dupuytren's contracture (post-release)" ] },
   { region:"Hip", protocol:"hip", dx:[
-    "Gluteal tendinopathy","Trochanteric bursitis","Hip osteoarthritis","Hip labral tear",
+    "Gluteal tendinopathy","Trochanteric bursitis","Hip labral tear",
     "Femoroacetabular impingement (FAI)","Hip flexor strain","Adductor (groin) strain",
     "Piriformis syndrome","Hip abductor weakness","Snapping hip syndrome","Proximal hamstring tendinopathy" ] },
+  { region:"Hip", protocol:"hip_oa", dx:[
+    "Hip osteoarthritis" ] },
   { region:"Hip", protocol:"hip_replacement", dx:[
     "Total hip replacement recovery","Hip hemiarthroplasty recovery","Hip resurfacing recovery" ] },
   /* Hip fracture fixation is ORIF/nail — NOT arthroplasty. THA precautions (90°/adduction/IR) do not apply. */
@@ -137,8 +145,10 @@ const MSK_REGIONS = [
     "High ankle (syndesmosis) sprain","Chronic ankle instability","Ankle osteoarthritis",
     "Peroneal tendinopathy","Posterior tibial tendinopathy","Ankle fracture recovery" ] },
   { region:"Ankle", protocol:"achilles", dx:[
-    "Achilles tendinopathy (midportion)","Insertional Achilles tendinopathy","Achilles tendon rupture recovery",
+    "Achilles tendinopathy (midportion)","Insertional Achilles tendinopathy",
     "Achilles paratenonitis" ] },
+  { region:"Ankle", protocol:"achilles_repair", dx:[
+    "Achilles tendon rupture recovery" ] },
   { region:"Foot", protocol:"foot", dx:[
     "Plantar fasciitis","Metatarsalgia","Morton's neuroma","Hallux valgus (bunion) recovery",
     "Turf toe","Sesamoiditis","Tarsal tunnel syndrome","Fifth metatarsal fracture recovery",
@@ -177,7 +187,8 @@ const SPINE_GENERAL = [
     "Scheuermann's kyphosis","Rib dysfunction","Postural thoracic pain","Scoliosis (conservative management)"]],
   ["Lumbar","lumbar",["Non-specific low back pain","Lumbar strain","Lumbar spondylosis","Lumbar facet syndrome",
     "Lumbar spinal stenosis","Spondylolysis","Spondylolisthesis (grade I)","Spondylolisthesis (grade II)",
-    "Degenerative spondylolisthesis","Failed back surgery syndrome","Post-laminectomy recovery","Post-lumbar fusion recovery"]],
+    "Degenerative spondylolisthesis","Failed back surgery syndrome","Post-laminectomy recovery"]],
+  ["Lumbar","lumbar_fusion",["Post-lumbar fusion recovery"]],
   ["Sacroiliac","sacroiliac",["Sacroiliac joint dysfunction","SI joint pain","Sacroiliitis","Coccydynia","Pelvic girdle pain"]]
 ];
 for (const [region, protocol, list] of SPINE_GENERAL)
@@ -189,8 +200,8 @@ add("Cauda equina (post-decompression recovery)", "msk", "Lumbar spine", "radicu
 /* ==================== MSK — systemic joint disease, OA/RA ==================== */
 const JOINTS = ["Shoulder","Elbow","Wrist","Hand","Hip","Knee","Ankle","Foot","Cervical spine","Lumbar spine"];
 for (const j of JOINTS) {
-  const protocol = ({Shoulder:"shoulder",Elbow:"elbow",Wrist:"wrist_hand",Hand:"wrist_hand",Hip:"hip",
-    Knee:"knee_replacement",Ankle:"ankle",Foot:"foot","Cervical spine":"cervical","Lumbar spine":"lumbar"})[j] || "general_msk";
+  const protocol = ({Shoulder:"shoulder",Elbow:"elbow",Wrist:"wrist_hand",Hand:"wrist_hand",Hip:"hip_oa",
+    Knee:"knee_oa",Ankle:"ankle",Foot:"foot","Cervical spine":"cervical","Lumbar spine":"lumbar"})[j] || "general_msk";
   add(`Osteoarthritis of the ${j.toLowerCase()}`, "msk", j, protocol, { chronic:true });
   add(`Rheumatoid arthritis affecting the ${j.toLowerCase()}`, "msk", j, protocol, { chronic:true, supervision:"supervised" });
 }
@@ -234,12 +245,13 @@ for (const [m, protocol] of MUSCLES) {
  "Serratus anterior dysfunction","Levator scapulae syndrome","Rhomboid myofascial pain","Gluteus medius tendinopathy",
  "Hamstring avulsion recovery","Distal quadriceps tendon repair recovery","Patellar tendon repair recovery",
  "Achilles repair — return to sport","Turf toe — return to sport"]
-  .forEach(dx => add(dx, "msk", "Sports", /hernia|pubis|pubalgia|pointer/.test(dx) ? "hip" : "general_msk"));
+  .forEach(dx => add(dx, "msk", "Sports", /hernia|pubis|pubalgia|pointer/.test(dx) ? "hip" : /Achilles repair/.test(dx) ? "achilles_repair" : "general_msk"));
 
 /* ==================== MSK — additional per-joint diagnoses (lateralized) ==================== */
 const EXTRA_JOINT = [
   ["shoulder","Shoulder",["Pectoralis major tear recovery","Long head of biceps rupture recovery","Latarjet procedure recovery",
-    "Reverse total shoulder replacement recovery","Total shoulder replacement recovery","Scapular dyskinesis","GIRD (internal rotation deficit)"]],
+    "Scapular dyskinesis","GIRD (internal rotation deficit)"]],
+  ["shoulder_replacement","Shoulder",["Reverse total shoulder replacement recovery","Total shoulder replacement recovery"]],
   ["elbow","Elbow",["Elbow stiffness (post-immobilization)","Ulnar collateral ligament sprain","Little League elbow recovery",
     "Elbow contracture rehabilitation"]],
   ["wrist_hand","Wrist / Hand",["Kienböck's disease (reconditioning)","Wrist stiffness (post-cast)","Extensor tendon repair recovery",
