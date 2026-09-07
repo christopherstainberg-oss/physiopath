@@ -1183,7 +1183,7 @@ const LIB_REGION = {
   meniscus_repair:["Knee","Hip"], extensor_mechanism_repair:["Knee","Hip"],
   ucl_reconstruction:["Elbow","Forearm","Shoulder"], hand_tendon_repair:["Wrist / Hand","Forearm"],
   constipation_cic:["Cardio","Hip"], constipation_slow_transit:["Cardio","Hip"],
-  gastroparesis:["Cardio","Breathing"]
+  gastroparesis:["Cardio","Breathing"], ibs:["Cardio","Hip"], functional_dyspepsia:["Cardio","Breathing"]
 };
 function hashStr(s){ let h=0; for(let i=0;i<s.length;i++){ h=(h*31+s.charCodeAt(i))|0; } return h; }
 /* Pool / aquatic exercises are only SUGGESTED once the user has told us their
@@ -1419,7 +1419,8 @@ function libraryOptions(protocol, phaseIdx, flags, exclude, count, seed){
   let { kept } = window.applyContra(pool, flags);
   kept = kept.filter(e=>nameAllowed(e.name));      // respect device / weight-bearing restrictions
   if(protocol === "lumbar_stenosis" || protocol === "osteoporosis" || protocol === "cervical_stenosis"
-    || protocol === "constipation_cic" || protocol === "constipation_slow_transit" || protocol === "gastroparesis")
+    || protocol === "constipation_cic" || protocol === "constipation_slow_transit" || protocol === "gastroparesis"
+    || protocol === "ibs" || protocol === "functional_dyspepsia")
     kept = kept.filter(e => !/deadlift|crunch|sit-?up|impact reintroduction|loaded lifting|plyometric|lying flat/i.test(e.name));
   kept.sort((a,b)=> hashStr(a.name+"|"+seed) - hashStr(b.name+"|"+seed));
   /* aMin/aMax/band ride along: without them a paediatric pick loses its declared window the
@@ -2077,6 +2078,16 @@ const INJURY_FOCUS = [
    add:[{p:1,n:"Core & postural strengthening play (animal walks, planks)",d:"play-based",c:"Fun, short bouts",tags:["weight_bearing"]},
         {p:2,n:"Balance & coordination games (beam walks, hopping)",d:"play-based",c:"Progress difficulty gradually",tags:["balance"]},
         {p:3,n:"Ball & motor-skill practice (throw/catch/kick, obstacle courses)",d:"play-based",c:"Build everyday coordination"}]},
+  {re:/irritable bowel|\bibs\b|functional (diarrhea|bloating)|gut-brain|\bdgbi\b|functional motility/,
+   focus:"IBS and other functional bowel / gut-brain disorders: moderate walking 3–5 days a week is the activity with the best evidence. This is not a colon-massage programme (that is CIC/slow-transit) and not a diet. Ease intensity in a flare; do not strain.",
+   add:[{p:1,n:"Easy walking (talk-test)",d:"15–20 min",c:"Moderate aerobic work, not a gut workout",tags:["aerobic","weight_bearing"]},
+        {p:1,n:"Diaphragmatic breathing (seated, upright)",d:"3×1 min",c:"Slow belly breaths — do not bear down"},
+        {p:2,n:"Walking dose 3–5 days/week",d:"20–30 min",c:"A flare is a reason to ease, not to stop",tags:["aerobic"]}]},
+  {re:/functional dyspepsia|epigastric pain syndrome|postprandial distress/,
+   focus:"Functional dyspepsia is a gut-brain pattern of fullness or upper-belly pain — not the same as gastroparesis. Stay upright after meals and walk gently. This is activity advice, not a meal plan.",
+   add:[{p:1,n:"Upright walk after a meal",d:"10–15 min",c:"Stay on your feet after eating",tags:["aerobic","weight_bearing"]},
+        {p:1,n:"Seated diaphragmatic breathing (upright)",d:"3×1 min",c:"No breath-holding"},
+        {p:2,n:"Post-meal upright walk",d:"10–20 min",c:"Upright time after eating is the key habit",tags:["aerobic"]}]},
   {re:/gastroparesis|delayed gastric emptying/,
    focus:"Gastroparesis: stay upright after meals and walk gently — lying down or hard core work on a full stomach can worsen nausea. This is activity advice, not a meal plan or a diagnosis.",
    add:[{p:1,n:"Upright walk after a meal",d:"10–15 min",c:"Stay on your feet after eating",tags:["aerobic","weight_bearing"]},
@@ -3747,7 +3758,9 @@ const PROTOCOL_APPROACH = {
   abdominal_surgery:"protecting the healing abdominal wall (abdominal precautions) with walking, breathing and gentle deep-core/pelvic-floor reactivation early, then graded core and loading once cleared",
   constipation_cic:"walking, abdominal massage along the colon, and breathing — not sit-ups or straining",
   constipation_slow_transit:"frequent walking as the motility stimulus, plus colon-directed massage — not loaded core work",
-  gastroparesis:"upright walking after meals and gentle aerobic work — not lying flat or hard core work on a full stomach"
+  gastroparesis:"upright walking after meals and gentle aerobic work — not lying flat or hard core work on a full stomach",
+  ibs:"moderate walking 3–5 days a week and breathing — not sit-ups, straining, or a colon-massage programme",
+  functional_dyspepsia:"upright walking after meals — a gut-brain pattern, not a gastroparesis emptying programme"
 };
 
 const PATHOLOGY_INFO = [
@@ -3769,6 +3782,8 @@ const PATHOLOGY_INFO = [
   [/spondylo|facet|pars|baastrup|schmorl|modic/, "This is a mechanical or age-related change of the spinal joints. Movement, mobility and core strengthening typically reduce symptoms."],
   [/frozen shoulder|adhesive capsulitis/, "Adhesive capsulitis ('frozen shoulder') is painful stiffening of the shoulder capsule that passes through phases. Rehab restores range gradually and avoids aggressive stretching too early."],
   [/gastroparesis|delayed gastric emptying/, "Gastroparesis is delayed stomach emptying. Activity advice is to stay upright after meals and walk gently — this is educational, not a meal plan or a diagnosis."],
+  [/irritable bowel|\bibs\b|functional (diarrhea|bloating)|gut-brain|dgbi|functional motility/, "IBS and other functional bowel / gut-brain (DGBI) disorders. Moderate walking 3–5 days a week is the activity with the best evidence. This is not a diagnosis, not a diet, and not pelvic-floor therapy."],
+  [/functional dyspepsia|epigastric pain|postprandial distress/, "Functional dyspepsia is a gut-brain pattern of fullness or upper-belly pain, not the same as gastroparesis. Stay upright after meals and walk gently."],
   [/slow transit constipation|colonic inertia/, "Slow-transit constipation means the colon moves stool slowly. Frequent walking is the usual activity stimulus; straining and sit-ups are not the treatment."],
   [/chronic idiopathic constipation|functional constipation/, "Chronic idiopathic constipation is constipation without an identified structural cause. Walking and not straining help more than abdominal crunches."],
   [/plantar fasciitis|fasciitis|fibromatosis|heel/, "This affects the connective tissue of the foot. Loading the tissue progressively, plus calf and foot strengthening, drives recovery."],

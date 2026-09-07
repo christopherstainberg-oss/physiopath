@@ -1654,6 +1654,46 @@
      E("Return to valued activity","graded","Avoid lying flat after meals and avoid hard core work on a full stomach")]
   ];
 
+  /* IBS / DGBI — moderate aerobic + breathing (Johannesson-style); not CIC colon-massage, not sit-ups. */
+  P.ibs = [
+    [E("Easy walking (talk-test)","15–20 min","Moderate aerobic work is the best-studied activity for IBS",T.aerobic,T.wb),
+     E("Diaphragmatic breathing (seated, upright)","3×1 min","Slow belly breaths — down-regulate, do not bear down"),
+     E("Sit-to-stand from a chair","3×8","Keep moving; exhale on effort",T.wb),
+     E("Gentle thoracic rotation (seated)","3×8 each","Ease the trunk without crunching")],
+    [E("Walking dose 3–5 days/week","20–30 min","Build minutes before speed; a flare is a reason to ease, not to stop",T.aerobic,T.wb),
+     E("Upright breathing + short walk after a meal","10 min","If bloating after eating, stay upright",T.aerobic),
+     E("Hip-flexor stretch (half-kneel)","3×20s","No breath-holding"),
+     E("Cat–camel (small range)","3×8","Gentle motion — not a sit-up")],
+    [E("Steady aerobic walk or easy bike","25–40 min","Most days; keep it conversational",T.aerobic),
+     E("Sit-to-stand sets","3×10","Daily function without straining",T.wb),
+     E("Scapular squeezes & tall posture","3×12","Upright, quiet belly"),
+     E("Breathing reset when symptoms rise","2–3 min","Slow exhale longer than inhale")],
+    [E("Maintenance aerobic habit","30 min most days","Consistency beats intensity",T.aerobic,T.wb),
+     E("Upright mobility routine","10 min","Walk, hip openers, breathing — no crunches"),
+     E("Light whole-body strength (exhale on effort)","3×8","Rows and sit-to-stands, not sit-ups",T.wb),
+     E("Return to valued activity","graded","Keep walking; skip straining, HIIT-on-a-flare, and loaded sit-ups")]
+  ];
+
+  /* Functional dyspepsia — DGBI, not delayed-emptying gastroparesis; still upright after meals. */
+  P.functional_dyspepsia = [
+    [E("Upright walk after a meal","10–15 min","Stay on your feet after eating — lying down often worsens fullness",T.aerobic,T.wb),
+     E("Seated diaphragmatic breathing (upright)","3×1 min","Calm the upper belly; no breath-holding"),
+     E("Easy walking between meals","10 min × 2","Light aerobic, not a workout on a full stomach",T.aerobic,T.wb),
+     E("Sit-to-stand (upright)","3×6","Short sets; stop for nausea",T.wb)],
+    [E("Post-meal upright walk","10–20 min","Upright time after eating is the key habit",T.aerobic,T.wb),
+     E("Walking on the flat (not after a large meal)","15–20 min","Keep intensity conversational",T.aerobic,T.wb),
+     E("Scapular squeezes & tall posture","3×12","Loosen tight waistbands of posture, not of diet advice"),
+     E("Seated thoracic openers","3×8","Stay sitting or standing — not supine")],
+    [E("Post-meal walk then later aerobic","walk 10–15 min; later 15–20 min","Hard effort waits until fullness has settled",T.aerobic),
+     E("Sit-to-stand and easy step-ups","3×8","Upright loading",T.wb),
+     E("Light band rows (seated or standing)","3×10","Exhale on effort; no straining"),
+     E("Breathing reset after meals","2–3 min","Upright only")],
+    [E("Upright activity habit","most days","Walk after meals; save intensity for quieter windows",T.aerobic),
+     E("Functional upright strength","3×8","Daily tasks standing or sitting — not floor crunches",T.wb),
+     E("Longer walk when symptoms are quiet","20–30 min","Still conversational",T.aerobic),
+     E("Return to valued activity","graded","Not a gastroparesis emptying programme and not a meal plan")]
+  ];
+
   /* ================= ALIASES ================= */
   const ALIAS = {
     shoulder_instability:"shoulder", knee_meniscus:"knee_ligament",
@@ -1766,6 +1806,10 @@
       note:"Constipation (educational): walking and not straining on the toilet matter more than sit-ups. Exhale on effort; do not bear down. A footstool so the knees sit above the hips is a common toilet-position tip — this is not a pelvic-floor diagnosis. Red flags that need a clinician: blood in stool, unexplained weight loss, new constipation after 50, vomiting, or severe belly pain." },
     gastroparesis: { avoid:[T.supine,T.highInt,T.valsalva], caution:[T.flexLoad,T.aerobic], clearance:true,
       note:"Gastroparesis (educational): stay upright after meals; a short walk after eating is usually better than lying down or doing hard core work. Save higher intensity for when the stomach has settled. Usual dietary pattern is smaller, more frequent, lower-fat meals — that is not a meal plan. Stop for chest pain, vomiting blood, fainting, or uncontrollably high/low blood sugar, and follow your GI/diabetes team's advice." },
+    ibs: { avoid:[T.valsalva], caution:[T.highInt,T.flexLoad],
+      note:"IBS / functional bowel (educational, disorders of gut-brain interaction): moderate walking 3–5 days a week is the activity with the best evidence — not sit-ups, not straining, not a colon-massage programme (that is for slow-transit/CIC). Ease intensity during a flare rather than stopping altogether. Diet changes such as a low-FODMAP trial belong with a clinician or dietitian, not this app. Red flags: blood in stool, unexplained weight loss, fever, waking at night with pain/diarrhea, new symptoms after 50, or a family history of bowel cancer — those need medical review, not more exercise." },
+    functional_dyspepsia: { avoid:[T.supine,T.highInt,T.valsalva], caution:[T.flexLoad,T.aerobic],
+      note:"Functional dyspepsia (educational): this is a gut-brain / DGBI pattern of fullness or upper-belly pain, not the same as gastroparesis (delayed emptying). Stay upright after meals and walk gently. Save hard effort until fullness settles. Meal size and fat content are often discussed with a GI clinician — that is not a meal plan from this app. Stop for vomiting blood, black stools, fainting, or progressive swallowing trouble." },
     spinal_precautions: { avoid:[T.flexLoad,T.ext,T.valsalva,T.breath], caution:[T.highInt,T.impact,T.overhead], clearance:true,
       note:"Spinal precautions (after spine surgery — fusion, laminectomy, discectomy): protect the healing spine with the “BLT” rule — no Bending, Lifting (more than ~5–10 lb) or Twisting. Loaded spinal flexion, extension and rotation and heavy lifting/carrying were removed; hinge at the hips with a straight back, log-roll in and out of bed, and turn your whole body as one unit. Keep walking (it's the best medicine), wear your brace if one was prescribed, and follow your surgeon's timeline. Seek urgent care for new leg weakness/numbness or loss of bladder or bowel control." },
     low_water_confidence: { avoid:[T.deepWater], caution:[],

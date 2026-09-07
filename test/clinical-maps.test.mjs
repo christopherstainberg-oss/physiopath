@@ -178,7 +178,8 @@ test("new program protocols exist as 4-phase pools", () => {
     "adhesive_capsulitis", "gh_oa", "lumbar_stenosis", "cervical_stenosis", "osteoporosis",
     "achilles_insertional", "meniscus_repair", "extensor_mechanism_repair",
     "ucl_reconstruction", "hand_tendon_repair",
-    "constipation_cic", "constipation_slow_transit", "gastroparesis"
+    "constipation_cic", "constipation_slow_transit", "gastroparesis",
+    "ibs", "functional_dyspepsia"
   ]) {
     assert(Array.isArray(P[id]) && P[id].length === 4, `${id} must be a 4-phase protocol`);
     assert(P[id].every(ph => Array.isArray(ph) && ph.length >= 3), `${id} phases need exercise pools`);
@@ -383,6 +384,32 @@ test("Gastroparesis uses gastroparesis — post-meal walking, not lying-flat cor
   const text = names(prog).toLowerCase();
   assert(!/crunch|sit-up|lying flat|supine hold/.test(text), "gastroparesis must not lie-flat crunch");
   assert(/walk|upright|after (a )?meal|post-?meal/.test(text), "gastroparesis should keep upright post-meal walking");
+});
+
+test("IBS uses ibs — walking and breathing, not CIC colon-massage or sit-ups", () => {
+  const c = condByName(/^Irritable bowel syndrome \(IBS\)$/i);
+  assert(c, "expected Irritable bowel syndrome (IBS)");
+  assert(c.protocol === "ibs", `got ${c.protocol}`);
+  const prog = planFor(E, { condIds: [c.id], weeks: 8, age: 38, surgery: "no" });
+  const text = names(prog).toLowerCase();
+  assert(!/crunch|sit-up|colon-directed abdominal massage/.test(text), "IBS must not copy CIC massage or crunches");
+  assert(/walk|breath/.test(text), "IBS should keep moderate walking and breathing");
+});
+
+test("IBS-C is ibs — not constipation_cic", () => {
+  const c = condByName(/IBS with constipation/i);
+  assert(c, "expected IBS with constipation");
+  assert(c.protocol === "ibs", `got ${c.protocol}`);
+});
+
+test("Functional dyspepsia uses functional_dyspepsia — not gastroparesis pool", () => {
+  const c = condByName(/^Functional dyspepsia$/i);
+  assert(c, "expected Functional dyspepsia");
+  assert(c.protocol === "functional_dyspepsia", `got ${c.protocol}`);
+  const prog = planFor(E, { condIds: [c.id], weeks: 6, age: 42, surgery: "no" });
+  const text = names(prog).toLowerCase();
+  assert(!/crunch|sit-up|lying flat/.test(text), "functional dyspepsia must not lie-flat crunch");
+  assert(/walk|upright|after (a )?meal|post-?meal/.test(text), "functional dyspepsia should keep upright post-meal walking");
 });
 
 import { pathToFileURL } from "node:url";

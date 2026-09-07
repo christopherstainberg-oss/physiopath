@@ -61,6 +61,8 @@ function autoFlagsFor(protocol, name) {
   if (protocol === "abdominal_surgery") f.push("abdominal_precautions");    // post-abdominal-wall surgery
   if (protocol === "gastroparesis") f.push("gastroparesis");
   if (protocol === "constipation_cic" || protocol === "constipation_slow_transit") f.push("constipation");
+  if (protocol === "ibs") f.push("ibs");
+  if (protocol === "functional_dyspepsia") f.push("functional_dyspepsia");
   if (protocol === "hypertension") f.push("hypertension");
   if (["pulmonary_rehab","asthma","post_covid","ild","thoracic_surgery","pulm_hypertension"].includes(protocol)) f.push("pulmonary");
   if (["stroke","tbi","sci","ms","parkinsons","vestibular","balance_neuro","guillain_barre","icu_aw","myasthenia","encephalopathy","acute_medical","polytrauma","burn"].includes(protocol)) f.push("balance_risk");
@@ -550,6 +552,14 @@ for (const lv of SCI_LEVELS) {
 add("Chronic idiopathic constipation", "msk", "Abdomen / GI", "constipation_cic", { chronic:true });
 add("Slow transit constipation", "msk", "Abdomen / GI", "constipation_slow_transit", { chronic:true, supervision:"supervised" });
 add("Gastroparesis", "msk", "Abdomen / GI", "gastroparesis", { chronic:true, supervision:"supervised", clearance:true });
+add("Irritable bowel syndrome (IBS)", "msk", "Abdomen / GI", "ibs", { chronic:true });
+add("IBS with constipation (IBS-C)", "msk", "Abdomen / GI", "ibs", { chronic:true });
+add("IBS with diarrhea (IBS-D)", "msk", "Abdomen / GI", "ibs", { chronic:true });
+add("IBS mixed (IBS-M)", "msk", "Abdomen / GI", "ibs", { chronic:true });
+add("Functional diarrhea", "msk", "Abdomen / GI", "ibs", { chronic:true });
+add("Functional bloating", "msk", "Abdomen / GI", "ibs", { chronic:true });
+add("Functional dyspepsia", "msk", "Abdomen / GI", "functional_dyspepsia", { chronic:true, supervision:"supervised" });
+add("Functional motility disorder (gut-brain / DGBI) — exercise support", "msk", "Abdomen / GI", "ibs", { chronic:true });
 
 /* ==================== Pad out toward 2000 with graded/side variants ==================== */
 /* Add functional-goal variants for the most common MSK protocols to reach breadth

@@ -1179,7 +1179,7 @@ const LIB_REGION = {
   meniscus_repair:["Knee","Hip"], extensor_mechanism_repair:["Knee","Hip"],
   ucl_reconstruction:["Elbow","Forearm","Shoulder"], hand_tendon_repair:["Wrist / Hand","Forearm"],
   constipation_cic:["Cardio","Hip"], constipation_slow_transit:["Cardio","Hip"],
-  gastroparesis:["Cardio","Breathing"]
+  gastroparesis:["Cardio","Breathing"], ibs:["Cardio","Hip"], functional_dyspepsia:["Cardio","Breathing"]
 };
 function hashStr(s){ let h=0; for(let i=0;i<s.length;i++){ h=(h*31+s.charCodeAt(i))|0; } return h; }
 /* Pool / aquatic exercises are only SUGGESTED once the user has told us their
@@ -1415,7 +1415,8 @@ function libraryOptions(protocol, phaseIdx, flags, exclude, count, seed){
   let { kept } = window.applyContra(pool, flags);
   kept = kept.filter(e=>nameAllowed(e.name));      // respect device / weight-bearing restrictions
   if(protocol === "lumbar_stenosis" || protocol === "osteoporosis" || protocol === "cervical_stenosis"
-    || protocol === "constipation_cic" || protocol === "constipation_slow_transit" || protocol === "gastroparesis")
+    || protocol === "constipation_cic" || protocol === "constipation_slow_transit" || protocol === "gastroparesis"
+    || protocol === "ibs" || protocol === "functional_dyspepsia")
     kept = kept.filter(e => !/deadlift|crunch|sit-?up|impact reintroduction|loaded lifting|plyometric|lying flat/i.test(e.name));
   kept.sort((a,b)=> hashStr(a.name+"|"+seed) - hashStr(b.name+"|"+seed));
   /* aMin/aMax/band ride along: without them a paediatric pick loses its declared window the
@@ -2073,6 +2074,16 @@ const INJURY_FOCUS = [
    add:[{p:1,n:"Core & postural strengthening play (animal walks, planks)",d:"play-based",c:"Fun, short bouts",tags:["weight_bearing"]},
         {p:2,n:"Balance & coordination games (beam walks, hopping)",d:"play-based",c:"Progress difficulty gradually",tags:["balance"]},
         {p:3,n:"Ball & motor-skill practice (throw/catch/kick, obstacle courses)",d:"play-based",c:"Build everyday coordination"}]},
+  {re:/irritable bowel|\bibs\b|functional (diarrhea|bloating)|gut-brain|\bdgbi\b|functional motility/,
+   focus:"IBS and other functional bowel / gut-brain disorders: moderate walking 3–5 days a week is the activity with the best evidence. This is not a colon-massage programme (that is CIC/slow-transit) and not a diet. Ease intensity in a flare; do not strain.",
+   add:[{p:1,n:"Easy walking (talk-test)",d:"15–20 min",c:"Moderate aerobic work, not a gut workout",tags:["aerobic","weight_bearing"]},
+        {p:1,n:"Diaphragmatic breathing (seated, upright)",d:"3×1 min",c:"Slow belly breaths — do not bear down"},
+        {p:2,n:"Walking dose 3–5 days/week",d:"20–30 min",c:"A flare is a reason to ease, not to stop",tags:["aerobic"]}]},
+  {re:/functional dyspepsia|epigastric pain syndrome|postprandial distress/,
+   focus:"Functional dyspepsia is a gut-brain pattern of fullness or upper-belly pain — not the same as gastroparesis. Stay upright after meals and walk gently. This is activity advice, not a meal plan.",
+   add:[{p:1,n:"Upright walk after a meal",d:"10–15 min",c:"Stay on your feet after eating",tags:["aerobic","weight_bearing"]},
+        {p:1,n:"Seated diaphragmatic breathing (upright)",d:"3×1 min",c:"No breath-holding"},
+        {p:2,n:"Post-meal upright walk",d:"10–20 min",c:"Upright time after eating is the key habit",tags:["aerobic"]}]},
   {re:/gastroparesis|delayed gastric emptying/,
    focus:"Gastroparesis: stay upright after meals and walk gently — lying down or hard core work on a full stomach can worsen nausea. This is activity advice, not a meal plan or a diagnosis.",
    add:[{p:1,n:"Upright walk after a meal",d:"10–15 min",c:"Stay on your feet after eating",tags:["aerobic","weight_bearing"]},

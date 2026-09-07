@@ -67,7 +67,9 @@ const PROTOCOL_APPROACH = {
   abdominal_surgery:"protecting the healing abdominal wall (abdominal precautions) with walking, breathing and gentle deep-core/pelvic-floor reactivation early, then graded core and loading once cleared",
   constipation_cic:"walking, abdominal massage along the colon, and breathing — not sit-ups or straining",
   constipation_slow_transit:"frequent walking as the motility stimulus, plus colon-directed massage — not loaded core work",
-  gastroparesis:"upright walking after meals and gentle aerobic work — not lying flat or hard core work on a full stomach"
+  gastroparesis:"upright walking after meals and gentle aerobic work — not lying flat or hard core work on a full stomach",
+  ibs:"moderate walking 3–5 days a week and breathing — not sit-ups, straining, or a colon-massage programme",
+  functional_dyspepsia:"upright walking after meals — a gut-brain pattern, not a gastroparesis emptying programme"
 };
 
 const PATHOLOGY_INFO = [
@@ -89,6 +91,8 @@ const PATHOLOGY_INFO = [
   [/spondylo|facet|pars|baastrup|schmorl|modic/, "This is a mechanical or age-related change of the spinal joints. Movement, mobility and core strengthening typically reduce symptoms."],
   [/frozen shoulder|adhesive capsulitis/, "Adhesive capsulitis ('frozen shoulder') is painful stiffening of the shoulder capsule that passes through phases. Rehab restores range gradually and avoids aggressive stretching too early."],
   [/gastroparesis|delayed gastric emptying/, "Gastroparesis is delayed stomach emptying. Activity advice is to stay upright after meals and walk gently — this is educational, not a meal plan or a diagnosis."],
+  [/irritable bowel|\bibs\b|functional (diarrhea|bloating)|gut-brain|dgbi|functional motility/, "IBS and other functional bowel / gut-brain (DGBI) disorders. Moderate walking 3–5 days a week is the activity with the best evidence. This is not a diagnosis, not a diet, and not pelvic-floor therapy."],
+  [/functional dyspepsia|epigastric pain|postprandial distress/, "Functional dyspepsia is a gut-brain pattern of fullness or upper-belly pain, not the same as gastroparesis. Stay upright after meals and walk gently."],
   [/slow transit constipation|colonic inertia/, "Slow-transit constipation means the colon moves stool slowly. Frequent walking is the usual activity stimulus; straining and sit-ups are not the treatment."],
   [/chronic idiopathic constipation|functional constipation/, "Chronic idiopathic constipation is constipation without an identified structural cause. Walking and not straining help more than abdominal crunches."],
   [/plantar fasciitis|fasciitis|fibromatosis|heel/, "This affects the connective tissue of the foot. Loading the tissue progressively, plus calf and foot strengthening, drives recovery."],
