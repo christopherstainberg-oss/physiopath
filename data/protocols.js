@@ -1394,6 +1394,266 @@
      E("Return to activity","as tolerated","Pivoting/cutting only with clinician clearance — not a sport-cutting program")]
   ];
 
+  /* Frozen shoulder — staged thaw, not cuff plyos or throwing. */
+  P.adhesive_capsulitis = [
+    [E("Pendulum swings","3×30s","Let the arm hang; small relaxed circles"),
+     E("Table slides / forward reach","3×10","Slide to a gentle stretch — do not force the thaw"),
+     E("Scapular squeezes","3×12","Shoulder blades, not the stiff joint"),
+     E("Easy walk","10–15 min","Keep the rest of you moving",T.aerobic)],
+    [E("Wall walks (to comfort)","3×8","Fingers up only to a comfortable height",T.overhead),
+     E("Cane-assisted external rotation","3×8","Guide gently with the other arm"),
+     E("Active-assisted elevation","3×8","Other arm helps; stop before sharp pain"),
+     E("Scapular rows","3×12","Quiet neck and shoulder blade")],
+    [E("Mid-range cuff isometrics","3×8s","Gentle press, elbow at the side"),
+     E("Functional reaching at chest height","3×10","Daily tasks before overhead sport"),
+     E("Light band rows","3×12","Build endurance, not force"),
+     E("Walk / bike","15–25 min","Aerobic without forcing the shoulder",T.aerobic)],
+    [E("Comfortable overhead reach (thaw phase)","3×8","Only as the capsule allows — not a stretch contest",T.overhead),
+     E("Light functional lift (coffee-cup load)","3×10","Daily tasks; no throwing"),
+     E("Return to valued activity","graded","Work and ADLs first — not plyometrics"),
+     E("Long-term mobility habit","ongoing","Little and often beats aggressive stretching")]
+  ];
+
+  /* Glenohumeral OA — joint-friendly loading (NICE NG226), not overhead plyos. */
+  P.gh_oa = [
+    [E("Pendulum & assisted range","3×10","Keep the joint moving through a comfortable range"),
+     E("Scapular setting","3×12","Shoulder-blade support without grinding"),
+     E("Isometric cuff holds (neutral)","3×8s","Build support, stay pain-free"),
+     E("Easy walk or bike","10–15 min","Low-impact aerobic is first-line for OA",T.aerobic)],
+    [E("Light band external rotation","3×12","Elbow tucked; comfortable range"),
+     E("Scapular rows","3×12","Squeeze blades"),
+     E("Below-shoulder raises (pain-free)","3×8","Thumbs up; stop before a grind",T.overhead),
+     E("Walking dose","15–25 min","Minutes before intensity",T.aerobic,T.wb)],
+    [E("Progressive cuff & scapular strength","3×12","Add load only if next-day pain stays acceptable"),
+     E("Functional reaching at eye level","3×10","Overhead only if comfortable",T.overhead),
+     E("Closed-chain wall control","3×20s","Hand on wall, small circles"),
+     E("Aerobic build (walk/bike/swim)","20–30 min","Joint-friendly, most days",T.aerobic)],
+    [E("Long-term OA routine","ongoing","Consistency beats intensity",T.aerobic),
+     E("Light functional lift","3×10","Daily tasks — not throwing or racket plyos"),
+     E("Balance of mobility and strength","3×10","Keep range you use"),
+     E("Return to valued activity","graded","Hiking, work, cycling — not cutting sports",T.aerobic)]
+  ];
+
+  /* Lumbar stenosis — flexion-biased walking (NICE NG59), not loaded lifting/impact. */
+  P.lumbar_stenosis = [
+    [E("Easy walking (slight forward lean if easier)","5–10 min × several/day","Walking is first-line; sit to rest if legs tingle",T.aerobic,T.wb),
+     E("Knee-to-chest / flexion in lying","3×20s","Gentle — often eases stenosis symptoms",T.deepHipFlex),
+     E("Pelvic tilts","3×12","Small rock, breathe"),
+     E("Seated flexion to comfort","3×8","Lean forward onto thighs if it eases the legs")],
+    [E("Walking build","10–20 min","Stop and sit before neurogenic pain climbs",T.aerobic,T.wb),
+     E("Dead-bug (neutral spine)","3×8 each","Keep the low back still",T.supine),
+     E("Glute bridges (small range)","3×10","Squeeze without arching"),
+     E("Stationary bike (upright, slight flexion)","8–12 min","Often easier than walking hills",T.aerobic)],
+    [E("Walking endurance","20–30 min","Community distances; rest on a bench if needed",T.aerobic,T.wb),
+     E("Hip hinge with a quiet spine","3×8","Hips, not a back-bend or a heavy deadlift"),
+     E("Sit-to-stand (tall)","3×8","Daily function",T.wb),
+     E("Bird-dog (short range)","3×8","No end-range extension")],
+    [E("Maintenance walking / bike","most days","Keep the gains; hills last",T.aerobic),
+     E("Functional sit-to-stand & step","3×10","Daily tasks",T.wb),
+     E("Hip and glute strength","3×10","Offload the spine without loaded lifting"),
+     E("Return to valued activity","graded","Not an impact or deadlift programme")]
+  ];
+
+  /* Cervical stenosis — mid-range, not forced end-range rotation/extension. */
+  P.cervical_stenosis = [
+    [E("Chin tucks in a comfortable mid-range","3×10","Tiny nod — not a forced stretch"),
+     E("Easy walking with eyes forward","5–10 min","Avoid prolonged phone-down posture",T.aerobic,T.wb),
+     E("Scapular squeezes","3×12","Shoulder blades, quiet neck"),
+     E("Supported neutral neck","several × day","No end-range rotation or looking-up/down",T.endNeck)],
+    [E("Walking build","10–20 min","Eyes forward",T.aerobic,T.wb),
+     E("Deep neck flexor nods (tiny)","3×8","Not a loaded chin tuck into end-range"),
+     E("Shoulder shrugs & scapular setting","3×12","Quiet neck"),
+     E("Gentle supported rotation in mid-range","3×8","Stop before stiffness or symptoms",T.endNeck)],
+    [E("Walking endurance","20–30 min","Community distances",T.aerobic,T.wb),
+     E("Isometric neck holds in neutral","3×8s","Match resistance; don't push into range",T.endNeck),
+     E("Postural endurance (wall angels to comfort)","3×8","No forced overhead if the neck complains",T.overhead),
+     E("Thoracic mobility (seated)","3×10","Move the mid-back, spare the neck")],
+    [E("Functional reaching at eye level","3×10","Overhead only when comfortable",T.overhead),
+     E("Progressive walking / bike","as tolerated","Low-impact first",T.aerobic),
+     E("Light functional loading","3×8","No heavy lifting until symptoms stay quiet"),
+     E("Return to activity","as tolerated","End-range sport only with clinician clearance")]
+  ];
+
+  /* Osteoporosis / osteopenia — upright loading + balance (NOF/NICE), no crunches or impact. */
+  P.osteoporosis = [
+    [E("Upright walking","15–20 min","Weight-bearing loads bone safely",T.aerobic,T.wb),
+     E("Sit-to-stand from a chair","3×8","Use hands at first",T.wb),
+     E("Scapular squeezes / tall posture","3×12","Extension-biased posture — not a crunch"),
+     E("Supported standing balance","3×20s","Hands on a counter",T.balance)],
+    [E("Walking dose","20–30 min","Most days",T.aerobic,T.wb),
+     E("Sit-to-stand progression","3×10","Hands less over time",T.wb),
+     E("Wall push-ups or band rows","3×10","Upright resistance with a long spine"),
+     E("Feet-together stand near support","3×20s","Falls prevention",T.balance)],
+    [E("Progressive upright resistance","3×10","Good posture; exhale on effort",T.wb),
+     E("Step-ups onto a low step (rail)","3×8 each","Stairs are where falls matter",T.wb,T.balance),
+     E("Hip hinge with a stick (neutral spine)","3×8","Hips, not a sit-up or crunch"),
+     E("Tandem stand near support","3×20s","Control the sway",T.balance)],
+    [E("Long-term bone-loading routine","ongoing","Consistency of walking + resistance",T.aerobic,T.wb),
+     E("Single-leg stance near support","3×15s","Hand hovering, not gripping",T.balance),
+     E("Functional carries (light, tall)","3×20m","Groceries with a long spine",T.wb),
+     E("Return to valued activity","graded","Not an impact or sit-up programme")]
+  ];
+
+  /* Insertional Achilles — floor loading only; no heel-drops below the step (compresses the insertion). */
+  P.achilles_insertional = [
+    [E("Isometric calf hold (foot flat on the floor)","5×30–45s","Don't drop the heel below floor level"),
+     E("Ankle pumps (pain-free)","3×15","Circulation, no stretch into a pinch"),
+     E("Seated calf raises (floor)","3×12","Knee bent; stay on the floor"),
+     E("Easy walk on level ground","8–12 min","Avoid hills and speed work",T.aerobic,T.wb)],
+    [E("Heavy-slow calf raise (floor, limited range)","3×12","Don't drop the heel below the step — stay on the floor",T.wb),
+     E("Isometric hold progress (two feet → one)","4×30s","Flat surface only"),
+     E("Soleus seated raise with load","3×10","Add load before range"),
+     E("Walking dose on the flat","15–20 min","No hills yet",T.aerobic,T.wb)],
+    [E("Single-leg calf raise on the floor","3×8","Slow; stay above floor level",T.wb,T.balance),
+     E("Heavy-slow calf press (flat)","3×8","Progressive load, no below-step drop",T.wb),
+     E("Step-ups (level, no heel hang)","3×8 each","Push through midfoot",T.wb),
+     E("Walk / bike build","20–25 min","Hills last",T.aerobic)],
+    [E("Strength on a flat surface","3×10","Only add a step if a clinician clears it",T.wb),
+     E("Return-to-walk / easy jog (flat)","graded","When single-leg floor raises are strong",T.aerobic),
+     E("Balance and calf endurance","3×20s","Steady, not bouncing",T.balance),
+     E("Return to activity","as tolerated","Speed and hills only when the insertion stays quiet")]
+  ];
+
+  /* Meniscus repair / root repair — protect WB and deep flexion; not a meniscectomy or ACL cutting plan. */
+  P.meniscus_repair = [
+    [E("Protected quad sets","hourly ×10","Tighten the thigh without twisting"),
+     E("Heel slides in the allowed range","3×10","Stay inside the brace/ROM limit"),
+     E("Ankle pumps (circulation)","hourly ×20","While weight-bearing is limited"),
+     E("Straight-leg raise (brace as prescribed)","3×8","No lag; no pivoting")],
+    [E("Quad sets & inner-range holds","3×12","Keep the kneecap tracking"),
+     E("Heel slides a little deeper (as allowed)","3×10","No twisting under load"),
+     E("Supported sit-to-stand (partial range)","3×8","Follow the weight-bearing order",T.wb),
+     E("Side-lying hip abduction","3×10","Hip control without pivoting")],
+    [E("Partial-range squat / sit-to-stand","3×8","Avoid deep flexion and twisting",T.wb),
+     E("Stationary bike (high seat)","8–12 min","High seat limits bend",T.aerobic),
+     E("Straight-plane step-ups (low)","3×8","No cutting",T.wb),
+     E("Glute and hip strength","3×10","Offload the knee")],
+    [E("Strength in a twist-free range","3×10","Add load before depth or turning",T.wb),
+     E("Walk / bike / swim","as tolerated","Impact and cutting only with clearance",T.aerobic),
+     E("Single-leg control (no hop)","3×8","Quiet knee",T.balance),
+     E("Return to activity","as tolerated","Pivoting/jogging only when the surgeon eases limits — not an agility programme")]
+  ];
+
+  /* Patellar / quadriceps tendon repair — protect the extensor mechanism; no hops. */
+  P.extensor_mechanism_repair = [
+    [E("Quad sets in the brace","hourly ×10, 5s","Tighten without stressing the repair"),
+     E("Ankle pumps (circulation)","hourly ×20","While the knee is protected"),
+     E("Straight-leg raise, brace on until no lag","3×8","Knee locked straight"),
+     E("Protected heel slides to the allowed range","3×8","Hands or a strap; stay inside the limit")],
+    [E("Quad sets with inner-range hold","3×12","No resisted kicking yet"),
+     E("Heel slides as allowed","3×10","Regain bend without loading the tendon"),
+     E("Supported sit-to-stand (brace)","3×8","Follow weight-bearing exactly",T.wb),
+     E("Hip abduction (side-lying)","3×10","Keep the rest of the limb strong")],
+    [E("Closed-chain mini-squat (allowed range)","3×8","Both feet planted",T.wb),
+     E("Stationary bike, seat high","8–12 min","High seat limits stress on the repair",T.aerobic),
+     E("Step-ups (low, slow)","3×8","No hop",T.wb),
+     E("Glute bridges (small range)","3×10","Quiet knee")],
+    [E("Progressive quad strength (cleared range)","3×8","Add load only when the surgeon allows",T.wb),
+     E("Walk / bike build","as tolerated","Running and hops only with clearance",T.aerobic),
+     E("Single-leg control (no hop)","3×8","Landings come last",T.balance),
+     E("Return to activity","as tolerated","Energy-storage hops are not early rehab")]
+  ];
+
+  /* Tommy John / UCL reconstruction — protect valgus; no throwing or wrist plyos early. */
+  P.ucl_reconstruction = [
+    [E("Protected elbow motion in the brace","hourly ×10","Get extension back; no valgus stress"),
+     E("Grip squeezes (no valgus)","3×12","Forearm working, elbow protected"),
+     E("Scapular setting & shoulder isometrics","3×10","Shoulder base while the elbow rests"),
+     E("Wrist ROM (supported)","3×10","Keep the wrist moving")],
+    [E("Elbow flexion/extension in the brace limits","3×10","No sideways stress"),
+     E("Rotator-cuff external rotation with a band","3×12","Elbow tucked"),
+     E("Scapular rows","3×12","Foundation of a safe throw — later"),
+     E("Forearm isometrics","3×8s","No valgus")],
+    [E("Hip, trunk & kinetic-chain strength","3×10","Power from the ground up — still no throwing"),
+     E("Progressive elbow strength in the hinge plane","3×10","Straight flexion/extension only"),
+     E("Scapular endurance (Y-T-W light)","3×8","Not a plyometric wrist snap",T.prone),
+     E("Walk / bike","15–20 min","Keep fitness",T.aerobic)],
+    [E("Functional reaching & light lift","3×10","Daily tasks first"),
+     E("Kinetic-chain strength","3×8","Hips and trunk, not the graft"),
+     E("Return to activity","as tolerated","Interval throwing only with clinician clearance — not this programme"),
+     E("Maintenance of elbow motion","ongoing","Stiffness is the avoidable setback")]
+  ];
+
+  /* Flexor / extensor tendon repair — splinted glides; no palm weight-bearing or loaded grip. */
+  P.hand_tendon_repair = [
+    [E("Protected tendon glides in the splint","3×10","Only the prescribed place-and-hold / passive pattern"),
+     E("Elevation & oedema control","regularly","A swollen hand becomes a stiff hand"),
+     E("Uninvolved finger, elbow & shoulder motion","hourly ×10","Stiffness elsewhere is avoidable"),
+     E("Protected wrist position in the splint","as directed","Do not grip or push up from a chair")],
+    [E("Graded tendon-gliding sequence (as cleared)","3×10","Smooth, no force"),
+     E("Scar massage once healed","2 min","Keep the tendon from sticking"),
+     E("Active motion within splint limits","3×8","No resisted grip yet"),
+     E("Shoulder and elbow ROM","3×10","Keep the chain moving")],
+    [E("Light active flexion/extension (cleared)","3×10","Build range before strength"),
+     E("Putty or sponge squeeze (very light, once cleared)","3×8","Grip is last",T.grip),
+     E("Functional grasp practice (no load)","3×8","Pick up cotton balls, not jars"),
+     E("Wrist AROM in a safe range","3×10","No weight-bearing rocks")],
+    [E("Progressive grip (once cleared)","3×10","Very gradual",T.grip),
+     E("Functional task practice","as tolerated","Keys, buttons, then load"),
+     E("Light carry with the arm, not the palm","as tolerated","No push-ups or palm rocks"),
+     E("Return to activity","as tolerated","Heavy grip and weight-bearing through the hand only with hand-therapy clearance")]
+  ];
+
+  /* Chronic idiopathic constipation — walking + abdominal massage; no sit-ups/straining (ACG/AGA educational). */
+  P.constipation_cic = [
+    [E("Easy walking","15–20 min most days","Walking is the best-evidenced activity for bowel regularity",T.aerobic,T.wb),
+     E("Clockwise abdominal massage","5–10 min","Follow the colon: up the right, across, down the left — gentle circles"),
+     E("Diaphragmatic breathing (seated, upright)","3×1 min","Belly rises on inhale; do not bear down"),
+     E("Sit-to-stand from a chair","3×8","Keep moving; exhale on effort — no straining",T.wb)],
+    [E("Walking dose","20–30 min","Most days; a mealtime walk helps many people",T.aerobic,T.wb),
+     E("Abdominal massage along the colon","5–10 min","Warm hands, gentle pressure, never painful"),
+     E("Hip-flexor stretch (half-kneel)","3×20s","Ease the front of the hip without holding your breath"),
+     E("Cat–camel (small range)","3×8","Gentle trunk motion — not a crunch")],
+    [E("Brisk walk (talk-test)","25–35 min","Aerobic work speeds colonic transit more than rest",T.aerobic,T.wb),
+     E("Abdominal massage + breathing","5 min","Massage then slow breaths; still no straining"),
+     E("Squat-to-stand (comfortable depth)","3×8","Toilet-like hip bend without bearing down",T.wb),
+     E("Thoracic rotation (seated)","3×8 each","Move the mid-back; keep the belly quiet")],
+    [E("Maintenance walking habit","30 min most days","Consistency beats intensity",T.aerobic,T.wb),
+     E("Colon-directed abdominal massage","as needed","Use when the bowel is sluggish — not a substitute for medical care"),
+     E("Upright mobility routine","10 min","Walk, hip openers, breathing — no sit-ups"),
+     E("Return to valued activity","graded","Keep walking; skip straining and loaded sit-ups")]
+  ];
+
+  /* Slow-transit constipation — aerobic walking first; fiber-loading is not the exercise. */
+  P.constipation_slow_transit = [
+    [E("Frequent short walks","10 min × several/day","Little-and-often walking is the motility stimulus",T.aerobic,T.wb),
+     E("Colon-directed abdominal massage (clockwise)","5–10 min","Ascending → transverse → descending colon; light pressure"),
+     E("Upright diaphragmatic breathing","3×1 min","Do not strain or hold your breath"),
+     E("Ankle pumps & seated marching","3×15","Keep circulation if long sitting is the habit")],
+    [E("Walking build","20–30 min","Daily if possible; sit-to-walk after meals",T.aerobic,T.wb),
+     E("Colon massage after a warm drink","5–10 min","Warmth plus massage; stop if pain"),
+     E("Pelvic tilts (small, no strain)","3×10","Gentle motion — not a sit-up"),
+     E("Hip hinge with a quiet belly","3×8","Hips move; do not bear down")],
+    [E("Steady aerobic walk or easy bike","25–40 min","Aerobic work is the main transit stimulus",T.aerobic),
+     E("Colon-directed massage","5–10 min","Same clockwise path"),
+     E("Sit-to-stand sets","3×10","Daily function without straining",T.wb),
+     E("Side-lying trunk rotation (small)","3×6 each","Gentle; stop if bloating rises")],
+    [E("Maintenance aerobic habit","most days","Walking remains the programme",T.aerobic,T.wb),
+     E("Colon massage as a tool","as needed","Not a cure-all; medical review if new red flags"),
+     E("Upright strength (sit-to-stand, rows)","3×8","Exhale on effort; no Valsalva",T.wb),
+     E("Return to valued activity","graded","Keep moving; skip crunches and straining")]
+  ];
+
+  /* Gastroparesis — upright post-meal walking; no lying-flat core or hard intensity after eating (ACG educational). */
+  P.gastroparesis = [
+    [E("Upright walk after a meal","10–15 min","Stay on your feet after eating — lying down slows emptying",T.aerobic,T.wb),
+     E("Seated diaphragmatic breathing (upright)","3×1 min","Calm the belly; no breath-holding"),
+     E("Easy walking between meals","10 min × 2","Light aerobic, not a workout after a full stomach",T.aerobic,T.wb),
+     E("Sit-to-stand (upright)","3×6","Short sets; stop for nausea or dizziness",T.wb)],
+    [E("Post-meal upright walk","10–20 min","Upright time after eating is the key habit",T.aerobic,T.wb),
+     E("Walking on the flat (not after a large meal)","15–20 min","Keep intensity conversational",T.aerobic,T.wb),
+     E("Scapular squeezes & tall posture","3×12","Upright posture; no lying-flat holds"),
+     E("Seated thoracic openers","3×8","Stay sitting or standing — not supine")],
+    [E("Post-meal walk then later aerobic","walk 10–15 min; later 15–20 min","Hard effort waits until the stomach has settled",T.aerobic),
+     E("Sit-to-stand and easy step-ups","3×8","Upright loading",T.wb),
+     E("Light band rows (seated or standing)","3×10","Exhale on effort; no straining"),
+     E("Balance near support (upright)","3×20s","If dizziness is an issue, use a counter",T.balance)],
+    [E("Upright activity habit","most days","Walk after meals; save intensity for empty-stomach windows",T.aerobic),
+     E("Functional upright strength","3×8","Daily tasks standing or sitting — not floor crunches",T.wb),
+     E("Longer walk when symptoms are quiet","20–30 min","Still conversational effort",T.aerobic),
+     E("Return to valued activity","graded","Avoid lying flat after meals and avoid hard core work on a full stomach")]
+  ];
+
   /* ================= ALIASES ================= */
   const ALIAS = {
     shoulder_instability:"shoulder", knee_meniscus:"knee_ligament",
@@ -1502,6 +1762,10 @@
       note:"Sternal precautions (open-heart surgery through the breastbone): the sternum takes ~6–8 weeks to heal, so protect it — don't lift, push or pull more than ~5–10 lb with your arms, keep both elbows near your sides (no reaching overhead/behind with both arms), don't push up from a chair with your arms, and hug a pillow to your chest when you cough. Pushing, pulling, pressing, overhead and carrying exercises were removed; focus on walking, gentle legs and breathing work. Follow your surgeon's timeline and, ideally, attend supervised cardiac rehab." },
     abdominal_precautions: { avoid:[T.valsalva,T.breath,T.flexLoad], caution:[T.highInt,T.impact,T.wb], clearance:true,
       note:"Abdominal precautions (after abdominal / hernia / C-section surgery): the abdominal wall and incision take ~4–6 weeks to heal — don't lift more than ~5–10 lb (or your surgeon's limit), never hold your breath and bear down (breathe out on effort), and skip sit-ups, crunches, planks and leg-lowers for now. Support the incision when you cough and log-roll out of bed. Report a new bulge, increasing pain, or wound drainage, and follow your surgeon's timeline." },
+    constipation: { avoid:[T.valsalva], caution:[T.flexLoad],
+      note:"Constipation (educational): walking and not straining on the toilet matter more than sit-ups. Exhale on effort; do not bear down. A footstool so the knees sit above the hips is a common toilet-position tip — this is not a pelvic-floor diagnosis. Red flags that need a clinician: blood in stool, unexplained weight loss, new constipation after 50, vomiting, or severe belly pain." },
+    gastroparesis: { avoid:[T.supine,T.highInt,T.valsalva], caution:[T.flexLoad,T.aerobic], clearance:true,
+      note:"Gastroparesis (educational): stay upright after meals; a short walk after eating is usually better than lying down or doing hard core work. Save higher intensity for when the stomach has settled. Usual dietary pattern is smaller, more frequent, lower-fat meals — that is not a meal plan. Stop for chest pain, vomiting blood, fainting, or uncontrollably high/low blood sugar, and follow your GI/diabetes team's advice." },
     spinal_precautions: { avoid:[T.flexLoad,T.ext,T.valsalva,T.breath], caution:[T.highInt,T.impact,T.overhead], clearance:true,
       note:"Spinal precautions (after spine surgery — fusion, laminectomy, discectomy): protect the healing spine with the “BLT” rule — no Bending, Lifting (more than ~5–10 lb) or Twisting. Loaded spinal flexion, extension and rotation and heavy lifting/carrying were removed; hinge at the hips with a straight back, log-roll in and out of bed, and turn your whole body as one unit. Keep walking (it's the best medicine), wear your brace if one was prescribed, and follow your surgeon's timeline. Seek urgent care for new leg weakness/numbness or loss of bladder or bowel control." },
     low_water_confidence: { avoid:[T.deepWater], caution:[],

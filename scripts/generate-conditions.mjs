@@ -38,11 +38,11 @@ function defaultSupervision(domain, protocol) {
   if (domain === "cardiac") return "clinical";
   if (domain === "pulmonary") return "supervised";
   if (domain === "neuro") return "supervised";
-  if (/replacement|fracture|amputation|_surgery|cuff_repair|lumbar_fusion|cervical_fusion|achilles_repair|hip_labral/.test(protocol)) return "supervised";
+  if (/replacement|fracture|amputation|_surgery|cuff_repair|lumbar_fusion|cervical_fusion|achilles_repair|hip_labral|meniscus_repair|extensor_mechanism_repair|ucl_reconstruction|hand_tendon_repair/.test(protocol)) return "supervised";
   return "self";
 }
 function defaultClearance(domain, protocol) {
-  return domain !== "msk" || /replacement|fracture|amputation|surgery|cuff_repair|lumbar_fusion|cervical_fusion|achilles_repair|hip_labral/.test(protocol);
+  return domain !== "msk" || /replacement|fracture|amputation|surgery|cuff_repair|lumbar_fusion|cervical_fusion|achilles_repair|hip_labral|meniscus_repair|extensor_mechanism_repair|ucl_reconstruction|hand_tendon_repair/.test(protocol);
 }
 function autoFlagsFor(protocol, name) {
   const f = [];
@@ -54,10 +54,13 @@ function autoFlagsFor(protocol, name) {
   if (protocol === "hip_labral" && /repair|arthroscopy|post-reduction|dislocation/i.test(name)) f.push("recent_surgery");
   if (/avascular necrosis|osteonecrosis|\bavn\b|transient osteoporosis of the hip/i.test(name)) f.push("critical_offload");
   if (protocol === "achilles_repair") f.push("recent_surgery");
+  if (protocol === "meniscus_repair" || protocol === "extensor_mechanism_repair" || protocol === "ucl_reconstruction" || protocol === "hand_tendon_repair") f.push("recent_surgery");
   if (protocol.startsWith("fracture")) f.push("recent_fracture");
   if (["cardiac_rehab","heart_failure","valve","arrhythmia","pad","cardiac_surgery","venous_rehab"].includes(protocol)) f.push("cardiac");
   if (protocol === "cardiac_surgery") f.push("sternal_precautions");        // post-sternotomy (CABG / open-heart)
   if (protocol === "abdominal_surgery") f.push("abdominal_precautions");    // post-abdominal-wall surgery
+  if (protocol === "gastroparesis") f.push("gastroparesis");
+  if (protocol === "constipation_cic" || protocol === "constipation_slow_transit") f.push("constipation");
   if (protocol === "hypertension") f.push("hypertension");
   if (["pulmonary_rehab","asthma","post_covid","ild","thoracic_surgery","pulm_hypertension"].includes(protocol)) f.push("pulmonary");
   if (["stroke","tbi","sci","ms","parkinsons","vestibular","balance_neuro","guillain_barre","icu_aw","myasthenia","encephalopathy","acute_medical","polytrauma","burn"].includes(protocol)) f.push("balance_risk");
@@ -98,9 +101,12 @@ const MSK_REGIONS = [
   { region:"Shoulder", protocol:"shoulder", dx:[
     "Rotator cuff tendinopathy","Rotator cuff tear (partial-thickness)","Rotator cuff tear (full-thickness)",
     "Subacromial impingement syndrome","Supraspinatus tendinitis","Biceps tendinopathy",
-    "Adhesive capsulitis (frozen shoulder)","Glenohumeral osteoarthritis","Subacromial bursitis",
-    "Calcific tendinitis of the shoulder","SLAP (labral) tear","Shoulder impingement post-repair",
-    "Proximal humerus fracture recovery" ] },
+    "Subacromial bursitis",
+    "Calcific tendinitis of the shoulder","SLAP (labral) tear","Shoulder impingement post-repair" ] },
+  { region:"Shoulder", protocol:"adhesive_capsulitis", dx:[
+    "Adhesive capsulitis (frozen shoulder)" ] },
+  { region:"Shoulder", protocol:"gh_oa", dx:[
+    "Glenohumeral osteoarthritis" ] },
   { region:"Shoulder", protocol:"cuff_repair", dx:[
     "Rotator cuff repair recovery" ] },
   { region:"Shoulder", protocol:"shoulder_instability", dx:[
@@ -137,8 +143,10 @@ const MSK_REGIONS = [
     "Patellofemoral pain syndrome","Patellar tendinopathy (jumper's knee)","Chondromalacia patellae",
     "Iliotibial band syndrome","Patellar dislocation recovery","Quadriceps tendinopathy","Osgood-Schlatter recovery" ] },
   { region:"Knee", protocol:"knee_meniscus", dx:[
-    "Medial meniscus tear","Lateral meniscus tear","Meniscus repair recovery","Partial meniscectomy recovery",
+    "Medial meniscus tear","Lateral meniscus tear","Partial meniscectomy recovery",
     "Degenerative meniscal tear" ] },
+  { region:"Knee", protocol:"meniscus_repair", dx:[
+    "Meniscus repair recovery" ] },
   { region:"Knee", protocol:"knee_replacement", dx:[
     "Total knee replacement recovery","Partial (unicompartmental) knee replacement recovery" ] },
   /* Knee OA is exercise-first conservative care (OARSI/NICE/ACR) — not a TKA pathway. */
@@ -149,8 +157,10 @@ const MSK_REGIONS = [
     "High ankle (syndesmosis) sprain","Chronic ankle instability","Ankle osteoarthritis",
     "Peroneal tendinopathy","Posterior tibial tendinopathy","Ankle fracture recovery" ] },
   { region:"Ankle", protocol:"achilles", dx:[
-    "Achilles tendinopathy (midportion)","Insertional Achilles tendinopathy",
+    "Achilles tendinopathy (midportion)",
     "Achilles paratenonitis" ] },
+  { region:"Ankle", protocol:"achilles_insertional", dx:[
+    "Insertional Achilles tendinopathy" ] },
   { region:"Ankle", protocol:"achilles_repair", dx:[
     "Achilles tendon rupture recovery" ] },
   { region:"Foot", protocol:"foot", dx:[
@@ -186,12 +196,14 @@ spineSet(LUMB, "Lumbar spine", "lumbar", "radiculopathy_lumbar");
 
 const SPINE_GENERAL = [
   ["Cervical","cervical",["Neck strain","Whiplash-associated disorder","Cervical spondylosis","Cervical facet syndrome",
-    "Cervical stenosis","Cervicogenic headache","Text neck syndrome","Cervical myofascial pain","Torticollis"]],
+    "Cervicogenic headache","Text neck syndrome","Cervical myofascial pain","Torticollis"]],
+  ["Cervical","cervical_stenosis",["Cervical stenosis"]],
   ["Thoracic","thoracic",["Thoracic outlet syndrome","Thoracic facet syndrome","Costovertebral joint dysfunction",
     "Scheuermann's kyphosis","Rib dysfunction","Postural thoracic pain","Scoliosis (conservative management)"]],
   ["Lumbar","lumbar",["Non-specific low back pain","Lumbar strain","Lumbar spondylosis","Lumbar facet syndrome",
-    "Lumbar spinal stenosis","Spondylolysis","Spondylolisthesis (grade I)","Spondylolisthesis (grade II)",
+    "Spondylolysis","Spondylolisthesis (grade I)","Spondylolisthesis (grade II)",
     "Degenerative spondylolisthesis","Failed back surgery syndrome","Post-laminectomy recovery"]],
+  ["Lumbar","lumbar_stenosis",["Lumbar spinal stenosis"]],
   ["Lumbar","lumbar_fusion",["Post-lumbar fusion recovery"]],
   ["Cervical","cervical_fusion",["Post-cervical fusion recovery","ACDF recovery"]],
   ["Sacroiliac","sacroiliac",["Sacroiliac joint dysfunction","SI joint pain","Sacroiliitis","Coccydynia","Pelvic girdle pain"]]
@@ -211,9 +223,11 @@ for (const j of JOINTS) {
   add(`Rheumatoid arthritis affecting the ${j.toLowerCase()}`, "msk", j, protocol, { chronic:true, supervision:"supervised" });
 }
 ["Rheumatoid arthritis","Psoriatic arthritis","Ankylosing spondylitis","Gout (post-flare reconditioning)",
- "Osteoporosis","Osteopenia","Polymyalgia rheumatica","Fibromyalgia","Systemic lupus (deconditioning)",
+ "Polymyalgia rheumatica","Fibromyalgia","Systemic lupus (deconditioning)",
  "Osteoarthritis (generalized)"].forEach(dx =>
   add(dx, "msk", "Systemic", "general_msk", { chronic:true, supervision:"supervised" }));
+["Osteoporosis","Osteopenia"].forEach(dx =>
+  add(dx, "msk", "Systemic", "osteoporosis", { chronic:true, supervision:"supervised" }));
 
 /* ==================== MSK — muscle strains by muscle group ==================== */
 const MUSCLES = [
@@ -250,7 +264,7 @@ for (const [m, protocol] of MUSCLES) {
  "Serratus anterior dysfunction","Levator scapulae syndrome","Rhomboid myofascial pain","Gluteus medius tendinopathy",
  "Hamstring avulsion recovery","Distal quadriceps tendon repair recovery","Patellar tendon repair recovery",
  "Achilles repair — return to sport","Turf toe — return to sport"]
-  .forEach(dx => add(dx, "msk", "Sports", /hernia|pubis|pubalgia|pointer/.test(dx) ? "hip" : /Achilles repair/.test(dx) ? "achilles_repair" : "general_msk"));
+  .forEach(dx => add(dx, "msk", "Sports", /hernia|pubis|pubalgia|pointer/i.test(dx) ? "hip" : /Achilles repair/i.test(dx) ? "achilles_repair" : /quadriceps tendon repair|patellar tendon repair/i.test(dx) ? "extensor_mechanism_repair" : /hamstring avulsion/i.test(dx) ? "hip" : "general_msk"));
 
 /* ==================== MSK — additional per-joint diagnoses (lateralized) ==================== */
 const EXTRA_JOINT = [
@@ -259,12 +273,14 @@ const EXTRA_JOINT = [
   ["shoulder_replacement","Shoulder",["Reverse total shoulder replacement recovery","Total shoulder replacement recovery"]],
   ["elbow","Elbow",["Elbow stiffness (post-immobilization)","Ulnar collateral ligament sprain","Little League elbow recovery",
     "Elbow contracture rehabilitation"]],
-  ["wrist_hand","Wrist / Hand",["Kienböck's disease (reconditioning)","Wrist stiffness (post-cast)","Extensor tendon repair recovery",
-    "Flexor tendon repair recovery","Skier's thumb (UCL) recovery","Intersection syndrome"]],
+  ["wrist_hand","Wrist / Hand",["Kienböck's disease (reconditioning)","Wrist stiffness (post-cast)",
+    "Skier's thumb (UCL) recovery","Intersection syndrome"]],
+  ["hand_tendon_repair","Wrist / Hand",["Extensor tendon repair recovery","Flexor tendon repair recovery"]],
   ["hip","Hip",["Hip flexor tendinopathy","Deep gluteal syndrome","Ischiofemoral impingement","Hamstring origin repair recovery"]],
   ["hip_labral","Hip",["Hip arthroscopy recovery","Labral repair recovery — hip"]],
-  ["knee_ligament","Knee",["ACL revision recovery","Meniscus root repair recovery","Posterolateral corner injury recovery",
+  ["knee_ligament","Knee",["ACL revision recovery","Posterolateral corner injury recovery",
     "Patellar tendon graft (BPTB) recovery","Hamstring graft ACL recovery"]],
+  ["meniscus_repair","Knee",["Meniscus root repair recovery"]],
   ["knee_pf","Knee",["Patellofemoral instability","MPFL reconstruction recovery","Fat pad impingement (Hoffa's)",
     "Plica syndrome","Patellar maltracking",
     "Tibial tubercle transfer recovery","Tibial tubercle osteotomy (Fulkerson) recovery",
@@ -273,7 +289,8 @@ const EXTRA_JOINT = [
     "Trochleoplasty with MPFL reconstruction recovery","Trochlear dysplasia (patellar instability)"]],
   ["rhabdo","Systemic",["Exertional rhabdomyolysis recovery"]],
   ["general_msk","Systemic",["Acute compartment syndrome (post-fasciotomy) recovery"]],
-  ["elbow","Elbow",["UCL reconstruction (Tommy John) recovery","UCL repair with internal brace recovery"]],
+  ["ucl_reconstruction","Elbow",["UCL reconstruction (Tommy John) recovery","UCL repair with internal brace recovery"]],
+  ["fracture_ue","Shoulder",["Proximal humerus fracture recovery"]],
   ["wrist_hand","Wrist / Hand",["Trapeziectomy (thumb base) recovery","Nerve graft / transfer recovery"]],
   ["hip","Hip",["Proximal hamstring repair recovery"]],
   ["fracture_le","Lower limb",["Limb lengthening (external fixation) recovery"]],
@@ -528,6 +545,11 @@ for (const lv of SCI_LEVELS) {
  "Post-colectomy / bowel-resection recovery","Post-cholecystectomy recovery","Post-abdominoplasty core recovery",
  "Post-prostatectomy core & pelvic recovery","Diastasis recti rehabilitation"]
   .forEach(dx => add(dx, "msk", "Abdomen / core", "abdominal_surgery", { supervision:"supervised", clearance:true }));
+
+/* GI motility — educational activity programmes (not pelvic-floor diagnoses, not meal plans). */
+add("Chronic idiopathic constipation", "msk", "Abdomen / GI", "constipation_cic", { chronic:true });
+add("Slow transit constipation", "msk", "Abdomen / GI", "constipation_slow_transit", { chronic:true, supervision:"supervised" });
+add("Gastroparesis", "msk", "Abdomen / GI", "gastroparesis", { chronic:true, supervision:"supervised", clearance:true });
 
 /* ==================== Pad out toward 2000 with graded/side variants ==================== */
 /* Add functional-goal variants for the most common MSK protocols to reach breadth

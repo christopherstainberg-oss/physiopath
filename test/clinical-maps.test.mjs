@@ -14,6 +14,15 @@ suite("clinical correlation maps");
 
 const condByName = re => (E.window.CONDITIONS || []).find(c => re.test(c.name));
 const names = prog => allExercises(prog).map(e => e.n || e.name || "").join(" | ");
+const namesEarly = prog => {
+  const out = [];
+  for (const it of prog.items || []) {
+    for (const ph of (it.phases || []).slice(0, 2)) {
+      for (const e of ph.ex || []) out.push(e.n || e.name || "");
+    }
+  }
+  return out.join(" | ");
+};
 
 test("Knee OA maps to knee_oa — not knee_replacement", () => {
   const c = condByName(/^Knee osteoarthritis$/i) || condByName(/Knee osteoarthritis \(Left\)/i);
@@ -163,7 +172,14 @@ test("Achilles rupture uses achilles_repair — not tendinopathy heavy-slow load
 
 test("new program protocols exist as 4-phase pools", () => {
   const P = E.PROTOCOLS || {};
-  for (const id of ["hip_oa", "cuff_repair", "shoulder_replacement", "lumbar_fusion", "achilles_repair", "cervical_fusion", "hip_labral"]) {
+  for (const id of [
+    "hip_oa", "cuff_repair", "shoulder_replacement", "lumbar_fusion", "achilles_repair",
+    "cervical_fusion", "hip_labral",
+    "adhesive_capsulitis", "gh_oa", "lumbar_stenosis", "cervical_stenosis", "osteoporosis",
+    "achilles_insertional", "meniscus_repair", "extensor_mechanism_repair",
+    "ucl_reconstruction", "hand_tendon_repair",
+    "constipation_cic", "constipation_slow_transit", "gastroparesis"
+  ]) {
     assert(Array.isArray(P[id]) && P[id].length === 4, `${id} must be a 4-phase protocol`);
     assert(P[id].every(ph => Array.isArray(ph) && ph.length >= 3), `${id} phases need exercise pools`);
   }
@@ -231,6 +247,142 @@ test("Hip arthroscopy recovery uses hip_labral — not generic hip", () => {
   const c = condByName(/Hip arthroscopy recovery/i);
   assert(c, "expected Hip arthroscopy recovery");
   assert(c.protocol === "hip_labral", `got ${c.protocol}`);
+});
+
+test("Frozen shoulder uses adhesive_capsulitis — not generic shoulder plyos", () => {
+  const c = condByName(/Adhesive capsulitis \(frozen shoulder\)/i);
+  assert(c, "expected Adhesive capsulitis (frozen shoulder)");
+  assert(c.protocol === "adhesive_capsulitis", `got ${c.protocol}`);
+  const prog = planFor(E, { condIds: [c.id], weeks: 4, age: 54, surgery: "no" });
+  const text = names(prog).toLowerCase();
+  assert(!/plyometric|throwing|racket/.test(text), "frozen shoulder must not throw/plyo");
+  assert(/pendulum|table slide|gentle|thaw/.test(text), "frozen shoulder should stay gentle mobility");
+});
+
+test("Glenohumeral OA uses gh_oa — not overhead plyos", () => {
+  const c = condByName(/Glenohumeral osteoarthritis/i);
+  assert(c, "expected Glenohumeral osteoarthritis");
+  assert(c.protocol === "gh_oa", `got ${c.protocol}`);
+  const prog = planFor(E, { condIds: [c.id], weeks: 8, age: 68, surgery: "no" });
+  const text = names(prog).toLowerCase();
+  assert(!/plyometric|throwing/.test(text), "GH OA must not plyo/throw");
+  assert(/pendulum|scapular|walk|bike/.test(text), "GH OA should keep joint-friendly loading");
+});
+
+test("Lumbar spinal stenosis uses lumbar_stenosis — not generic lumbar load-lift", () => {
+  const c = condByName(/^Lumbar spinal stenosis$/i);
+  assert(c, "expected Lumbar spinal stenosis");
+  assert(c.protocol === "lumbar_stenosis", `got ${c.protocol}`);
+  const prog = planFor(E, { condIds: [c.id], weeks: 6, age: 72, surgery: "no" });
+  const text = names(prog).toLowerCase();
+  assert(!/loaded lifting mechanics|impact reintroduction|deadlift/.test(text), "stenosis must not load-lift/impact");
+  assert(/walk|flexion|sit|bike/.test(text), "stenosis should keep walking and flexion-biased work");
+});
+
+test("Cervical stenosis uses cervical_stenosis — not generic cervical end-range", () => {
+  const c = condByName(/^Cervical stenosis$/i);
+  assert(c, "expected Cervical stenosis");
+  assert(c.protocol === "cervical_stenosis", `got ${c.protocol}`);
+  const prog = planFor(E, { condIds: [c.id], weeks: 4, age: 70, surgery: "no" });
+  const text = names(prog).toLowerCase();
+  assert(!/end-range rotation|extension overpressure/.test(text), "cervical stenosis must not force end-range");
+  assert(/chin tuck|scapular|walk|neutral/.test(text), "cervical stenosis should keep mid-range and walking");
+});
+
+test("Osteoporosis uses osteoporosis pool — not general_msk impact", () => {
+  const c = condByName(/^Osteoporosis$/i);
+  assert(c, "expected Osteoporosis");
+  assert(c.protocol === "osteoporosis", `got ${c.protocol}`);
+  const prog = planFor(E, { condIds: [c.id], weeks: 8, age: 74, surgery: "no" });
+  const text = names(prog).toLowerCase();
+  assert(!/crunch|sit-up|impact reintroduction/.test(text), "osteoporosis must not crunch or impact");
+  assert(/walk|posture|balance|upright/.test(text), "osteoporosis should keep upright loading and balance");
+});
+
+test("Insertional Achilles uses achilles_insertional — not heel-drops below the step", () => {
+  const c = condByName(/Insertional Achilles tendinopathy/i);
+  assert(c, "expected Insertional Achilles tendinopathy");
+  assert(c.protocol === "achilles_insertional", `got ${c.protocol}`);
+  const prog = planFor(E, { condIds: [c.id], weeks: 6, age: 48, surgery: "no" });
+  const text = names(prog).toLowerCase();
+  assert(!/heel drop|below the step|below level/.test(text), "insertional Achilles must not drop the heel below the step");
+  assert(/isometric|floor|flat/.test(text), "insertional Achilles should load on a flat surface");
+});
+
+test("Meniscus repair uses meniscus_repair — not generic meniscus pivoting", () => {
+  const c = condByName(/^Meniscus repair recovery$/i) || condByName(/Meniscus repair recovery \(Left\)/i);
+  assert(c, "expected Meniscus repair recovery");
+  assert(c.protocol === "meniscus_repair", `got ${c.protocol}`);
+  const prog = planFor(E, { condIds: [c.id], weeks: 2, age: 28, surgery: "yes" });
+  const text = namesEarly(prog).toLowerCase();
+  assert(!/agility|pivoting|jogging/.test(text), "early meniscus repair must not pivot/jog");
+  assert(/quad|heel slide|protect/.test(text), "early meniscus repair should stay protected");
+});
+
+test("Patellar tendon repair uses extensor_mechanism_repair — not general_msk", () => {
+  const c = condByName(/Patellar tendon repair recovery/i);
+  assert(c, "expected Patellar tendon repair recovery");
+  assert(c.protocol === "extensor_mechanism_repair", `got ${c.protocol}`);
+  const prog = planFor(E, { condIds: [c.id], weeks: 2, age: 34, surgery: "yes" });
+  const text = namesEarly(prog).toLowerCase();
+  assert(!/hop|plyometric|energy-storage/.test(text), "early tendon repair must not hop");
+  assert(/brace|protect|quad set|circulation/.test(text), "early tendon repair should stay protected");
+});
+
+test("Tommy John uses ucl_reconstruction — not elbow plyometric snaps", () => {
+  const c = condByName(/UCL reconstruction \(Tommy John\) recovery/i);
+  assert(c, "expected UCL reconstruction (Tommy John) recovery");
+  assert(c.protocol === "ucl_reconstruction", `got ${c.protocol}`);
+  const prog = planFor(E, { condIds: [c.id], weeks: 2, age: 22, surgery: "yes" });
+  const text = namesEarly(prog).toLowerCase();
+  assert(!/plyometric wrist|throwing/.test(text), "early UCL reconstruction must not throw/plyo");
+  assert(/brace|protect|isometric|scapular/.test(text), "early UCL reconstruction should stay protected");
+});
+
+test("Flexor tendon repair uses hand_tendon_repair — not wrist weight-bearing rocks", () => {
+  const c = condByName(/Flexor tendon repair recovery/i);
+  assert(c, "expected Flexor tendon repair recovery");
+  assert(c.protocol === "hand_tendon_repair", `got ${c.protocol}`);
+  const prog = planFor(E, { condIds: [c.id], weeks: 2, age: 40, surgery: "yes" });
+  const text = namesEarly(prog).toLowerCase();
+  assert(!/weight-bearing rocks|loaded carries|push-up/.test(text), "early flexor repair must not load the palm");
+  assert(/splint|tendon glide|protect/.test(text), "early flexor repair should stay splinted/gliding");
+});
+
+test("Proximal humerus fracture uses fracture_ue — not generic shoulder", () => {
+  const c = condByName(/Proximal humerus fracture recovery/i);
+  assert(c, "expected Proximal humerus fracture recovery");
+  assert(c.protocol === "fracture_ue", `got ${c.protocol}`);
+});
+
+test("Chronic idiopathic constipation uses constipation_cic — walking, not sit-ups", () => {
+  const c = condByName(/^Chronic idiopathic constipation$/i);
+  assert(c, "expected Chronic idiopathic constipation");
+  assert(c.protocol === "constipation_cic", `got ${c.protocol}`);
+  const prog = planFor(E, { condIds: [c.id], weeks: 8, age: 46, surgery: "no" });
+  const text = names(prog).toLowerCase();
+  assert(!/crunch|sit-up|valsalva|plyometric/.test(text), "CIC must not strain or crunch");
+  assert(/walk|abdominal massage|breath/.test(text), "CIC should keep walking and abdominal massage");
+});
+
+test("Slow transit constipation uses constipation_slow_transit — not generic core", () => {
+  const c = condByName(/^Slow transit constipation$/i);
+  assert(c, "expected Slow transit constipation");
+  assert(c.protocol === "constipation_slow_transit", `got ${c.protocol}`);
+  const prog = planFor(E, { condIds: [c.id], weeks: 8, age: 52, surgery: "no" });
+  const text = names(prog).toLowerCase();
+  assert(!/crunch|sit-up|deadlift/.test(text), "slow transit must not crunch/deadlift");
+  assert(/walk|massage|colon/.test(text), "slow transit should keep walking and colon-directed massage");
+});
+
+test("Gastroparesis uses gastroparesis — post-meal walking, not lying-flat core", () => {
+  const c = condByName(/^Gastroparesis$/i);
+  assert(c, "expected Gastroparesis");
+  assert(c.protocol === "gastroparesis", `got ${c.protocol}`);
+  const prog = planFor(E, { condIds: [c.id], weeks: 6, age: 48, surgery: "no" });
+  const text = names(prog).toLowerCase();
+  assert(!/crunch|sit-up|lying flat|supine hold/.test(text), "gastroparesis must not lie-flat crunch");
+  assert(/walk|upright|after (a )?meal|post-?meal/.test(text), "gastroparesis should keep upright post-meal walking");
 });
 
 import { pathToFileURL } from "node:url";

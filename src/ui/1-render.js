@@ -64,7 +64,10 @@ const PROTOCOL_APPROACH = {
   thoracic_surgery:"breathing and airway work plus graded reconditioning, respecting incision precautions",
   pulm_hypertension:"very conservative, low-to-moderate exercise strictly within prescribed limits",
   asthma:"well-warmed-up aerobic and strength work, using your action plan to prevent symptoms",
-  abdominal_surgery:"protecting the healing abdominal wall (abdominal precautions) with walking, breathing and gentle deep-core/pelvic-floor reactivation early, then graded core and loading once cleared"
+  abdominal_surgery:"protecting the healing abdominal wall (abdominal precautions) with walking, breathing and gentle deep-core/pelvic-floor reactivation early, then graded core and loading once cleared",
+  constipation_cic:"walking, abdominal massage along the colon, and breathing — not sit-ups or straining",
+  constipation_slow_transit:"frequent walking as the motility stimulus, plus colon-directed massage — not loaded core work",
+  gastroparesis:"upright walking after meals and gentle aerobic work — not lying flat or hard core work on a full stomach"
 };
 
 const PATHOLOGY_INFO = [
@@ -85,6 +88,9 @@ const PATHOLOGY_INFO = [
   [/stenosis|foraminal/, "Stenosis is narrowing of the spinal canal or a nerve passage. Exercise focuses on positions and strengthening that open space and improve activity tolerance."],
   [/spondylo|facet|pars|baastrup|schmorl|modic/, "This is a mechanical or age-related change of the spinal joints. Movement, mobility and core strengthening typically reduce symptoms."],
   [/frozen shoulder|adhesive capsulitis/, "Adhesive capsulitis ('frozen shoulder') is painful stiffening of the shoulder capsule that passes through phases. Rehab restores range gradually and avoids aggressive stretching too early."],
+  [/gastroparesis|delayed gastric emptying/, "Gastroparesis is delayed stomach emptying. Activity advice is to stay upright after meals and walk gently — this is educational, not a meal plan or a diagnosis."],
+  [/slow transit constipation|colonic inertia/, "Slow-transit constipation means the colon moves stool slowly. Frequent walking is the usual activity stimulus; straining and sit-ups are not the treatment."],
+  [/chronic idiopathic constipation|functional constipation/, "Chronic idiopathic constipation is constipation without an identified structural cause. Walking and not straining help more than abdominal crunches."],
   [/plantar fasciitis|fasciitis|fibromatosis|heel/, "This affects the connective tissue of the foot. Loading the tissue progressively, plus calf and foot strengthening, drives recovery."],
   [/stroke|hemiparesis|wallenberg|infarct/, "A stroke injures part of the brain, affecting movement, balance or coordination. Recovery uses repetitive, task-specific practice — the brain can re-learn."],
   [/spinal cord|tetraplegia|paraplegia|cord syndrome|myelitis|myelopathy|brown-s|cauda equina/, "This involves the spinal cord, affecting movement and sensation below the level of injury. Rehab maximizes strength, function and independence within your ability."],

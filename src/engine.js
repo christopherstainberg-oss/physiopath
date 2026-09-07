@@ -1169,7 +1169,17 @@ const LIB_REGION = {
   cardiac_surgery:["Cardio","Breathing","Full body"],
   pulmonary_rehab:["Cardio","Breathing","Core"], asthma:["Cardio","Breathing"], post_covid:["Cardio","Breathing","Balance"],
   ild:["Cardio","Breathing"], thoracic_surgery:["Breathing","Scapula/Upper back","Cardio"], pulm_hypertension:["Cardio","Breathing"],
-  abdominal_surgery:["Breathing","Core","Hip","Full body"]
+  abdominal_surgery:["Breathing","Core","Hip","Full body"],
+  hip_oa:["Hip","Glute","Core","Cardio"], cuff_repair:["Shoulder","Scapula/Upper back"],
+  shoulder_replacement:["Shoulder","Scapula/Upper back"], lumbar_fusion:["Core","Hip","Spine"],
+  cervical_fusion:["Neck","Scapula/Upper back"], hip_labral:["Hip","Glute","Core"],
+  adhesive_capsulitis:["Shoulder","Scapula/Upper back"], gh_oa:["Shoulder","Scapula/Upper back","Cardio"],
+  lumbar_stenosis:["Hip","Cardio"], cervical_stenosis:["Neck","Scapula/Upper back"],
+  osteoporosis:["Full body","Core","Balance","Cardio"], achilles_insertional:["Ankle","Calf"],
+  meniscus_repair:["Knee","Hip"], extensor_mechanism_repair:["Knee","Hip"],
+  ucl_reconstruction:["Elbow","Forearm","Shoulder"], hand_tendon_repair:["Wrist / Hand","Forearm"],
+  constipation_cic:["Cardio","Hip"], constipation_slow_transit:["Cardio","Hip"],
+  gastroparesis:["Cardio","Breathing"]
 };
 function hashStr(s){ let h=0; for(let i=0;i<s.length;i++){ h=(h*31+s.charCodeAt(i))|0; } return h; }
 /* Pool / aquatic exercises are only SUGGESTED once the user has told us their
@@ -1404,6 +1414,9 @@ function libraryOptions(protocol, phaseIdx, flags, exclude, count, seed){
     exAgeOk(e, age));
   let { kept } = window.applyContra(pool, flags);
   kept = kept.filter(e=>nameAllowed(e.name));      // respect device / weight-bearing restrictions
+  if(protocol === "lumbar_stenosis" || protocol === "osteoporosis" || protocol === "cervical_stenosis"
+    || protocol === "constipation_cic" || protocol === "constipation_slow_transit" || protocol === "gastroparesis")
+    kept = kept.filter(e => !/deadlift|crunch|sit-?up|impact reintroduction|loaded lifting|plyometric|lying flat/i.test(e.name));
   kept.sort((a,b)=> hashStr(a.name+"|"+seed) - hashStr(b.name+"|"+seed));
   /* aMin/aMax/band ride along: without them a paediatric pick loses its declared window the
      moment it enters the program, and the later re-filters would judge it on its NAME. */
@@ -1664,6 +1677,18 @@ const INJURY_FOCUS = [
    focus:"Protect the healing ligament from sideways stress — progress straight-plane strength before any cutting.",
    add:[{p:1,n:"Quad sets & straight-leg raise",d:"3×10",c:"Keep the knee stable"},
         {p:3,n:"Step-ups / squats (straight plane)",d:"3×10",c:"No sideways force",tags:["weight_bearing"]}]},
+  {re:/patellar tendon (repair|rupture)|quadriceps tendon (repair|rupture)|extensor mechanism (repair|rupture)/,
+   focus:"After a patellar or quadriceps tendon repair the extensor mechanism is protected in a brace — early work is quad sets and circulation, not hops or energy-storage loading.",
+   add:[{p:1,n:"Quad sets in the brace",d:"hourly ×10, 5s",c:"Tighten without stressing the repair"},
+        {p:1,n:"Ankle pumps (circulation)",d:"hourly ×20",c:"While the knee is protected"},
+        {p:2,n:"Protected heel slides to the allowed range",d:"3×8",c:"Hands or a strap; stay inside the limit"},
+        {p:3,n:"Closed-chain mini-squat (allowed range)",d:"3×8",c:"Both feet planted — no hop",tags:["weight_bearing"]}]},
+  {re:/meniscus (root )?repair|meniscal repair/,
+   focus:"After a meniscus repair, weight-bearing and deep flexion are limited so the suture can heal — quad sets and heel slides first, no pivoting or jogging until cleared.",
+   add:[{p:1,n:"Protected quad sets",d:"hourly ×10",c:"Tighten the thigh without twisting"},
+        {p:1,n:"Heel slides in the allowed range",d:"3×10",c:"Stay inside the brace/ROM limit"},
+        {p:2,n:"Supported sit-to-stand (partial range)",d:"3×8",c:"Follow the weight-bearing order",tags:["weight_bearing"]},
+        {p:3,n:"Partial-range squat (no twist)",d:"3×8",c:"Avoid deep flexion and pivoting",tags:["weight_bearing"]}]},
   {re:/meniscus|meniscal/,
    focus:"Build quad and hip strength while protecting the meniscus — avoid deep squatting and twisting under load early.",
    add:[{p:1,n:"Quad sets & heel slides (comfortable range)",d:"3×12",c:"Gentle, avoid a deep bend"},
@@ -1718,7 +1743,13 @@ const INJURY_FOCUS = [
         {p:1,n:"Frequent short walks",d:"5–10 min ×2/day",c:"Easy pace",tags:["aerobic"]},
         {p:2,n:"Sciatic nerve glides",d:"3×10",c:"Gentle — don't provoke leg symptoms"},
         {p:3,n:"Hip hinge / dead-bug core",d:"3×10",c:"Keep the spine neutral"}]},
-  {re:/extension-intolerant|stenosis|spondylolisth|spondylolysis|\bpars\b/,
+  {re:/cervical stenosis|cervical myelopath/,
+   focus:"Keep the neck in a comfortable mid-range — walking, scapular setting and gentle chin-nods; avoid forcing end-range looking up, looking down or rotation.",
+   add:[{p:1,n:"Chin tucks in a comfortable mid-range",d:"3×10",c:"Tiny nod — not a forced stretch"},
+        {p:1,n:"Easy walking with eyes forward",d:"5–10 min",c:"Avoid prolonged phone-down posture",tags:["aerobic"]},
+        {p:2,n:"Scapular setting & supported posture",d:"3×12",c:"Shoulder blades, quiet neck"},
+        {p:3,n:"Isometric neck holds in neutral",d:"3×8s",c:"Match resistance; don't push into range"}]},
+  {re:/extension-intolerant|lumbar spinal stenosis|lumbar stenosis|spondylolisth|spondylolysis|\bpars\b/,
    focus:"Favour flexion-biased movement and core control; avoid repeated/loaded extension early.",
    add:[{p:1,n:"Knee-to-chest / flexion in lying",d:"3×20s",c:"Gentle — eases symptoms",tags:["deep_hip_flexion"]},
         {p:2,n:"Dead-bug & bird-dog core control",d:"3×10",c:"Keep the low back still"},
@@ -2042,6 +2073,21 @@ const INJURY_FOCUS = [
    add:[{p:1,n:"Core & postural strengthening play (animal walks, planks)",d:"play-based",c:"Fun, short bouts",tags:["weight_bearing"]},
         {p:2,n:"Balance & coordination games (beam walks, hopping)",d:"play-based",c:"Progress difficulty gradually",tags:["balance"]},
         {p:3,n:"Ball & motor-skill practice (throw/catch/kick, obstacle courses)",d:"play-based",c:"Build everyday coordination"}]},
+  {re:/gastroparesis|delayed gastric emptying/,
+   focus:"Gastroparesis: stay upright after meals and walk gently — lying down or hard core work on a full stomach can worsen nausea. This is activity advice, not a meal plan or a diagnosis.",
+   add:[{p:1,n:"Upright walk after a meal",d:"10–15 min",c:"Stay on your feet after eating",tags:["aerobic","weight_bearing"]},
+        {p:1,n:"Seated diaphragmatic breathing (upright)",d:"3×1 min",c:"No breath-holding"},
+        {p:2,n:"Post-meal upright walk",d:"10–20 min",c:"Upright time after eating is the key habit",tags:["aerobic"]}]},
+  {re:/slow transit constipation|colonic inertia/,
+   focus:"Slow-transit constipation: frequent walking is the motility stimulus — abdominal massage along the colon can help. Do not strain. Extra fiber is not the exercise here and can worsen bloating for some people; that decision belongs with your clinician.",
+   add:[{p:1,n:"Frequent short walks",d:"10 min × several/day",c:"Little-and-often walking",tags:["aerobic","weight_bearing"]},
+        {p:1,n:"Colon-directed abdominal massage (clockwise)",d:"5–10 min",c:"Light pressure; stop if painful"},
+        {p:2,n:"Walking build",d:"20–30 min",c:"Daily if possible",tags:["aerobic"]}]},
+  {re:/chronic idiopathic constipation|functional constipation/,
+   focus:"Chronic idiopathic constipation: walking, not sit-ups, is the activity that helps transit. Don't strain on the toilet; a footstool so the knees sit higher than the hips is a common position tip — not a pelvic-floor diagnosis.",
+   add:[{p:1,n:"Easy walking",d:"15–20 min most days",c:"Best-evidenced activity for regularity",tags:["aerobic","weight_bearing"]},
+        {p:1,n:"Clockwise abdominal massage",d:"5–10 min",c:"Up the right, across, down the left"},
+        {p:2,n:"Walking dose",d:"20–30 min",c:"A mealtime walk helps many people",tags:["aerobic"]}]},
   // ---- generic catch-alls (only used when nothing more specific matched) ----
   {re:/tendinop|tendinosis|tendinitis/, generic:true,
    focus:"Load the tendon progressively — start with isometrics for pain relief, build to heavy-slow resistance, then add speed/energy-storage last.",
@@ -2207,6 +2253,12 @@ const RTS_SPORT = /acl|pcl|mcl|lcl|ligament|sprain|instab|meniscus|hamstring|cal
 /* protocols that already carry specific, staged agility drills — skip the
    ladder's agility for these so we don't double up (balance is still added). */
 const AGILITY_RICH = new Set(["knee_ligament","ankle"]);
+const RTS_PROTECT = new Set([
+  "meniscus_repair","extensor_mechanism_repair","achilles_repair","achilles_insertional",
+  "ucl_reconstruction","hand_tendon_repair","cuff_repair","lumbar_fusion","cervical_fusion",
+  "hip_labral","shoulder_replacement","lumbar_stenosis","cervical_stenosis","osteoporosis",
+  "adhesive_capsulitis","gh_oa","fracture_ue","fracture_le"
+]);
 /* Lower-limb conditions that must be OFFLOADED, not balanced on. The balance
    ladder is weight-bearing by definition, so injecting it here contradicts the
    plan's own restriction (an active Charcot foot is told "DO NOT WALK ON IT",
@@ -2239,8 +2291,13 @@ function rtsFor(cond, phaseIdx){
   const degen = RTS_DEGEN.test(cond.name||"");
   const sporty = !degen && RTS_SPORT.test(cond.name||"");
   const out = [];
-  if(BALANCE_LADDER[p]) out.push(...BALANCE_LADDER[p]);
-  if(sporty && !AGILITY_RICH.has(cond.protocol) && AGILITY_LADDER[p]) out.push(...AGILITY_LADDER[p]);
+  if(BALANCE_LADDER[p]) {
+    const bal = RTS_PROTECT.has(cond.protocol)
+      ? BALANCE_LADDER[p].filter(a => !(a.tags||[]).includes("impact"))
+      : BALANCE_LADDER[p];
+    out.push(...bal);
+  }
+  if(sporty && !AGILITY_RICH.has(cond.protocol) && !RTS_PROTECT.has(cond.protocol) && AGILITY_LADDER[p]) out.push(...AGILITY_LADDER[p]);
   return out.map(a=>({ n:a.n, d:a.d, c:a.c, tags:a.tags||[], sig:true }));
 }
 
