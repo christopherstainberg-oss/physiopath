@@ -79,7 +79,7 @@ const TEMPLATE = {
 
 const DOMAIN_NAME = { msk:"musculoskeletal", neuro:"neurological", cardiac:"cardiac", pulmonary:"pulmonary" };
 const DOMAIN_REDFLAGS = {
-  msk:"Get it checked for: inability to bear weight or use the limb, obvious deformity, a hot/swollen joint with fever, new numbness or weakness, or pain that steadily worsens despite rest.",
+  msk:"Get it checked for: inability to bear weight or use the limb, obvious deformity, a hot/swollen joint with fever, new numbness or weakness, or pain that steadily worsens despite rest. Also stop and see a clinician — do not treat as ordinary sprain/strain — if there are signs that could mean cancer, infection, trauma/fracture, or inflammatory disease (unexplained weight loss, fever, recent major trauma, or a joint that is hot and swollen). This app does not diagnose.",
   neuro:"Seek prompt care for: new or worsening weakness/numbness, trouble speaking or swallowing, sudden severe headache, new loss of balance, loss of bladder/bowel control or saddle numbness, unequal pupils, rapidly dropping alertness, or (after SCI ~T6 and above) pounding headache with flushing/sweating that may signal autonomic dysreflexia.",
   cardiac:"Stop and seek urgent care for: chest pain or pressure, unusual breathlessness, palpitations, fainting, or cold sweats. Report rapid weight gain or new swelling to your team.",
   pulmonary:"Seek care for: worsening breathlessness at rest, chest pain, blue-tinged lips/fingertips, fever with discolored sputum, or oxygen readings below your prescribed level."
@@ -101,8 +101,8 @@ const CURATED_SURGERIES = [
     ret:"Precautions commonly relax around 6–12 weeks — the exact rules depend on your surgical approach (posterior vs anterior). Confirm with your surgeon." },
   { id:"tka", name:"Total / partial knee replacement", match:/knee replacement|knee arthroplasty|unicompartmental/, autoFlags:["knee_replacement"],
     precautions:[
-      {t:"Work on full knee straightening (extension) AND bend (flexion) early — regaining motion is the priority.",w:8},
-      {t:"Ice and elevate frequently to control swelling.",w:6},
+      {t:"Work on full knee straightening (extension) AND bend (flexion) early — regaining motion is the priority. If you elevate with the knee bent about 30–90° to limit swelling, keep working full straightening so it does not stay bent.",w:8},
+      {t:"Ice (a simple cold pack is enough) and elevate frequently to control swelling. Continuous passive motion machines and routine braces are not needed after a typical primary knee replacement.",w:6},
       {t:"Keep ankle pumps going and watch for DVT (calf pain/swelling/warmth).",w:6},
       {t:"Weight-bear as tolerated with your walker/crutches until steady.",w:6},
       {t:"No driving until cleared (often ~4–6 weeks).",w:6},
@@ -1416,8 +1416,11 @@ function libraryOptions(protocol, phaseIdx, flags, exclude, count, seed){
   kept = kept.filter(e=>nameAllowed(e.name));      // respect device / weight-bearing restrictions
   if(protocol === "lumbar_stenosis" || protocol === "osteoporosis" || protocol === "cervical_stenosis"
     || protocol === "constipation_cic" || protocol === "constipation_slow_transit" || protocol === "gastroparesis"
-    || protocol === "ibs" || protocol === "functional_dyspepsia")
-    kept = kept.filter(e => !/deadlift|crunch|sit-?up|impact reintroduction|loaded lifting|plyometric|lying flat/i.test(e.name));
+    || protocol === "ibs" || protocol === "functional_dyspepsia"
+    || protocol === "knee_replacement" || protocol === "cuff_repair" || protocol === "lumbar_fusion"
+    || protocol === "hip_oa" || protocol === "radiculopathy_lumbar" || protocol === "shoulder_instability"
+    || protocol === "hip_replacement" || protocol === "shoulder_replacement")
+    kept = kept.filter(e => !/deadlift|crunch|sit-?up|impact reintroduction|loaded lifting|plyometric|lying flat|cutting drills|lateral bounds|hop-and-stick|\bhops?\b|jogging|running \/ sport/i.test(e.name));
   kept.sort((a,b)=> hashStr(a.name+"|"+seed) - hashStr(b.name+"|"+seed));
   /* aMin/aMax/band ride along: without them a paediatric pick loses its declared window the
      moment it enters the program, and the later re-filters would judge it on its NAME. */
@@ -2268,7 +2271,8 @@ const RTS_PROTECT = new Set([
   "meniscus_repair","extensor_mechanism_repair","achilles_repair","achilles_insertional",
   "ucl_reconstruction","hand_tendon_repair","cuff_repair","lumbar_fusion","cervical_fusion",
   "hip_labral","shoulder_replacement","lumbar_stenosis","cervical_stenosis","osteoporosis",
-  "adhesive_capsulitis","gh_oa","fracture_ue","fracture_le"
+  "adhesive_capsulitis","gh_oa","fracture_ue","fracture_le","knee_replacement","hip_oa",
+  "radiculopathy_lumbar","shoulder_instability","hip_replacement"
 ]);
 /* Lower-limb conditions that must be OFFLOADED, not balanced on. The balance
    ladder is weight-bearing by definition, so injecting it here contradicts the
@@ -3667,7 +3671,7 @@ function generateProgram(){
     sessions: (primaryPlan && primaryPlan.freq) ? primaryPlan.freq : sessionsText(track),
     load:loadGuidance(),
     builtFrom: { pain: effectivePain().v, flags: flags.slice().sort().join(",") },   // so planDrift() can tell when it goes stale
-    flags, notes:[...new Set(window.notesForFlags(flags).concat(R.notes).concat(telemetryNotes()))], clearance:clearanceNeeded(flags),
+    flags, notes:[...new Set(window.notesForFlags(flags).concat(R.notes).concat(telemetryNotes()).concat(protocolEducationNotes(conds)))], clearance:clearanceNeeded(flags),
     supervision:displaySupervision(flags, clearanceNeeded(flags)), items,
     removed:Array.from(removedAll, ([n,tag])=>({n,tag}))
   };
@@ -3675,6 +3679,19 @@ function generateProgram(){
 function aboutText(c, track){
   return `${DOMAIN_NAME[c.domain].replace(/^./,ch=>ch.toUpperCase())} rehabilitation (${c.region}). ` +
     `This plan follows a general ${DOMAIN_NAME[c.domain]} approach centered on ${TEMPLATE[track].focus}.`;
+}
+const FITT_PROTOCOLS = new Set(["general_msk","cardiac_rehab","pulmonary_rehab","hypertension","heart_failure","pad","ild","post_covid"]);
+function protocolEducationNotes(conds){
+  const notes = [];
+  const protos = new Set((conds||[]).map(c => c.protocol));
+  if([...protos].some(p => FITT_PROTOCOLS.has(p))){
+    notes.push("Dose education (WHO/AHA, not a prescription): adults often aim for 150–300 minutes a week of moderate aerobic activity (or 75–150 vigorous), plus muscle-strengthening of major groups on 2 or more days. Any bout counts. Sit less. If you have a long-term condition, do what you can as able and follow your clinician.");
+  }
+  if(protos.has("knee_replacement")){
+    notes.push("After a knee replacement: ice and elevate (early on, a slight bend of about 30–90° can limit swelling — keep working the knee straight so it does not stay bent). Continuous passive motion machines and routine braces are not needed for a typical primary replacement. Progressive strength, walking, sit-to-stand, stairs and balance beat gadgets. Harder is not automatically better — if swelling or night pain jump, back off. This list does not replace supervised physical therapy.");
+    notes.push("If your physical therapist issued a quadriceps stimulator (NMES), use it as they set it. Do not use electrical stim if you have a demand pacemaker, active cancer, or a known clot unless your team says otherwise.");
+  }
+  return notes;
 }
 const TAG_LABEL = {
   impact:"high-impact", valsalva:"heavy straining / breath-holding", overhead:"overhead loading",

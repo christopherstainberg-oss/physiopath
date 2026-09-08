@@ -101,19 +101,19 @@ function lateral(baseName, domain, region, protocol, opts = {}) {
 /* ==================== MSK — peripheral joints ==================== */
 const MSK_REGIONS = [
   { region:"Shoulder", protocol:"shoulder", dx:[
-    "Rotator cuff tendinopathy","Rotator cuff tear (partial-thickness)","Rotator cuff tear (full-thickness)",
+    "Rotator cuff tendinopathy","Rotator cuff tear (partial-thickness)",
     "Subacromial impingement syndrome","Supraspinatus tendinitis","Biceps tendinopathy",
     "Subacromial bursitis",
-    "Calcific tendinitis of the shoulder","SLAP (labral) tear","Shoulder impingement post-repair" ] },
+    "Calcific tendinitis of the shoulder" ] },
   { region:"Shoulder", protocol:"adhesive_capsulitis", dx:[
     "Adhesive capsulitis (frozen shoulder)" ] },
   { region:"Shoulder", protocol:"gh_oa", dx:[
     "Glenohumeral osteoarthritis" ] },
   { region:"Shoulder", protocol:"cuff_repair", dx:[
-    "Rotator cuff repair recovery" ] },
+    "Rotator cuff repair recovery","Rotator cuff tear (full-thickness)","Shoulder impingement post-repair" ] },
   { region:"Shoulder", protocol:"shoulder_instability", dx:[
     "Anterior shoulder dislocation recovery","Recurrent shoulder instability","Shoulder subluxation",
-    "Bankart lesion recovery","Multidirectional shoulder instability","Labral repair recovery" ] },
+    "Bankart lesion recovery","Multidirectional shoulder instability","Labral repair recovery","SLAP (labral) tear" ] },
   { region:"AC joint", protocol:"shoulder", dx:[
     "AC joint sprain (grade I)","AC joint sprain (grade II)","AC joint separation recovery","AC joint osteoarthritis" ] },
   { region:"Elbow", protocol:"elbow", dx:[
@@ -126,13 +126,12 @@ const MSK_REGIONS = [
     "Trigger finger","Thumb CMC osteoarthritis","Mallet finger recovery","Boxer's fracture recovery",
     "Ganglion cyst (post-excision)","Hand osteoarthritis","Dupuytren's contracture (post-release)" ] },
   { region:"Hip", protocol:"hip", dx:[
-    "Gluteal tendinopathy","Trochanteric bursitis",
     "Hip flexor strain","Adductor (groin) strain",
-    "Piriformis syndrome","Hip abductor weakness","Snapping hip syndrome","Proximal hamstring tendinopathy" ] },
+    "Piriformis syndrome","Hip abductor weakness","Snapping hip syndrome" ] },
+  { region:"Hip", protocol:"hip_oa", dx:[
+    "Hip osteoarthritis","Gluteal tendinopathy","Trochanteric bursitis","Proximal hamstring tendinopathy" ] },
   { region:"Hip", protocol:"hip_labral", dx:[
     "Hip labral tear","Femoroacetabular impingement (FAI)" ] },
-  { region:"Hip", protocol:"hip_oa", dx:[
-    "Hip osteoarthritis" ] },
   { region:"Hip", protocol:"hip_replacement", dx:[
     "Total hip replacement recovery","Hip hemiarthroplasty recovery","Hip resurfacing recovery" ] },
   /* Hip fracture fixation is ORIF/nail — NOT arthroplasty. THA precautions (90°/adduction/IR) do not apply. */
@@ -189,7 +188,8 @@ function spineSet(levels, region, protocol, radicProtocol) {
     add(`Disc protrusion at ${lv}`, "msk", region, protocol);
     add(`Degenerative disc disease at ${lv}`, "msk", region, protocol, { chronic:true });
     add(`Radiculopathy at ${lv}`, "msk", region, radicProtocol);
-    add(`Foraminal stenosis at ${lv}`, "msk", region, protocol);
+    add(`Foraminal stenosis at ${lv}`, "msk", region,
+      /Lumbar/.test(region) ? "lumbar_stenosis" : /Cervical/.test(region) ? "cervical_stenosis" : protocol);
   }
 }
 spineSet(CERV, "Cervical spine", "cervical", "radiculopathy_cervical");
@@ -203,10 +203,9 @@ const SPINE_GENERAL = [
   ["Thoracic","thoracic",["Thoracic outlet syndrome","Thoracic facet syndrome","Costovertebral joint dysfunction",
     "Scheuermann's kyphosis","Rib dysfunction","Postural thoracic pain","Scoliosis (conservative management)"]],
   ["Lumbar","lumbar",["Non-specific low back pain","Lumbar strain","Lumbar spondylosis","Lumbar facet syndrome",
-    "Spondylolysis","Spondylolisthesis (grade I)","Spondylolisthesis (grade II)",
-    "Degenerative spondylolisthesis","Failed back surgery syndrome","Post-laminectomy recovery"]],
-  ["Lumbar","lumbar_stenosis",["Lumbar spinal stenosis"]],
-  ["Lumbar","lumbar_fusion",["Post-lumbar fusion recovery"]],
+    "Spondylolysis","Spondylolisthesis (grade I)"]],
+  ["Lumbar","lumbar_stenosis",["Lumbar spinal stenosis","Spondylolisthesis (grade II)","Degenerative spondylolisthesis"]],
+  ["Lumbar","lumbar_fusion",["Post-lumbar fusion recovery","Failed back surgery syndrome","Post-laminectomy recovery"]],
   ["Cervical","cervical_fusion",["Post-cervical fusion recovery","ACDF recovery"]],
   ["Sacroiliac","sacroiliac",["Sacroiliac joint dysfunction","SI joint pain","Sacroiliitis","Coccydynia","Pelvic girdle pain"]]
 ];
@@ -214,7 +213,7 @@ for (const [region, protocol, list] of SPINE_GENERAL)
   for (const dx of list) add(dx, "msk", region + " spine", protocol, { chronic:/spondylosis|stenosis|degenerative|chronic/i.test(dx) });
 
 add("Sciatica", "msk", "Lumbar spine", "radiculopathy_lumbar");
-add("Cauda equina (post-decompression recovery)", "msk", "Lumbar spine", "radiculopathy_lumbar", { supervision:"clinical", clearance:true });
+add("Cauda equina (post-decompression recovery)", "msk", "Lumbar spine", "lumbar_fusion", { supervision:"clinical", clearance:true });
 
 /* ==================== MSK — systemic joint disease, OA/RA ==================== */
 const JOINTS = ["Shoulder","Elbow","Wrist","Hand","Hip","Knee","Ankle","Foot","Cervical spine","Lumbar spine"];
@@ -864,7 +863,7 @@ plainList(["Sarcopenia (progressive resistance)","Frailty reconditioning","Post-
  "Falls-prevention reconditioning","Immobility-related deconditioning","Age-related muscle weakness",
  "Post-delirium mobility reconditioning","Multimorbidity exercise reconditioning"],"msk","Geriatric","general_msk",{chronic:true,supervision:"supervised"});
 /* Vertebral compression: extension-bias / upright loading — not LE fracture or generic MSK impact. */
-plainList(["Osteoporotic vertebral compression (reconditioning)"],"msk","Thoracic / lumbar spine","lumbar",{
+plainList(["Osteoporotic vertebral compression (reconditioning)"],"msk","Thoracic / lumbar spine","osteoporosis",{
   chronic:true,supervision:"supervised",clearance:true,autoFlags:["osteoporosis"] });
 
 /* --- TMJ / headache subtypes --- */

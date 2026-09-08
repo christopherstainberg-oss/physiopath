@@ -341,7 +341,7 @@ function safetyNotesCard(prog){
       <li>Do balance work beside a sturdy support if you feel at all unsteady.</li>
       <li>Stay hydrated, and stop if you feel unwell, faint, or overheated.</li>
     </ul>
-    <div class="redflags" style="margin-top:12px"><b>⚠ Seek urgent care</b> for: chest pain, severe breathlessness, fainting, sudden weakness/numbness or trouble speaking, loss of bladder or bowel control, a hot swollen joint with fever, or calf pain/swelling with breathlessness.</div>
+    <div class="redflags" style="margin-top:12px"><b>⚠ Seek urgent care</b> for: chest pain, severe breathlessness, fainting, sudden weakness/numbness or trouble speaking, loss of bladder or bowel control, a hot swollen joint with fever, or calf pain/swelling with breathlessness. Also see a clinician — do not treat as ordinary mechanical pain — for unexplained weight loss, fever with back or joint pain, recent major trauma, or other signs that could mean cancer, infection, fracture, or inflammatory disease.</div>
     ${prog && prog.clearance ? `<p class="hint" style="margin-top:10px"><b>Because of your history, get medical clearance before starting</b> — ideally with supervised rehab. See your personalised precautions in the Details step.</p>` : ""}`;
   const badge = prog && prog.clearance ? `<span class="collapsebadge">⚠ clearance</span>` : "";
   return collapsibleCard("safety", "safetycard", "🛟 Safety notes", body, badge);

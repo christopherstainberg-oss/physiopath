@@ -412,5 +412,148 @@ test("Functional dyspepsia uses functional_dyspepsia — not gastroparesis pool"
   assert(/walk|upright|after (a )?meal|post-?meal/.test(text), "functional dyspepsia should keep upright post-meal walking");
 });
 
+test("Sciatica uses radiculopathy_lumbar keep-active walking — not generic lumbar load-lift", () => {
+  const c = condByName(/^Sciatica$/i);
+  assert(c, "expected Sciatica");
+  assert(c.protocol === "radiculopathy_lumbar", `got ${c.protocol}`);
+  const prog = planFor(E, { condIds: [c.id], weeks: 6, age: 48, surgery: "no" });
+  const text = names(prog).toLowerCase();
+  assert(!/loaded lifting mechanics|impact reintroduction|deadlift/.test(text), "sciatica must not load-lift/impact");
+  assert(/walk/.test(text), "sciatica should keep walking (NICE keep-active)");
+});
+
+test("Non-specific low back pain keeps walking — not fusion BLT", () => {
+  const c = condByName(/^Non-specific low back pain$/i);
+  assert(c, "expected Non-specific low back pain");
+  assert(c.protocol === "lumbar", `got ${c.protocol}`);
+  const prog = planFor(E, { condIds: [c.id], weeks: 4, age: 44, surgery: "no" });
+  const text = names(prog).toLowerCase();
+  assert(/walk/.test(text), "ordinary LBP should keep walking");
+  assert(!/log.?roll|blt/.test(text), "ordinary LBP is keep-active, not fusion BLT");
+});
+
+test("Full-thickness rotator cuff tear is protect-first — not shoulder plyos", () => {
+  const c = condByName(/Rotator cuff tear \(full-thickness\)/i);
+  assert(c, "expected Rotator cuff tear (full-thickness)");
+  assert(c.protocol === "cuff_repair", `got ${c.protocol}`);
+  const prog = planFor(E, { condIds: [c.id], weeks: 4, age: 58, surgery: "no" });
+  const text = names(prog).toLowerCase();
+  assert(!/plyometric|throwing|racket/.test(text), "full-thickness cuff tear must not plyo/throw");
+  assert(/pendulum|isometric|scapular/.test(text), "full-thickness cuff tear should stay protected");
+});
+
+test("SLAP tear is protect-first — not overhead plyos", () => {
+  const c = condByName(/^SLAP \(labral\) tear$/i) || condByName(/SLAP \(labral\) tear \(Left\)/i);
+  assert(c, "expected SLAP (labral) tear");
+  assert(c.protocol === "shoulder_instability", `got ${c.protocol}`);
+  const prog = planFor(E, { condIds: [c.id], weeks: 4, age: 28, surgery: "no" });
+  const text = names(prog).toLowerCase();
+  assert(!/plyometric|throwing|racket/.test(text), "SLAP tear must not throw/plyo");
+});
+
+test("Shoulder impingement post-repair uses cuff_repair — not generic shoulder plyos", () => {
+  const c = condByName(/Shoulder impingement post-repair/i);
+  assert(c, "expected Shoulder impingement post-repair");
+  assert(c.protocol === "cuff_repair", `got ${c.protocol}`);
+});
+
+test("Gluteal tendinopathy is not hip cutting drills", () => {
+  const c = condByName(/^Gluteal tendinopathy$/i) || condByName(/Gluteal tendinopathy \(Left\)/i);
+  assert(c, "expected Gluteal tendinopathy");
+  assert(c.protocol !== "hip", `gluteal tendinopathy must not use generic hip, got ${c.protocol}`);
+  const prog = planFor(E, { condIds: [c.id], weeks: 8, age: 54, surgery: "no" });
+  const text = names(prog).toLowerCase();
+  assert(!/cutting drills|lateral bounds/.test(text), "gluteal tendinopathy must not cut/bound");
+});
+
+test("Post-laminectomy recovery uses lumbar_fusion — not generic lumbar load-lift", () => {
+  const c = condByName(/^Post-laminectomy recovery$/i);
+  assert(c, "expected Post-laminectomy recovery");
+  assert(c.protocol === "lumbar_fusion", `got ${c.protocol}`);
+  const prog = planFor(E, { condIds: [c.id], weeks: 2, age: 62, surgery: "yes" });
+  const text = names(prog).toLowerCase();
+  assert(!/loaded lifting mechanics|impact reintroduction|deadlift/.test(text), "early laminectomy must not load-lift/impact");
+});
+
+test("Cauda equina post-decompression uses lumbar_fusion — not radiculopathy load-lift", () => {
+  const c = condByName(/Cauda equina \(post-decompression recovery\)/i);
+  assert(c, "expected Cauda equina (post-decompression recovery)");
+  assert(c.protocol === "lumbar_fusion", `got ${c.protocol}`);
+});
+
+test("Foraminal stenosis at L4-L5 uses lumbar_stenosis — not generic lumbar", () => {
+  const c = condByName(/^Foraminal stenosis at L4-L5$/i);
+  assert(c, "expected Foraminal stenosis at L4-L5");
+  assert(c.protocol === "lumbar_stenosis", `got ${c.protocol}`);
+});
+
+test("Osteoporotic vertebral compression uses osteoporosis — not generic lumbar impact", () => {
+  const c = condByName(/Osteoporotic vertebral compression/i);
+  assert(c, "expected Osteoporotic vertebral compression");
+  assert(c.protocol === "osteoporosis", `got ${c.protocol}`);
+  const prog = planFor(E, { condIds: [c.id], weeks: 8, age: 74, surgery: "no" });
+  const text = names(prog).toLowerCase();
+  assert(!/loaded lifting mechanics|impact reintroduction|deadlift|crunch/.test(text), "vertebral compression must not load-lift/impact/crunch");
+});
+
+test("Total knee replacement recovery follows 2026 APTA TKA CPG themes", () => {
+  const c = condByName(/^Total knee replacement recovery$/i) || condByName(/Total knee replacement recovery \(Left\)/i);
+  assert(c, "expected Total knee replacement recovery");
+  assert(c.protocol === "knee_replacement", `got ${c.protocol}`);
+  const early = planFor(E, { condIds: [c.id], weeks: 2, age: 68, surgery: "yes" });
+  const earlyText = namesEarly(early).toLowerCase();
+  assert(/quad|heel slide|ankle pump|extension|straight/.test(earlyText), "early TKA should keep quad/ROM/circulation work");
+  assert(!/\bcpm\b|continuous passive|plyometric|hop|jog|run/.test(earlyText), "early TKA must not use CPM or impact");
+  const later = planFor(E, { condIds: [c.id], weeks: 10, age: 68, surgery: "yes" });
+  const laterText = names(later).toLowerCase();
+  assert(/sit-to-stand|step-up|walk|bike|balance/.test(laterText), "later TKA should keep function, walking, bike, balance");
+  assert(!/\bcpm\b|continuous passive|plyometric|hop|\bjog\b|\brun\b/.test(laterText), "TKA must not hop/run/CPM");
+  const blob = `${(early.notes || []).join(" ")} ${(early.items || []).map(i => `${i.about || ""} ${i.redflags || ""}`).join(" ")}`.toLowerCase();
+  assert(/ice|cryo/.test(blob) && /elevat/.test(blob), "TKA education should mention ice and elevation");
+  assert(/straighten|extension/.test(blob), "TKA education should keep working extension");
+  assert(/physical therapist|supervised/.test(blob), "TKA education should not replace supervised PT");
+});
+
+test("MSK red-flag copy off-ramps cancer/infection/trauma/inflammatory — does not diagnose", () => {
+  const c = condByName(/^Non-specific low back pain$/i);
+  assert(c, "expected Non-specific low back pain");
+  const prog = planFor(E, { condIds: [c.id], weeks: 4, age: 50, surgery: "no" });
+  const rf = `${prog.items[0].redflags || ""} ${(prog.notes || []).join(" ")}`.toLowerCase();
+  assert(/cancer|infection|trauma|inflammatory/.test(rf), "MSK off-ramp must name cancer/infection/trauma/inflammatory");
+  assert(/clinician|assess|urgent|checked/.test(rf), "MSK off-ramp must send the person to a clinician");
+  assert(!/your labs mean|you have cancer|diagnosis is/.test(rf), "must not diagnose from labs");
+});
+
+test("general_msk and cardiac_rehab carry WHO/FITT dose education — not a prescription", () => {
+  const g = condByName(/^Sarcopenia \(progressive resistance\)$/i);
+  assert(g, "expected Sarcopenia (progressive resistance)");
+  assert(g.protocol === "general_msk", `got ${g.protocol}`);
+  const gProg = planFor(E, { condIds: [g.id], weeks: 8, age: 70, surgery: "no" });
+  const gNotes = (gProg.notes || []).join(" ").toLowerCase();
+  assert(/150/.test(gNotes) && /muscle-strengthen|strengthening/.test(gNotes), "general_msk should show WHO weekly minutes + strength days");
+  assert(/not a prescription|education|as able|clinician/.test(gNotes), "dose card must stay educational");
+
+  const cr = condByName(/^COPD with pulmonary rehabilitation$/i) || condByName(/^COPD \(GOLD stage 1\)$/i);
+  assert(cr, "expected a pulmonary_rehab condition");
+  const cProg = planFor(E, { condIds: [cr.id], weeks: 8, age: 68, surgery: "no" });
+  const cNotes = (cProg.notes || []).join(" ").toLowerCase();
+  assert(/150/.test(cNotes), "cardio-pulm pools should show the same dose education");
+});
+
+test("GETP-12 special-pops are not dumped on general_msk", () => {
+  for (const [re, label] of [
+    [/Postural orthostatic tachycardia syndrome \(POTS\)/i, "POTS"],
+    [/Chronic fatigue syndrome \/ ME/i, "ME/CFS"],
+  ]) {
+    const c = condByName(re);
+    assert(c, `expected ${label} in catalogue`);
+    assert(c.protocol !== "general_msk", `${label} must not use general_msk, got ${c.protocol}`);
+  }
+  for (const re of [/MASLD/i, /NAFLD/i, /non-alcoholic fatty liver/i, /spontaneous coronary/i, /SCAD/i]) {
+    const c = condByName(re);
+    if (c) assert(c.protocol !== "general_msk", `${c.name} must not use general_msk, got ${c.protocol}`);
+  }
+});
+
 import { pathToFileURL } from "node:url";
 if (import.meta.url === pathToFileURL(process.argv[1]).href) (await import("./runner.mjs")).report();

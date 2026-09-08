@@ -179,22 +179,24 @@
   ];
 
   P.knee_replacement = [
-    [E("Ankle pumps","3×20","Circulation"),
+    [E("Ankle pumps","3×20","Circulation — early motion, not a CPM machine"),
      E("Quad sets","3×12","Rebuild thigh control"),
-     E("Heel slides / knee bends","3×12","Regain flexion daily"),
+     E("Heel slides / assisted knee bends","3×12","Passive, active-assist, then active — regain flexion daily"),
+     E("Towel under heel / terminal extension","3×10","Keep the knee straight — flexion elevation must not steal extension"),
      E("Straight-leg raises","3×10","Keep knee straight")],
     [E("Seated knee extension","3×12","Work toward full straightening"),
      E("Standing knee bends","3×12","Improve flexion",T.balance),
      E("Mini squats","3×10","Shallow, controlled",T.wb),
-     E("Stationary bike","10 min","Light resistance",T.aerobic)],
+     E("Operated-leg weight shift","3×30s","Even stance near support",T.wb,T.balance),
+     E("Stationary bike","10 min","Light resistance — assisted ROM",T.aerobic)],
     [E("Sit-to-stand","3×10","Controlled",T.wb),
      E("Step-ups (low)","3×10 each","Lead operated leg",T.wb,T.balance),
      E("Standing hip abduction","3×15","Stabilize the knee"),
      E("Calf raises","3×15","Support as needed")],
-    [E("Progressive squats/lunges","3×10","Pain-free range",T.wb),
+    [E("Progressive squats/lunges","3×10","Pain-free range — harder is not automatically better",T.wb),
      E("Balance training","3×30s","Near support",T.balance),
      E("Walking endurance","20–30 min","Build distance",T.wb,T.aerobic),
-     E("Low-impact activity return","as tolerated","Avoid high impact",T.impact)]
+     E("Low-impact activity (walk/bike)","as tolerated","No running or jumping",T.aerobic)]
   ];
 
   P.ankle = [
@@ -1096,10 +1098,10 @@
      E("Prone Y-T-W raises","3×10 each","Build scapular control",T.prone),
      E("Controlled-range external rotation","3×12","Increase range gradually",T.overhead),
      E("Loaded rhythmic stabilization","3×30s","Multi-direction control",T.balance)],
-    [E("Plyometric ball drills","3×12","Light, controlled catches",T.highInt),
+    [E("Closed-chain control & catching","3×12","Light, no throwing",T.balance),
      E("Overhead pressing (progressive)","3×10","Only when stable & pain-free",T.overhead,T.valsalva),
      E("Perturbation & reactive control","3×30s","Prepare for real demands",T.balance),
-     E("Sport / contact-specific loading","as tolerated","Avoid the apprehension position",T.overhead)]
+     E("Sport / contact-specific loading","as tolerated","Avoid the apprehension position — not plyometrics",T.overhead)]
   ];
 
   P.knee_meniscus = [
@@ -1134,9 +1136,9 @@
      E("Hip hinge patterning","3×12","Protect the disc & nerve",T.flexLoad),
      E("Progressive leg strengthening","3×12","Squats/steps as tolerated",T.wb),
      E("Walking endurance","15–25 min","Build tolerance",T.aerobic)],
-    [E("Loaded lifting mechanics","3×8","Neutral spine, add load slowly",T.flexLoad,T.valsalva),
-     E("Return-to-activity conditioning","3×10","Task-specific",T.wb),
-     E("Impact reintroduction (if relevant)","gradual","When symptoms have settled",T.impact),
+    [E("Walking endurance & daily activity","20–30 min","Keep moving — ordinary activity is the goal",T.aerobic,T.wb),
+     E("Return-to-activity conditioning","3×10","Task-specific, pain-guided",T.wb),
+     E("Hip hinge patterning (bodyweight)","3×8","Neutral spine — not loaded lifting or impact",T.flexLoad),
      E("Relapse-prevention routine","ongoing","Keep moving, manage load")]
   ];
 
