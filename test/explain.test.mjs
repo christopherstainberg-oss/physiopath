@@ -77,5 +77,65 @@ test("vague 'Return to activity' is a progression note, not a fake movement", ()
     `should admit this is a progression, not a drill: ${t.slice(0, 280)}`);
 });
 
+test("Gentle wrist ROM names the wrist — not 'general conditioning' on a shoulder plan", () => {
+  const t = explain("Gentle wrist ROM", ["Shoulder"]);
+  assert(/wrist/i.test(t), `must name the wrist: ${t.slice(0, 280)}`);
+  assert(!/general conditioning exercise for the area/i.test(t), `must not be generic: ${t.slice(0, 200)}`);
+  assert(!/mainly works the shoulder/i.test(t), `wrist ROM must not inherit the condition region: ${t.slice(0, 200)}`);
+});
+
+test("Pronation/supination (hammer) is forearm rotation, not a generic drill", () => {
+  const t = explain("Pronation/supination (hammer)", ["Elbow"]);
+  assert(/hammer|rotate|thumb|forearm/i.test(t), `must describe the rotation: ${t.slice(0, 280)}`);
+});
+
+test("Soft-ball squeezes is a grip, not general conditioning", () => {
+  const t = explain("Soft-ball squeezes", ["Elbow"]);
+  assert(/squeez|grip|ball|hand/i.test(t), `must describe a squeeze: ${t.slice(0, 280)}`);
+  assert(!/general conditioning exercise for the area/i.test(t), `must not be generic: ${t.slice(0, 200)}`);
+});
+
+test("Band diagonals (PNF) names a diagonal reach", () => {
+  const t = explain("Band diagonals (PNF)", ["Shoulder"]);
+  assert(/diagonal|chop|lift|across/i.test(t), `must describe the diagonal: ${t.slice(0, 280)}`);
+});
+
+test("Clamshells is a side-lying hip drill", () => {
+  const t = explain("Clamshells", ["Hip"]);
+  assert(/side|clam|knee|hip/i.test(t), `must describe the clamshell: ${t.slice(0, 280)}`);
+  assert(!/general conditioning exercise for the area/i.test(t), `must not be generic what-it-is: ${t.slice(0, 200)}`);
+});
+
+test("Sport-specific loading is a heading, not a fake movement", () => {
+  const t = explain("Sport-specific loading", ["Shoulder"]);
+  assert(/progress|earlier|not a single movement|not one named|heading/i.test(t),
+    `should admit this is a progression: ${t.slice(0, 280)}`);
+  assert(!/general conditioning/i.test(t), `must not be generic: ${t.slice(0, 200)}`);
+});
+
+test("Short easy walks is walking, not general conditioning", () => {
+  const t = explain("Short easy walks", ["Knee"]);
+  assert(/walk/i.test(t), `must mention walking: ${t.slice(0, 200)}`);
+  assert(!/general conditioning exercise for the area/i.test(t), `walks plural must not fall through: ${t.slice(0, 200)}`);
+});
+
+test("Energy conservation is a habit, not a strengthening drill", () => {
+  const t = explain("Energy conservation", ["Shoulder"]);
+  assert(/pac|rest|habit|energy|not a strengthening/i.test(t), `must describe pacing: ${t.slice(0, 280)}`);
+  assert(!/general conditioning/i.test(t), `must not be generic: ${t.slice(0, 200)}`);
+});
+
+test("Colon-directed abdominal massage is massage along the colon, not sit-ups", () => {
+  const t = explain("Colon-directed abdominal massage", ["Abdomen"]);
+  assert(/colon|massage|clockwise/i.test(t), `must name colon massage: ${t.slice(0, 280)}`);
+  assert(!/sit-up|crunch/i.test(t), `must not be trunk flexion`);
+});
+
+test("Rest — no structured exercise until cleared is rest, not a drill", () => {
+  const t = explain("Rest — no structured exercise until cleared", ["Shoulder"]);
+  assert(/rest|cleared|not (a |an )?(drill|exercise)|no structured/i.test(t),
+    `must say rest: ${t.slice(0, 280)}`);
+});
+
 import { pathToFileURL } from "node:url";
 if (import.meta.url === pathToFileURL(process.argv[1]).href) (await import("./runner.mjs")).report();

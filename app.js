@@ -4209,7 +4209,7 @@ function inferPattern(name){
   if(/calf raise|heel raise|calf|heel drop/.test(l)) return "calf";
   if(/lunge|step-up|split squat|step-down/.test(l)) return "lunge";
   if(/squat/.test(l)) return "squat";
-  if(/deadlift|hinge|bridge|hip thrust|good-morning|kickback|romanian|hip extension/.test(l)) return "hinge";
+  if(/deadlift|hinge|bridge|hip thrust|good-morning|kickback|romanian|\brdl\b|hip extension/.test(l)) return "hinge";
   if(/crunch|sit-up|curl-up|v-up|trunk flexion|reverse crunch/.test(l)) return "flexion";
   if(/superman|cobra|back extension|hyperextension|prone extension/.test(l)) return "extension";
   if(/tandem walk|braiding|grapevine|gait|marching|obstacle stepping|backward walk|heel walk|toe walk/.test(l)) return "gait";
@@ -4222,7 +4222,7 @@ function inferPattern(name){
   if(/(scapular |seated |bent-over |cable |barbell |dumbbell |machine |band )?rows?\b/.test(l) && !/ergometer|rower\b|rowing/.test(l)) return "pull";
   if(/arm[- ]?ergometer|upper-body cardio|seated arm|\bcardio\b|ergometer/.test(l)) return "cardio";
   if(/\baerobic\b|treadmill|elliptical|stationary bike|\bcycling\b|easy bike|walk\/bike|walk \/ bike|\brower\b|rowing/.test(l)) return "cardio";
-  if(/\b(brisk |easy |gentle |short |frequent |progressive |community |upright |graded |maintenance |warm-up )?(walk|walking)\b/.test(l)
+  if(/\b(brisk |easy |gentle |short |frequent |progressive |community |upright |graded |maintenance |warm-up )?(walk|walking|walks)\b/.test(l)
      && !/band walk|heel walk|toe walk|wall walk|slides? \/ walks|farmer/.test(l)) return "cardio";
   if(/\bjog|\bjogging|return-to-run|easy run/.test(l)) return "cardio";
   if(/pull|curl|face pull|rear-delt|external rotation|scapular|y-t-w|deviation|glide/.test(l)) return "pull";
@@ -5178,6 +5178,155 @@ const NAME_HOWTO = [
     steps:["Press up until the arms are long, keeping the ribs down so you don't lean back.","Pause.","Lower to the shoulders under control."],
     avoid:"Don't shrug the last inch. Don't arch the low back to finish the rep. Add load only if it's pain-free.",
     why:"Strength for putting things on a shelf — the job the shoulder is for."
+  }],
+
+  /* ---- Families: one how-to per movement class, not per catalog string. ---- */
+  [/pronation|supination/i, {
+    what:"Pronation and supination: you rotate the forearm so the palm turns down, then up — often using a hammer or a stick for the weight.",
+    set:"Sit with the elbow bent at your side, as if holding a hammer standing on its head. Keep the upper arm still.",
+    steps:["Turn the palm slowly toward the floor, then toward the ceiling.","The thumb leads the turn. The elbow stays tucked.","Small, even arcs. Don't twist from the shoulder."],
+    avoid:"Don't swing the whole arm. If the elbow drifts out, the shoulder is cheating.",
+    why:"The two forearm bones have to glide on each other for pouring, keys and tools."
+  }],
+  [/wrist (flexion|extension|curls)|eccentric wrist|heavy-slow wrist|wrist roller/i, {
+    what:"Wrist loading: the forearm stays still and the hand nods against a light weight.",
+    set:"Sit with the forearm supported on a table, hand hanging off the edge, light dumbbell or bar in the fist.",
+    steps:["For extension, the palm faces down; for flexion, the palm faces up.","Lift the hand, pause, then lower for a slow count of three.","The forearm does not lift off the table."],
+    avoid:"Don't snatch it up. The slow lower is the work — especially if the heading says eccentric or heavy-slow.",
+    why:"Tendons in the elbow and wrist settle with slow, repeated load, not with rest alone."
+  }],
+  [/squeezes|putty|sponge squeeze|grip (work|squeezes|strengthening|strength)|soft-ball/i, {
+    what:"A grip squeeze: you close the hand around a ball, putty or sponge and let go slowly.",
+    set:"Sit with the elbow bent, wrist straight, a soft ball or putty in the palm.",
+    steps:["Squeeze until the hand is firmly closed — not a death grip.","Hold a second. Keep breathing.","Open slowly. That opening is part of the exercise."],
+    avoid:"Don't crank until the forearm cramps. Pain-free and repeatable beats one heroic squeeze.",
+    why:"Grip is how the hand earns a living. Light, frequent squeezes rebuild it without loading the elbow hard."
+  }],
+  [/diagonals|\\bpnf\\b/i, {
+    what:"A diagonal (PNF) reach: the arm travels from one hip toward the opposite ear, or the reverse, against a band.",
+    set:"Stand on the band or anchor it low. Hold the other end in the working hand, starting near the opposite hip.",
+    steps:["Reach up and across, as if drawing a sword or putting something on a high opposite shelf.","Turn the thumb up as you go.","Return slowly along the same diagonal."],
+    avoid:"Don't shrug the ear into the shoulder. Don't twist the low back to finish the reach.",
+    why:"Daily reaching is diagonal, not straight up. Training that line is what transfers."
+  }],
+  [/clamshell|sidelying clams/i, {
+    what:"A clamshell: you lie on your side and open the top knee like a clam, without rolling the hips back.",
+    set:"Lie on your side, knees bent about 45 degrees, hips stacked, head on your arm. A band above the knees is optional.",
+    steps:["Keep the feet together. Lift the top knee toward the ceiling.","Hips stay stacked — if the top hip rolls back, stop and lift less.","Lower slowly. Switch sides."],
+    avoid:"Don't roll onto your back to get more height. A smaller lift with still hips is the real exercise.",
+    why:"Turns on the outer hip that keeps the knee over the foot when you walk."
+  }],
+  [/colon|abdominal massage/i, {
+    what:"Colon-directed abdominal massage: you stroke the belly clockwise along the large bowel — not a core workout.",
+    set:"Lie on your back with the knees bent, or sit. Warm hands. This is education, not a diagnosis or a meal plan.",
+    steps:["Start low on the right, stroke up toward the ribs, across to the left, then down the left side — clockwise, like a clock face.","Use the pads of the fingers, slow and firm enough to move the skin, not a poke.","A few minutes is enough. Breathing out as you stroke often feels easier."],
+    avoid:"Don't do this over a surgical wound, a known hernia, or sharp pain. Don't strain or hold your breath. This is massage, not core training.",
+    why:"Gentle clockwise massage is one of the activity tools used for slow-moving bowels — walking still does more."
+  }],
+  [/deep neck flexor|chin tuck/i, {
+    what:"A deep-neck nod: you make a tiny 'yes' so the chin tucks, without looking down hard.",
+    set:"Lie on your back without a pillow, or sit tall. Eyes on the ceiling or the horizon.",
+    steps:["Give a small nod, as if saying yes to someone slightly above you. You should feel a gentle work at the front of the neck.","Hold a few seconds. Keep breathing.","Ease off. The range is tiny — a millimetre or two."],
+    avoid:"Don't jam the head back or lift it off the floor. If it throbs, do less.",
+    why:"The deep neck flexors hold your head over your shoulders. They fade when the head sits poked forward."
+  }],
+  [/(controlled )?jaw opening|relaxed jaw|facial muscle|facial movements|masseter/i, {
+    what:"Jaw control: you open, rest, or hold the jaw in a small, even range — often watching in a mirror.",
+    set:"Sit tall. Tongue resting on the roof of the mouth behind the front teeth (the 'N' position) unless you've been shown otherwise.",
+    steps:["Let the teeth come slightly apart. Lips soft.","If this is opening: drop the jaw straight down, watching in a mirror so it doesn't veer.","If this is rest: stay there and breathe. Don't clench."],
+    avoid:"Don't force a big yawn. Don't chew gum as 'exercise'. Stop if it locks or clicks painfully.",
+    why:"The jaw joint likes small, even motion and a resting gap — not stretching it open like a hinge."
+  }],
+  [/thoracic rotation|thoracic openers/i, {
+    what:"Seated thoracic rotation: you turn from the mid-back, not by yanking the neck.",
+    set:"Sit tall on a chair, feet flat, arms crossed or a hand on the opposite shoulder.",
+    steps:["Turn the chest toward one side as if looking over that shoulder with the breastbone, not just the eyes.","Pause where it is easy.","Return and switch."],
+    avoid:"Don't crank the neck ahead of the chest. Don't lift the hips off the seat to cheat range.",
+    why:"The mid-back is supposed to turn. When it doesn't, the neck and low back pick up the slack."
+  }],
+  [/knee-to-chest|flexion in lying/i, {
+    what:"Knee-to-chest: you lie on your back and bring one or both knees toward the chest, within comfort.",
+    set:"Lie on your back. One foot can stay flat. Use your hands behind the thigh, not on top of the kneecap.",
+    steps:["Slide or lift the knee toward the chest only as far as stays comfortable.","Hold a gentle stretch, breathing.","Lower slowly."],
+    avoid:"Don't pull on the kneecap. Don't force a pinch in the hip or a shoot of pain down the leg.",
+    why:"A gentle flexion movement many backs prefer early on — comfort is the limiter, not a target angle."
+  }],
+  [/log-roll|sitting on edge of bed|transfer practice|transfer &/i, {
+    what:"A transfer or log-roll: you move as one piece between lying, sitting and standing — not a strengthening set.",
+    set:"Have the destination (chair, edge of bed) close and locked. Follow whatever brace or sternal/abdominal precaution you've been given.",
+    steps:["For a log-roll: bend the knees, roll onto your side as one piece, then push up with the arms. Don't sit straight up from flat.","Pause at the edge of the bed until the room is steady.","Stand only as your weight-bearing status allows."],
+    avoid:"Don't twist the trunk against a fusion, sternum or abdominal precaution. If you feel faint, stay sitting.",
+    why:"Getting in and out of bed safely is the exercise. The named lifts can wait."
+  }],
+  [/weight shifts?|stepping \/ weight/i, {
+    what:"Weight shifts: you stand (or sit) and move your weight from one side to the other without taking a full step yet.",
+    set:"Stand at a counter or rail. Feet about hip-width. Knees soft.",
+    steps:["Shift toward one foot until the other feels light, without lifting it unless the heading says to.","Pause. Stay tall.","Shift the other way. Small and even beats a lurch."],
+    avoid:"Don't collapse the hip or look at your feet. Keep something to grab.",
+    why:"Walking is a series of weight shifts. Practising them near support is how gait comes back."
+  }],
+  [/scar massage/i, {
+    what:"Scar massage: once the wound is healed and you've been told it's allowed, you move the skin over the scar so it doesn't stick.",
+    set:"Clean hands. Cream only if your team said to. The scar must be closed — no scabs, no open points.",
+    steps:["Using a pad of a finger, move the skin in small circles and in a line along the scar.","The skin should glide. You are not digging into the wound.","A couple of minutes, a few times a day, is plenty."],
+    avoid:"Don't do this on an open, infected, or still-scabbed scar. Stop if it splits or weeps.",
+    why:"Early, gentle movement of a healed scar reduces sticking that later limits range."
+  }],
+  [/nerve (glide|mobilization)|median \/ ulnar|sciatic \/ femoral/i, {
+    what:"A nerve glide: you move a limb through a sequence that slides the nerve, then ease off — not a stretch you hold at the end.",
+    set:"Sit or lie as you've been shown. This should feel like a gentle pull, never electric pain.",
+    steps:["Move into the position until you feel a light tension, then back off.","It is a slide, not a stretch-and-hold.","If tingling ramps up, you've gone too far — reduce the range."],
+    avoid:"Don't bounce, don't force, and don't hold the end range. Nerves don't like that.",
+    why:"Nerves need to slide in their tunnels. A glide keeps that motion without yanking them."
+  }],
+  [/huff|airway clearance|supported cough/i, {
+    what:"Airway clearance: a huff or supported cough to move mucus, not a fitness set.",
+    set:"Sit tall. Splint the incision with a pillow if you have one. This follows whatever your team prescribed.",
+    steps:["A huff is a medium breath in, then a forced 'ha' as if fogging a mirror — not a hacking cough.","If you cough, hold the pillow firmly against the wound.","Stop and breathe when you get light-headed."],
+    avoid:"Don't do violent coughing fits. Don't skip the splint on a fresh incision.",
+    why:"Clearing the airway after surgery or in lung disease prevents trapped mucus. Technique matters more than force."
+  }],
+  [/coffee-cup lift|light functional lift/i, {
+    what:"A coffee-cup lift: you pick up a mug-weight, not a gym load — often after a shoulder replacement.",
+    set:"Sit or stand tall. Use a mug, can, or the lightest dumbbell you have. Elbow near your side at first.",
+    steps:["Lift the cup toward your mouth or a low shelf, only as high as stays comfortable.","Pause.","Lower slowly. That is the whole job."],
+    avoid:"Don't reach overhead until you've been told that's allowed. Don't hold your breath.",
+    why:"The first real-life load after a protected shoulder is a cup, not a barbell."
+  }],
+  [/ball catches/i, {
+    what:"Ball catches: a light ball tossed and caught to rebuild reaction and confidence.",
+    set:"Stand or sit a couple of metres apart, or use a wall. A soft, light ball — not a hard cricket ball.",
+    steps:["Toss gently to the chest. Catch with both hands.","Return it. Stay balanced.","Speed up only when the catch is clean."],
+    avoid:"Don't start with a fast or heavy ball. Stop if a joint jams on the catch.",
+    why:"Catching is how the arm re-learns to meet a moving object without guarding."
+  }],
+  [/large-amplitude|lsvt/i, {
+    what:"Large-amplitude movement: you make the motion bigger than feels natural — a Parkinson's-style drill.",
+    set:"Stand with space around you. Think big, not fast.",
+    steps:["Reach, step or turn as if you were exaggerating the movement for someone at the back of a room.","Hold the big shape a moment.","Reset and repeat. Effort should feel high; form should still look controlled."],
+    avoid:"Don't rush. Big and sloppy is not the point. Sit if balance is unsafe.",
+    why:"Parkinson's movements shrink. Practising bigger ones is the evidence-based counter, not a generic stretch."
+  }],
+  [/band 4-way ankle|4-way ankle/i, {
+    what:"Four-way ankle: you point, flex, and turn the foot in and out against a band.",
+    set:"Sit with the band looped around the forefoot, the other end in your hands or around the opposite foot.",
+    steps:["One direction at a time: toes down, toes up, sole inward, sole outward.","Slow and complete. The knee stays still.","Equal work both ways unless you've been told to bias one."],
+    avoid:"Don't let the whole leg roll to fake range. Don't snap the band back.",
+    why:"The ankle needs strength in all four directions before it can balance on uneven ground."
+  }],
+  [/side-lying (hip )?abduction|standing (hip )?abduction|hip abduction/i, {
+    what:"Hip abduction: you lift the leg out to the side, lying or standing, without leaning away from it.",
+    set:"Side-lying: hips stacked, bottom leg bent for balance. Standing: hold a counter, toes pointing forward.",
+    steps:["Lift the top or working leg a small way out to the side. Lead with the heel, toes slightly down.","Pause. Don't roll the hips or hitch the waist.","Lower slowly."],
+    avoid:"Don't lean the trunk the other way to get more height. A smaller, honest lift is the work.",
+    why:"The outer hip keeps the pelvis level when you stand on one foot — walking, stairs, getting dressed."
+  }],
+  [/\brom\b|range[- ]of[- ]motion|active-assisted|passive\/|gentle ROM|wrist ROM|ankle ROM|hip ROM|all directions|AROM|keep neighbouring joints/i, {
+    what:"Range of motion: you move the named joint slowly through the directions it can go, without forcing the end.",
+    set:"Sit or lie so the joint is supported. Move only the joint in the heading — wrist means wrist, not the whole arm.",
+    steps:["Take it slowly to the first comfortable end in each direction you've been given.","Pause, breathe, come back.","If a heading says assisted, the other hand or a cane helps; if it says passive, a helper or the other hand does the moving."],
+    avoid:"Don't bounce, don't force a pinch, and don't add a strengthening load to a ROM drill.",
+    why:"Joints get nutrition and lose stiffness by moving. Range you don't use is range you lose."
   }]
 ];
 
@@ -5240,10 +5389,26 @@ const CARDIO_HOWTO = {
   }
 };
 
+const EDUCATION_HOWTO = {
+  what:"This is a self-care or safety habit, not a strengthening drill.",
+  set:"You are not learning a gym movement here.",
+  steps:["Do the named habit — rest, pacing, skin check, hydration, inhaler, offloading — as written.","If it says rest until cleared, that means no structured exercise until your team says so.","If it says energy conservation, break jobs into pieces and rest before you are wiped out."],
+  avoid:"Don't turn a safety heading into a workout. Don't skip it because it isn't an 'exercise'.",
+  why:"These lines exist because recovery depends on them as much as on sets and reps."
+};
 function isPrescriptionName(name){
   const l = String(name||"").toLowerCase();
-  return /^(return to activity|return to work|return to sport|return to full|return to valued|return to roles|return to normal|return to low-impact|graded return)/.test(l)
-    || /^(activity participation|sport participation|full return|full pain-free function)/.test(l);
+  return /^(return to |return-to-|graded return)/.test(l)
+    || /sport-specific|work-specific|activity\/sport-specific|contact-specific/.test(l)
+    || /^(activity participation|sport participation|full return|full pain-free|meaningful activity|recreation)/.test(l)
+    || /^(light |very light |progressive |graded |maintenance |gentle |short )?(resistance|strengthening|strength\b|loading|conditioning)\b/.test(l)
+    || /^(maintenance |long-term |endurance |whole-body |full-body |functional (tasks|strength|conditioning|movements|patterns|training))/.test(l)
+    || /strength 2/.test(l)
+    || /^(general conditioning|core stability|sport drills|upper-body strengthening|upper-limb resistance|core &|uninvolved-limb|available-muscle|seated core|impact |running \/ sport)/.test(l);
+}
+function isEducationName(name){
+  const l = String(name||"").toLowerCase();
+  return /energy conservation|energy pacing|pacing & rest|pacing plan|hydration|skin check|foot inspection|action-plan|symptom (check|monitor|awareness)|relapse-prevention|lifestyle|diary|medication check|sun protection|glucose|weight-bearing status|device limits|inhaler|flare plan|rest — no structured|rest & symptom|offloading|caregiver education|emergency action|eye protection|heat & infection|positioning & skin|lifelong |sleep & recovery|travel & flare|trigger management|psychosocial pacing|reorientation|dysreflexia|prosthetic (tolerance|control)|residual-limb positioning|heat acclimatis|stress\/awareness|protected weight-bearing|know your device/.test(l);
 }
 function cardioKind(name){
   const l = String(name||"").toLowerCase();
@@ -5259,6 +5424,7 @@ function lookupNameHowTo(name, pattern){
   for(const [re, spec] of NAME_HOWTO){
     if(re.test(n)) return spec;
   }
+  if(isEducationName(n)) return EDUCATION_HOWTO;
   if(isPrescriptionName(n)) return PRESCRIPTION_HOWTO;
   if((pattern || inferPattern(n)) === "cardio") return CARDIO_HOWTO[cardioKind(n)] || CARDIO_HOWTO.generic;
   return null;
@@ -5296,7 +5462,8 @@ function movementExplain(name, pattern, regionArr, cue){
   const regs = (regionArr||[]).filter(r=>!skip.has(r));
   /* "the knee, hip" reads like a stub. This line appears on every explanation. */
   const listOf = a => a.length < 2 ? (a[0] || "") : a.slice(0, -1).join(", ") + " and " + a[a.length - 1];
-  const target = (p === "cardio" || p === "breathing")
+  const target = named ? ""
+    : (p === "cardio" || p === "breathing")
     ? " It mainly works your heart and lungs."
     : (regs.length ? ` It mainly works the ${listOf(regs).toLowerCase()}.` : "");
   const notes = movementNotes(name);
