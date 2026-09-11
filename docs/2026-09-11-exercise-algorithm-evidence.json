@@ -1,0 +1,181 @@
+{
+  "headline": "PhysioPath already encodes tissue ladders, pain/effort holds, biological floors, and WHO/FITT notes. The highest-yield 2025–2026 upgrades are a coded 24h pain-monitoring rule, GETP-12 special-pop FITT education (not new diagnoses), NICE LBP risk-stratified intensity, ACL time+function RTS gates, and replacing the 10% load myth with high-effort RT ≥2/wk. Do not add GET for ME/CFS.",
+  "key_findings": [
+    {"finding": "ACSM GETP 12th ed (Mar 2025) is the current FITT-VP standard, with new POTS, ME/CFS, SCAD, MASLD, telerehab, older-adult power/HIIT, and behaviour-change chapters.", "claim_ids": ["c1", "c2"]},
+    {"finding": "Silbernagel/Thomeé pain-monitoring (≤5/10 during; return to baseline next morning) is RCT-backed for tendinopathy and is only prose in PhysioPath today.", "claim_ids": ["c3", "c4"]},
+    {"finding": "NICE NG59 still says stay active + group exercise + STarT-style stratification; July 2026 withdrew CBT-package recs after retracted evidence.", "claim_ids": ["c5", "c6"]},
+    {"finding": "Cochrane 2024 (139 RCTs) finds exercise for knee OA helps pain/function but often below MCID vs attention control.", "claim_ids": ["c7"]},
+    {"finding": "ACSM 2026 RT position stand: few prescription variables matter; ≥2 sessions/wk and high effort; heavier loads help strength.", "claim_ids": ["c8"]},
+    {"finding": "NICE NG206 (reviewed Jan 2025, no rec change) says fixed-increment GET must not be undertaken for ME/CFS.", "claim_ids": ["c9"]},
+    {"finding": "BFR is ACSM-documented for when heavy load is unsafe; it is a clinician-issued tool, not a DIY catalog exercise.", "claim_ids": ["c10"]}
+  ],
+  "claims": [
+    {
+      "id": "c1",
+      "text": "ACSM GETP 12th edition presents evidence-based FITT tables and new sections including POTS, ME/CFS, SCAD, MASLD, pediatric cardiac, and respiratory muscle training.",
+      "kind": "factual",
+      "polarity": "support",
+      "topic_tag": "getp12",
+      "source_id": "src1",
+      "snippet": "The 12th edition of the Guidelines presents evidence-based standards with several new sections, including updates on sex differences, transgender and gender diverse individuals, spontaneous coronary artery dissection, postural orthostatic tachycardia syndrome, pediatric patients with cardiac conditions, metabolic dysfunction-associated steatotic liver disease, and myalgic encephalomyelitis/chronic fatigue syndrome.",
+      "source_url": "https://acsm.org/education-resources/books/guidelines-exercise-testing-prescription/",
+      "source_title": "ACSM’s Guidelines for Exercise Testing and Prescription, 12th edition",
+      "source_quality": "primary"
+    },
+    {
+      "id": "c2",
+      "text": "GETP 11→12 faculty crosswalk lists new POTS Table 8.4, ME/CFS section pp.417–425, telerehabilitation, older-adult HIIT/power, arthritis FITT time, and Chapter 12 TTM/self-efficacy tables.",
+      "kind": "factual",
+      "polarity": "support",
+      "topic_tag": "getp12",
+      "source_id": "src2",
+      "snippet": "New Section Added:Postural Orthostatic Tachycardia Syndrome ... New Table 8.4 Summary of Exercise Program for POTS ... New Section Added:Telerehabilitation ... New Section Added: Myalgic Encephalomyelitis/Chronic Fatigue Syndrome ... Older Adults New section/content on high-intensity interval training (HIIT)/Balance/Muscle Power training for Older Adults",
+      "source_url": "https://acsm.org/wp-content/uploads/2025/03/GETP11-12-crosswalk.pdf",
+      "source_title": "GETP 11-12 Crosswalk (ACSM, March 2025)",
+      "source_quality": "primary"
+    },
+    {
+      "id": "c3",
+      "text": "Silbernagel 2007 RCT (n=38): continued running/jumping with a pain-monitoring model was not inferior to 6 weeks of stopping those activities; both groups improved VISA-A.",
+      "kind": "factual",
+      "polarity": "support",
+      "topic_tag": "pain_monitor",
+      "source_id": "src3",
+      "snippet": "No negative effects could be demonstrated from continuing Achilles tendon-loading activity, such as running and jumping, with the use of a pain-monitoring model, during treatment.",
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/17307888",
+      "source_title": "Silbernagel et al. Am J Sports Med. 2007;35(6):897-906",
+      "source_quality": "primary"
+    },
+    {
+      "id": "c4",
+      "text": "Pain-Monitoring Model (Thomeé/Silbernagel): pain should not exceed 5/10 during or immediately after activity, and should return to pre-activity levels by the following morning.",
+      "kind": "factual",
+      "polarity": "support",
+      "topic_tag": "pain_monitor",
+      "source_id": "src4",
+      "snippet": "Briefly, pain levels should not exceed a 5/10 on the numeric pain rating scale (NPRS) during or immediately after activity. Additionally, pain ratings should return to pre-activity levels by the following morning.",
+      "source_url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC7905015",
+      "source_title": "Sprague et al. Pilot Feasibility Stud. 2021;7:58",
+      "source_quality": "primary"
+    },
+    {
+      "id": "c5",
+      "text": "NICE NG59: consider STarT Back-style risk stratification; simpler keep-active support vs more intensive exercise; consider group exercise (biomechanical, aerobic, mind–body or combination); do not routinely image in non-specialist settings.",
+      "kind": "factual",
+      "polarity": "support",
+      "topic_tag": "lbp_nice",
+      "source_id": "src5",
+      "snippet": "Consider using risk stratification (for example, the STarT Back risk assessment tool) at first point of contact ... simpler and less intensive support ... (for example, reassurance, advice to keep active and guidance on self-management) ... more complex and intensive support ... (for example, exercise programmes with or without manual therapy ...). Do not routinely offer imaging in a non-specialist setting ... Consider a group exercise programme (biomechanical, aerobic, mind–body or a combination of approaches)",
+      "source_url": "https://www.ncbi.nlm.nih.gov/books/NBK562933/",
+      "source_title": "NICE NG59 Low back pain and sciatica (2020)",
+      "source_quality": "primary"
+    },
+    {
+      "id": "c6",
+      "text": "July 2026 NICE NG59 update withdrew psychological-therapy and combined physical+psychological programme recommendations after retracted evidence; 1.2.7 now says manual therapy only as part of a package that includes exercise.",
+      "kind": "factual",
+      "polarity": "refute",
+      "topic_tag": "lbp_nice",
+      "source_id": "src6",
+      "snippet": "The recommendations on psychological therapy for low back pain with or without sciatica, and combined physical and psychological programmes for low back pain or sciatica were withdrawn. Those recommendations were partly based on evidence that was retracted since publication.",
+      "source_url": "https://www.guidelinecentral.com/insights/aug-2026-nice-lowbackpainsciaticaover16-guideline-spotlight/",
+      "source_title": "2026 NICE Low Back Pain Guideline Update (Guideline Central, 4 Aug 2026)",
+      "source_quality": "secondary"
+    },
+    {
+      "id": "c7",
+      "text": "Cochrane 2024 update (139 RCTs, 12,468 people, search to 4 Jan 2024): vs attention/placebo, exercise may improve pain 8.7/100 (below 12-point MCID) and function 11.3/100; benefits of uncertain clinical importance.",
+      "kind": "factual",
+      "polarity": "refute",
+      "topic_tag": "oa_cochrane",
+      "source_id": "src7",
+      "snippet": "Exercise may result in a slight improvement in pain (8.7 points better on a 0 to 100 point scale). Exercise likely results in an improvement in physical function (11.3 points better ...). ... we compared our findings to established 'minimal important difference' scores for pain (12 points on a 0 to 100 point scale) ... However, the benefits were of uncertain clinical importance",
+      "source_url": "https://www.cochrane.org/CD004376/MUSKEL_exercise-osteoarthritis-knee",
+      "source_title": "Cochrane: Exercise for osteoarthritis of the knee (Lawford et al., search to 4 Jan 2024)",
+      "source_quality": "primary"
+    },
+    {
+      "id": "c8",
+      "text": "ACSM 2026 RT position stand (137 SRs): few RTx variables affect primary adaptations; strength better with ≥80% 1RM, full ROM, 2–3 sets, ≥2 sessions/wk, high effort; hypertrophy with ≥10 sets/wk.",
+      "kind": "factual",
+      "polarity": "support",
+      "topic_tag": "rt_acsm",
+      "source_id": "src8",
+      "snippet": "Few RT prescription (RTx) variables affected primary adaptations. However, voluntary strength was enhanced by lifting heavier loads (≥80% one-repetition maximum), through a complete range of motion, for 2–3 sets, at the beginning of training sessions, and ≥2 sessions/wk. Muscle hypertrophy was enhanced by higher volumes (≥10 sets/wk)",
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/41843416/",
+      "source_title": "Currier et al. Med Sci Sports Exerc. 2026;58(4):851–872",
+      "source_quality": "primary"
+    },
+    {
+      "id": "c9",
+      "text": "NICE NG206 defines GET as fixed incremental increases from a baseline and says that approach should not be undertaken; last reviewed 24 Jan 2025 with no recommendation change.",
+      "kind": "factual",
+      "polarity": "refute",
+      "topic_tag": "mecfs",
+      "source_id": "src9",
+      "snippet": "In this guideline, graded exercise therapy is defined as first establishing an individual's baseline of achievable exercise or physical activity, then making fixed incremental increases in the time spent being physically active. ... it is this approach that the guideline says should not be undertaken.",
+      "source_url": "https://www.nice.org.uk/guidance/ng206/chapter/Recommendations",
+      "source_title": "NICE NG206 ME/CFS recommendations (published 2021; last reviewed 24 Jan 2025)",
+      "source_quality": "primary"
+    },
+    {
+      "id": "c10",
+      "text": "ACSM BFR 101: 20–40% 1RM, 4 sets 30-15-15-15 or to failure, 40–80% AOP, restriction typically <10 min continuous; best when heavy load is not possible; consult a clinician if clot/cardiac risk.",
+      "kind": "factual",
+      "polarity": "neutral",
+      "topic_tag": "bfr",
+      "source_id": "src10",
+      "snippet": "The most common programs include 4 sets of 30, 15, 15, 15 ... or 4 sets to failure using 20-40% of one-repetition maximum ... Ideally, the occlusion cuff should be inflated to between 40-80% of the pressure that would stop all blood flow into the limb ... restriction should typically last less than 10 continuous minutes",
+      "source_url": "https://acsm.org/blood-flow-restriction-bfr-resistance-exercise-101-infographic/",
+      "source_title": "ACSM Blood Flow Restriction (BFR) Resistance Exercise 101",
+      "source_quality": "primary"
+    },
+    {
+      "id": "c11",
+      "text": "PhysioPath thisWeekFocus still nudges '~10% up from last week'; ACSM 2026 finds few load-percentage rules drive adaptation vs high effort and ≥2 sessions/week.",
+      "kind": "interpretive",
+      "polarity": "refute",
+      "topic_tag": "ten_percent",
+      "source_id": "src8",
+      "snippet": "Few RT prescription (RTx) variables affected primary adaptations.",
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/41843416/",
+      "source_title": "Currier et al. Med Sci Sports Exerc. 2026",
+      "source_quality": "primary"
+    }
+  ],
+  "sources": [
+    {"id": "src1", "url": "https://acsm.org/education-resources/books/guidelines-exercise-testing-prescription/", "title": "ACSM GETP 12th edition (publisher page)", "quality": "primary"},
+    {"id": "src2", "url": "https://acsm.org/wp-content/uploads/2025/03/GETP11-12-crosswalk.pdf", "title": "GETP 11-12 Crosswalk PDF", "quality": "primary"},
+    {"id": "src3", "url": "https://pubmed.ncbi.nlm.nih.gov/17307888", "title": "Silbernagel 2007 AJSM RCT", "quality": "primary"},
+    {"id": "src4", "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC7905015", "title": "Sprague 2021 pain-guided activity (PMC)", "quality": "primary"},
+    {"id": "src5", "url": "https://www.ncbi.nlm.nih.gov/books/NBK562933/", "title": "NICE NG59 NCBI Bookshelf", "quality": "primary"},
+    {"id": "src6", "url": "https://www.guidelinecentral.com/insights/aug-2026-nice-lowbackpainsciaticaover16-guideline-spotlight/", "title": "Guideline Central NICE LBP 2026 update", "quality": "secondary"},
+    {"id": "src7", "url": "https://www.cochrane.org/CD004376/MUSKEL_exercise-osteoarthritis-knee", "title": "Cochrane exercise for knee OA 2024 update", "quality": "primary"},
+    {"id": "src8", "url": "https://pubmed.ncbi.nlm.nih.gov/41843416/", "title": "ACSM RT Position Stand 2026", "quality": "primary"},
+    {"id": "src9", "url": "https://www.nice.org.uk/guidance/ng206/chapter/Recommendations", "title": "NICE NG206 ME/CFS", "quality": "primary"},
+    {"id": "src10", "url": "https://acsm.org/blood-flow-restriction-bfr-resistance-exercise-101-infographic/", "title": "ACSM BFR 101", "quality": "primary"}
+  ],
+  "writing_context": [
+    {
+      "id": "w1",
+      "kind": "scope_boundary",
+      "text": "PhysioPath is educational, not a clinician. Improvements are algorithm/education notes, not diagnoses or Jeffery-as-PT. Do not invent MASLD/SCAD catalog names (GETP-12 special-pops skill rule).",
+      "source_ids": ["src1"],
+      "use": "Keep recommendations as 1–5 pickable slices; no code until Chris picks."
+    },
+    {
+      "id": "w2",
+      "kind": "availability_gap",
+      "text": "GETP-12 full FITT tables are behind the book paywall; only ACSM marketing page + faculty crosswalk were fetched. WHO 2020 PAG PDF did not extract.",
+      "source_ids": ["src1", "src2"],
+      "use": "Do not invent numeric FITT cells for POTS/ME/CFS; point at GETP-12 tables."
+    },
+    {
+      "id": "w3",
+      "kind": "unresolved_gap",
+      "text": "Delaware-Oslo Grindem BJSM 2016 full text was Cloudflare-blocked this pass; ACL RTS 9-month/function rule is widely cited but not re-verified from the PDF here.",
+      "source_ids": [],
+      "use": "Treat ACL 9-month rule as commonly cited; do not quote an 84% figure without the paper body."
+    }
+  ]
+}

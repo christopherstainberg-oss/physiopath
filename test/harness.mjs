@@ -50,6 +50,7 @@ const SEAM = `
   gateStatus, measuresFor, measureRegionKey, measurePct, latestMeasure, MEASURE_SETS,
   planFloored, currentPlanPhase, weekPhaseOf,
   tissueClass, thisWeekFocus, LOADING_LADDER, progressionSignal, recentEffort,
+  loadGuidance, planDrift, protocolEducationNotes, phaseTarget,
   SPECIAL_PRECAUTIONS, CONTRA_RULES: window.CONTRA_RULES,
   PROTOCOLS: window.PROTOCOLS, PROTOCOL_ALIAS: window.PROTOCOL_ALIAS,
   landingStep,
@@ -154,6 +155,7 @@ export function resetState(engine, overrides = {}) {
     weightBearing: { status: "", pct: "", lbs: "", side: "", limb: "le" }, devices: [],
     cardiacDevice: { type: "", icdRate: "" }, specialPrecautions: [], planVariant: {},
     program: null, pregStage: "", footSensation: "",
+    log: [], moveConfidence: "", priorEpisodes: "", workDemand: "", timePerDay: "",
   });
   Object.assign(s, overrides);
   return s;

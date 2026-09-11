@@ -1123,25 +1123,45 @@ function painTrend(log){
 /* Has the picture changed since the program was built? Used to OFFER a rebuild rather than
    force one: generateProgram() discards the user's rotate/swap/remove edits, and silently
    wiping a customised plan because they logged one sore day would be its own bug. */
+function snapshotBuiltFrom(flags){
+  const eff = recentEffort();
+  const w = weeksPostOp();
+  return {
+    pain: effectivePain().v,
+    flags: (flags || []).slice().sort().join(","),
+    weeks: w != null ? w : (state.weeks != null ? state.weeks : ""),
+    sleep: state.sleep || "",
+    stress: state.stress || "",
+    workDemand: state.workDemand || "",
+    moveConfidence: state.moveConfidence || "",
+    effort: (eff && eff.avgEffort != null) ? Math.round(eff.avgEffort * 10) / 10 : ""
+  };
+}
 function planDrift(){
   const p = state.program; if(!p || !p.builtFrom) return null;
   const out = [];
+  const b = p.builtFrom;
   const ep = effectivePain();
-  const dp = Math.round((ep.v - p.builtFrom.pain) * 10) / 10;
-  if(dp >= 2) out.push(`you're logging ${ep.v}/10 now — up ${dp} on the ${p.builtFrom.pain}/10 this plan was built for`);
-  else if(dp <= -2) out.push(`you're logging ${ep.v}/10 now — down ${Math.abs(dp)} on the ${p.builtFrom.pain}/10 this plan was built for`);
-  const now = gatherFlags(), had = new Set((p.builtFrom.flags||"").split(",").filter(Boolean));
+  const dp = Math.round((ep.v - b.pain) * 10) / 10;
+  if(dp >= 2) out.push(`you're logging ${ep.v}/10 now — up ${dp} on the ${b.pain}/10 this plan was built for`);
+  else if(dp <= -2) out.push(`you're logging ${ep.v}/10 now — down ${Math.abs(dp)} on the ${b.pain}/10 this plan was built for`);
+  const now = gatherFlags(), had = new Set((b.flags||"").split(",").filter(Boolean));
   const added = now.filter(f => !had.has(f));
   if(added.length) out.push(`new precautions apply from what you've logged (${added.slice(0,3).join(", ")})`);
+  const cur = snapshotBuiltFrom(now);
+  for(const [k, label] of [["sleep","sleep"], ["stress","stress"], ["workDemand","work demand"], ["moveConfidence","confidence with movement"], ["weeks","weeks since onset/surgery"]]){
+    if(String(b[k] ?? "") !== String(cur[k] ?? ""))
+      out.push(`${label} has changed since this plan was built`);
+  }
   return out.length ? out : null;
 }
 
 function loadGuidance(){
   const ep = effectivePain();                  // what they're reporting NOW, not at intake
   const src = ` (based on ${ep.from})`;
-  if(ep.v>=7) return "Keep effort very light. Pain during exercise should stay at/below 3/10 and settle within an hour." + src;
-  if(ep.v>=4) return "Mild discomfort (up to ~4/10) during loading is acceptable if it settles by the next morning. Sharp pain means back off." + src;
-  return "You can load with confidence. Progress ~10% per week while pain stays low and settles overnight." + src;
+  if(ep.v>=7) return "Keep effort very light. Pain during exercise should stay at or below 5/10 and be back toward baseline the next morning." + src;
+  if(ep.v>=4) return "Mild discomfort up to 5/10 during loading is acceptable if it is back to baseline the next morning. Sharp pain means back off." + src;
+  return "You can load with confidence. Progress when sessions feel easy and sets are finished, while pain stays at or below 5/10 and is back to baseline the next morning." + src;
 }
 
 /* ---------- exercise library integration ---------- */
@@ -2422,10 +2442,45 @@ const PHASE_TARGET = [6,6,7,7];
 function phaseTarget(p){
   const base = PHASE_TARGET[p] || 6;
   const t = state.timePerDay;
-  if(t==="lt10")  return Math.max(3, Math.round(base*0.5));
-  if(t==="10to20")return Math.max(4, Math.round(base*0.7));
-  if(t==="gt40")  return base + 2;
-  return base;
+  let n = base;
+  if(t==="lt10")  n = Math.max(3, Math.round(base*0.5));
+  else if(t==="10to20") n = Math.max(4, Math.round(base*0.7));
+  else if(t==="gt40") n = base + 2;
+  const g = planGoal();
+  if(g==="adl") n = Math.max(3, n - 1);
+  else if(g==="work" && p >= 1) n = Math.max(n, Math.min(n + 1, base + 2));
+  else if(g==="sport" && p >= 2) n = n + 1;
+  if(careIntensity() === "simple") n = Math.max(3, n - 1);
+  return n;
+}
+function planGoal(){
+  const sports = state.returnSports || [];
+  if(sports.length) return "sport";
+  if(["manual","heavy"].includes(state.workDemand)) return "work";
+  return "adl";
+}
+function psychosocialRisk(){
+  return state.moveConfidence==="fearful" || state.stress==="high" || state.sleep==="lt6" || state.priorEpisodes==="recurrent";
+}
+function isLbpish(c){
+  return /lumbar|radiculopathy_lumbar|sacroiliac/.test(c.protocol||"") || /low back|sciatica|lumbago/i.test(c.name||"");
+}
+function careIntensity(){
+  try{
+    if(selectedConditions().some(isLbpish) && psychosocialRisk()) return "simple";
+  }catch(_){}
+  return "standard";
+}
+function condHay(conds){
+  return (conds||[]).map(c => `${c.name||""} ${c.protocol||""}`).join(" ").toLowerCase();
+}
+function hasMecfs(conds){
+  const h = condHay(conds);
+  return h.includes("chronic fatigue") || h.includes("me/cfs") || h.includes("myalgic encephalomyelitis");
+}
+function hasPots(conds){
+  const h = condHay(conds);
+  return h.includes("pots") || h.includes("postural orthostatic");
 }
 /* Criteria to progress to the next phase — more detail than dates alone. */
 const PHASE_CRITERIA = {
@@ -3511,14 +3566,33 @@ function recentEffort(){
     n: es.length,
   };
 }
+function painMonitor(){
+  const log = (state.log || []).filter(e => isFinite(Number(e.pain)) || isFinite(Number(e.painMorning)));
+  if(!log.length) return null;
+  const last = log[log.length - 1];
+  const during = Number(last.pain);
+  const morning = last.painMorning != null && last.painMorning !== "" ? Number(last.painMorning) : NaN;
+  if(isFinite(during) && during > 5)
+    return { ok:false, why:"Pain during the session was above 5/10 — hold at this level (keep loading at or below 5/10, and check it has settled by the next morning)." };
+  if(isFinite(morning) && morning > 5)
+    return { ok:false, why:"Next-morning pain was above 5/10 — the last session did not settle overnight. Hold and ease back." };
+  if(isFinite(morning) && isFinite(during) && morning > during)
+    return { ok:false, why:"Next-morning pain was higher than during the session — hold until it returns to baseline." };
+  return { ok:true };
+}
 function progressionSignal(){
   const log = (state.log || []).filter(e => isFinite(Number(e.pain)));
   if(log.length < 2) return null;                    // too little to base a call on — stay time-based
   const trend = painTrend(state.log || []);
   const ep = effectivePain();
   const adh = adherence();
+  const pm = painMonitor();
+  if(hasMecfs(selectedConditions()))
+    return { rec:"hold", why:"Energy limits — do not use fixed weekly increases (graded exercise). Stay inside what you can repeat the next day; this list is education, not a prescription." };
   if(trend.cls === "trend-up")
     return { rec:"hold", why:"Your recent logs show pain trending up — hold at this level (or ease back a step) this week rather than adding load, and let it settle first." };
+  if(pm && pm.ok === false)
+    return { rec:"hold", why: pm.why };
   if(ep.v >= 7)
     return { rec:"hold", why:`You're logging around ${(+ep.v).toFixed(1)}/10 right now — keep this week light and don't progress until it eases.` };
   if(adh && adh.status === "behind")
@@ -3552,7 +3626,7 @@ function thisWeekFocus(item){
     ? "Start of this phase — establish tolerance at this level before adding anything."
     : wip >= len
     ? "End of this phase — if it's controlled and next-morning symptoms are settled, you're ready to progress to the next phase."
-    : "Nudge it up this week — one more set, slightly heavier, or a slower tempo. No more than ~10% up from last week, and only if the last step settled well.";
+    : "Nudge it up this week — one more set, slightly heavier, or a slower tempo — only if sessions felt easy, pain stayed at or below 5/10, and it had settled by the next morning.";
   const sig = progressionSignal();
   return { wip, len, rung, nudge: sig ? sig.why : timeNudge, tissue: tissueClass(item), signal: sig ? sig.rec : null };
 }
@@ -3670,10 +3744,11 @@ function generateProgram(){
     track, totalWeeks: primaryPlan ? primaryPlan.total : tmpl.total,
     sessions: (primaryPlan && primaryPlan.freq) ? primaryPlan.freq : sessionsText(track),
     load:loadGuidance(),
-    builtFrom: { pain: effectivePain().v, flags: flags.slice().sort().join(",") },   // so planDrift() can tell when it goes stale
+    builtFrom: snapshotBuiltFrom(flags),   // so planDrift() can tell when it goes stale
     flags, notes:[...new Set(window.notesForFlags(flags).concat(R.notes).concat(telemetryNotes()).concat(protocolEducationNotes(conds)))], clearance:clearanceNeeded(flags),
     supervision:displaySupervision(flags, clearanceNeeded(flags)), items,
-    removed:Array.from(removedAll, ([n,tag])=>({n,tag}))
+    removed:Array.from(removedAll, ([n,tag])=>({n,tag})),
+    goal: planGoal()
   };
 }
 function aboutText(c, track){
@@ -3691,6 +3766,22 @@ function protocolEducationNotes(conds){
     notes.push("After a knee replacement: ice and elevate (early on, a slight bend of about 30–90° can limit swelling — keep working the knee straight so it does not stay bent). Continuous passive motion machines and routine braces are not needed for a typical primary replacement. Progressive strength, walking, sit-to-stand, stairs and balance beat gadgets. Harder is not automatically better — if swelling or night pain jump, back off. This list does not replace supervised physical therapy.");
     notes.push("If your physical therapist issued a quadriceps stimulator (NMES), use it as they set it. Do not use electrical stim if you have a demand pacemaker, active cancer, or a known clot unless your team says otherwise.");
   }
+  if(careIntensity() === "simple"){
+    notes.push("Keep-active education (NICE-style, not a prescription): with higher worry, poor sleep, or recurring flares, simpler support is the usual first step — stay active, self-manage, and use a less intensive session. This is not a talking-therapy add-on. Ask your clinician if you need more support.");
+  }
+  if(hasPots(conds)){
+    notes.push("POTS education (GETP-12 themes, not a prescription): start recumbent or seated and progress toward upright as tolerated. This list does not replace a clinician-guided POTS programme.");
+  }
+  if(hasMecfs(conds)){
+    notes.push("ME/CFS education (NICE NG206, not a prescription): stay inside your energy limits and watch for post-exertional symptom worsening. Do not use graded exercise therapy — that means fixed incremental increases in activity time. This app will not auto-advance your load. Work with a clinician or specialist team if you choose to add activity.");
+  }
+  if([...protos].some(p => p === "knee_oa" || p === "hip_oa" || p === "gh_oa")){
+    notes.push("Osteoarthritis exercise education (not a prescription): land-based exercise can help pain and function a modest amount; it is still first-line in guidelines. Pick what you can repeat. This list does not replace supervised physical therapy.");
+  }
+  if(Number(state.age) >= 65){
+    notes.push("Older-adult education (GETP-12 themes, not a prescription): muscle power, balance, and walking capacity matter as much as heavy grinding. Progress as able with your clinician.");
+  }
+  notes.push("These sessions are a local education list — they are not supervised physiotherapy or a telerehab visit. Seek in-person care if you need it.");
   return notes;
 }
 const TAG_LABEL = {

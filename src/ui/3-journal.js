@@ -40,7 +40,8 @@ function initDataCard(){
   renderDataWarn();
 }
 function initProgress(){
-  $("#logPain").oninput = e=>$("#logPainVal").textContent=e.target.value;
+  $("#logPain").oninput = e => $("#logPainVal").textContent = e.target.value;
+  { const lm=$("#logPainMorning"); if(lm) lm.oninput = e=>{ const v=$("#logPainMorningVal"); if(v) v.textContent=e.target.value; }; }
   { const le=$("#logEffort"); if(le) le.oninput = e=>{ const v=$("#logEffortVal"); if(v) v.textContent=e.target.value; }; }
   $("#logBtn").onclick = saveLogEntry;
 
@@ -151,6 +152,10 @@ function loadLogDay(d){
   state.logMood = e ? (e.mood||"") : "";
   state.logDone = (e && Array.isArray(e.done)) ? e.done.slice() : [];   // before renderLogEx reads it
   if($("#logPain")){ $("#logPain").value = e ? e.pain : 3; $("#logPainVal").textContent = e ? e.pain : 3; }
+  if($("#logPainMorning")){
+    const mv = (e && e.painMorning != null) ? e.painMorning : (e ? e.pain : 3);
+    $("#logPainMorning").value = mv; if($("#logPainMorningVal")) $("#logPainMorningVal").textContent = mv;
+  }
   if($("#logSessions")) $("#logSessions").value = e ? e.sessions : 1;
   if($("#logEffort")){ const v = (e && e.effort!=null) ? e.effort : 5; $("#logEffort").value = v; if($("#logEffortVal")) $("#logEffortVal").textContent = v; }
   if($("#logSets")) $("#logSets").value = (e && e.sets) || "";
@@ -918,7 +923,7 @@ function journalTodayHTML(){
   return `<div class="jcard jtoday">
     <div class="jtop"><span class="jdate2">${esc(fmtDate(e.date))}</span>
       ${m?`<span class="jmood">${m.icon} ${esc(m.label)}</span>`:""}
-      <span class="jtag">${e.pain}/10</span>
+      <span class="jtag">${e.pain}/10${e.painMorning!=null?` → AM ${e.painMorning}`:""}</span>
       <span class="jsess">${e.sessions} session${e.sessions===1?"":"s"}</span>
       ${(e.done||[]).length?`<span class="jex">✓ ${e.done.length}/${(e.plan||e.done).length} exercises</span>`:""}</div>
     ${e.note?`<div class="jbody">${esc(e.note)}</div>`:`<div class="jbody jempty">No note for this day.</div>`}
@@ -1241,6 +1246,7 @@ function collectEntry(d){
     date: d,
     mood: state.logMood || "",
     pain: parseInt($("#logPain").value),
+    painMorning: $("#logPainMorning") ? parseInt($("#logPainMorning").value) : null,
     sessions: Math.max(0, parseInt($("#logSessions").value)||0),
     effort: $("#logEffort") ? parseInt($("#logEffort").value) : null,
     sets: ($("#logSets") && $("#logSets").value) || "",
@@ -1431,7 +1437,7 @@ function renderProgress(){
       shown.map(e=>{ const m=moodOf(e.mood); return `<div class="jcard">
         <div class="jtop"><span class="jdate2">${esc(fmtDate(e.date))}</span>
           ${m?`<span class="jmood">${m.icon} ${esc(m.label)}</span>`:""}
-          <span class="jtag">${e.pain}/10</span>
+          <span class="jtag">${e.pain}/10${e.painMorning!=null?` → AM ${e.painMorning}`:""}</span>
           <span class="jsess">${e.sessions} session${e.sessions===1?"":"s"}</span>
           ${e.t?`<span class="jwhen">${esc(writtenLabel(e))}</span>`:""}
           <button type="button" class="lx" data-date="${e.date}" title="Delete this entry" aria-label="Delete entry for ${esc(fmtDate(e.date))}">✕</button></div>

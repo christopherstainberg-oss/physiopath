@@ -25,6 +25,7 @@ import "./tissue-ladder.test.mjs";
 import "./response-progression.test.mjs";
 import "./objective-gates.test.mjs";
 import "./session-effort.test.mjs";
+import "./plan-model.test.mjs";
 import { report } from "./runner.mjs";
 
 report();
