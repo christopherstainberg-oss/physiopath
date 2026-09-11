@@ -4212,17 +4212,23 @@ function inferPattern(name){
   if(/deadlift|hinge|bridge|hip thrust|good-morning|kickback|romanian|hip extension/.test(l)) return "hinge";
   if(/crunch|sit-up|curl-up|v-up|trunk flexion|reverse crunch/.test(l)) return "flexion";
   if(/superman|cobra|back extension|hyperextension|prone extension/.test(l)) return "extension";
-  if(/tandem walk|braiding|grapevine|gait|marching|obstacle stepping|backward walk/.test(l)) return "gait";
+  if(/tandem walk|braiding|grapevine|gait|marching|obstacle stepping|backward walk|heel walk|toe walk/.test(l)) return "gait";
   if(/balance|single-leg stance|tandem stance|star-excursion|weight-shift|reach|foam|bosu|perturbation/.test(l)) return "balance";
-  if(/walk|jog|run|cycl|bike|row|elliptical|stair|swim|aqua|conditioning|interval|sled/.test(l)) return "cardio";
-  if(/stretch|\brom\b|mobility|pendulum|cat-camel|open-book|circle|alphabet|thread|slide|wall walk|wall angel/.test(l)) return "mobility";
-  if(/row|pull|curl|face pull|rear-delt|external rotation|scapular|y-t-w|deviation|glide/.test(l)) return "pull";
+  /* Mobility BEFORE cardio. "Wall slides / walks" used to match /walk/ and open as
+     "pick a bike or rower". Same for pendulum, table slides, cane ROM. */
+  if(/stretch|\\brom\\b|mobility|pendulum|cat-camel|open-book|circle|alphabet|thread|slide|wall walk|wall angel|wall slide/.test(l)) return "mobility";
+  if(/band walk|monster walk/.test(l)) return "standing";
+  /* Strength rows before cardio — /row/ used to turn "Scapular rows" into a rower session. */
+  if(/(scapular |seated |bent-over |cable |barbell |dumbbell |machine |band )?rows?\b/.test(l) && !/ergometer|rower\b|rowing/.test(l)) return "pull";
+  if(/arm[- ]?ergometer|upper-body cardio|seated arm|\bcardio\b|ergometer/.test(l)) return "cardio";
+  if(/\baerobic\b|treadmill|elliptical|stationary bike|\bcycling\b|easy bike|walk\/bike|walk \/ bike|\brower\b|rowing/.test(l)) return "cardio";
+  if(/\b(brisk |easy |gentle |short |frequent |progressive |community |upright |graded |maintenance |warm-up )?(walk|walking)\b/.test(l)
+     && !/band walk|heel walk|toe walk|wall walk|slides? \/ walks|farmer/.test(l)) return "cardio";
+  if(/\bjog|\bjogging|return-to-run|easy run/.test(l)) return "cardio";
+  if(/pull|curl|face pull|rear-delt|external rotation|scapular|y-t-w|deviation|glide/.test(l)) return "pull";
   if(/press|push-up|raise|fly|scaption|full-can|internal rotation|extension|leg extension|chest pass|med-?ball (pass|throw)/.test(l)) return "push";
   return "general";
 }
-/* Kept for the handful of cues the equipment/variant/modifier layers don't reach.
-   Everything that IS covered there was removed: with both in play, a
-   "Barbell box squat — with 2s pause" explained the pause three separate times. */
 function movementNotes(name){
   const l = name.toLowerCase(); const n = [];
   if(/perturbation/.test(l)) n.push("Someone gives you small, unpredictable nudges — the point is reacting to what you didn't expect, so don't let them warn you.");
@@ -4561,7 +4567,7 @@ const WHAT_ALT = {
          "A carry is exactly what it sounds like: pick the load up and walk with it.",
          "A loaded carry trains the whole body by making you hold something while you move."],
   cardio:["An aerobic activity raises your heart and breathing rate steadily.",
-          "Aerobic work keeps your heart and breathing up for a sustained stretch.",
+          "Aerobic work keeps your heart and breathing up for a sustained bout of effort.",
           "This is cardiovascular work — steady effort your heart and lungs have to keep up with."],
   vestibular:["A vestibular exercise retrains the inner-ear balance system.",
               "A vestibular drill asks the inner ear and eyes to recalibrate together.",
@@ -5008,10 +5014,266 @@ function explainMods(name){
   }
   return out;
 }
-function movementExplain(name, pattern, regionArr){
+/* Named movements — FIXED strings, never echo the raw `name` (it can be a
+   custom/clinician value). First match wins. These are the protocol names the
+   Explain button actually opens; pattern text alone cannot describe them. */
+const NAME_HOWTO = [
+  [/wall[- ]?slides?|wall[- ]?walks?/i, {
+    what:"Wall slides: you stand facing a wall and slide your hands up it, like painting two stripes.",
+    set:"Stand facing a wall, close enough that your fingertips rest on it around chest height. Take a small step back so your body is not pressed into the wall.",
+    steps:["Rest your fingertips — or the little-finger edge of your hands — on the wall.","Slide both hands slowly up the wall. Stop at the first height that stays comfortable — a pinch means too high.","Pause, then slide back down under control. Keep the shoulders quiet; don't shrug them toward your ears."],
+    avoid:"Don't force height. Comfortable height is the whole point.",
+    why:"The wall guides the arms so overhead reach comes back without you muscling the shoulder up."
+  }],
+  [/table[- ]?slides?|forward reach/i, {
+    what:"Table slides: you sit and slide your hand forward along a table to reach without lifting the arm.",
+    set:"Sit at a table with a cloth or paper under the hand of the side you're working. Sit tall, close enough that you don't have to lean.",
+    steps:["Let the hand rest on the cloth.","Slide it forward along the table as far as stays comfortable, as if reaching for a cup.","Slide it back to you. The table takes the weight — you are not lifting the arm."],
+    avoid:"Don't hike the shoulder or lean your whole trunk to fake extra reach.",
+    why:"Gives the shoulder motion without the load of lifting the arm against gravity."
+  }],
+  [/pendulum/i, {
+    what:"Pendulum swings: the sore arm hangs and sways — you don't lift it.",
+    set:"Stand next to a table. Lean forward and rest your other hand on it. Let the working arm hang heavy toward the floor.",
+    steps:["Keep the hanging arm completely relaxed — like a pendulum, not like a raise.","Sway your body a little so the arm draws small circles, then reverse.","Keep the circles small. Bigger is not better here."],
+    avoid:"Don't muscle the arm around. If you are lifting it, you have stopped doing pendulums.",
+    why:"Gentle motion without you lifting the arm, which often calms an irritable shoulder."
+  }],
+  [/assisted ROM with cane|cane-assisted|wand|stick.*elevation/i, {
+    what:"Cane-assisted range: the good arm uses a stick to help the sore arm move.",
+    set:"Sit or stand holding a cane, stick or umbrella with both hands, a little wider than your shoulders.",
+    steps:["Let the good arm do the work. The sore arm holds on and goes along for the ride.","Raise, lower, or rotate only as far as stays comfortable.","Move slowly. Stop before a pinch."],
+    avoid:"Don't let the sore arm take over and lift itself. The stick is there so it doesn't have to.",
+    why:"Restores range while the sore side is still too irritable to lift on its own."
+  }],
+  [/scapular squeezes|scapular setting/i, {
+    what:"Scapular squeezes: you pinch the shoulder blades together without moving the arms much.",
+    set:"Sit or stand tall. Let the arms hang. Think 'proud chest' without tipping the low back.",
+    steps:["Draw the shoulder blades down and toward each other, as if tucking them into back pockets.","Hold a gentle squeeze — about 5 out of 10 — and keep breathing.","Let go slowly. Don't shrug up toward the ears."],
+    avoid:"This is a small movement. If the shoulders ride up, you've gone too hard.",
+    why:"Sets the shoulder blades so the arm has a stable base to work from."
+  }],
+  [/scapular rows|band rows|light band rows/i, {
+    what:"A scapular row: you pull a band toward you and pinch the shoulder blades together.",
+    set:"Anchor a band at about chest height, or sit with it around your feet. Hold one end in each hand with the arms long, and take the slack out.",
+    steps:["Start by drawing the shoulder blades down and back, then bend the elbows.","Pull the hands toward your lower ribs and squeeze the blades together.","Let the arms go long again slowly, without rounding forward."],
+    avoid:"Don't shrug. Don't yank. The squeeze between the blades is the exercise.",
+    why:"Builds the muscles that set the shoulder blade, which is what the arm needs underneath it."
+  }],
+  [/band external rotation|rotator-cuff external|external rotation \(neutral\)/i, {
+    what:"Band external rotation: the elbow stays tucked and the hand rotates out against a band.",
+    set:"Stand with a band anchored at elbow height on the opposite side, or hold the band in both hands. Tuck the working elbow against your side, as if a towel were clamped there.",
+    steps:["Keep that elbow glued to your ribs.","Rotate the hand outward against the band, like opening a gate.","Come back in slowly. The upper arm should barely move."],
+    avoid:"Don't let the elbow drift forward or away from the body. If it does, the shoulder is cheating.",
+    why:"Loads the rotator cuff in the position most people need for reaching and throwing."
+  }],
+  [/band internal rotation/i, {
+    what:"Band internal rotation: the elbow stays tucked and the hand rotates in against a band.",
+    set:"Anchor the band out to the working side at elbow height. Tuck that elbow against your ribs.",
+    steps:["Keep the elbow glued to your side.","Rotate the hand inward across your stomach against the band.","Return slowly. Small range is enough."],
+    avoid:"Don't twist your whole trunk to finish the rep.",
+    why:"Trains the other half of the rotator cuff so the shoulder is strong both ways."
+  }],
+  [/full-can/i, {
+    what:"A full-can raise: thumbs-up arm lift, slightly in front of the body — not straight out to the side.",
+    set:"Stand tall holding a light weight or nothing. Point the thumbs up, arms about 30 degrees forward of the side (the 'full can' position).",
+    steps:["Raise the arms only as high as stays comfortable — often below shoulder height at first.","Keep the thumbs up and the shoulders down.","Lower slowly."],
+    avoid:"Don't shrug. Don't go through a pinch just to match a picture of a full overhead raise.",
+    why:"Loads the cuff and shoulder blade in a friendlier plane than a strict side raise."
+  }],
+  [/y-t-w|prone y/i, {
+    what:"Prone Y-T-W: lying face-down, you lift the arms into Y, T, then W shapes.",
+    set:"Lie face-down on a bed or bench with the forehead resting. Light weights or none. Arms hanging off the edge if you have one.",
+    steps:["Y: arms up and out like a Y, thumbs up, lift only as high as the shoulder blades can squeeze.","T: arms straight out to the side, lift from the blades.","W: elbows bent, lift and squeeze as if putting the blades in your back pockets. Pause each lift. Don't yank the head up."],
+    avoid:"Don't turn it into a back-arch. The lift is small and comes from the shoulder blades.",
+    why:"Endurance for the mid-back and cuff in the positions that hold the shoulder on its socket."
+  }],
+  [/push-up plus/i, {
+    what:"Push-up plus: a push-up with an extra round-forward of the shoulder blades at the top.",
+    set:"Start at the wall if you're early on; the floor is later. Hands under the shoulders, body in one line.",
+    steps:["Do a push-up.","At the top, push the wall or floor away another inch so the upper back rounds slightly — that's the 'plus'.","Come back. The plus is the point of this version."],
+    avoid:"Don't sag the hips or shrug the ears. If the plus pinches, stay with an ordinary wall push-up.",
+    why:"Trains the serratus — the muscle that keeps the shoulder blade sitting on the ribcage when you reach."
+  }],
+  [/lateral band walks/i, {
+    what:"Lateral band walks: a mini-squat side-step against a band around the legs.",
+    set:"Loop a band just above the knees (or around the ankles). Stand with feet apart so the band is already tight, knees softly bent.",
+    steps:["Stay low. Take a slow step to the side, then bring the other foot in — without letting the feet clap together.","Keep the band tight the whole time. The hips, not the feet, should do the work.","Do the same number of steps the other way."],
+    avoid:"Don't stand up tall between steps, and don't let the knees fall in.",
+    why:"Turns on the outer hip muscles that keep the knee tracking over the foot when you walk."
+  }],
+  [/heel slides/i, {
+    what:"Heel slides: you lie on your back and slide the heel toward the seat to bend the knee.",
+    set:"Lie on your back. A plastic bag or cloth under the heel helps it slide. The other leg can be bent with that foot flat.",
+    steps:["Slowly slide the heel toward your seat, bending the knee only as far as stays comfortable.","Pause.","Slide it back out until the knee is long again."],
+    avoid:"Don't force the last few degrees. Don't hold your breath.",
+    why:"Restores knee bend and quad control without standing on the leg."
+  }],
+  [/quad sets/i, {
+    what:"A quad set: you tighten the thigh while the leg stays straight — nothing has to move.",
+    set:"Lie or sit with the working leg straight. A small rolled towel under the knee is optional.",
+    steps:["Push the back of the knee down and tighten the thigh as if you were about to lift the heel.","Hold a firm but comfortable squeeze. Keep breathing.","Let go slowly."],
+    avoid:"Don't hold your breath. Don't force a painful kneecap.",
+    why:"Wakes the thigh up after injury or surgery, which is what lets you straighten the knee and walk."
+  }],
+  [/glute sets/i, {
+    what:"A glute set: you squeeze the buttocks while lying or sitting still.",
+    set:"Lie on your back or sit tall.",
+    steps:["Squeeze the buttocks together as if holding a coin between them.","Hold a moderate squeeze and keep breathing.","Let go slowly."],
+    avoid:"Don't arch the low back to fake a bigger squeeze.",
+    why:"Wakes the hip extensors that you need to stand up and walk."
+  }],
+  [/straight-leg raise|\bslr\b/i, {
+    what:"A straight-leg raise: the thigh stays tight and the whole straight leg lifts a little.",
+    set:"Lie on your back. Bend the other knee and put that foot flat. Tighten the working thigh first.",
+    steps:["Keep that thigh tight. Lift the straight leg about 30–45 cm, heel leading.","Pause. The knee must stay straight.","Lower slowly. If the knee bends, you've lost the quad — put it down and reset."],
+    avoid:"Don't swing it up. Don't hold your breath. A brace stays on if you've been told to wear one.",
+    why:"Rebuilds the quad's job of holding the knee straight, which is what walking needs."
+  }],
+  [/chin tucks|cervical retraction/i, {
+    what:"A chin tuck: you draw the chin straight back, like making a double chin, without looking down.",
+    set:"Sit or stand tall. Eyes on the horizon.",
+    steps:["Slide the chin straight back — as if a string is pulling the back of your head.","You should look slightly less 'poked forward', not down at your chest.","Hold a few seconds, then ease off."],
+    avoid:"Don't look down and don't jam the head back hard.",
+    why:"Retrains the deep neck muscles that hold your head over your shoulders."
+  }],
+  [/cat[–-]camel/i, {
+    what:"Cat–camel: on hands and knees, you round the back then let it sag, slowly.",
+    set:"Hands under shoulders, knees under hips. Neutral neck — look at the floor.",
+    steps:["Round the back up toward the ceiling (cat), letting the head drop a little.","Then let the back sag gently (camel) without cranking the neck up.","Move with the breath. This is motion, not a stretch contest."],
+    avoid:"Don't force either end. Stop if a limb goes numb or pain shoots down a leg.",
+    why:"Gets the spine moving again in a supported position after it has been guarded and stiff."
+  }],
+  [/pelvic tilts/i, {
+    what:"A pelvic tilt: you flatten the low back onto the floor by rolling the pelvis, then ease off.",
+    set:"Lie on your back, knees bent, feet flat.",
+    steps:["Gently roll the pelvis so the low back flattens onto the floor.","Hold a moment, breathing.","Let the normal small curve return."],
+    avoid:"Don't push the back down by jamming the stomach. Small and smooth.",
+    why:"Finds the deep core without sit-ups, which many backs don't want yet."
+  }],
+  [/isometric rotator/i, {
+    what:"Isometric rotator-cuff holds: you press the arm into a wall or towel and nothing moves.",
+    set:"Stand with a folded towel between the elbow and your ribs, next to a wall or doorframe.",
+    steps:["Press the hand or forearm into the wall — outward, inward, or forward as listed — at about 5 out of 10 effort.","Nothing should move. Hold. Keep breathing.","Ease off slowly."],
+    avoid:"Don't strain as hard as you can. Don't hold your breath. Stop if it pinches.",
+    why:"Loads the cuff without moving a sore joint — often the way in when raising the arm still hurts."
+  }],
+  [/tendon glides/i, {
+    what:"Tendon glides: you move the fingers through a set sequence so the tendons slide in their tunnels.",
+    set:"Sit with the elbow bent, hand up, as if taking an oath.",
+    steps:["Straight fingers.","Hook fist (knuckles straight, fingertips to the palm pads).","Full fist.","Straight fist (knuckles bent, fingers straight). Return to open between shapes if that's how you were shown."],
+    avoid:"Don't force a shape that pinches or goes numb. Slow and complete beats fast and incomplete.",
+    why:"Keeps the finger tendons sliding after injury or swelling, which is what stops them getting stuck."
+  }],
+  [/seated knee extension/i, {
+    what:"Seated knee extension: you straighten the knee while sitting, then lower it slowly.",
+    set:"Sit tall on a chair that won't slide, feet hanging or lightly on the floor.",
+    steps:["Straighten one knee until the thigh is tight and the foot is up.","Pause with the knee long, without snapping it back.","Lower slowly. That lowering is most of the work."],
+    avoid:"Don't swing the lower leg. Don't hold your breath.",
+    why:"Rebuilds the quad for walking and stairs without having to squat."
+  }],
+  [/overhead press progression/i, {
+    what:"An overhead press: you press a load from the shoulders to long arms, then lower it.",
+    set:"Sit or stand tall. Hold the weight at shoulder height, knuckles up, elbows slightly forward — not flared way out.",
+    steps:["Press up until the arms are long, keeping the ribs down so you don't lean back.","Pause.","Lower to the shoulders under control."],
+    avoid:"Don't shrug the last inch. Don't arch the low back to finish the rep. Add load only if it's pain-free.",
+    why:"Strength for putting things on a shelf — the job the shoulder is for."
+  }]
+];
+
+const PRESCRIPTION_HOWTO = {
+  what:"This is a progression step, not a single named movement.",
+  set:"You are not learning a new drill here.",
+  steps:["Keep doing the named exercises from earlier in this phase.","If symptoms stay settled, do them a little longer or a little more steadily — not a brand-new movement.","If a named exercise sits next to this line, that named one is what you actually perform."],
+  avoid:"Don't invent a new exercise because the heading sounds like one.",
+  why:"Progress is repeating the same work with a bit more capacity, not swapping the menu."
+};
+
+const CARDIO_HOWTO = {
+  walk:{
+    what:"Walking for fitness: easy, steady steps — not a new gym machine.",
+    set:"Wear shoes you can walk in. Pick a flat, clear path with somewhere to sit if you need it.",
+    steps:["Start with a few easy minutes.","Settle into a pace where you could talk but not sing.","Finish with a couple of slower minutes."],
+    avoid:"Don't push until you can't breathe. Stop for chest pain, dizziness, or anything that feels wrong.",
+    why:"Walking is the aerobic work most bodies tolerate while a joint is settling.",
+    tempo:"Keep going for the time you've been given. Conversation-pace is enough."
+  },
+  bike:{
+    what:"Stationary or easy cycling: the legs turn the pedals while the joints take less impact than walking.",
+    set:"Set the seat so the knee stays slightly bent at the bottom of the stroke. Start with no resistance or the lowest gear.",
+    steps:["Pedal smoothly.","Build to a pace where you could talk but not sing, or the intervals you've been given.","Cool down with easy pedalling."],
+    avoid:"Don't crank a heavy gear that makes you rock at the hips. Stop for chest pain or dizziness.",
+    why:"Raises heart rate with less pounding than walking or running.",
+    tempo:"Keep a smooth cadence for the time you've been given."
+  },
+  arm:{
+    what:"An arm bike (upper-body ergometer): you sit and cycle with your hands.",
+    set:"Sit tall facing the arm bike. Set the seat so the elbows stay slightly bent at the farthest reach. Feet on the floor.",
+    steps:["Hold the handles and turn them in a smooth circle, as if cycling with your arms.","Keep the shoulders down. Don't hunch or shrug.","Build to a pace where you could talk but not sing, for the time you've been given."],
+    avoid:"Don't crank so hard the shoulders hike up. Stop for chest pain, dizziness, or anything that feels wrong.",
+    why:"Raises heart rate without loading the legs or a sore foot.",
+    tempo:"Smooth circles for the time you've been given. Conversation-pace is enough."
+  },
+  rower:{
+    what:"Rowing: legs, then body, then arms — a full-body aerobic pull.",
+    set:"Feet strapped, sit tall. If a joint is protected, use the machine only as your plan allows.",
+    steps:["Push with the legs first, then lean back slightly, then pull the handle to the lower ribs.","Return in reverse: arms, body, legs.","Keep the stroke smooth, not yanked."],
+    avoid:"Don't yank with the arms first. Don't round the back. Stop for chest pain or dizziness.",
+    why:"Aerobic work that also trains a strong pulling pattern.",
+    tempo:"Steady strokes for the time you've been given."
+  },
+  swim:{
+    what:"Swimming or easy water exercise: the water carries some of your weight.",
+    set:"Use a pool you can stand in or a lane you are happy in. Never exercise in a pool on your own.",
+    steps:["Warm up with easy lengths or water walking.","Settle into a pace you can keep.","Stop while you still have something in the tank."],
+    avoid:"Don't go deeper than you're confident in. Get out if you feel cold, dizzy or unwell.",
+    why:"Fitness with less joint impact than land work.",
+    tempo:"Easy continuous movement for the time you've been given."
+  },
+  generic:{
+    what:"Aerobic work: a sustained bout that raises your heart and breathing rate.",
+    set:"Use the activity already named in this line of your plan. If it says walk, walk. If it says bike, bike. Don't switch machines just because the heading is broad.",
+    steps:["Warm up for a few easy minutes.","Settle into a pace where you could talk but not sing, or the intervals you've been given.","Cool down for a few easy minutes."],
+    avoid:"Don't push until you can't breathe. Stop for chest pain, dizziness, or anything that feels wrong.",
+    why:"Aerobic fitness underpins how fast you recover between sessions — and how well tissue heals.",
+    tempo:"Keep going for the time or intervals you've been given. At a moderate pace you should be able to hold a conversation."
+  }
+};
+
+function isPrescriptionName(name){
+  const l = String(name||"").toLowerCase();
+  return /^(return to activity|return to work|return to sport|return to full|return to valued|return to roles|return to normal|return to low-impact|graded return)/.test(l)
+    || /^(activity participation|sport participation|full return|full pain-free function)/.test(l);
+}
+function cardioKind(name){
+  const l = String(name||"").toLowerCase();
+  if(/arm[- ]?erg|upper-body cardio|seated arm|cardio \(arm|arm\/seated|arm erg/.test(l)) return "arm";
+  if(/rowing|\brower\b/.test(l) && !/scapular row|band row|seated row|cable row/.test(l)) return "rower";
+  if(/bike|cycl/.test(l) && !/arm/.test(l)) return "bike";
+  if(/swim|aqua jog/.test(l)) return "swim";
+  if(/walk|walking/.test(l)) return "walk";
+  return "generic";
+}
+function lookupNameHowTo(name, pattern){
+  const n = String(name||"");
+  for(const [re, spec] of NAME_HOWTO){
+    if(re.test(n)) return spec;
+  }
+  if(isPrescriptionName(n)) return PRESCRIPTION_HOWTO;
+  if((pattern || inferPattern(n)) === "cardio") return CARDIO_HOWTO[cardioKind(n)] || CARDIO_HOWTO.generic;
+  return null;
+}
+
+function movementExplain(name, pattern, regionArr, cue){
   const p = pattern || inferPattern(name);
+  const named = lookupNameHowTo(name, p);
   const info = PATTERN_INFO[p] || PATTERN_INFO.general;
-  const ht = PATTERN_HOWTO[p] || PATTERN_HOWTO.general;
+  const ht = named ? {
+    setup: named.set,
+    steps: named.steps,
+    tempo: named.tempo || (PATTERN_HOWTO[p] || PATTERN_HOWTO.general).tempo,
+    avoid: named.avoid
+  } : (PATTERN_HOWTO[p] || PATTERN_HOWTO.general);
   /* One phrasing per pattern meant every squat opened and closed with the same two
      sentences. Vary by a hash of the NAME (stable across re-renders), then add the
      clauses that describe THIS variant. */
@@ -5021,20 +5283,22 @@ function movementExplain(name, pattern, regionArr){
       if(new RegExp("^" + reEsc(k) + "\\b", "i").test(name||"")) return WHAT_EQUIP[k];
     return ""; })();
   const whatBits = [eqWhat, ...sc.what].filter(Boolean);
-  const whatBase = pickAlt(name, WHAT_ALT[p] || [info.what]);
+  const whatBase = (named && named.what) ? named.what : pickAlt(name, WHAT_ALT[p] || [info.what]);
   /* Several base phrasings already contain an em-dash, so appending " — clause" gave
      "a held position — tension without motion — with a static hold added". Use a
      separate sentence instead of a second dash. */
-  const whatLine = whatBits.length
-    ? whatBase + " This version is " + whatBits.join(", ") + "."
-    : whatBase;
-  const whyBase = pickAlt(name, WHY_ALT[p] || [info.why]);
+  const whatLine = (named && named.what)
+    ? named.what
+    : (whatBits.length ? whatBase + " This version is " + whatBits.join(", ") + "." : whatBase);
+  const whyBase = (named && named.why) ? named.why : pickAlt(name, WHY_ALT[p] || [info.why]);
   const whyLine = [whyBase, ...sc.why.slice(0, 2)].join(" ");
   const skip = new Set(["Full body","Cardio","Balance","Gait","Vestibular","Breathing","Core","Grip"]);
   const regs = (regionArr||[]).filter(r=>!skip.has(r));
   /* "the knee, hip" reads like a stub. This line appears on every explanation. */
   const listOf = a => a.length < 2 ? (a[0] || "") : a.slice(0, -1).join(", ") + " and " + a[a.length - 1];
-  const target = regs.length ? ` It mainly works the ${listOf(regs).toLowerCase()}.` : "";
+  const target = (p === "cardio" || p === "breathing")
+    ? " It mainly works your heart and lungs."
+    : (regs.length ? ` It mainly works the ${listOf(regs).toLowerCase()}.` : "");
   const notes = movementNotes(name);
   /* Layer the name's own detail over the pattern text: the implement, the named
      variant, then the modifier — so a "Barbell box squat — with 2s pause" no
@@ -5064,19 +5328,23 @@ function movementExplain(name, pattern, regionArr){
   const legOnly = isLowerLimbOnly(regionArr);
   const htSteps = (legOnly && ht.legSteps) ? ht.legSteps : (ht.steps || []);
   const htAvoid = (legOnly && ht.legAvoid) ? ht.legAvoid : ht.avoid;
-  const setup = [ht.setup, eq && eq.set, ...vr.set].filter(Boolean).join(" ");
-  /* When the mechanics lead, the band contributes coaching rather than a second set of
-     instructions — two is enough, and it keeps the list at a length someone will read. */
-  const bandSteps = mech.length ? htSteps.slice(0, 2) : htSteps;
+  const setup = named
+    ? ht.setup
+    : [vr.set.length ? vr.set.join(" ") : ht.setup, eq && eq.set].filter(Boolean).join(" ");
+  /* Named movement already has the right steps — don't append the generic pattern
+     list (that is how wall slides became "pick a bike or rower"). */
+  const bandSteps = named ? [] : (mech.length ? htSteps.slice(0, 2) : htSteps);
+  const namedSteps = named ? (ht.steps || []) : [];
   const steps = [`<b>Set up —</b> ${setup}`]
-    .concat(mech, bandSteps, vr.steps, md.steps).slice(0, 9);
+    .concat(namedSteps, mech, bandSteps, named ? [] : vr.steps, md.steps).slice(0, 7);
   const stepHTML = `<ol class="howsteps">${steps.map(s=>`<li>${s}</li>`).join("")}</ol>`;
   const tempo = md.tempo || ht.tempo;                       // a modifier's tempo overrides the pattern's
   const avoid = [htAvoid, eq && eq.avoid, ...vr.avoid, ...md.avoid].filter(Boolean).join(" ");
   const meta = [
     tempo ? `<div class="howmeta"><b>⏱ Tempo &amp; breathing:</b> ${tempo}</div>` : "",
     avoid ? `<div class="howmeta howavoid"><b>⚠ Avoid:</b> ${avoid}</div>` : "",
-    notes ? `<div class="howmeta"><b>Note:</b> ${notes}</div>` : ""
+    notes ? `<div class="howmeta"><b>Note:</b> ${notes}</div>` : "",
+    (cue && String(cue).trim()) ? `<div class="howmeta"><b>Your cue:</b> ${esc(String(cue).trim())}</div>` : ""
   ].join("");
   /* ⚠ SECURITY INVARIANT: every fragment interpolated below (steps/tempo/avoid/notes/whatLine/
      whyLine) is a FIXED internal string selected by matching the exercise `name`; the raw name is
@@ -5120,7 +5388,7 @@ function exItemHTML(e, regionArr, ctx, medHidden){
       <button class="expbtn" onclick="this.closest('.exitem').querySelector('.exp').classList.toggle('hide')">ⓘ Explain</button>
       ${rotate}${swap}${remove}
     </div>
-    <div class="exp hide">${movementExplain(e.n, e.pattern, e.region||regionArr)}</div>
+    <div class="exp hide">${movementExplain(e.n, e.pattern, e.region||regionArr, e.c)}</div>
     ${swapbox}
   </li>`;
 }

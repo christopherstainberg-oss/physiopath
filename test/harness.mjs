@@ -51,6 +51,7 @@ const SEAM = `
   planFloored, currentPlanPhase, weekPhaseOf,
   tissueClass, thisWeekFocus, LOADING_LADDER, progressionSignal, recentEffort,
   loadGuidance, planDrift, protocolEducationNotes, phaseTarget,
+  inferPattern, movementExplain,
   SPECIAL_PRECAUTIONS, CONTRA_RULES: window.CONTRA_RULES,
   PROTOCOLS: window.PROTOCOLS, PROTOCOL_ALIAS: window.PROTOCOL_ALIAS,
   landingStep,
