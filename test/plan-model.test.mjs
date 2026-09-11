@@ -121,5 +121,34 @@ test("5: program.goal is sport / work / adl from user data; sport gets a larger 
   assert(sportN > adlN, `sport late-phase cap (${sportN}) should exceed ADL cap (${adlN})`);
 });
 
+test("6: a 2-point (or 30%) pain drop is named as a possible meaningful change — education, not success", () => {
+  const prog = planFor(E, {
+    condIds: [COND.lbp.id], age: 40, weeks: 6, surgery: "no",
+    painMove: 8, painRest: 6, log: mkLog(Array(6).fill(5)),
+  });
+  const n = notesOf(prog);
+  assert(/2 point|two point|30%|meaningful change/i.test(n), `MCID education missing: ${n.slice(0, 500)}`);
+  assert(/education|not a prescription|not a score of success|not success/i.test(n), "MCID must stay educational");
+});
+
+test("6: cannot-do-goal logs HOLD even when pain is settled", () => {
+  resetState(E, {
+    program: null,
+    log: mkLog(Array(6).fill({ pain: 2, functionCapacity: "none" })),
+  });
+  const sig = E.progressionSignal();
+  assert(sig && sig.rec === "hold", `functionCapacity none should hold, got ${JSON.stringify(sig)}`);
+  assert(/function|goal|task/i.test(sig.why), `should name function/goal: ${sig && sig.why}`);
+});
+
+test("6: ACL notes are time + clinician RTS, not an in-app hop test or sport clearance", () => {
+  const prog = planFor(E, { condIds: [COND.acl.id], age: 25, surgery: "yes", weeks: 16, log: [] });
+  const n = notesOf(prog);
+  assert(/9 month|nine month/i.test(n), `ACL should mention a typical 9-month pivoting-sport window: ${n.slice(0, 400)}`);
+  assert(/clinician|physical therapist|physiotherapist/i.test(n), "ACL RTS must send clearance to a clinician");
+  assert(/does not clear|not a clearance|not hop-test|does not hop/i.test(n), "must not claim in-app sport clearance");
+  assert(/not a prescription|education/i.test(n), "must stay educational");
+});
+
 import { pathToFileURL } from "node:url";
 if (import.meta.url === pathToFileURL(process.argv[1]).href) (await import("./runner.mjs")).report();

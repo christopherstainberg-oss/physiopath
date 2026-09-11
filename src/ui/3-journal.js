@@ -159,6 +159,7 @@ function loadLogDay(d){
   if($("#logSessions")) $("#logSessions").value = e ? e.sessions : 1;
   if($("#logEffort")){ const v = (e && e.effort!=null) ? e.effort : 5; $("#logEffort").value = v; if($("#logEffortVal")) $("#logEffortVal").textContent = v; }
   if($("#logSets")) $("#logSets").value = (e && e.sets) || "";
+  if($("#logFunction")) $("#logFunction").value = (e && e.functionCapacity) || "";
   if($("#logNote")) $("#logNote").value = e ? (e.note||"") : "";
   /* Don't stack two questions. When Jeffery asks an OPEN question his card is the prompt,
      so the note stays quiet; when he asks a CLOSED one (a tap), the written prompt
@@ -1250,6 +1251,7 @@ function collectEntry(d){
     sessions: Math.max(0, parseInt($("#logSessions").value)||0),
     effort: $("#logEffort") ? parseInt($("#logEffort").value) : null,
     sets: ($("#logSets") && $("#logSets").value) || "",
+    functionCapacity: ($("#logFunction") && $("#logFunction").value) || "",
     note: $("#logNote").value.trim(),
     t: (prev && prev.t) || now,          // first written — never overwritten
     edited: now

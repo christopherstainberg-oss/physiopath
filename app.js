@@ -2486,6 +2486,9 @@ function hasPots(conds){
   const h = condHay(conds);
   return h.includes("pots") || h.includes("postural orthostatic");
 }
+function hasAcl(conds){
+  return condHay(conds).includes("acl");
+}
 /* Criteria to progress to the next phase — more detail than dates alone. */
 const PHASE_CRITERIA = {
   acute: [
@@ -3584,6 +3587,21 @@ function painMonitor(){
     return { ok:false, why:"Next-morning pain was higher than during the session — hold until it returns to baseline." };
   return { ok:true };
 }
+function painMcid(before, after){
+  const b = Number(before), a = Number(after);
+  if(!isFinite(b) || !isFinite(a)) return false;
+  const drop = b - a;
+  if(drop >= 2) return true;
+  if(b > 0 && drop >= 0.3 * b) return true;
+  return false;
+}
+function functionCapacitySignal(){
+  const recent = (state.log || []).filter(e => e.functionCapacity).slice(-4);
+  if(recent.length < 3) return null;
+  if(recent.every(e => e.functionCapacity === "none"))
+    return { rec:"hold", why:"Your recent logs say you could not do the day's goal task — hold load and rebuild that function before adding work. Education, not a test score." };
+  return null;
+}
 function progressionSignal(){
   const log = (state.log || []).filter(e => isFinite(Number(e.pain)));
   if(log.length < 2) return null;                    // too little to base a call on — stay time-based
@@ -3597,6 +3615,9 @@ function progressionSignal(){
     return { rec:"hold", why:"Your recent logs show pain trending up — hold at this level (or ease back a step) this week rather than adding load, and let it settle first." };
   if(pm && pm.ok === false)
     return { rec:"hold", why: pm.why };
+  const fn = functionCapacitySignal();
+  if(fn && fn.rec === "hold")
+    return fn;
   if(ep.v >= 7)
     return { rec:"hold", why:`You're logging around ${(+ep.v).toFixed(1)}/10 right now — keep this week light and don't progress until it eases.` };
   if(adh && adh.status === "behind")
@@ -3784,6 +3805,13 @@ function protocolEducationNotes(conds){
   }
   if(Number(state.age) >= 65){
     notes.push("Older-adult education (GETP-12 themes, not a prescription): muscle power, balance, and walking capacity matter as much as heavy grinding. Progress as able with your clinician.");
+  }
+  const epNow = effectivePain();
+  if(painMcid(state.painMove, epNow.v)){
+    notes.push("Pain education: a drop of about 2 points, or about 30%, on a 0–10 pain scale is often treated as a meaningful change in research. That is education, not a score of success and not a prescription.");
+  }
+  if(hasAcl(conds)){
+    notes.push("Return-to-sport education after a knee ligament reconstruction (not a prescription, not a clearance): pivoting sport is commonly delayed until around 9 months and only after a clinician checks strength, hop symmetry, and confidence. This app does not hop-test and does not clear you for sport.");
   }
   notes.push("These sessions are a local education list — they are not supervised physiotherapy or a telerehab visit. Seek in-person care if you need it.");
   return notes;
@@ -8323,6 +8351,7 @@ function loadLogDay(d){
   if($("#logSessions")) $("#logSessions").value = e ? e.sessions : 1;
   if($("#logEffort")){ const v = (e && e.effort!=null) ? e.effort : 5; $("#logEffort").value = v; if($("#logEffortVal")) $("#logEffortVal").textContent = v; }
   if($("#logSets")) $("#logSets").value = (e && e.sets) || "";
+  if($("#logFunction")) $("#logFunction").value = (e && e.functionCapacity) || "";
   if($("#logNote")) $("#logNote").value = e ? (e.note||"") : "";
   /* Don't stack two questions. When Jeffery asks an OPEN question his card is the prompt,
      so the note stays quiet; when he asks a CLOSED one (a tap), the written prompt
@@ -9414,6 +9443,7 @@ function collectEntry(d){
     sessions: Math.max(0, parseInt($("#logSessions").value)||0),
     effort: $("#logEffort") ? parseInt($("#logEffort").value) : null,
     sets: ($("#logSets") && $("#logSets").value) || "",
+    functionCapacity: ($("#logFunction") && $("#logFunction").value) || "",
     note: $("#logNote").value.trim(),
     t: (prev && prev.t) || now,          // first written — never overwritten
     edited: now
