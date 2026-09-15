@@ -1,0 +1,69 @@
+{
+  "title": "Acute/hospital clinical reasoning overlay for PhysioPath Jeffery",
+  "date": "2026-09-15",
+  "question": "How should Jeffery's system prompt be improved for acute/hospital physical rehabilitation without making Jeffery a clinician?",
+  "quality_distribution": {"primary": 10, "secondary": 5, "tertiary": 3, "rating": "healthy"},
+  "claims": [
+    {
+      "id": "c1",
+      "text": "TEAM: extra early active mobilisation did not increase days alive and out of hospital at 180 days (143 vs 145, P=0.62) and increased mobilisation-attributable AEs (9.2% vs 4.1%).",
+      "polarity": "refute",
+      "kind": "outcome",
+      "sources": [1],
+      "basis": "verified"
+    },
+    {
+      "id": "c2",
+      "text": "AVERT: very early frequent higher-dose out-of-bed mobilisation reduced odds of favourable 3-month mRS 0-2 (46% vs 50%; aOR 0.73, 0.59-0.90).",
+      "polarity": "refute",
+      "kind": "outcome",
+      "sources": [2],
+      "basis": "verified"
+    },
+    {
+      "id": "c3",
+      "text": "Hodgson 2014: ETT is not a contraindication; FiO2<0.6, SpO2>90%, RR<30 were consensus-safe if no other contraindications; no consensus on vasoactive dose.",
+      "polarity": "support",
+      "kind": "safety",
+      "sources": [3],
+      "basis": "sourced"
+    },
+    {
+      "id": "c4",
+      "text": "Schaller 2024: start mobilisation within 72 h when no contraindication; stepwise to highest safe level; no evidence-based absolute start vitals.",
+      "polarity": "support",
+      "kind": "guideline",
+      "sources": [4],
+      "basis": "sourced"
+    },
+    {
+      "id": "c5",
+      "text": "SCCM PADIS 2025: conditional recommendation for enhanced mobilisation/rehabilitation over usual care (moderate certainty).",
+      "polarity": "support",
+      "kind": "guideline",
+      "sources": [5, 6],
+      "basis": "verified"
+    },
+    {
+      "id": "c6",
+      "text": "Masley 2011: acute-care PT reasoning integrates medical information with PT knowledge, dynamic assessment, mobility/safety, and discharge setting.",
+      "polarity": "support",
+      "kind": "reasoning",
+      "sources": [7],
+      "basis": "sourced"
+    },
+    {
+      "id": "c7",
+      "text": "Mari 2024 SRMA: EM within 72 h associated with shorter ICU LOS and MV duration, better strength/function, no increase in AEs or mortality (conflicts with TEAM on AEs).",
+      "polarity": "support",
+      "kind": "outcome",
+      "sources": [8],
+      "basis": "sourced"
+    }
+  ],
+  "writing_context": [
+    "PhysioPath is educational; overlay must not diagnose or replace in-person care.",
+    "Jailbreak/GODMODE templates were not applied.",
+    "Engine already has icu_aw, stroke/raised_icp, venous_rehab, encephalopathy, sternal/abdominal/spinal, telemetry, acute-track RPE 9-12."
+  ]
+}

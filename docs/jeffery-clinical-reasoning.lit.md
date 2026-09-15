@@ -117,9 +117,16 @@ Journal register: keep this loop silent unless they asked about the plan.
 
 `test/coach-prompt.test.mjs` locks the block: HOAC, SINSS, ICF, FITT-VP, educational-not-clinician, no GET, no 10% folklore, no invented papers, talking-therapy wording (never a CBT phrase), Rotate/Swap/Remove, pain-monitor. After edits: `node scripts/assemble-app.mjs && npm test`.
 
+# Acute / hospital overlay
+
+The block above is still **outpatient-flavoured** (tendon ladders, OA, plyos, “this week”). Acute-care PT reasoning is medical data + mobility/safety + discharge setting, reassessed every session. TEAM and AVERT show that “more, earlier, harder” is not a default.
+
+The drop-in overlay lives in `docs/jeffery-acute-hospital-prompt.md`. Research: `docs/2026-09-15-acute-hospital-ebp-research.md`. Do not insert it into `4-coach-boot.js` until that slice is picked. Tests, when picked, belong in `test/coach-prompt.test.mjs` (traffic light, mobility ladder, no invented vasoactive cutoffs, no “highest intensity for the longest time”).
+
 # What this is not
 
 - Not a tangle of `app.js`.
 - Not a new protocol pool.
 - Not Jeffery-as-PT.
 - Not a jailbreak.
+- Not an ICU medical-decision engine.
