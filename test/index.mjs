@@ -13,6 +13,7 @@ import "./coverage.test.mjs";
 import "./snapshots.test.mjs";
 import "./migration.test.mjs";
 import "./coach-stream.test.mjs";
+import "./coach-prompt.test.mjs";
 import "./safety-fixes.test.mjs";
 import "./clinical-maps.test.mjs";
 import "./pa-home-grok.test.mjs";

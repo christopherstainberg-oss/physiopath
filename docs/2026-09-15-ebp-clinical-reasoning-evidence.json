@@ -1,0 +1,280 @@
+{
+  "headline": "Jeffery should run an educational HOAC/SINSS/ICF/FITT-VP loop over the on-screen generateProgram plan; autonomous LLM prescription is weaker than expert-led programs and must not diagnose, GET, or invent citations.",
+  "key_findings": [
+    {"finding": "HOAC II and SINSS are the standard scaffolds for hypothesis-driven vigor, not a new catalog of exercises.", "claim_ids": ["c1", "c2", "c3"]},
+    {"finding": "Outcomes move with trust, individualisation, and adherence more than exercise brand.", "claim_ids": ["c4", "c5"]},
+    {"finding": "FITT-VP is the dose language; GETP-12 added special-pop sections; ACSM 2026 RT undercuts 10% folklore.", "claim_ids": ["c6", "c7", "c8"]},
+    {"finding": "LLMs can draft FITT-shaped text but fail irritability/red flags, hallucinate references, and lose to expert humans on safety/progression.", "claim_ids": ["c9", "c10", "c11", "c12"]},
+    {"finding": "Hard nos: GET for ME/CFS, withdrawn NICE LBP talking-therapy packages, overclaiming OA pain drops.", "claim_ids": ["c13", "c14", "c15", "c16"]}
+  ],
+  "claims": [
+    {
+      "id": "c1",
+      "text": "HOAC II is a patient-centred algorithm covering examination, evaluation, diagnosis, prognosis and intervention, including patient-identified vs clinician-identified problems.",
+      "kind": "factual",
+      "polarity": "support",
+      "topic_tag": "hoac_ii",
+      "source_id": "src1",
+      "snippet": "The HOAC II offers a conceptual, patient-centred framework for physical therapists to use in the management of any type of patient. It addresses the five elements of patient management: examination, evaluation, diagnosis, prognosis and intervention.",
+      "source_url": "https://www.physio-pedia.com/Hypothesis-Oriented_Algorithm_for_Clinicians_II_(HOAC_II)",
+      "source_title": "Hypothesis-Oriented Algorithm for Clinicians II (HOAC II)",
+      "source_quality": "tertiary"
+    },
+    {
+      "id": "c2",
+      "text": "SINSS is used to set vigor and extent of examination and intervention so clinicians neither under- nor over-treat.",
+      "kind": "factual",
+      "polarity": "support",
+      "topic_tag": "sinss",
+      "source_id": "src2",
+      "snippet": "It is used to determine the appropriate vigor and extent of a physical examination as well as treatment or intervention [20,25,28]. It helps the therapist avoid under-or overexamining as well as under-or over-treating the patient.",
+      "source_url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC8491699/",
+      "source_title": "Severity, Irritability, Nature, Stage, and Stability (SINSS): A clinical perspective",
+      "source_quality": "primary"
+    },
+    {
+      "id": "c3",
+      "text": "Maximal severity and irritability implies very limited vigor and extent of intervention, focused on pain relief and activity modification.",
+      "kind": "factual",
+      "polarity": "support",
+      "topic_tag": "sinss",
+      "source_id": "src2",
+      "snippet": "Both vigor and extent of the intervention should be very limited due to maximal severity and irritability.",
+      "source_url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC8491699/",
+      "source_title": "Severity, Irritability, Nature, Stage, and Stability (SINSS): A clinical perspective",
+      "source_quality": "primary"
+    },
+    {
+      "id": "c4",
+      "text": "For persistent LBP, a realist review found trust from the therapeutic consultation, individualised prescription, and support/follow-up associated with adherence, engagement, and clinical outcomes.",
+      "kind": "factual",
+      "polarity": "support",
+      "topic_tag": "outcomes_adherence",
+      "source_id": "src13",
+      "snippet": "We found that the patient-clinician therapeutic consultation builds a foundation of trust and was associated with improved adherence, engagement and clinical outcomes, and that individualised exercise prescription increases motivation to adhere to exercise and thus also impacts clinical outcomes.",
+      "source_url": "https://eprints.whiterose.ac.uk/id/eprint/209625/1/bjsports-2023-107598.pdf",
+      "source_title": "Wood et al. BJSM 2024 realist review",
+      "source_quality": "primary"
+    },
+    {
+      "id": "c5",
+      "text": "nsCLBP exercise-therapy adherence remains low despite ET being first-line; contributors are complex and context-dependent.",
+      "kind": "factual",
+      "polarity": "support",
+      "topic_tag": "outcomes_adherence",
+      "source_id": "src19",
+      "snippet": "Despite strong evidence supporting exercise therapy (ET) as a primary treatment, adherence rates remain low, compromising outcomes and increasing healthcare costs.",
+      "source_url": "https://www.mdpi.com/2077-0383/14/17/6251",
+      "source_title": "Meuwissen 2025 nsCLBP exercise adherence SR",
+      "source_quality": "primary"
+    },
+    {
+      "id": "c6",
+      "text": "GETP 12th edition (2025) added FITT-relevant sections including POTS, ME/CFS, MASLD, SCAD, telerehab, and rewrote behaviour and resistance chapters.",
+      "kind": "factual",
+      "polarity": "support",
+      "topic_tag": "fitt_getp12",
+      "source_id": "src6",
+      "snippet": "The 12th edition of the Guidelines presents evidence-based standards with several new sections, including updates on sex differences, transgender and gender diverse individuals, spontaneous coronary artery dissection, postural orthostatic tachycardia syndrome, pediatric patients with cardiac conditions, metabolic dysfunction-associated steatotic liver disease, and myalgic encephalomyelitis/chronic fatigue syndrome.",
+      "source_url": "https://acsm.org/education-resources/books/guidelines-exercise-testing-prescription/",
+      "source_title": "ACSM GETP 12th edition",
+      "source_quality": "primary"
+    },
+    {
+      "id": "c7",
+      "text": "ACSM 2026 RT position stand: few prescription variables changed primary adaptations; strength better with heavier loads, full ROM, 2–3 sets, ≥2 sessions/week.",
+      "kind": "factual",
+      "polarity": "support",
+      "topic_tag": "acsm_rt_2026",
+      "source_id": "src16",
+      "snippet": "Few RT prescription (RTx) variables affected primary adaptations. However, voluntary strength was enhanced by lifting heavier loads (≥80% one-repetition maximum), through a complete range of motion, for 2–3 sets, at the beginning of training sessions, and ≥2 sessions/wk.",
+      "source_url": "https://pubmed.ncbi.nlm.nih.gov/41843416/",
+      "source_title": "ACSM RT Position Stand 2026 Currier",
+      "source_quality": "primary"
+    },
+    {
+      "id": "c8",
+      "text": "ICF is WHO's international standard to describe functioning and disability, including environmental factors.",
+      "kind": "factual",
+      "polarity": "support",
+      "topic_tag": "icf",
+      "source_id": "src10",
+      "snippet": "ICF is the WHO framework for measuring health and disability at both individual and population levels.",
+      "source_url": "https://www.who.int/standards/classifications/international-classification-of-functioning-disability-and-health",
+      "source_title": "WHO ICF",
+      "source_quality": "primary"
+    },
+    {
+      "id": "c9",
+      "text": "ChatGPT-4 SOAP MSK cases: Objective accuracy mean 3.7 vs Assessment 4.4; often generic tests ignoring irritability/acuity/stage.",
+      "kind": "factual",
+      "polarity": "refute",
+      "topic_tag": "llm_limits",
+      "source_id": "src3",
+      "snippet": "Mean accuracy scores were highest in the Assessment (4.4), followed by Subjective (4.3), Plan (4.3), and Objective (3.7).",
+      "source_url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC12313553",
+      "source_title": "ChatGPT MSK clinical reasoning Hao 2025",
+      "source_quality": "primary"
+    },
+    {
+      "id": "c10",
+      "text": "Hao et al. conclude ChatGPT should not be an independent clinical reasoning engine; it omitted red-flag triage and stage-specific plans.",
+      "kind": "factual",
+      "polarity": "refute",
+      "topic_tag": "llm_limits",
+      "source_id": "src3",
+      "snippet": "Therefore, at this stage, ChatGPT should not be viewed as an independent clinical tutor or reasoning engine.",
+      "source_url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC12313553",
+      "source_title": "ChatGPT MSK clinical reasoning Hao 2025",
+      "source_quality": "primary"
+    },
+    {
+      "id": "c11",
+      "text": "ChatGPT PT guideline Q&A: content often adequate but references frequently non-existent or misinterpreted.",
+      "kind": "factual",
+      "polarity": "refute",
+      "topic_tag": "llm_limits",
+      "source_id": "src17",
+      "snippet": "ChatGPT demonstrated adequate accuracy in generating content for clinical questions in physical therapy. However, the accuracy of the references was poor, with a significant number of references being non-existent or misinterpreted.",
+      "source_url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC11060764",
+      "source_title": "Sawamura ChatGPT PT clinical questions 2024",
+      "source_quality": "primary"
+    },
+    {
+      "id": "c12",
+      "text": "Blinded raters scored expert human APA protocols highest, novice+AI intermediate, autonomous GPT-5 lowest; authors say current LLMs are not suitable for autonomous clinical decision-making.",
+      "kind": "factual",
+      "polarity": "refute",
+      "topic_tag": "llm_limits",
+      "source_id": "src12",
+      "snippet": "Across all investigated pathologies, the APA protocols designed by the EP consistently achieved the highest overall evaluation scores, followed by the protocols developed by the NAI, while the AI protocols received the lowest scores.",
+      "source_url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC13027591",
+      "source_title": "AI vs expert APA prescription Catania 2026",
+      "source_quality": "primary"
+    },
+    {
+      "id": "c13",
+      "text": "NICE NG206: no ME/CFS programme using fixed or quota-based incremental increases, including GET, should be offered.",
+      "kind": "factual",
+      "polarity": "refute",
+      "topic_tag": "no_get",
+      "source_id": "src8",
+      "snippet": "No ME/CFS treatment programme that uses fixed or quota-based incremental increases in physical activity or exercise, including GET, should be offered to people with ME/CFS.",
+      "source_url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC9778354",
+      "source_title": "NICE NG206 ME/CFS primary care summary PMC",
+      "source_quality": "primary"
+    },
+    {
+      "id": "c14",
+      "text": "GETP-12 added an ME/CFS section, which conflicts with NICE's GET prohibition unless activity stays symptom-contingent inside energy limits.",
+      "kind": "interpretive",
+      "polarity": "refute",
+      "topic_tag": "no_get",
+      "source_id": "src6",
+      "snippet": "and myalgic encephalomyelitis/chronic fatigue syndrome.",
+      "source_url": "https://acsm.org/education-resources/books/guidelines-exercise-testing-prescription/",
+      "source_title": "ACSM GETP 12th edition",
+      "source_quality": "primary"
+    },
+    {
+      "id": "c15",
+      "text": "July 2026 NICE NG59 withdrew psychological therapy and combined physical+psychological programme recommendations after retracted evidence.",
+      "kind": "factual",
+      "polarity": "refute",
+      "topic_tag": "nice_lbp_2026",
+      "source_id": "src9",
+      "snippet": "July 2026: We have withdrawn the recommendations on psychological therapy for low back pain with or without sciatica, and combined physical and psychological programmes for low back pain or sciatica.",
+      "source_url": "https://www.nice.org.uk/guidance/NG59/chapter/update-information",
+      "source_title": "NICE NG59 July 2026 update information",
+      "source_quality": "primary"
+    },
+    {
+      "id": "c16",
+      "text": "Cochrane 2024 update: land-based exercise vs attention/placebo may improve knee OA pain 8.7/100; benefits of uncertain clinical importance vs MCID 12.",
+      "kind": "factual",
+      "polarity": "refute",
+      "topic_tag": "oa_modesty",
+      "source_id": "src14",
+      "snippet": "Exercise may result in a slight improvement in pain (8.7 points better on a 0 to 100 point scale).",
+      "source_url": "https://www.cochrane.org/CD004376/MUSKEL_exercise-osteoarthritis-knee",
+      "source_title": "Cochrane exercise for knee OA",
+      "source_quality": "primary"
+    },
+    {
+      "id": "c17",
+      "text": "NICE NG59 still stratifies: simpler keep-active support vs more intensive exercise (± manual therapy); do not routinely image in non-specialist settings.",
+      "kind": "factual",
+      "polarity": "support",
+      "topic_tag": "nice_lbp_2026",
+      "source_id": "src11",
+      "snippet": "simpler and less intensive support for people with low back pain with or without sciatica likely to improve quickly and have a good outcome (for example, reassurance, advice to keep active and guidance on self-management)",
+      "source_url": "https://www.nice.org.uk/guidance/ng59/chapter/Recommendations",
+      "source_title": "NICE NG59 LBP recommendations",
+      "source_quality": "primary"
+    },
+    {
+      "id": "c18",
+      "text": "Frontiers 2026 FITT-VP LLM bake-off scored Claude 3.7 highest among four models on synthetic profiles, but authors warn this is not real-world clinical outcomes.",
+      "kind": "factual",
+      "polarity": "refute",
+      "topic_tag": "llm_limits",
+      "source_id": "src4",
+      "snippet": "These results, however, are based on a single-run evaluation of static synthetic profiles and expert-rated prescription quality rather than real-world clinical outcomes",
+      "source_url": "https://www.frontiersin.org/journals/physiology/articles/10.3389/fphys.2026.1846567/full",
+      "source_title": "LLM FITT-VP comparison Frontiers 2026",
+      "source_quality": "primary"
+    }
+  ],
+  "sources": [
+    {"id": "src1", "url": "https://www.physio-pedia.com/Hypothesis-Oriented_Algorithm_for_Clinicians_II_(HOAC_II)", "title": "Physiopedia HOAC II", "quality": "tertiary"},
+    {"id": "src2", "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC8491699/", "title": "SINSS Petersen 2021", "quality": "primary"},
+    {"id": "src3", "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC12313553", "title": "Hao 2025 ChatGPT MSK CR", "quality": "primary"},
+    {"id": "src4", "url": "https://www.frontiersin.org/journals/physiology/articles/10.3389/fphys.2026.1846567/full", "title": "Frontiers FITT-VP LLM 2026", "quality": "primary"},
+    {"id": "src5", "url": "https://www.acefitness.org/resources/pros/expert-articles/8996/updates-to-acsm-s-guidelines-for-exercise-testing-and-prescription/", "title": "ACE GETP-12 updates", "quality": "secondary"},
+    {"id": "src6", "url": "https://acsm.org/education-resources/books/guidelines-exercise-testing-prescription/", "title": "ACSM GETP 12th edition", "quality": "primary"},
+    {"id": "src7", "url": "https://acsm.org/wp-content/uploads/2025/03/GETP11-12-crosswalk.pdf", "title": "GETP 11-12 crosswalk", "quality": "primary"},
+    {"id": "src8", "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC9778354", "title": "NICE NG206 primary care PMC", "quality": "primary"},
+    {"id": "src9", "url": "https://www.nice.org.uk/guidance/NG59/chapter/update-information", "title": "NICE NG59 July 2026 update", "quality": "primary"},
+    {"id": "src10", "url": "https://www.who.int/standards/classifications/international-classification-of-functioning-disability-and-health", "title": "WHO ICF", "quality": "primary"},
+    {"id": "src11", "url": "https://www.nice.org.uk/guidance/ng59/chapter/Recommendations", "title": "NICE NG59 recommendations", "quality": "primary"},
+    {"id": "src12", "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC13027591", "title": "AI vs expert APA 2026", "quality": "primary"},
+    {"id": "src13", "url": "https://eprints.whiterose.ac.uk/id/eprint/209625/1/bjsports-2023-107598.pdf", "title": "Wood BJSM 2024", "quality": "primary"},
+    {"id": "src14", "url": "https://www.cochrane.org/CD004376/MUSKEL_exercise-osteoarthritis-knee", "title": "Cochrane knee OA exercise", "quality": "primary"},
+    {"id": "src15", "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC7905015", "title": "Sprague pain-guided 2021", "quality": "primary"},
+    {"id": "src16", "url": "https://pubmed.ncbi.nlm.nih.gov/41843416/", "title": "ACSM RT 2026", "quality": "primary"},
+    {"id": "src17", "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC11060764", "title": "Sawamura 2024 ChatGPT PT", "quality": "primary"},
+    {"id": "src18", "url": "https://www.nice.org.uk/guidance/ng206/chapter/Recommendations", "title": "NICE NG206 recommendations", "quality": "primary"},
+    {"id": "src19", "url": "https://www.mdpi.com/2077-0383/14/17/6251", "title": "Meuwissen 2025 adherence SR", "quality": "primary"},
+    {"id": "src20", "url": "https://doi.org/10.1093/ptj/83.5.455", "title": "Rothstein HOAC II 2003", "quality": "primary"}
+  ],
+  "writing_context": [
+    {
+      "id": "w1",
+      "kind": "availability_gap",
+      "text": "GETP-12 numeric FITT cells live in the paid book and were not extracted. Do not invent them.",
+      "source_ids": ["src6", "src7"],
+      "use": "Prompt may name FITT-VP dimensions, not fake table numbers."
+    },
+    {
+      "id": "w2",
+      "kind": "scope_boundary",
+      "text": "PhysioPath is educational, not a licensed clinician and not high-stakes automated medical decisions for a named person.",
+      "source_ids": [],
+      "use": "Keep not-a-clinician banner; Jeffery reasons over generateProgram, does not diagnose."
+    },
+    {
+      "id": "w3",
+      "kind": "methodology",
+      "text": "Rothstein 2003 full PDF timed out; HOAC facts cited via Physiopedia plus DOI, not page-level quotes from PTJ.",
+      "source_ids": ["src1", "src20"],
+      "use": "Do not quote HOAC page numbers."
+    },
+    {
+      "id": "w4",
+      "kind": "unresolved_gap",
+      "text": "Jailbreak / GODMODE templates were not applied (Grok AUP). Prompt completeness used instead of safety-filter bypass.",
+      "source_ids": [],
+      "use": "State this in Gaps, not as a research finding."
+    }
+  ]
+}
